@@ -1,0 +1,85 @@
+import { app, shell, BrowserWindow } from 'electron';
+import { join } from 'path';
+import { setupIpcHandlers, cleanupIpcHandlers } from './services/ipc-handlers';
+
+// Inline utilities to avoid @electron-toolkit/utils initialization issues
+// Use getter to defer app.isPackaged access until after app ready
+const is = {
+  get dev() {
+    return !app.isPackaged;
+  },
+};
+
+function setAppUserModelId(id: string): void {
+  if (process.platform === 'win32') {
+    app.setAppUserModelId(id);
+  }
+}
+
+function watchWindowShortcuts(window: BrowserWindow): void {
+  window.webContents.on('before-input-event', (event, input) => {
+    // Prevent default refresh shortcuts in production
+    if (!is.dev && input.key === 'F5') {
+      event.preventDefault();
+    }
+    if (!is.dev && input.control && input.key === 'r') {
+      event.preventDefault();
+    }
+  });
+}
+
+function createWindow(): void {
+  const mainWindow = new BrowserWindow({
+    width: 1200,
+    height: 800,
+    minWidth: 900,
+    minHeight: 600,
+    show: false,
+    autoHideMenuBar: true,
+    titleBarStyle: 'hiddenInset',
+    trafficLightPosition: { x: 15, y: 10 },
+    webPreferences: {
+      preload: join(__dirname, '../preload/index.js'),
+      sandbox: false,
+    },
+  });
+
+  mainWindow.on('ready-to-show', () => {
+    mainWindow.show();
+  });
+
+  mainWindow.webContents.setWindowOpenHandler((details) => {
+    shell.openExternal(details.url);
+    return { action: 'deny' };
+  });
+
+  if (is.dev && process.env['ELECTRON_RENDERER_URL']) {
+    mainWindow.loadURL(process.env['ELECTRON_RENDERER_URL']);
+  } else {
+    mainWindow.loadFile(join(__dirname, '../renderer/index.html'));
+  }
+}
+
+app.whenReady().then(() => {
+  setAppUserModelId('com.sql-pro');
+
+  // Setup IPC handlers for database operations
+  setupIpcHandlers();
+
+  app.on('browser-window-created', (_, window) => {
+    watchWindowShortcuts(window);
+  });
+
+  createWindow();
+
+  app.on('activate', () => {
+    if (BrowserWindow.getAllWindows().length === 0) createWindow();
+  });
+});
+
+app.on('window-all-closed', () => {
+  cleanupIpcHandlers();
+  if (process.platform !== 'darwin') {
+    app.quit();
+  }
+});
