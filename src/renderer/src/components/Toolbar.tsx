@@ -15,6 +15,7 @@ import {
   TooltipContent,
   TooltipTrigger,
 } from '@/components/ui/tooltip';
+import { sqlPro } from '@/lib/api';
 import {
   useChangesStore,
   useConnectionStore,
@@ -41,7 +42,7 @@ export function Toolbar({ onOpenChanges }: ToolbarProps) {
 
   const handleDisconnect = async () => {
     if (connection) {
-      await window.sqlPro.db.close({ connectionId: connection.id });
+      await sqlPro.db.close({ connectionId: connection.id });
       setConnection(null);
       setSchema(null);
       setSelectedTable(null);
@@ -54,7 +55,7 @@ export function Toolbar({ onOpenChanges }: ToolbarProps) {
     if (!connection) return;
 
     setIsLoadingSchema(true);
-    const result = await window.sqlPro.db.getSchema({
+    const result = await sqlPro.db.getSchema({
       connectionId: connection.id,
     });
 

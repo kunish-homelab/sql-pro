@@ -7,6 +7,7 @@ import {
   TooltipContent,
   TooltipTrigger,
 } from '@/components/ui/tooltip';
+import { sqlPro } from '@/lib/api';
 import { cn } from '@/lib/utils';
 
 interface PasswordDialogProps {
@@ -33,8 +34,8 @@ export function PasswordDialog({
   useEffect(() => {
     if (open && dbPath) {
       Promise.all([
-        window.sqlPro.password.isAvailable(),
-        window.sqlPro.password.has({ dbPath }),
+        sqlPro.password.isAvailable(),
+        sqlPro.password.has({ dbPath }),
       ]).then(([availableResult, hasResult]) => {
         setIsStorageAvailable(availableResult.available);
         setHasSavedPassword(hasResult.hasPassword);
@@ -55,7 +56,7 @@ export function PasswordDialog({
 
   const handleForgetPassword = async () => {
     if (dbPath) {
-      await window.sqlPro.password.remove({ dbPath });
+      await sqlPro.password.remove({ dbPath });
       setHasSavedPassword(false);
     }
   };

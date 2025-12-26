@@ -6,6 +6,7 @@ import type {
 } from '@/lib/collections';
 import { useQuery } from '@tanstack/react-query';
 import { useCallback, useEffect, useMemo, useState } from 'react';
+import { sqlPro } from '@/lib/api';
 import {
   addPendingChange,
   clearPendingChanges,
@@ -96,7 +97,7 @@ export function useTableData(options: UseTableDataOptions): UseTableDataResult {
         throw new Error('Connection ID and table are required');
       }
 
-      const response = await window.sqlPro.db.getTableData({
+      const response = await sqlPro.db.getTableData({
         connectionId,
         table,
         page,

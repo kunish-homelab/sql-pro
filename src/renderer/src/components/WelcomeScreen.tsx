@@ -25,6 +25,7 @@ import {
   TooltipContent,
   TooltipTrigger,
 } from '@/components/ui/tooltip';
+import { sqlPro } from '@/lib/api';
 import { cn } from '@/lib/utils';
 import { useConnectionStore, useThemeStore } from '@/stores';
 import { ConnectionSettingsDialog } from './ConnectionSettingsDialog';
@@ -44,7 +45,7 @@ function HasSavedPasswordIndicator({ path }: { path: string }) {
 
   // Check on mount
   useEffect(() => {
-    window.sqlPro.password.has({ dbPath: path }).then((result) => {
+    sqlPro.password.has({ dbPath: path }).then((result) => {
       setHasSaved(result.hasPassword);
     });
   }, [path]);
@@ -101,13 +102,13 @@ export function WelcomeScreen() {
     setError(null);
 
     try {
-      const result = await window.sqlPro.db.open({ path, password, readOnly });
+      const result = await sqlPro.db.open({ path, password, readOnly });
 
       if (!result.success) {
         // Check if database needs a password (using explicit flag from backend)
         if (result.needsPassword) {
           // Try to use saved password first
-          const savedPasswordResult = await window.sqlPro.password.get({
+          const savedPasswordResult = await sqlPro.password.get({
             dbPath: path,
           });
           if (savedPasswordResult.success && savedPasswordResult.password) {
@@ -132,7 +133,7 @@ export function WelcomeScreen() {
       if (result.connection) {
         // Save connection settings if provided (new connection flow)
         if (settings) {
-          await window.sqlPro.connection.update({
+          await sqlPro.connection.update({
             path: result.connection.path,
             displayName: settings.displayName,
             readOnly: settings.readOnly,
@@ -150,7 +151,7 @@ export function WelcomeScreen() {
 
         // Load schema
         setIsLoadingSchema(true);
-        const schemaResult = await window.sqlPro.db.getSchema({
+        const schemaResult = await sqlPro.db.getSchema({
           connectionId: result.connection.id,
         });
 
@@ -180,7 +181,7 @@ export function WelcomeScreen() {
 
       // Check if this is an encrypted database by attempting to open it
       setIsConnecting(true);
-      const probeResult = await window.sqlPro.db.open({ path: filePath });
+      const probeResult = await sqlPro.db.open({ path: filePath });
       setIsConnecting(false);
 
       const isEncrypted = probeResult.needsPassword === true;
@@ -195,7 +196,7 @@ export function WelcomeScreen() {
   );
 
   const handleOpenDatabase = async () => {
-    const result = await window.sqlPro.dialog.openFile();
+    const result = await sqlPro.dialog.openFile();
     if (result.success && !result.canceled && result.filePath) {
       await openDatabaseFile(result.filePath);
     }
@@ -240,7 +241,7 @@ export function WelcomeScreen() {
 
       if (dbFile) {
         // Use Electron's webUtils to get the file path
-        const filePath = window.sqlPro.file.getPathForFile(dbFile);
+        const filePath = sqlPro.file.getPathForFile(dbFile);
         if (filePath) {
           await openDatabaseFile(filePath);
         } else {
@@ -261,7 +262,7 @@ export function WelcomeScreen() {
 
     if (pendingIsEncrypted) {
       // Check if we have a saved password
-      const savedPasswordResult = await window.sqlPro.password.get({
+      const savedPasswordResult = await sqlPro.password.get({
         dbPath: pendingPath,
       });
       if (savedPasswordResult.success && savedPasswordResult.password) {
@@ -299,7 +300,7 @@ export function WelcomeScreen() {
 
       // Save password if requested
       if (shouldRemember) {
-        await window.sqlPro.password.save({
+        await sqlPro.password.save({
           dbPath: pendingPath,
           password,
         });
@@ -322,7 +323,7 @@ export function WelcomeScreen() {
   ) => {
     if (isEncrypted) {
       // Check if we have a saved password
-      const savedPasswordResult = await window.sqlPro.password.get({
+      const savedPasswordResult = await sqlPro.password.get({
         dbPath: path,
       });
       if (savedPasswordResult.success && savedPasswordResult.password) {
@@ -352,7 +353,7 @@ export function WelcomeScreen() {
   const handleEditSubmit = async (settings: ConnectionSettings) => {
     if (!editingConnection) return;
 
-    const result = await window.sqlPro.connection.update({
+    const result = await sqlPro.connection.update({
       path: editingConnection.path,
       displayName: settings.displayName,
       readOnly: settings.readOnly,
@@ -360,7 +361,7 @@ export function WelcomeScreen() {
 
     if (result.success) {
       // Refresh recent connections to show updated settings (T034)
-      const connectionsResult = await window.sqlPro.app.getRecentConnections();
+      const connectionsResult = await sqlPro.app.getRecentConnections();
       if (connectionsResult.success && connectionsResult.connections) {
         setRecentConnections(connectionsResult.connections);
       }
@@ -372,14 +373,14 @@ export function WelcomeScreen() {
 
   // Remove connection from list (T045-T049 - implementing here for context menu)
   const handleRemoveConnection = async (conn: RecentConnection) => {
-    const result = await window.sqlPro.connection.remove({
+    const result = await sqlPro.connection.remove({
       path: conn.path,
       removePassword: true, // Also remove saved password
     });
 
     if (result.success) {
       // Refresh recent connections
-      const connectionsResult = await window.sqlPro.app.getRecentConnections();
+      const connectionsResult = await sqlPro.app.getRecentConnections();
       if (connectionsResult.success && connectionsResult.connections) {
         setRecentConnections(connectionsResult.connections);
       }

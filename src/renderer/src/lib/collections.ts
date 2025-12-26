@@ -1,6 +1,7 @@
 import type { ColumnInfo, PendingChangeInfo } from '../../../shared/types';
 import { createCollection, localOnlyCollectionOptions } from '@tanstack/db';
 import { queryCollectionOptions } from '@tanstack/query-db-collection';
+import { sqlPro } from './api';
 import { queryClient } from './query-client';
 
 // ============ Types ============
@@ -77,7 +78,7 @@ export function createTableRowsCollection(params: TableDataQueryParams) {
         filters,
       ],
       queryFn: async (): Promise<TableRow[]> => {
-        const response = await window.sqlPro.db.getTableData({
+        const response = await sqlPro.db.getTableData({
           connectionId,
           table,
           page,
@@ -123,7 +124,7 @@ export function createTableRowsCollection(params: TableDataQueryParams) {
           primaryKeyColumn: undefined, // Will be set by caller if needed
         }));
 
-        const response = await window.sqlPro.db.applyChanges({
+        const response = await sqlPro.db.applyChanges({
           connectionId,
           changes,
         });
@@ -144,7 +145,7 @@ export function createTableRowsCollection(params: TableDataQueryParams) {
           newValues: m.modified as Record<string, unknown>,
         }));
 
-        const response = await window.sqlPro.db.applyChanges({
+        const response = await sqlPro.db.applyChanges({
           connectionId,
           changes,
         });
@@ -165,7 +166,7 @@ export function createTableRowsCollection(params: TableDataQueryParams) {
           newValues: null,
         }));
 
-        const response = await window.sqlPro.db.applyChanges({
+        const response = await sqlPro.db.applyChanges({
           connectionId,
           changes,
         });

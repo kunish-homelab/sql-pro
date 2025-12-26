@@ -2,6 +2,7 @@ import type { TableSchema } from '@/types/database';
 import { ChevronDown, ChevronRight, Eye, Search, Table } from 'lucide-react';
 import { useState } from 'react';
 import { ScrollArea } from '@/components/ui/scroll-area';
+import { sqlPro } from '@/lib/api';
 import { cn } from '@/lib/utils';
 import { useConnectionStore, useTableDataStore } from '@/stores';
 
@@ -27,7 +28,7 @@ export function Sidebar() {
     setIsLoading(true);
 
     try {
-      const result = await window.sqlPro.db.getTableData({
+      const result = await sqlPro.db.getTableData({
         connectionId: connection.id,
         table: table.name,
         page: 1,

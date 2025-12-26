@@ -1,6 +1,7 @@
 import type { PendingChangeInfo } from '../../../shared/types';
 import type { PendingChange } from '@/lib/collections';
 import { useCallback, useEffect, useMemo, useState } from 'react';
+import { sqlPro } from '@/lib/api';
 import {
   clearPendingChanges,
   getAllPendingChanges,
@@ -91,7 +92,7 @@ export function usePendingChanges(
         primaryKeyColumn: c.primaryKeyColumn,
       }));
 
-      const response = await window.sqlPro.db.validateChanges({
+      const response = await sqlPro.db.validateChanges({
         connectionId,
         changes: changeInfos,
       });
@@ -160,7 +161,7 @@ export function usePendingChanges(
         primaryKeyColumn: c.primaryKeyColumn,
       }));
 
-      const response = await window.sqlPro.db.applyChanges({
+      const response = await sqlPro.db.applyChanges({
         connectionId,
         changes: changeInfos,
       });

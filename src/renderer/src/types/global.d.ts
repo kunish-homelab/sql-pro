@@ -8,6 +8,15 @@ declare global {
   }
 }
 
+// Vite environment variables
+interface ImportMetaEnv {
+  readonly VITE_MOCK_MODE?: string;
+}
+
+interface ImportMeta {
+  readonly env: ImportMetaEnv;
+}
+
 // Vite worker import type declarations
 declare module 'monaco-editor/esm/vs/editor/editor.worker?worker' {
   const workerConstructor: {

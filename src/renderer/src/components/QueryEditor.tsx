@@ -2,6 +2,7 @@ import { AlertCircle, Clock, History, Loader2, Play, X } from 'lucide-react';
 import { useCallback, useState } from 'react';
 import { Button } from '@/components/ui/button';
 import { ScrollArea } from '@/components/ui/scroll-area';
+import { sqlPro } from '@/lib/api';
 import { cn } from '@/lib/utils';
 import { useConnectionStore, useQueryStore } from '@/stores';
 import { MonacoSqlEditor } from './MonacoSqlEditor';
@@ -34,7 +35,7 @@ export function QueryEditor() {
     setResults(null);
 
     try {
-      const result = await window.sqlPro.db.executeQuery({
+      const result = await sqlPro.db.executeQuery({
         connectionId: connection.id,
         query: currentQuery.trim(),
       });

@@ -7,6 +7,7 @@ import {
   TooltipContent,
   TooltipTrigger,
 } from '@/components/ui/tooltip';
+import { sqlPro } from '@/lib/api';
 import { cn } from '@/lib/utils';
 
 export interface ConnectionSettings {
@@ -65,7 +66,7 @@ function DialogFormContent({
   // Check if password storage is available (async operation is fine in useEffect)
   useEffect(() => {
     if (isEncrypted) {
-      window.sqlPro.password.isAvailable().then((result) => {
+      sqlPro.password.isAvailable().then((result) => {
         setIsStorageAvailable(result.available);
         // Default to remember if storage is available and this is a new connection
         if (

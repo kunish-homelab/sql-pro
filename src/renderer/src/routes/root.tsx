@@ -2,6 +2,7 @@ import { TanStackDevtools } from '@tanstack/react-devtools';
 import { ReactQueryDevtoolsPanel } from '@tanstack/react-query-devtools';
 import { Outlet } from '@tanstack/react-router';
 import { TanStackRouterDevtoolsPanel } from '@tanstack/react-router-devtools';
+import { isMockMode } from '@/lib/mock-api';
 
 /**
  * Root layout component that wraps all routes.
@@ -18,8 +19,8 @@ export function RootLayout() {
         <Outlet />
       </div>
 
-      {/* TanStack DevTools - only visible in development */}
-      {import.meta.env.DEV && (
+      {/* TanStack DevTools - only visible in development, hidden in mock mode */}
+      {import.meta.env.DEV && !isMockMode() && (
         <TanStackDevtools
           plugins={[
             {

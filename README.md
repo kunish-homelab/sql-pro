@@ -26,7 +26,10 @@
 
 ## 📸 Screenshots
 
-<!-- Add screenshots here -->
+![Welcome Screen](screenshots/welcome-dark.png)
+![Database View](screenshots/database-dark.png)
+![Table View](screenshots/table-dark.png)
+![Query Editor](screenshots/query-dark.png)
 
 ## 📦 Installation
 
@@ -92,12 +95,52 @@ pnpm build:linux  # Linux
 
 ```bash
 pnpm dev          # Start development server
+pnpm dev:mock     # Start with mock data (for screenshots/demos)
 pnpm build        # Build for production
 pnpm lint         # Run ESLint
 pnpm typecheck    # Run TypeScript type checking
 pnpm format       # Format code with Prettier
 pnpm build:icons  # Generate app icons from SVG
+pnpm screenshots  # Capture screenshots for documentation
 ```
+
+### Screenshot Capture
+
+Automated screenshot tool for documentation:
+
+```bash
+# Capture all screenshots (dark mode by default)
+pnpm screenshots
+
+# Capture specific page only
+pnpm screenshots --page=welcome
+pnpm screenshots --page=database
+pnpm screenshots --page=table
+pnpm screenshots --page=query
+
+# Capture light mode or both themes
+pnpm screenshots --light
+pnpm screenshots --all
+
+# List available pages
+pnpm screenshots --list
+```
+
+Screenshots are saved to `screenshots/` directory with naming convention `{page}-{theme}.png`.
+
+### Mock Mode
+
+For taking screenshots or demos without a real database, you can run the app in mock mode:
+
+```bash
+pnpm dev:mock
+```
+
+Or add `?mock=true` to the URL in development mode. Mock mode provides:
+
+- Sample database with users, products, orders, and categories tables
+- Pre-populated data for UI demonstration
+- All API calls return realistic mock responses
 
 ### Project Structure
 
