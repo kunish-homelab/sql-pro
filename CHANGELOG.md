@@ -1,5 +1,12 @@
 # Changelog
 
+## [1.2.0](https://github.com/kunish-homelab/sql-pro/compare/v1.1.1...v1.2.0) (2025-12-26)
+
+
+### Features
+
+* add GitHub release configuration to electron-builder ([3fcdcd6](https://github.com/kunish-homelab/sql-pro/commit/3fcdcd6c9a3213ff36de0a18adfcb521e66339bb))
+
 ## [1.1.1](https://github.com/kunish-homelab/sql-pro/compare/v1.1.0...v1.1.1) (2025-12-26)
 
 
