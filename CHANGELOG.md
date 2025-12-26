@@ -1,5 +1,12 @@
 # Changelog
 
+## [1.1.0](https://github.com/kunish-homelab/sql-pro/compare/v1.0.0...v1.1.0) (2025-12-26)
+
+
+### Features
+
+* integrate mock API for development and testing ([a97fd89](https://github.com/kunish-homelab/sql-pro/commit/a97fd89706d47da9da8effe4adecc3dc0b417b27))
+
 ## 1.0.0 (2025-12-26)
 
 
