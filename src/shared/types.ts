@@ -247,6 +247,51 @@ export interface SetPreferencesResponse {
   error?: string;
 }
 
+// ============ Password Storage Types ============
+
+export interface SavePasswordRequest {
+  dbPath: string;
+  password: string;
+}
+
+export interface SavePasswordResponse {
+  success: boolean;
+  error?: string;
+}
+
+export interface GetPasswordRequest {
+  dbPath: string;
+}
+
+export interface GetPasswordResponse {
+  success: boolean;
+  password?: string;
+  error?: string;
+}
+
+export interface HasPasswordRequest {
+  dbPath: string;
+}
+
+export interface HasPasswordResponse {
+  success: boolean;
+  hasPassword: boolean;
+}
+
+export interface RemovePasswordRequest {
+  dbPath: string;
+}
+
+export interface RemovePasswordResponse {
+  success: boolean;
+  error?: string;
+}
+
+export interface IsPasswordStorageAvailableResponse {
+  success: boolean;
+  available: boolean;
+}
+
 // ============ IPC Channel Names ============
 
 export const IPC_CHANNELS = {
@@ -270,4 +315,11 @@ export const IPC_CHANNELS = {
   APP_GET_RECENT_CONNECTIONS: 'app:getRecentConnections',
   APP_GET_PREFERENCES: 'app:getPreferences',
   APP_SET_PREFERENCES: 'app:setPreferences',
+
+  // Password storage
+  PASSWORD_SAVE: 'password:save',
+  PASSWORD_GET: 'password:get',
+  PASSWORD_HAS: 'password:has',
+  PASSWORD_REMOVE: 'password:remove',
+  PASSWORD_IS_AVAILABLE: 'password:isAvailable',
 } as const;

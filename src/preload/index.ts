@@ -26,6 +26,15 @@ import type {
   GetPreferencesResponse,
   SetPreferencesRequest,
   SetPreferencesResponse,
+  SavePasswordRequest,
+  SavePasswordResponse,
+  GetPasswordRequest,
+  GetPasswordResponse,
+  HasPasswordRequest,
+  HasPasswordResponse,
+  RemovePasswordRequest,
+  RemovePasswordResponse,
+  IsPasswordStorageAvailableResponse,
 } from '../shared/types';
 
 // Custom API for SQL Pro
@@ -84,6 +93,20 @@ const sqlProAPI = {
       request: SetPreferencesRequest
     ): Promise<SetPreferencesResponse> =>
       ipcRenderer.invoke(IPC_CHANNELS.APP_SET_PREFERENCES, request),
+  },
+
+  // Password storage operations
+  password: {
+    isAvailable: (): Promise<IsPasswordStorageAvailableResponse> =>
+      ipcRenderer.invoke(IPC_CHANNELS.PASSWORD_IS_AVAILABLE),
+    save: (request: SavePasswordRequest): Promise<SavePasswordResponse> =>
+      ipcRenderer.invoke(IPC_CHANNELS.PASSWORD_SAVE, request),
+    get: (request: GetPasswordRequest): Promise<GetPasswordResponse> =>
+      ipcRenderer.invoke(IPC_CHANNELS.PASSWORD_GET, request),
+    has: (request: HasPasswordRequest): Promise<HasPasswordResponse> =>
+      ipcRenderer.invoke(IPC_CHANNELS.PASSWORD_HAS, request),
+    remove: (request: RemovePasswordRequest): Promise<RemovePasswordResponse> =>
+      ipcRenderer.invoke(IPC_CHANNELS.PASSWORD_REMOVE, request),
   },
 };
 

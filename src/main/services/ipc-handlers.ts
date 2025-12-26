@@ -1,5 +1,6 @@
 import { ipcMain, dialog, app } from 'electron';
 import { databaseService } from './database';
+import { passwordStorageService } from './password-storage';
 import {
   IPC_CHANNELS,
   type OpenDatabaseRequest,
@@ -12,6 +13,10 @@ import {
   type OpenFileDialogRequest,
   type SaveFileDialogRequest,
   type ExportRequest,
+  type SavePasswordRequest,
+  type GetPasswordRequest,
+  type HasPasswordRequest,
+  type RemovePasswordRequest,
 } from '../../shared/types';
 import fs from 'fs';
 import path from 'path';
@@ -350,6 +355,92 @@ export function setupIpcHandlers(): void {
             error instanceof Error
               ? error.message
               : 'Failed to save preferences',
+        };
+      }
+    }
+  );
+
+  // Password: Check if storage is available
+  ipcMain.handle(IPC_CHANNELS.PASSWORD_IS_AVAILABLE, async () => {
+    return {
+      success: true,
+      available: passwordStorageService.isAvailable(),
+    };
+  });
+
+  // Password: Save
+  ipcMain.handle(
+    IPC_CHANNELS.PASSWORD_SAVE,
+    async (_event, request: SavePasswordRequest) => {
+      try {
+        const success = passwordStorageService.savePassword(
+          request.dbPath,
+          request.password
+        );
+        if (success) {
+          return { success: true };
+        }
+        return {
+          success: false,
+          error: 'Password encryption is not available on this system',
+        };
+      } catch (error) {
+        return {
+          success: false,
+          error:
+            error instanceof Error ? error.message : 'Failed to save password',
+        };
+      }
+    }
+  );
+
+  // Password: Get
+  ipcMain.handle(
+    IPC_CHANNELS.PASSWORD_GET,
+    async (_event, request: GetPasswordRequest) => {
+      try {
+        const password = passwordStorageService.getPassword(request.dbPath);
+        if (password !== null) {
+          return { success: true, password };
+        }
+        return { success: true, password: undefined };
+      } catch (error) {
+        return {
+          success: false,
+          error:
+            error instanceof Error
+              ? error.message
+              : 'Failed to retrieve password',
+        };
+      }
+    }
+  );
+
+  // Password: Has
+  ipcMain.handle(
+    IPC_CHANNELS.PASSWORD_HAS,
+    async (_event, request: HasPasswordRequest) => {
+      return {
+        success: true,
+        hasPassword: passwordStorageService.hasPassword(request.dbPath),
+      };
+    }
+  );
+
+  // Password: Remove
+  ipcMain.handle(
+    IPC_CHANNELS.PASSWORD_REMOVE,
+    async (_event, request: RemovePasswordRequest) => {
+      try {
+        passwordStorageService.removePassword(request.dbPath);
+        return { success: true };
+      } catch (error) {
+        return {
+          success: false,
+          error:
+            error instanceof Error
+              ? error.message
+              : 'Failed to remove password',
         };
       }
     }

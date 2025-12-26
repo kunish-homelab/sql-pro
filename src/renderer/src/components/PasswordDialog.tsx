@@ -1,14 +1,20 @@
-import { useState } from 'react';
-import { Lock } from 'lucide-react';
+import { useState, useEffect } from 'react';
+import { Lock, Info } from 'lucide-react';
 import * as Dialog from '@radix-ui/react-dialog';
 import { Button } from '@/components/ui/button';
+import {
+  Tooltip,
+  TooltipContent,
+  TooltipTrigger,
+} from '@/components/ui/tooltip';
 import { cn } from '@/lib/utils';
 
 interface PasswordDialogProps {
   open: boolean;
   onOpenChange: (open: boolean) => void;
-  onSubmit: (password: string) => void;
+  onSubmit: (password: string, rememberPassword: boolean) => void;
   filename: string;
+  dbPath: string;
 }
 
 export function PasswordDialog({
@@ -16,14 +22,41 @@ export function PasswordDialog({
   onOpenChange,
   onSubmit,
   filename,
+  dbPath,
 }: PasswordDialogProps) {
   const [password, setPassword] = useState('');
+  const [rememberPassword, setRememberPassword] = useState(false);
+  const [isStorageAvailable, setIsStorageAvailable] = useState(false);
+  const [hasSavedPassword, setHasSavedPassword] = useState(false);
+
+  // Check if password storage is available and if there's a saved password
+  useEffect(() => {
+    if (open && dbPath) {
+      Promise.all([
+        window.sqlPro.password.isAvailable(),
+        window.sqlPro.password.has({ dbPath }),
+      ]).then(([availableResult, hasResult]) => {
+        setIsStorageAvailable(availableResult.available);
+        setHasSavedPassword(hasResult.hasPassword);
+        // Default to remember if storage is available
+        setRememberPassword(availableResult.available);
+      });
+    }
+  }, [open, dbPath]);
 
   const handleSubmit = (e: React.FormEvent) => {
     e.preventDefault();
     if (password.trim()) {
-      onSubmit(password);
+      onSubmit(password, rememberPassword && isStorageAvailable);
       setPassword('');
+      setRememberPassword(false);
+    }
+  };
+
+  const handleForgetPassword = async () => {
+    if (dbPath) {
+      await window.sqlPro.password.remove({ dbPath });
+      setHasSavedPassword(false);
     }
   };
 
@@ -58,6 +91,47 @@ export function PasswordDialog({
                 'focus:outline-none focus:ring-2 focus:ring-ring focus:ring-offset-2'
               )}
             />
+
+            {/* Remember password checkbox */}
+            <div className="flex items-center justify-between">
+              <label
+                className={cn(
+                  'flex cursor-pointer items-center gap-2 text-sm',
+                  !isStorageAvailable && 'cursor-not-allowed opacity-50'
+                )}
+              >
+                <input
+                  type="checkbox"
+                  checked={rememberPassword}
+                  onChange={(e) => setRememberPassword(e.target.checked)}
+                  disabled={!isStorageAvailable}
+                  className="h-4 w-4 rounded border-input"
+                />
+                <span>Remember password</span>
+                {!isStorageAvailable && (
+                  <Tooltip>
+                    <TooltipTrigger asChild>
+                      <Info className="h-3.5 w-3.5 text-muted-foreground" />
+                    </TooltipTrigger>
+                    <TooltipContent>
+                      <p>Secure storage is not available on this system</p>
+                    </TooltipContent>
+                  </Tooltip>
+                )}
+              </label>
+
+              {/* Forget saved password link */}
+              {hasSavedPassword && (
+                <button
+                  type="button"
+                  onClick={handleForgetPassword}
+                  className="text-xs text-muted-foreground hover:text-foreground hover:underline"
+                >
+                  Forget saved password
+                </button>
+              )}
+            </div>
+
             <div className="flex gap-3">
               <Button
                 type="button"

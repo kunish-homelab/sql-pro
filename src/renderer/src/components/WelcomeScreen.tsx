@@ -1,4 +1,4 @@
-import { useState } from 'react';
+import { useState, useEffect } from 'react';
 import {
   Database,
   FolderOpen,
@@ -8,6 +8,7 @@ import {
   Sun,
   Moon,
   Monitor,
+  KeyRound,
 } from 'lucide-react';
 import { Button } from '@/components/ui/button';
 import {
@@ -51,6 +52,18 @@ export function WelcomeScreen() {
       if (!result.success) {
         // Check if database needs a password (using explicit flag from backend)
         if (result.needsPassword) {
+          // Try to use saved password first
+          const savedPasswordResult = await window.sqlPro.password.get({
+            dbPath: path,
+          });
+          if (savedPasswordResult.success && savedPasswordResult.password) {
+            // Automatically try with saved password
+            setIsConnecting(false);
+            await connectToDatabase(path, savedPasswordResult.password);
+            return;
+          }
+
+          // No saved password, show dialog
           setPendingPath(path);
           setPasswordDialogOpen(true);
           setIsConnecting(false);
@@ -93,9 +106,19 @@ export function WelcomeScreen() {
     }
   };
 
-  const handlePasswordSubmit = async (password: string) => {
+  const handlePasswordSubmit = async (
+    password: string,
+    rememberPassword: boolean
+  ) => {
     setPasswordDialogOpen(false);
     if (pendingPath) {
+      // Save password if requested
+      if (rememberPassword) {
+        await window.sqlPro.password.save({
+          dbPath: pendingPath,
+          password,
+        });
+      }
       await connectToDatabase(pendingPath, password);
       setPendingPath(null);
     }
@@ -103,8 +126,18 @@ export function WelcomeScreen() {
 
   const handleRecentClick = async (path: string, isEncrypted: boolean) => {
     if (isEncrypted) {
-      setPendingPath(path);
-      setPasswordDialogOpen(true);
+      // Check if we have a saved password
+      const savedPasswordResult = await window.sqlPro.password.get({
+        dbPath: path,
+      });
+      if (savedPasswordResult.success && savedPasswordResult.password) {
+        // Try to connect with saved password
+        await connectToDatabase(path, savedPasswordResult.password);
+      } else {
+        // No saved password, show dialog
+        setPendingPath(path);
+        setPasswordDialogOpen(true);
+      }
     } else {
       await connectToDatabase(path);
     }
@@ -141,6 +174,29 @@ export function WelcomeScreen() {
       default:
         return 'System theme';
     }
+  };
+
+  // Check if a database has a saved password
+  const HasSavedPasswordIndicator = ({ path }: { path: string }) => {
+    const [hasSaved, setHasSaved] = useState(false);
+
+    // Check on mount
+    useEffect(() => {
+      window.sqlPro.password.has({ dbPath: path }).then((result) => {
+        setHasSaved(result.hasPassword);
+      });
+    }, [path]);
+
+    if (!hasSaved) return null;
+
+    return (
+      <Tooltip>
+        <TooltipTrigger asChild>
+          <KeyRound className="h-3 w-3 text-green-500" />
+        </TooltipTrigger>
+        <TooltipContent>Password saved</TooltipContent>
+      </Tooltip>
+    );
   };
 
   return (
@@ -210,7 +266,10 @@ export function WelcomeScreen() {
                         {conn.filename}
                       </span>
                       {conn.isEncrypted && (
-                        <Lock className="h-3 w-3 text-muted-foreground" />
+                        <>
+                          <Lock className="h-3 w-3 text-muted-foreground" />
+                          <HasSavedPasswordIndicator path={conn.path} />
+                        </>
                       )}
                     </div>
                     <span className="truncate text-xs text-muted-foreground">
@@ -230,6 +289,7 @@ export function WelcomeScreen() {
         onOpenChange={setPasswordDialogOpen}
         onSubmit={handlePasswordSubmit}
         filename={pendingPath?.split('/').pop() || ''}
+        dbPath={pendingPath || ''}
       />
     </div>
   );
