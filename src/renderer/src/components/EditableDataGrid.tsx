@@ -1,4 +1,4 @@
-import { useState, useMemo, useRef, useCallback } from 'react';
+import { useState, useMemo, useRef, useCallback, useEffect } from 'react';
 import { useVirtualizer } from '@tanstack/react-virtual';
 import { ArrowUp, ArrowDown, Key, Trash2 } from 'lucide-react';
 import { cn } from '@/lib/utils';
@@ -30,6 +30,10 @@ export function EditableDataGrid({
   const [editingCell, setEditingCell] = useState<{
     rowIndex: number;
     column: string;
+  } | null>(null);
+  const [focusedCell, setFocusedCell] = useState<{
+    rowIndex: number;
+    colIndex: number;
   } | null>(null);
 
   // Get the row ID for a given row
@@ -136,18 +140,40 @@ export function EditableDataGrid({
   ) => {
     const row = displayRows[rowIndex];
     const rowId = row.__rowId as string | number;
-    const originalRow = rows[rowIndex];
-    const oldValue = originalRow[column];
+    const isNew = '__isNew' in row && row.__isNew;
 
-    // Only create change if value actually changed
-    if (newValue !== oldValue) {
-      addChange({
-        table: tableName,
-        rowId,
-        type: 'update',
-        oldValues: originalRow,
-        newValues: { [column]: newValue },
-      });
+    if (isNew) {
+      // For new rows, update the existing insert change
+      const existingChange = getChangeForRow(tableName, rowId);
+      if (existingChange) {
+        addChange({
+          table: tableName,
+          rowId,
+          type: 'insert',
+          oldValues: null,
+          newValues: { ...existingChange.newValues, [column]: newValue },
+        });
+      }
+    } else {
+      // For existing rows, create/merge update change
+      // Find the actual row index in the original rows array
+      const insertCount = changes.filter(
+        (c) => c.table === tableName && c.type === 'insert'
+      ).length;
+      const originalRowIndex = rowIndex - insertCount;
+      const originalRow = rows[originalRowIndex];
+      const oldValue = originalRow?.[column];
+
+      // Only create change if value actually changed
+      if (newValue !== oldValue) {
+        addChange({
+          table: tableName,
+          rowId,
+          type: 'update',
+          oldValues: originalRow,
+          newValues: { [column]: newValue },
+        });
+      }
     }
 
     setEditingCell(null);
@@ -157,16 +183,230 @@ export function EditableDataGrid({
     if (readOnly) return;
     const row = displayRows[rowIndex];
     const rowId = row.__rowId as string | number;
-    const originalRow = rows[rowIndex];
+    const isNew = '__isNew' in row && row.__isNew;
 
-    addChange({
-      table: tableName,
-      rowId,
-      type: 'delete',
-      oldValues: originalRow,
-      newValues: null,
-    });
+    if (isNew) {
+      // For new rows, removing the insert will be handled by addChange
+      addChange({
+        table: tableName,
+        rowId,
+        type: 'delete',
+        oldValues: null,
+        newValues: null,
+      });
+    } else {
+      // For existing rows, find the actual row in original rows array
+      const insertCount = changes.filter(
+        (c) => c.table === tableName && c.type === 'insert'
+      ).length;
+      const originalRowIndex = rowIndex - insertCount;
+      const originalRow = rows[originalRowIndex];
+
+      addChange({
+        table: tableName,
+        rowId,
+        type: 'delete',
+        oldValues: originalRow,
+        newValues: null,
+      });
+    }
   };
+
+  // Calculate next/previous cell for keyboard navigation
+  const getNextCell = useCallback(
+    (
+      rowIdx: number,
+      colIdx: number,
+      reverse: boolean
+    ): { rowIndex: number; colIndex: number } | null => {
+      const totalCols = columns.length;
+      const totalRows = displayRows.length;
+
+      if (reverse) {
+        // Shift+Tab: go left, then up
+        if (colIdx > 0) return { rowIndex: rowIdx, colIndex: colIdx - 1 };
+        if (rowIdx > 0)
+          return { rowIndex: rowIdx - 1, colIndex: totalCols - 1 };
+        return null; // At start of grid
+      } else {
+        // Tab: go right, then down
+        if (colIdx < totalCols - 1)
+          return { rowIndex: rowIdx, colIndex: colIdx + 1 };
+        if (rowIdx < totalRows - 1)
+          return { rowIndex: rowIdx + 1, colIndex: 0 };
+        return null; // At end of grid
+      }
+    },
+    [columns.length, displayRows.length]
+  );
+
+  // Handle keyboard navigation from cells
+  const handleCellKeyDown = useCallback(
+    (e: React.KeyboardEvent, rowIdx: number, colIdx: number) => {
+      if (e.key === 'Tab') {
+        e.preventDefault();
+        const next = getNextCell(rowIdx, colIdx, e.shiftKey);
+        if (next) {
+          setFocusedCell(next);
+          setEditingCell({
+            rowIndex: next.rowIndex,
+            column: columns[next.colIndex].name,
+          });
+        }
+      } else if (e.key === 'Enter' && !e.shiftKey) {
+        // Enter confirms and moves down
+        e.preventDefault();
+
+        const currentRow = displayRows[rowIdx];
+        const isNew = '__isNew' in currentRow && currentRow.__isNew === true;
+        const isLastRow = rowIdx === displayRows.length - 1;
+        const isLastColumn = colIdx === columns.length - 1;
+
+        // If on last cell of a new row, create another new row
+        if (isNew && isLastRow && isLastColumn) {
+          // Create a new row
+          const tempId = -Date.now();
+          const newRow: Record<string, unknown> = {};
+          columns.forEach((col) => {
+            newRow[col.name] = col.defaultValue ?? null;
+          });
+
+          addChange({
+            table: tableName,
+            rowId: tempId,
+            type: 'insert',
+            oldValues: null,
+            newValues: newRow,
+          });
+
+          // Move focus to first cell of new row (which will be at index 0 after insert)
+          setTimeout(() => {
+            setFocusedCell({ rowIndex: 0, colIndex: 0 });
+            setEditingCell({ rowIndex: 0, column: columns[0].name });
+          }, 0);
+        } else if (rowIdx < displayRows.length - 1) {
+          const next = { rowIndex: rowIdx + 1, colIndex: colIdx };
+          setFocusedCell(next);
+          setEditingCell({
+            rowIndex: next.rowIndex,
+            column: columns[next.colIndex].name,
+          });
+        } else {
+          setEditingCell(null);
+        }
+      } else if (e.key === 'Escape') {
+        setEditingCell(null);
+        setFocusedCell(null);
+      }
+    },
+    [getNextCell, columns, displayRows, tableName, addChange]
+  );
+
+  // Handle arrow key navigation when not editing (grid-level navigation)
+  const handleGridKeyDown = useCallback(
+    (e: React.KeyboardEvent) => {
+      // Only handle arrow keys when we have a focused cell but not editing
+      if (!focusedCell || editingCell) return;
+
+      const { rowIndex, colIndex } = focusedCell;
+      let next: { rowIndex: number; colIndex: number } | null = null;
+
+      switch (e.key) {
+        case 'ArrowUp':
+          if (rowIndex > 0) {
+            next = { rowIndex: rowIndex - 1, colIndex };
+          }
+          break;
+        case 'ArrowDown':
+          if (rowIndex < displayRows.length - 1) {
+            next = { rowIndex: rowIndex + 1, colIndex };
+          }
+          break;
+        case 'ArrowLeft':
+          if (colIndex > 0) {
+            next = { rowIndex, colIndex: colIndex - 1 };
+          }
+          break;
+        case 'ArrowRight':
+          if (colIndex < columns.length - 1) {
+            next = { rowIndex, colIndex: colIndex + 1 };
+          }
+          break;
+        case 'Enter':
+          // Enter on focused cell starts editing
+          e.preventDefault();
+          setEditingCell({
+            rowIndex,
+            column: columns[colIndex].name,
+          });
+          return;
+      }
+
+      if (next) {
+        e.preventDefault();
+        setFocusedCell(next);
+      }
+    },
+    [focusedCell, editingCell, displayRows.length, columns]
+  );
+
+  // Handle cell click to set focus
+  const handleCellClick = useCallback((rowIndex: number, colIndex: number) => {
+    setFocusedCell({ rowIndex, colIndex });
+  }, []);
+
+  // Handle copy (Ctrl+C) - copy focused cell value
+  const handleCopy = useCallback(async () => {
+    if (!focusedCell) return;
+
+    const row = displayRows[focusedCell.rowIndex];
+    const col = columns[focusedCell.colIndex];
+    const value = (row as Record<string, unknown>)[col.name];
+
+    const text = value === null ? '' : String(value);
+    try {
+      await navigator.clipboard.writeText(text);
+    } catch (err) {
+      console.error('Failed to copy to clipboard:', err);
+    }
+  }, [focusedCell, displayRows, columns]);
+
+  // Handle paste (Ctrl+V) - paste into focused cell
+  const handlePaste = useCallback(async () => {
+    if (!focusedCell || readOnly) return;
+
+    const row = displayRows[focusedCell.rowIndex];
+    const isDeleted = '__deleted' in row && row.__deleted === true;
+    if (isDeleted) return;
+
+    try {
+      const text = await navigator.clipboard.readText();
+      const col = columns[focusedCell.colIndex];
+      handleCellSave(focusedCell.rowIndex, col.name, text);
+    } catch (err) {
+      console.error('Failed to read from clipboard:', err);
+    }
+  }, [focusedCell, readOnly, displayRows, columns, handleCellSave]);
+
+  // Handle global keyboard shortcuts (copy/paste)
+  useEffect(() => {
+    const handleGlobalKeyDown = (e: KeyboardEvent) => {
+      // Only handle when grid is focused and not editing
+      if (editingCell) return;
+      if (!parentRef.current?.contains(document.activeElement)) return;
+
+      if ((e.ctrlKey || e.metaKey) && e.key === 'c') {
+        e.preventDefault();
+        handleCopy();
+      } else if ((e.ctrlKey || e.metaKey) && e.key === 'v') {
+        e.preventDefault();
+        handlePaste();
+      }
+    };
+
+    window.addEventListener('keydown', handleGlobalKeyDown);
+    return () => window.removeEventListener('keydown', handleGlobalKeyDown);
+  }, [editingCell, handleCopy, handlePaste]);
 
   if (columns.length === 0) {
     return (
@@ -177,7 +417,12 @@ export function EditableDataGrid({
   }
 
   return (
-    <div ref={parentRef} className="h-full overflow-auto">
+    <div
+      ref={parentRef}
+      className="h-full overflow-auto outline-none"
+      tabIndex={0}
+      onKeyDown={handleGridKeyDown}
+    >
       <div style={{ minWidth: totalWidth }}>
         {/* Header */}
         <div className="sticky top-0 z-10 flex border-b bg-muted/50 backdrop-blur-sm">
@@ -221,7 +466,8 @@ export function EditableDataGrid({
         >
           {rowVirtualizer.getVirtualItems().map((virtualRow) => {
             const row = displayRows[virtualRow.index];
-            const isDeleted = '__deleted' in row && row.__deleted;
+            const isDeleted = '__deleted' in row && row.__deleted === true;
+            const isNew = '__isNew' in row && row.__isNew === true;
             const rowId = row.__rowId as string | number;
 
             return (
@@ -230,7 +476,8 @@ export function EditableDataGrid({
                 className={cn(
                   'absolute left-0 flex w-full border-b',
                   virtualRow.index % 2 === 0 ? 'bg-background' : 'bg-muted/20',
-                  isDeleted && 'bg-red-500/10 line-through opacity-50'
+                  isDeleted && 'bg-red-500/10 line-through opacity-50',
+                  isNew && 'bg-green-500/10 border-l-2 border-l-green-500'
                 )}
                 style={{
                   height: `${virtualRow.size}px`,
@@ -244,18 +491,34 @@ export function EditableDataGrid({
                   const isEditing =
                     editingCell?.rowIndex === virtualRow.index &&
                     editingCell?.column === col.name;
+                  const isFocused =
+                    focusedCell?.rowIndex === virtualRow.index &&
+                    focusedCell?.colIndex === idx;
 
                   return (
                     <div
                       key={col.name}
-                      className="flex items-center border-r px-2"
+                      className={cn(
+                        'flex items-center border-r px-2',
+                        isFocused &&
+                          !isEditing &&
+                          'ring-2 ring-inset ring-primary'
+                      )}
                       style={{
                         width: columnWidths[idx],
                         minWidth: columnWidths[idx],
                       }}
+                      onClick={() => handleCellClick(virtualRow.index, idx)}
                     >
+                      {/* NEW badge for first column of new rows */}
+                      {isNew && idx === 0 && (
+                        <span className="mr-1 rounded bg-green-500 px-1 py-0.5 text-[10px] font-medium text-white">
+                          NEW
+                        </span>
+                      )}
                       <EditableCell
                         value={value}
+                        column={col}
                         type={col.type}
                         isEditing={isEditing && !readOnly && !isDeleted}
                         hasChange={!!cellChange}
@@ -267,6 +530,9 @@ export function EditableDataGrid({
                           handleCellSave(virtualRow.index, col.name, newValue)
                         }
                         onCancel={() => setEditingCell(null)}
+                        onKeyDown={(e) =>
+                          handleCellKeyDown(e, virtualRow.index, idx)
+                        }
                       />
                     </div>
                   );

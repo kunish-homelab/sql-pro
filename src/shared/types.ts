@@ -19,6 +19,8 @@ export interface OpenDatabaseResponse {
     isReadOnly: boolean;
   };
   error?: string;
+  /** When true, indicates the database requires a password to open */
+  needsPassword?: boolean;
 }
 
 export interface CloseDatabaseRequest {

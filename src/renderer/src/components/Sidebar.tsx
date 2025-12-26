@@ -180,9 +180,9 @@ function TableItem({ table, isSelected, onClick, isView }: TableItemProps) {
       )}
     >
       {isView ? (
-        <Eye className="h-4 w-4 flex-shrink-0 text-muted-foreground" />
+        <Eye className="h-4 w-4 shrink-0 text-muted-foreground" />
       ) : (
-        <Table className="h-4 w-4 flex-shrink-0 text-muted-foreground" />
+        <Table className="h-4 w-4 shrink-0 text-muted-foreground" />
       )}
       <span className="truncate">{table.name}</span>
       {table.rowCount !== undefined && (

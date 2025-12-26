@@ -1,4 +1,5 @@
-import Database from 'better-sqlite3';
+import Database from 'better-sqlite3-multiple-ciphers';
+import { readFileSync } from 'fs';
 import type {
   ColumnInfo,
   TableInfo,
@@ -24,6 +25,70 @@ function generateId(): string {
   return `conn_${idCounter}_${Math.random().toString(36).substring(2, 9)}`;
 }
 
+// Check if file appears to be encrypted (doesn't have SQLite header)
+function isFileEncrypted(path: string): boolean {
+  try {
+    const header = readFileSync(path, { encoding: null }).subarray(0, 16);
+    // SQLite header is "SQLite format 3\0"
+    const sqliteHeader = Buffer.from('SQLite format 3\0');
+    return !header.equals(sqliteHeader);
+  } catch {
+    return false;
+  }
+}
+
+// Cipher configurations to try (most common SQLCipher versions)
+interface CipherConfig {
+  cipher: string;
+  legacy?: number;
+  kdfIter?: number;
+  pageSize?: number;
+  hexKey?: boolean; // If true, wrap key as x'...'
+  rawKey?: boolean; // If true, treat password as already being hex
+  plaintextHeader?: number;
+}
+
+const CIPHER_CONFIGS: CipherConfig[] = [
+  // SQLCipher 4 (default, most common)
+  { cipher: 'sqlcipher', legacy: 0 },
+  // SQLCipher 4 with hex key
+  { cipher: 'sqlcipher', legacy: 0, hexKey: true },
+  // SQLCipher 4 treating password as raw hex key
+  { cipher: 'sqlcipher', legacy: 0, rawKey: true },
+  // SQLCipher 3 (older databases)
+  { cipher: 'sqlcipher', legacy: 1 },
+  // SQLCipher 3 with hex key
+  { cipher: 'sqlcipher', legacy: 1, hexKey: true },
+  // SQLCipher 3 treating password as raw hex key
+  { cipher: 'sqlcipher', legacy: 1, rawKey: true },
+  // SQLCipher 2
+  { cipher: 'sqlcipher', legacy: 2 },
+  // SQLCipher 1
+  { cipher: 'sqlcipher', legacy: 3 },
+  // ChaCha20 (used by some apps like Signal)
+  { cipher: 'chacha20' },
+  { cipher: 'chacha20', hexKey: true },
+  { cipher: 'chacha20', rawKey: true },
+  // AES-256-CBC
+  { cipher: 'aes256cbc' },
+  { cipher: 'aes256cbc', hexKey: true },
+  { cipher: 'aes256cbc', rawKey: true },
+  // RC4 (legacy)
+  { cipher: 'rc4' },
+  { cipher: 'rc4', rawKey: true },
+  // wxSQLite3 AES-128
+  { cipher: 'aes128cbc' },
+  { cipher: 'aes128cbc', rawKey: true },
+  // SQLCipher with different KDF iterations (some apps use lower values)
+  { cipher: 'sqlcipher', legacy: 0, kdfIter: 64000 },
+  { cipher: 'sqlcipher', legacy: 0, kdfIter: 4000 },
+  { cipher: 'sqlcipher', legacy: 0, kdfIter: 1 },
+  // SQLCipher with plaintext header (some apps use this)
+  { cipher: 'sqlcipher', legacy: 0, plaintextHeader: 32 },
+  // Also try SQLCipher 4 with HMAC disabled (some implementations)
+  { cipher: 'sqlcipher', legacy: 4 },
+];
+
 class DatabaseService {
   private connections: Map<string, ConnectionInfo> = new Map();
 
@@ -33,25 +98,108 @@ class DatabaseService {
     readOnly = false
   ): Promise<
     | { success: true; connection: Omit<ConnectionInfo, 'db'> }
-    | { success: false; error: string }
+    | { success: false; error: string; needsPassword?: boolean }
   > {
     try {
-      const db = new Database(path, { readonly: readOnly });
+      // Check if file appears encrypted before trying to open
+      const fileIsEncrypted = isFileEncrypted(path);
 
-      // If password provided, try to decrypt
-      if (password) {
-        try {
-          db.pragma(`key = '${password}'`);
-          // Test if we can read from the database
-          db.prepare('SELECT count(*) FROM sqlite_master').get();
-        } catch {
-          db.close();
-          return {
-            success: false,
-            error: 'Invalid password or database is not encrypted',
-          };
-        }
+      // If no password provided and file appears encrypted, ask for password
+      if (!password && fileIsEncrypted) {
+        return {
+          success: false,
+          error: 'Database appears to be encrypted. Please provide a password.',
+          needsPassword: true,
+        };
       }
+
+      // If password provided, try different cipher configurations
+      if (password) {
+        for (const config of CIPHER_CONFIGS) {
+          let db: Database.Database | null = null;
+          try {
+            db = new Database(path, { readonly: readOnly });
+
+            // Set cipher configuration
+            db.pragma(`cipher = '${config.cipher}'`);
+            if (config.legacy !== undefined) {
+              db.pragma(`legacy = ${config.legacy}`);
+            }
+            if (config.kdfIter !== undefined) {
+              db.pragma(`kdf_iter = ${config.kdfIter}`);
+            }
+            if (config.pageSize !== undefined) {
+              db.pragma(`cipher_page_size = ${config.pageSize}`);
+            }
+            if (config.plaintextHeader !== undefined) {
+              db.pragma(
+                `cipher_plaintext_header_size = ${config.plaintextHeader}`
+              );
+            }
+
+            // Set the key (hex format if specified)
+            if (config.rawKey) {
+              // Treat password as already being a hex key
+              db.pragma(`key = "x'${password}'"`);
+            } else if (config.hexKey) {
+              // Convert password to hex string
+              const hexKey = Buffer.from(password, 'utf8').toString('hex');
+              db.pragma(`key = "x'${hexKey}'"`);
+            } else {
+              db.pragma(`key = '${password}'`);
+            }
+
+            // Test if we can read from the database
+            db.prepare('SELECT count(*) FROM sqlite_master').get();
+
+            // Success! Return connection
+            const id = generateId();
+            const filename = path.split('/').pop() || path;
+
+            const connectionInfo: ConnectionInfo = {
+              id,
+              db,
+              path,
+              filename,
+              isEncrypted: true,
+              isReadOnly: readOnly,
+            };
+
+            this.connections.set(id, connectionInfo);
+
+            return {
+              success: true,
+              connection: {
+                id,
+                path,
+                filename,
+                isEncrypted: true,
+                isReadOnly: readOnly,
+              },
+            };
+          } catch {
+            // This cipher config didn't work, close and try the next one
+            if (db) {
+              try {
+                db.close();
+              } catch {
+                // Ignore close errors
+              }
+            }
+            continue;
+          }
+        }
+
+        // All cipher configs failed
+        return {
+          success: false,
+          error:
+            'Invalid password or unsupported encryption format. Supported formats: SQLCipher 1-4, ChaCha20, AES-256-CBC, RC4.',
+        };
+      }
+
+      // No password, try opening normally
+      const db = new Database(path, { readonly: readOnly });
 
       // Test connection
       db.prepare('SELECT 1').get();
@@ -64,7 +212,7 @@ class DatabaseService {
         db,
         path,
         filename,
-        isEncrypted: !!password,
+        isEncrypted: false,
         isReadOnly: readOnly,
       };
 
@@ -76,15 +224,29 @@ class DatabaseService {
           id,
           path,
           filename,
-          isEncrypted: !!password,
+          isEncrypted: false,
           isReadOnly: readOnly,
         },
       };
     } catch (error) {
+      const errorMessage =
+        error instanceof Error ? error.message : 'Failed to open database';
+
+      // Check if error suggests encryption
+      if (
+        errorMessage.includes('file is not a database') ||
+        errorMessage.includes('encrypted')
+      ) {
+        return {
+          success: false,
+          error: 'Database appears to be encrypted. Please provide a password.',
+          needsPassword: true,
+        };
+      }
+
       return {
         success: false,
-        error:
-          error instanceof Error ? error.message : 'Failed to open database',
+        error: errorMessage,
       };
     }
   }

@@ -34,16 +34,14 @@ export function WelcomeScreen() {
       const result = await window.sqlPro.db.open({ path, password });
 
       if (!result.success) {
-        // Check if it might be an encrypted database
-        if (
-          result.error?.includes('file is not a database') ||
-          result.error?.includes('encrypted')
-        ) {
+        // Check if database needs a password (using explicit flag from backend)
+        if (result.needsPassword) {
           setPendingPath(path);
           setPasswordDialogOpen(true);
           setIsConnecting(false);
           return;
         }
+        // Show error message (won't trigger password dialog loop)
         setError(result.error || 'Failed to open database');
         setIsConnecting(false);
         return;
@@ -114,7 +112,7 @@ export function WelcomeScreen() {
         {/* Error Message */}
         {error && (
           <div className="flex items-center gap-2 rounded-lg border border-destructive/50 bg-destructive/10 p-3 text-sm text-destructive">
-            <AlertCircle className="h-4 w-4 flex-shrink-0" />
+            <AlertCircle className="h-4 w-4 shrink-0" />
             <span>{error}</span>
           </div>
         )}
@@ -145,7 +143,7 @@ export function WelcomeScreen() {
                   disabled={isConnecting}
                   className="flex w-full items-center gap-3 rounded-lg px-3 py-2 text-left text-sm transition-colors hover:bg-accent disabled:opacity-50"
                 >
-                  <Database className="h-4 w-4 flex-shrink-0 text-muted-foreground" />
+                  <Database className="h-4 w-4 shrink-0 text-muted-foreground" />
                   <div className="min-w-0 flex-1">
                     <div className="flex items-center gap-2">
                       <span className="truncate font-medium">

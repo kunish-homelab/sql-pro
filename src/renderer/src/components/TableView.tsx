@@ -92,7 +92,7 @@ export function TableView() {
     if (tableName === selectedTable?.name && sort) {
       loadData();
     }
-  }, [sort]);
+  }, [loadData, selectedTable?.name, sort, tableName]);
 
   const handlePageChange = (page: number) => {
     setPagination({ page });

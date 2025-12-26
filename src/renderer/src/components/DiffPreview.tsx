@@ -1,4 +1,4 @@
-import { useState } from 'react';
+import { useState, useEffect } from 'react';
 import {
   X,
   Check,
@@ -41,6 +41,26 @@ export function DiffPreview({ onClose }: DiffPreviewProps) {
   const [expandedChanges, setExpandedChanges] = useState<Set<string>>(
     new Set(changes.map((c) => c.id))
   );
+
+  // Global Ctrl+Z handler for undo
+  useEffect(() => {
+    const handleKeyDown = (e: KeyboardEvent) => {
+      if ((e.ctrlKey || e.metaKey) && e.key === 'z' && !e.shiftKey) {
+        e.preventDefault();
+        // Find and remove the most recent change by timestamp
+        if (changes.length > 0) {
+          const sortedChanges = [...changes].sort(
+            (a, b) =>
+              new Date(b.timestamp).getTime() - new Date(a.timestamp).getTime()
+          );
+          removeChange(sortedChanges[0].id);
+        }
+      }
+    };
+
+    window.addEventListener('keydown', handleKeyDown);
+    return () => window.removeEventListener('keydown', handleKeyDown);
+  }, [changes, removeChange]);
 
   const toggleExpanded = (id: string) => {
     const newExpanded = new Set(expandedChanges);
@@ -265,6 +285,13 @@ function ChangeItem({
         {!change.isValid && (
           <AlertCircle className="h-4 w-4 text-destructive" />
         )}
+        <button
+          onClick={onRemove}
+          className="rounded p-1 hover:bg-background/50"
+          title="Undo this change"
+        >
+          <Undo2 className="h-4 w-4" />
+        </button>
         <button
           onClick={onRemove}
           className="rounded p-1 hover:bg-background/50"

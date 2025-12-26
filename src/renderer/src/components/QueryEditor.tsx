@@ -136,7 +136,7 @@ export function QueryEditor() {
       <div className="flex flex-1 overflow-hidden">
         {/* Editor */}
         <div className="flex flex-1 flex-col">
-          <div className="flex-shrink-0 border-b" onKeyDown={handleKeyDown}>
+          <div className="shrink-0 border-b" onKeyDown={handleKeyDown}>
             <CodeMirror
               value={currentQuery}
               onChange={setCurrentQuery}
@@ -162,7 +162,7 @@ export function QueryEditor() {
             ) : error ? (
               <div className="flex h-full items-center justify-center p-4">
                 <div className="flex max-w-md items-start gap-3 rounded-lg border border-destructive/50 bg-destructive/10 p-4">
-                  <AlertCircle className="h-5 w-5 flex-shrink-0 text-destructive" />
+                  <AlertCircle className="h-5 w-5 shrink-0 text-destructive" />
                   <div>
                     <p className="font-medium text-destructive">Query Error</p>
                     <p className="mt-1 text-sm text-destructive/80">{error}</p>

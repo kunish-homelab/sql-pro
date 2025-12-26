@@ -38,7 +38,7 @@
     "@tanstack/react-table": "^8.21.3",
     "@tanstack/react-virtual": "^3.13.13",
     "@uiw/react-codemirror": "^4.25.4",
-    "better-sqlite3": "^12.5.0",
+    "better-sqlite3-multiple-ciphers": "^12.5.0",
     "class-variance-authority": "^0.7.1",
     "clsx": "^2.1.1",
     "lucide-react": "^0.562.0",
@@ -86,13 +86,6 @@
     ],
     "*.{json,md}": [
       "prettier --write"
-    ]
-  },
-  "pnpm": {
-    "onlyBuiltDependencies": [
-      "better-sqlite3",
-      "electron",
-      "esbuild"
     ]
   },
   "packageManager": "pnpm@10.25.0"
