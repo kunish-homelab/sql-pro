@@ -30,13 +30,20 @@ export function TableView() {
     filters,
     isLoading,
     error,
+    reloadVersion,
     setTableData,
     setPagination,
     setSort,
     setIsLoading,
     setError,
   } = useTableDataStore();
-  const { changes, hasChanges, getChangesForTable, getChangeForRow, addChange } = useChangesStore();
+  const {
+    changes,
+    hasChanges,
+    getChangesForTable,
+    getChangeForRow,
+    addChange,
+  } = useChangesStore();
 
   const [showDiffPreview, setShowDiffPreview] = useState(false);
   const [grouping, setGrouping] = useState<string[]>([]);
@@ -96,15 +103,25 @@ export function TableView() {
     }
   }, [loadData, selectedTable?.name, sort, tableName]);
 
+  // Reload data when reloadVersion changes (after applying changes)
+  useEffect(() => {
+    if (reloadVersion > 0 && selectedTable) {
+      loadData();
+    }
+  }, [reloadVersion, selectedTable, loadData]);
+
   const handlePageChange = (page: number) => {
     setPagination({ page });
     loadData();
   };
 
   // Handle sort change from DataTable
-  const handleSortChange = useCallback((newSort: SortState | null) => {
-    setSort(newSort);
-  }, [setSort]);
+  const handleSortChange = useCallback(
+    (newSort: SortState | null) => {
+      setSort(newSort);
+    },
+    [setSort]
+  );
 
   // Find primary key column
   const primaryKeyColumn = selectedTable?.primaryKey[0];
@@ -175,7 +192,12 @@ export function TableView() {
 
   // Handle cell change from DataTable
   const handleCellChange = useCallback(
-    (rowId: string | number, columnId: string, newValue: unknown, oldValue: unknown) => {
+    (
+      rowId: string | number,
+      columnId: string,
+      newValue: unknown,
+      oldValue: unknown
+    ) => {
       if (!selectedTable) return;
 
       // Check if this is a new row (inserted row)

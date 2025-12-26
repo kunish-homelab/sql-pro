@@ -1,4 +1,4 @@
-import { useCallback, RefObject } from 'react';
+import { useCallback, useEffect, RefObject } from 'react';
 import { useVirtualizer, VirtualItem } from '@tanstack/react-virtual';
 import { Row, Table } from '@tanstack/react-table';
 import type { TableRowData } from './useTableCore';
@@ -44,7 +44,17 @@ export function useVirtualRows({
     overscan,
     // Enable smooth scrolling
     scrollMargin: 0,
+    // Use row id as key for stable identity when rows are added/removed
+    getItemKey: useCallback(
+      (index: number) => rows[index]?.id ?? index,
+      [rows]
+    ),
   });
+
+  // Reset measurements when row count changes to ensure proper recalculation
+  useEffect(() => {
+    virtualizer.measure();
+  }, [rows.length, virtualizer]);
 
   const virtualRows = virtualizer.getVirtualItems();
   const totalHeight = virtualizer.getTotalSize();

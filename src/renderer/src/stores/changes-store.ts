@@ -81,6 +81,19 @@ export const useChangesStore = create<ChangesState>((set, get) => ({
               : c
           ),
         }));
+      } else if (change.type === 'insert' && existingChange.type === 'insert') {
+        // Update existing insert with new values
+        set((state) => ({
+          changes: state.changes.map((c) =>
+            c.id === existingChange.id
+              ? {
+                  ...c,
+                  newValues: { ...c.newValues, ...change.newValues },
+                  timestamp: new Date(),
+                }
+              : c
+          ),
+        }));
       }
     } else {
       // Add new change

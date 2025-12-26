@@ -23,6 +23,9 @@ interface TableDataState {
   isLoading: boolean;
   error: string | null;
 
+  // Reload trigger - incremented to force data reload
+  reloadVersion: number;
+
   // Actions
   setTableData: (
     tableName: string,
@@ -38,6 +41,7 @@ interface TableDataState {
   setIsLoading: (isLoading: boolean) => void;
   setError: (error: string | null) => void;
   reset: () => void;
+  triggerReload: () => void;
 }
 
 const initialPagination: PaginationState = {
@@ -56,6 +60,7 @@ const initialState = {
   filters: [],
   isLoading: false,
   error: null,
+  reloadVersion: 0,
 };
 
 export const useTableDataStore = create<TableDataState>((set) => ({
@@ -96,4 +101,6 @@ export const useTableDataStore = create<TableDataState>((set) => ({
   setIsLoading: (isLoading) => set({ isLoading }),
   setError: (error) => set({ error }),
   reset: () => set(initialState),
+  triggerReload: () =>
+    set((state) => ({ reloadVersion: state.reloadVersion + 1 })),
 }));

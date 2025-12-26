@@ -36,7 +36,7 @@ export function DiffPreview({ onClose }: DiffPreviewProps) {
     setIsValidating,
     setIsApplying,
   } = useChangesStore();
-  const { reset: resetTableData } = useTableDataStore();
+  const { triggerReload } = useTableDataStore();
 
   const [expandedChanges, setExpandedChanges] = useState<Set<string>>(
     new Set(changes.map((c) => c.id))
@@ -103,8 +103,11 @@ export function DiffPreview({ onClose }: DiffPreviewProps) {
     // First validate
     await handleValidate();
 
+    // Get fresh changes from store after validation
+    const latestChanges = useChangesStore.getState().changes;
+
     // Check if all changes are valid
-    const invalidChanges = changes.filter((c) => !c.isValid);
+    const invalidChanges = latestChanges.filter((c) => !c.isValid);
     if (invalidChanges.length > 0) {
       return;
     }
@@ -113,7 +116,7 @@ export function DiffPreview({ onClose }: DiffPreviewProps) {
     try {
       const result = await window.sqlPro.db.applyChanges({
         connectionId: connection.id,
-        changes: changes.map((c) => ({
+        changes: latestChanges.map((c) => ({
           id: c.id,
           table: c.table,
           rowId: c.rowId,
@@ -125,9 +128,18 @@ export function DiffPreview({ onClose }: DiffPreviewProps) {
 
       if (result.success) {
         clearChanges();
-        resetTableData(); // Trigger data reload
+        triggerReload(); // Trigger data reload
         onClose();
+      } else {
+        // Show error to user
+        console.error('Failed to apply changes:', result.error);
+        alert(`Failed to apply changes: ${result.error}`);
       }
+    } catch (error) {
+      console.error('Error applying changes:', error);
+      alert(
+        `Error applying changes: ${error instanceof Error ? error.message : 'Unknown error'}`
+      );
     } finally {
       setIsApplying(false);
     }
