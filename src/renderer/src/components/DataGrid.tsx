@@ -14,6 +14,7 @@ interface DataGridProps {
 export function DataGrid({ columns, rows, sort, onSort }: DataGridProps) {
   const parentRef = useRef<HTMLDivElement>(null);
 
+  // eslint-disable-next-line react-hooks/incompatible-library -- TanStack Virtual is safe here
   const rowVirtualizer = useVirtualizer({
     count: rows.length,
     getScrollElement: () => parentRef.current,
@@ -63,9 +64,9 @@ export function DataGrid({ columns, rows, sort, onSort }: DataGridProps) {
                 <span className="truncate">{col.name}</span>
                 {sort?.column === col.name &&
                   (sort.direction === 'asc' ? (
-                    <ArrowUp className="h-3 w-3 flex-shrink-0" />
+                    <ArrowUp className="h-3 w-3 shrink-0" />
                   ) : (
-                    <ArrowDown className="h-3 w-3 flex-shrink-0" />
+                    <ArrowDown className="h-3 w-3 shrink-0" />
                   ))}
               </button>
             </div>

@@ -1,4 +1,13 @@
-import { Database, X, Lock, FileText, RefreshCw } from 'lucide-react';
+import {
+  Database,
+  X,
+  Lock,
+  FileText,
+  RefreshCw,
+  Sun,
+  Moon,
+  Monitor,
+} from 'lucide-react';
 import { Button } from '@/components/ui/button';
 import { Separator } from '@/components/ui/separator';
 import {
@@ -10,9 +19,14 @@ import {
   useConnectionStore,
   useChangesStore,
   useTableDataStore,
+  useThemeStore,
 } from '@/stores';
 
-export function Toolbar() {
+interface ToolbarProps {
+  onOpenChanges?: () => void;
+}
+
+export function Toolbar({ onOpenChanges }: ToolbarProps) {
   const {
     connection,
     setConnection,
@@ -21,8 +35,9 @@ export function Toolbar() {
     isLoadingSchema,
     setIsLoadingSchema,
   } = useConnectionStore();
-  const { hasChanges, clearChanges } = useChangesStore();
+  const { hasChanges, clearChanges, changes } = useChangesStore();
   const { reset: resetTableData } = useTableDataStore();
+  const { theme, setTheme } = useThemeStore();
 
   const handleDisconnect = async () => {
     if (connection) {
@@ -50,6 +65,39 @@ export function Toolbar() {
       });
     }
     setIsLoadingSchema(false);
+  };
+
+  const cycleTheme = () => {
+    const themes: Array<'light' | 'dark' | 'system'> = [
+      'light',
+      'dark',
+      'system',
+    ];
+    const currentIndex = themes.indexOf(theme);
+    const nextIndex = (currentIndex + 1) % themes.length;
+    setTheme(themes[nextIndex]);
+  };
+
+  const getThemeIcon = () => {
+    switch (theme) {
+      case 'light':
+        return <Sun className="h-4 w-4" />;
+      case 'dark':
+        return <Moon className="h-4 w-4" />;
+      default:
+        return <Monitor className="h-4 w-4" />;
+    }
+  };
+
+  const getThemeLabel = () => {
+    switch (theme) {
+      case 'light':
+        return 'Light mode';
+      case 'dark':
+        return 'Dark mode';
+      default:
+        return 'System theme';
+    }
   };
 
   if (!connection) return null;
@@ -91,13 +139,28 @@ export function Toolbar() {
 
       <div className="flex-1" />
 
-      {/* Pending Changes Indicator */}
+      {/* Pending Changes Indicator - Clickable */}
       {hasChanges() && (
-        <div className="flex items-center gap-2 rounded-md bg-amber-500/10 px-3 py-1 text-sm text-amber-600 dark:text-amber-400">
+        <button
+          onClick={onOpenChanges}
+          className="flex items-center gap-2 rounded-md bg-amber-500/10 px-3 py-1 text-sm text-amber-600 transition-colors hover:bg-amber-500/20 dark:text-amber-400"
+        >
           <FileText className="h-4 w-4" />
-          <span>Unsaved changes</span>
-        </div>
+          <span>
+            {changes.length} unsaved change{changes.length !== 1 ? 's' : ''}
+          </span>
+        </button>
       )}
+
+      {/* Theme Toggle */}
+      <Tooltip>
+        <TooltipTrigger asChild>
+          <Button variant="ghost" size="icon" onClick={cycleTheme}>
+            {getThemeIcon()}
+          </Button>
+        </TooltipTrigger>
+        <TooltipContent>{getThemeLabel()}</TooltipContent>
+      </Tooltip>
 
       {/* Disconnect */}
       <Tooltip>

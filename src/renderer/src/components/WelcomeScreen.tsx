@@ -1,7 +1,21 @@
 import { useState } from 'react';
-import { Database, FolderOpen, Clock, Lock, AlertCircle } from 'lucide-react';
+import {
+  Database,
+  FolderOpen,
+  Clock,
+  Lock,
+  AlertCircle,
+  Sun,
+  Moon,
+  Monitor,
+} from 'lucide-react';
 import { Button } from '@/components/ui/button';
-import { useConnectionStore } from '@/stores';
+import {
+  Tooltip,
+  TooltipContent,
+  TooltipTrigger,
+} from '@/components/ui/tooltip';
+import { useConnectionStore, useThemeStore } from '@/stores';
 import { PasswordDialog } from './PasswordDialog';
 
 export function WelcomeScreen() {
@@ -15,6 +29,7 @@ export function WelcomeScreen() {
     setIsLoadingSchema,
     setError,
   } = useConnectionStore();
+  const { theme, setTheme } = useThemeStore();
 
   const [passwordDialogOpen, setPasswordDialogOpen] = useState(false);
   const [pendingPath, setPendingPath] = useState<string | null>(null);
@@ -95,8 +110,53 @@ export function WelcomeScreen() {
     }
   };
 
+  const cycleTheme = () => {
+    const themes: Array<'light' | 'dark' | 'system'> = [
+      'light',
+      'dark',
+      'system',
+    ];
+    const currentIndex = themes.indexOf(theme);
+    const nextIndex = (currentIndex + 1) % themes.length;
+    setTheme(themes[nextIndex]);
+  };
+
+  const getThemeIcon = () => {
+    switch (theme) {
+      case 'light':
+        return <Sun className="h-4 w-4" />;
+      case 'dark':
+        return <Moon className="h-4 w-4" />;
+      default:
+        return <Monitor className="h-4 w-4" />;
+    }
+  };
+
+  const getThemeLabel = () => {
+    switch (theme) {
+      case 'light':
+        return 'Light mode';
+      case 'dark':
+        return 'Dark mode';
+      default:
+        return 'System theme';
+    }
+  };
+
   return (
-    <div className="flex h-full items-center justify-center">
+    <div className="relative flex h-full items-center justify-center">
+      {/* Theme Toggle - Top Right */}
+      <div className="absolute right-4 top-4">
+        <Tooltip>
+          <TooltipTrigger asChild>
+            <Button variant="ghost" size="icon" onClick={cycleTheme}>
+              {getThemeIcon()}
+            </Button>
+          </TooltipTrigger>
+          <TooltipContent>{getThemeLabel()}</TooltipContent>
+        </Tooltip>
+      </div>
+
       <div className="w-full max-w-md space-y-8 px-4">
         {/* Logo & Title */}
         <div className="text-center">

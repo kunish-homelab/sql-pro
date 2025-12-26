@@ -5,30 +5,42 @@ import { Sidebar } from './Sidebar';
 import { TableView } from './TableView';
 import { QueryEditor } from './QueryEditor';
 import { Toolbar } from './Toolbar';
-import { useConnectionStore } from '@/stores';
+import { DiffPreview } from './DiffPreview';
+import { ResizablePanel } from './ResizablePanel';
+import { useConnectionStore, useChangesStore } from '@/stores';
 import { cn } from '@/lib/utils';
 
 type TabValue = 'data' | 'query';
 
 export function DatabaseView() {
   const { selectedTable } = useConnectionStore();
+  const { hasChanges } = useChangesStore();
   const [activeTab, setActiveTab] = useState<TabValue>('data');
+  const [showChangesPanel, setShowChangesPanel] = useState(false);
 
   return (
     <div className="flex h-full flex-col">
       {/* Toolbar */}
-      <Toolbar />
+      <Toolbar onOpenChanges={() => setShowChangesPanel(true)} />
 
       {/* Main Content */}
-      <div className="flex flex-1 overflow-hidden">
-        {/* Sidebar */}
-        <Sidebar />
+      <div className="flex min-h-0 flex-1 overflow-hidden">
+        {/* Sidebar - Resizable */}
+        <ResizablePanel
+          side="left"
+          defaultWidth={256}
+          minWidth={180}
+          maxWidth={400}
+          storageKey="sidebar"
+        >
+          <Sidebar />
+        </ResizablePanel>
 
         {/* Content Area with Tabs */}
         <Tabs.Root
           value={activeTab}
           onValueChange={(v) => setActiveTab(v as TabValue)}
-          className="flex flex-1 flex-col overflow-hidden"
+          className="flex min-w-0 flex-1 flex-col overflow-hidden"
         >
           {/* Tab List */}
           <Tabs.List className="flex border-b px-2">
@@ -59,7 +71,10 @@ export function DatabaseView() {
           </Tabs.List>
 
           {/* Tab Content */}
-          <Tabs.Content value="data" className="flex-1 overflow-hidden">
+          <Tabs.Content
+            value="data"
+            className="h-full min-h-0 flex-1 data-[state=inactive]:hidden"
+          >
             {selectedTable ? (
               <TableView />
             ) : (
@@ -69,10 +84,26 @@ export function DatabaseView() {
             )}
           </Tabs.Content>
 
-          <Tabs.Content value="query" className="flex-1 overflow-hidden">
+          <Tabs.Content
+            value="query"
+            className="h-full min-h-0 flex-1 data-[state=inactive]:hidden"
+          >
             <QueryEditor />
           </Tabs.Content>
         </Tabs.Root>
+
+        {/* Changes Panel - Resizable */}
+        {showChangesPanel && hasChanges() && (
+          <ResizablePanel
+            side="right"
+            defaultWidth={384}
+            minWidth={280}
+            maxWidth={600}
+            storageKey="changes-panel"
+          >
+            <DiffPreview onClose={() => setShowChangesPanel(false)} />
+          </ResizablePanel>
+        )}
       </div>
     </div>
   );

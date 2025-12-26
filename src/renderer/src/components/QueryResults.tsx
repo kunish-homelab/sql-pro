@@ -9,6 +9,7 @@ interface QueryResultsProps {
 export function QueryResults({ results }: QueryResultsProps) {
   const parentRef = useRef<HTMLDivElement>(null);
 
+  // eslint-disable-next-line react-hooks/incompatible-library -- TanStack Virtual is safe here
   const rowVirtualizer = useVirtualizer({
     count: results.rows.length,
     getScrollElement: () => parentRef.current,

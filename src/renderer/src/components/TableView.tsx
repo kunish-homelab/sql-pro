@@ -143,9 +143,9 @@ export function TableView() {
   if (!selectedTable) return null;
 
   return (
-    <div className="flex h-full">
+    <div className="flex h-full min-h-0 min-w-0">
       {/* Main Content */}
-      <div className="flex flex-1 flex-col">
+      <div className="flex min-h-0 min-w-0 flex-1 flex-col">
         {/* Table Header */}
         <div className="flex items-center justify-between border-b px-4 py-2">
           <div className="flex items-center gap-2">
@@ -192,7 +192,7 @@ export function TableView() {
         </div>
 
         {/* Data Grid */}
-        <div className="flex-1 overflow-hidden">
+        <div className="min-h-0 min-w-0 flex-1">
           {isLoading ? (
             <div className="flex h-full items-center justify-center">
               <Loader2 className="h-8 w-8 animate-spin text-muted-foreground" />

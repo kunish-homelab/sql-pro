@@ -104,6 +104,7 @@ export function EditableDataGrid({
     [tableName, getChangeForRow]
   );
 
+  // eslint-disable-next-line react-hooks/incompatible-library -- TanStack Virtual is safe here
   const rowVirtualizer = useVirtualizer({
     count: displayRows.length,
     getScrollElement: () => parentRef.current,
@@ -128,89 +129,94 @@ export function EditableDataGrid({
 
   const totalWidth = columnWidths.reduce((sum, w) => sum + w, 0);
 
-  const handleCellEdit = (rowIndex: number, column: string) => {
-    if (readOnly) return;
-    setEditingCell({ rowIndex, column });
-  };
+  const handleCellEdit = useCallback(
+    (rowIndex: number, column: string) => {
+      if (readOnly) return;
+      setEditingCell({ rowIndex, column });
+    },
+    [readOnly]
+  );
 
-  const handleCellSave = (
-    rowIndex: number,
-    column: string,
-    newValue: unknown
-  ) => {
-    const row = displayRows[rowIndex];
-    const rowId = row.__rowId as string | number;
-    const isNew = '__isNew' in row && row.__isNew;
+  const handleCellSave = useCallback(
+    (rowIndex: number, column: string, newValue: unknown) => {
+      const row = displayRows[rowIndex];
+      const rowId = row.__rowId as string | number;
+      const isNew = '__isNew' in row && row.__isNew;
 
-    if (isNew) {
-      // For new rows, update the existing insert change
-      const existingChange = getChangeForRow(tableName, rowId);
-      if (existingChange) {
+      if (isNew) {
+        // For new rows, update the existing insert change
+        const existingChange = getChangeForRow(tableName, rowId);
+        if (existingChange) {
+          addChange({
+            table: tableName,
+            rowId,
+            type: 'insert',
+            oldValues: null,
+            newValues: { ...existingChange.newValues, [column]: newValue },
+          });
+        }
+      } else {
+        // For existing rows, create/merge update change
+        // Find the actual row index in the original rows array
+        const insertCount = changes.filter(
+          (c) => c.table === tableName && c.type === 'insert'
+        ).length;
+        const originalRowIndex = rowIndex - insertCount;
+        const originalRow = rows[originalRowIndex];
+        const oldValue = originalRow?.[column];
+
+        // Only create change if value actually changed
+        if (newValue !== oldValue) {
+          addChange({
+            table: tableName,
+            rowId,
+            type: 'update',
+            oldValues: originalRow,
+            newValues: { [column]: newValue },
+          });
+        }
+      }
+
+      setEditingCell(null);
+    },
+    [displayRows, tableName, getChangeForRow, addChange, changes, rows]
+  );
+
+  const handleDeleteRow = useCallback(
+    (rowIndex: number) => {
+      if (readOnly) return;
+      const row = displayRows[rowIndex];
+      const rowId = row.__rowId as string | number;
+      const isNew = '__isNew' in row && row.__isNew;
+
+      if (isNew) {
+        // For new rows, removing the insert will be handled by addChange
         addChange({
           table: tableName,
           rowId,
-          type: 'insert',
+          type: 'delete',
           oldValues: null,
-          newValues: { ...existingChange.newValues, [column]: newValue },
+          newValues: null,
         });
-      }
-    } else {
-      // For existing rows, create/merge update change
-      // Find the actual row index in the original rows array
-      const insertCount = changes.filter(
-        (c) => c.table === tableName && c.type === 'insert'
-      ).length;
-      const originalRowIndex = rowIndex - insertCount;
-      const originalRow = rows[originalRowIndex];
-      const oldValue = originalRow?.[column];
+      } else {
+        // For existing rows, find the actual row in original rows array
+        const insertCount = changes.filter(
+          (c) => c.table === tableName && c.type === 'insert'
+        ).length;
+        const originalRowIndex = rowIndex - insertCount;
+        const originalRow = rows[originalRowIndex];
 
-      // Only create change if value actually changed
-      if (newValue !== oldValue) {
         addChange({
           table: tableName,
           rowId,
-          type: 'update',
+          type: 'delete',
           oldValues: originalRow,
-          newValues: { [column]: newValue },
+          newValues: null,
         });
       }
-    }
-
-    setEditingCell(null);
-  };
-
-  const handleDeleteRow = (rowIndex: number) => {
-    if (readOnly) return;
-    const row = displayRows[rowIndex];
-    const rowId = row.__rowId as string | number;
-    const isNew = '__isNew' in row && row.__isNew;
-
-    if (isNew) {
-      // For new rows, removing the insert will be handled by addChange
-      addChange({
-        table: tableName,
-        rowId,
-        type: 'delete',
-        oldValues: null,
-        newValues: null,
-      });
-    } else {
-      // For existing rows, find the actual row in original rows array
-      const insertCount = changes.filter(
-        (c) => c.table === tableName && c.type === 'insert'
-      ).length;
-      const originalRowIndex = rowIndex - insertCount;
-      const originalRow = rows[originalRowIndex];
-
-      addChange({
-        table: tableName,
-        rowId,
-        type: 'delete',
-        oldValues: originalRow,
-        newValues: null,
-      });
-    }
-  };
+    },
+    [readOnly, displayRows, tableName, addChange, changes, rows]
+  );
 
   // Calculate next/previous cell for keyboard navigation
   const getNextCell = useCallback(
@@ -419,7 +425,7 @@ export function EditableDataGrid({
   return (
     <div
       ref={parentRef}
-      className="h-full overflow-auto outline-none"
+      className="h-full w-full overflow-auto outline-none"
       tabIndex={0}
       onKeyDown={handleGridKeyDown}
     >

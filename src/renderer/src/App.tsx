@@ -20,10 +20,12 @@ function App(): React.JSX.Element {
 
   return (
     <TooltipProvider>
-      <div className="flex h-screen flex-col bg-background text-foreground">
+      <div className="flex h-screen flex-col overflow-hidden bg-background text-foreground">
         {/* Titlebar - draggable area for macOS traffic lights */}
         <div className="titlebar h-10 shrink-0 border-b border-border/50" />
-        {connection ? <DatabaseView /> : <WelcomeScreen />}
+        <div className="min-h-0 flex-1">
+          {connection ? <DatabaseView /> : <WelcomeScreen />}
+        </div>
       </div>
     </TooltipProvider>
   );

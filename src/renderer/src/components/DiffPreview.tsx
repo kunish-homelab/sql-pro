@@ -139,7 +139,7 @@ export function DiffPreview({ onClose }: DiffPreviewProps) {
   const deleteCount = changes.filter((c) => c.type === 'delete').length;
 
   return (
-    <div className="flex h-full flex-col border-l bg-background">
+    <div className="flex h-full w-full flex-col overflow-hidden border-l bg-background">
       {/* Header */}
       <div className="flex items-center justify-between border-b px-4 py-3">
         <div>

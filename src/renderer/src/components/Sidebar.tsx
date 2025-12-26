@@ -62,7 +62,7 @@ export function Sidebar() {
     ) || [];
 
   return (
-    <div className="flex h-full w-64 flex-col border-r bg-muted/30">
+    <div className="flex h-full w-full flex-col overflow-hidden border-r bg-muted/30">
       {/* Search */}
       <div className="p-2">
         <div className="relative">
