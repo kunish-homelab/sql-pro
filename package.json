@@ -11,6 +11,7 @@
   "main": "./out/main/index.js",
   "scripts": {
     "build": "electron-vite build",
+    "build:icons": "fish resources/generate-icons.fish",
     "build:linux": "pnpm run build && electron-builder --linux",
     "build:mac": "pnpm run build && electron-builder --mac",
     "build:unpack": "pnpm run build && electron-builder --dir",
