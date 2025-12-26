@@ -2,6 +2,11 @@ appId: com.sqlpro.app
 productName: SQL Pro
 copyright: Copyright © 2025 kunish
 
+# Publish to existing GitHub release (created by release-please)
+publish:
+  provider: github
+  releaseType: release
+
 directories:
   buildResources: resources
   output: dist
