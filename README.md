@@ -1,0 +1,139 @@
+# SQL Pro
+
+<p align="center">
+  <img src="resources/icon.svg" width="128" height="128" alt="SQL Pro Logo">
+</p>
+
+<p align="center">
+  <strong>Professional SQLite database manager with SQLCipher support and diff preview</strong>
+</p>
+
+<p align="center">
+  <a href="https://github.com/kunish-homelab/sql-pro/releases"><img src="https://img.shields.io/github/v/release/kunish-homelab/sql-pro" alt="Release"></a>
+  <a href="https://github.com/kunish-homelab/sql-pro/blob/main/LICENSE"><img src="https://img.shields.io/github/license/kunish-homelab/sql-pro" alt="License"></a>
+  <a href="https://github.com/kunish-homelab/sql-pro/actions"><img src="https://img.shields.io/github/actions/workflow/status/kunish-homelab/sql-pro/release.yml" alt="Build Status"></a>
+</p>
+
+## ✨ Features
+
+- 🗄️ **SQLite & SQLCipher Support** - Open and manage both regular SQLite and encrypted SQLCipher databases
+- 📝 **SQL Editor** - Monaco-based editor with syntax highlighting and intelligent autocomplete
+- 🔍 **Schema Browser** - Browse tables, views, and indexes with ease
+- ✏️ **Inline Editing** - Edit data directly in the table view
+- 📊 **Diff Preview** - Review changes before applying them to the database
+- 🎨 **Dark/Light Theme** - Automatic theme switching based on system preferences
+- 🔐 **Secure Password Storage** - Store database passwords securely using system keychain
+
+## 📸 Screenshots
+
+<!-- Add screenshots here -->
+
+## 📦 Installation
+
+### Download
+
+Download the latest release for your platform from the [Releases](https://github.com/kunish-homelab/sql-pro/releases) page.
+
+| Platform              | Download                      |
+| --------------------- | ----------------------------- |
+| macOS (Apple Silicon) | `sql-pro-x.x.x-arm64.dmg`     |
+| macOS (Intel)         | `sql-pro-x.x.x-x64.dmg`       |
+| Windows               | `sql-pro-x.x.x-setup-x64.exe` |
+| Linux (AppImage)      | `sql-pro-x.x.x-x64.AppImage`  |
+| Linux (deb)           | `sql-pro-x.x.x-x64.deb`       |
+
+### Build from Source
+
+```bash
+# Clone the repository
+git clone https://github.com/kunish-homelab/sql-pro.git
+cd sql-pro
+
+# Install dependencies
+pnpm install
+
+# Run in development mode
+pnpm dev
+
+# Build for production
+pnpm build:mac    # macOS
+pnpm build:win    # Windows
+pnpm build:linux  # Linux
+```
+
+## 🚀 Usage
+
+1. **Open a Database** - Click "Open Database" to select a SQLite/SQLCipher database file
+2. **Browse Schema** - Use the sidebar to navigate tables, views, and indexes
+3. **Query Data** - Use the SQL editor to write and execute queries
+4. **Edit Data** - Double-click cells to edit values directly
+5. **Review Changes** - Click "Apply Changes" to preview and commit your modifications
+
+## ⌨️ Keyboard Shortcuts
+
+| Shortcut           | Action                          |
+| ------------------ | ------------------------------- |
+| `Cmd/Ctrl + Enter` | Execute SQL query               |
+| `Cmd/Ctrl + S`     | Apply changes                   |
+| `Escape`           | Cancel editing                  |
+| `Tab`              | Navigate to next cell           |
+| `Enter`            | Confirm edit / Move to next row |
+| `Delete`           | Delete selected row             |
+
+## 🛠️ Development
+
+### Prerequisites
+
+- Node.js 20+
+- pnpm 10+
+- For icon generation: ImageMagick and librsvg
+
+### Scripts
+
+```bash
+pnpm dev          # Start development server
+pnpm build        # Build for production
+pnpm lint         # Run ESLint
+pnpm typecheck    # Run TypeScript type checking
+pnpm format       # Format code with Prettier
+pnpm build:icons  # Generate app icons from SVG
+```
+
+### Project Structure
+
+```
+sql-pro/
+├── src/
+│   ├── main/           # Electron main process
+│   │   └── services/   # Database, IPC handlers
+│   ├── preload/        # Preload scripts
+│   └── renderer/       # React frontend
+│       ├── components/ # UI components
+│       ├── stores/     # Zustand stores
+│       └── routes/     # TanStack Router routes
+├── resources/          # App icons and assets
+└── electron-builder.yml
+```
+
+## 🤝 Contributing
+
+Contributions are welcome! Please feel free to submit a Pull Request.
+
+1. Fork the repository
+2. Create your feature branch (`git checkout -b feature/amazing-feature`)
+3. Commit your changes (`git commit -m 'feat: add amazing feature'`)
+4. Push to the branch (`git push origin feature/amazing-feature`)
+5. Open a Pull Request
+
+## 📄 License
+
+This project is licensed under the MIT License - see the [LICENSE](LICENSE) file for details.
+
+## 🙏 Acknowledgments
+
+- [Electron](https://www.electronjs.org/) - Cross-platform desktop apps
+- [React](https://react.dev/) - UI library
+- [Monaco Editor](https://microsoft.github.io/monaco-editor/) - Code editor
+- [TanStack Table](https://tanstack.com/table) - Headless table library
+- [better-sqlite3-multiple-ciphers](https://github.com/nicofuenzalida/better-sqlite3-multiple-ciphers) - SQLite with encryption support
+- [Tailwind CSS](https://tailwindcss.com/) - Utility-first CSS framework

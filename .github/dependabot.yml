@@ -1,0 +1,18 @@
+version: 2
+
+updates:
+  # Check for npm package updates daily
+  - package-ecosystem: npm
+    directory: /
+    schedule:
+      interval: daily
+      time: '09:00'
+      timezone: Asia/Shanghai
+
+  # Check for GitHub Actions updates daily
+  - package-ecosystem: github-actions
+    directory: /
+    schedule:
+      interval: daily
+      time: '09:00'
+      timezone: Asia/Shanghai
