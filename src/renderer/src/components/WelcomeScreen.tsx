@@ -9,7 +9,12 @@ import {
   Moon,
   Monitor,
   KeyRound,
+  Eye,
+  MoreVertical,
+  Settings,
+  Trash2,
 } from 'lucide-react';
+import * as DropdownMenu from '@radix-ui/react-dropdown-menu';
 import { Button } from '@/components/ui/button';
 import {
   Tooltip,
@@ -18,6 +23,11 @@ import {
 } from '@/components/ui/tooltip';
 import { useConnectionStore, useThemeStore } from '@/stores';
 import { PasswordDialog } from './PasswordDialog';
+import {
+  ConnectionSettingsDialog,
+  type ConnectionSettings,
+} from './ConnectionSettingsDialog';
+import type { RecentConnection } from '../../../shared/types';
 
 export function WelcomeScreen() {
   const {
@@ -29,25 +39,89 @@ export function WelcomeScreen() {
     setIsConnecting,
     setIsLoadingSchema,
     setError,
+    setRecentConnections,
   } = useConnectionStore();
   const { theme, setTheme } = useThemeStore();
 
   const [passwordDialogOpen, setPasswordDialogOpen] = useState(false);
+  const [settingsDialogOpen, setSettingsDialogOpen] = useState(false);
   const [pendingPath, setPendingPath] = useState<string | null>(null);
+  const [pendingFilename, setPendingFilename] = useState<string>('');
+  const [pendingIsEncrypted, setPendingIsEncrypted] = useState(false);
+  const [pendingSettings, setPendingSettings] =
+    useState<ConnectionSettings | null>(null);
+
+  // Edit mode state
+  const [editDialogOpen, setEditDialogOpen] = useState(false);
+  const [editingConnection, setEditingConnection] =
+    useState<RecentConnection | null>(null);
 
   const handleOpenDatabase = async () => {
     const result = await window.sqlPro.dialog.openFile();
     if (result.success && !result.canceled && result.filePath) {
-      await connectToDatabase(result.filePath);
+      const filePath = result.filePath;
+      const filename = filePath.split('/').pop() || filePath;
+
+      // Check if this is an encrypted database by attempting to open it
+      setIsConnecting(true);
+      const probeResult = await window.sqlPro.db.open({ path: filePath });
+      setIsConnecting(false);
+
+      const isEncrypted = probeResult.needsPassword === true;
+
+      // Store pending info and show settings dialog
+      setPendingPath(filePath);
+      setPendingFilename(filename);
+      setPendingIsEncrypted(isEncrypted);
+      setSettingsDialogOpen(true);
     }
   };
 
-  const connectToDatabase = async (path: string, password?: string) => {
+  const handleSettingsSubmit = async (settings: ConnectionSettings) => {
+    setSettingsDialogOpen(false);
+    setPendingSettings(settings);
+
+    if (!pendingPath) return;
+
+    if (pendingIsEncrypted) {
+      // Check if we have a saved password
+      const savedPasswordResult = await window.sqlPro.password.get({
+        dbPath: pendingPath,
+      });
+      if (savedPasswordResult.success && savedPasswordResult.password) {
+        // Connect with saved password and settings
+        await connectToDatabase(
+          pendingPath,
+          savedPasswordResult.password,
+          settings.readOnly,
+          settings
+        );
+      } else {
+        // Need password - show password dialog
+        setPasswordDialogOpen(true);
+      }
+    } else {
+      // Non-encrypted database - connect directly with settings
+      await connectToDatabase(
+        pendingPath,
+        undefined,
+        settings.readOnly,
+        settings
+      );
+    }
+  };
+
+  const connectToDatabase = async (
+    path: string,
+    password?: string,
+    readOnly?: boolean,
+    settings?: ConnectionSettings
+  ) => {
     setIsConnecting(true);
     setError(null);
 
     try {
-      const result = await window.sqlPro.db.open({ path, password });
+      const result = await window.sqlPro.db.open({ path, password, readOnly });
 
       if (!result.success) {
         // Check if database needs a password (using explicit flag from backend)
@@ -76,6 +150,15 @@ export function WelcomeScreen() {
       }
 
       if (result.connection) {
+        // Save connection settings if provided (new connection flow)
+        if (settings) {
+          await window.sqlPro.connection.update({
+            path: result.connection.path,
+            displayName: settings.displayName,
+            readOnly: settings.readOnly,
+          });
+        }
+
         setConnection({
           id: result.connection.id,
           path: result.connection.path,
@@ -98,6 +181,10 @@ export function WelcomeScreen() {
           });
         }
         setIsLoadingSchema(false);
+
+        // Clear pending state
+        setPendingPath(null);
+        setPendingSettings(null);
       }
     } catch (err) {
       setError(err instanceof Error ? err.message : 'Unknown error');
@@ -112,34 +199,96 @@ export function WelcomeScreen() {
   ) => {
     setPasswordDialogOpen(false);
     if (pendingPath) {
+      // Use rememberPassword from settings dialog if available, otherwise from password dialog
+      const shouldRemember =
+        pendingSettings?.rememberPassword ?? rememberPassword;
+
       // Save password if requested
-      if (rememberPassword) {
+      if (shouldRemember) {
         await window.sqlPro.password.save({
           dbPath: pendingPath,
           password,
         });
       }
-      await connectToDatabase(pendingPath, password);
-      setPendingPath(null);
+
+      // Connect with settings if available
+      await connectToDatabase(
+        pendingPath,
+        password,
+        pendingSettings?.readOnly,
+        pendingSettings ?? undefined
+      );
     }
   };
 
-  const handleRecentClick = async (path: string, isEncrypted: boolean) => {
+  const handleRecentClick = async (
+    path: string,
+    isEncrypted: boolean,
+    readOnly?: boolean
+  ) => {
     if (isEncrypted) {
       // Check if we have a saved password
       const savedPasswordResult = await window.sqlPro.password.get({
         dbPath: path,
       });
       if (savedPasswordResult.success && savedPasswordResult.password) {
-        // Try to connect with saved password
-        await connectToDatabase(path, savedPasswordResult.password);
+        // Try to connect with saved password and readOnly setting
+        await connectToDatabase(path, savedPasswordResult.password, readOnly);
       } else {
-        // No saved password, show dialog
+        // No saved password, show dialog - store readOnly for later use
         setPendingPath(path);
+        setPendingSettings(
+          readOnly !== undefined
+            ? { displayName: '', readOnly, rememberPassword: false }
+            : null
+        );
         setPasswordDialogOpen(true);
       }
     } else {
-      await connectToDatabase(path);
+      await connectToDatabase(path, undefined, readOnly);
+    }
+  };
+
+  // Edit connection settings (T031, T033)
+  const handleEditConnection = (conn: RecentConnection) => {
+    setEditingConnection(conn);
+    setEditDialogOpen(true);
+  };
+
+  const handleEditSubmit = async (settings: ConnectionSettings) => {
+    if (!editingConnection) return;
+
+    const result = await window.sqlPro.connection.update({
+      path: editingConnection.path,
+      displayName: settings.displayName,
+      readOnly: settings.readOnly,
+    });
+
+    if (result.success) {
+      // Refresh recent connections to show updated settings (T034)
+      const connectionsResult = await window.sqlPro.app.getRecentConnections();
+      if (connectionsResult.success && connectionsResult.connections) {
+        setRecentConnections(connectionsResult.connections);
+      }
+    }
+
+    setEditDialogOpen(false);
+    setEditingConnection(null);
+  };
+
+  // Remove connection from list (T045-T049 - implementing here for context menu)
+  const handleRemoveConnection = async (conn: RecentConnection) => {
+    const result = await window.sqlPro.connection.remove({
+      path: conn.path,
+      removePassword: true, // Also remove saved password
+    });
+
+    if (result.success) {
+      // Refresh recent connections
+      const connectionsResult = await window.sqlPro.app.getRecentConnections();
+      if (connectionsResult.success && connectionsResult.connections) {
+        setRecentConnections(connectionsResult.connections);
+      }
     }
   };
 
@@ -253,42 +402,129 @@ export function WelcomeScreen() {
             </div>
             <div className="space-y-1">
               {recentConnections.slice(0, 5).map((conn) => (
-                <button
+                <div
                   key={conn.path}
-                  onClick={() => handleRecentClick(conn.path, conn.isEncrypted)}
-                  disabled={isConnecting}
-                  className="flex w-full items-center gap-3 rounded-lg px-3 py-2 text-left text-sm transition-colors hover:bg-accent disabled:opacity-50"
+                  className="group flex w-full items-center gap-2 overflow-hidden rounded-lg px-3 py-2 text-left text-sm transition-colors hover:bg-accent"
                 >
-                  <Database className="h-4 w-4 shrink-0 text-muted-foreground" />
-                  <div className="min-w-0 flex-1">
-                    <div className="flex items-center gap-2">
-                      <span className="truncate font-medium">
-                        {conn.filename}
+                  <button
+                    onClick={() =>
+                      handleRecentClick(
+                        conn.path,
+                        conn.isEncrypted,
+                        conn.readOnly
+                      )
+                    }
+                    disabled={isConnecting}
+                    aria-label={`Open ${conn.displayName || conn.filename}${conn.readOnly ? ' (read-only)' : ''}${conn.isEncrypted ? ' (encrypted)' : ''}`}
+                    className="flex min-w-0 flex-1 items-center gap-3 rounded-md focus:outline-none focus:ring-2 focus:ring-ring focus:ring-offset-2 disabled:opacity-50"
+                  >
+                    <Database className="h-4 w-4 shrink-0 text-muted-foreground" />
+                    <div className="min-w-0 flex-1">
+                      <div className="flex items-center gap-2">
+                        <span className="truncate font-medium">
+                          {conn.displayName || conn.filename}
+                        </span>
+                        {conn.readOnly && (
+                          <Tooltip>
+                            <TooltipTrigger asChild>
+                              <Eye className="h-3 w-3 text-muted-foreground" />
+                            </TooltipTrigger>
+                            <TooltipContent>Read-only</TooltipContent>
+                          </Tooltip>
+                        )}
+                        {conn.isEncrypted && (
+                          <>
+                            <Lock className="h-3 w-3 text-muted-foreground" />
+                            <HasSavedPasswordIndicator path={conn.path} />
+                          </>
+                        )}
+                      </div>
+                      <span className="block truncate text-xs text-muted-foreground">
+                        {conn.path}
                       </span>
-                      {conn.isEncrypted && (
-                        <>
-                          <Lock className="h-3 w-3 text-muted-foreground" />
-                          <HasSavedPasswordIndicator path={conn.path} />
-                        </>
-                      )}
                     </div>
-                    <span className="block truncate text-xs text-muted-foreground">
-                      {conn.path}
-                    </span>
-                  </div>
-                </button>
+                  </button>
+
+                  {/* Context Menu */}
+                  <DropdownMenu.Root>
+                    <DropdownMenu.Trigger asChild>
+                      <button
+                        className="rounded p-1 opacity-0 transition-opacity hover:bg-accent-foreground/10 group-hover:opacity-100 focus:opacity-100 focus:outline-none focus:ring-2 focus:ring-ring"
+                        aria-label={`Options for ${conn.displayName || conn.filename}`}
+                      >
+                        <MoreVertical className="h-4 w-4 text-muted-foreground" />
+                      </button>
+                    </DropdownMenu.Trigger>
+                    <DropdownMenu.Portal>
+                      <DropdownMenu.Content
+                        className="min-w-40 rounded-md border bg-popover p-1 shadow-md"
+                        align="end"
+                        sideOffset={4}
+                        aria-label={`Actions for ${conn.displayName || conn.filename}`}
+                      >
+                        <DropdownMenu.Item
+                          className="flex cursor-pointer items-center gap-2 rounded-sm px-2 py-1.5 text-sm outline-none hover:bg-accent focus:bg-accent"
+                          onSelect={() => handleEditConnection(conn)}
+                        >
+                          <Settings className="h-4 w-4" />
+                          Edit Settings
+                        </DropdownMenu.Item>
+                        <DropdownMenu.Separator className="my-1 h-px bg-border" />
+                        <DropdownMenu.Item
+                          className="flex cursor-pointer items-center gap-2 rounded-sm px-2 py-1.5 text-sm text-destructive outline-none hover:bg-destructive/10 focus:bg-destructive/10"
+                          onSelect={() => handleRemoveConnection(conn)}
+                        >
+                          <Trash2 className="h-4 w-4" />
+                          Remove from List
+                        </DropdownMenu.Item>
+                      </DropdownMenu.Content>
+                    </DropdownMenu.Portal>
+                  </DropdownMenu.Root>
+                </div>
               ))}
             </div>
           </div>
         )}
       </div>
 
+      {/* Connection Settings Dialog (New Connection) */}
+      <ConnectionSettingsDialog
+        open={settingsDialogOpen}
+        onOpenChange={setSettingsDialogOpen}
+        onSubmit={handleSettingsSubmit}
+        filename={pendingFilename}
+        dbPath={pendingPath || ''}
+        isEncrypted={pendingIsEncrypted}
+        mode="new"
+      />
+
+      {/* Edit Connection Settings Dialog */}
+      {editingConnection && (
+        <ConnectionSettingsDialog
+          open={editDialogOpen}
+          onOpenChange={(open) => {
+            setEditDialogOpen(open);
+            if (!open) setEditingConnection(null);
+          }}
+          onSubmit={handleEditSubmit}
+          filename={editingConnection.filename}
+          dbPath={editingConnection.path}
+          isEncrypted={editingConnection.isEncrypted}
+          mode="edit"
+          initialValues={{
+            displayName:
+              editingConnection.displayName || editingConnection.filename,
+            readOnly: editingConnection.readOnly || false,
+          }}
+        />
+      )}
+
       {/* Password Dialog */}
       <PasswordDialog
         open={passwordDialogOpen}
         onOpenChange={setPasswordDialogOpen}
         onSubmit={handlePasswordSubmit}
-        filename={pendingPath?.split('/').pop() || ''}
+        filename={pendingFilename || pendingPath?.split('/').pop() || ''}
         dbPath={pendingPath || ''}
       />
     </div>

@@ -219,6 +219,12 @@ export interface RecentConnection {
   filename: string;
   isEncrypted: boolean;
   lastOpened: string;
+  /** User-defined display name (defaults to filename if not set) */
+  displayName?: string;
+  /** Open database in read-only mode */
+  readOnly?: boolean;
+  /** Timestamp when connection was first saved */
+  createdAt?: string;
 }
 
 export interface GetRecentConnectionsResponse {
@@ -292,6 +298,34 @@ export interface IsPasswordStorageAvailableResponse {
   available: boolean;
 }
 
+// ============ Connection Profile Types ============
+
+export interface UpdateConnectionRequest {
+  /** Absolute path to database file (profile identifier) */
+  path: string;
+  /** New display name (optional, keeps existing if not provided) */
+  displayName?: string;
+  /** New read-only setting (optional, keeps existing if not provided) */
+  readOnly?: boolean;
+}
+
+export interface UpdateConnectionResponse {
+  success: boolean;
+  error?: string;
+}
+
+export interface RemoveConnectionRequest {
+  /** Absolute path to database file (profile identifier) */
+  path: string;
+  /** If true, also removes saved password from keychain */
+  removePassword?: boolean;
+}
+
+export interface RemoveConnectionResponse {
+  success: boolean;
+  error?: string;
+}
+
 // ============ IPC Channel Names ============
 
 export const IPC_CHANNELS = {
@@ -322,4 +356,8 @@ export const IPC_CHANNELS = {
   PASSWORD_HAS: 'password:has',
   PASSWORD_REMOVE: 'password:remove',
   PASSWORD_IS_AVAILABLE: 'password:isAvailable',
+
+  // Connection profile operations
+  CONNECTION_UPDATE: 'connection:update',
+  CONNECTION_REMOVE: 'connection:remove',
 } as const;

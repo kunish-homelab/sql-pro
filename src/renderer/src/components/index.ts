@@ -10,4 +10,6 @@ export { DiffPreview } from './DiffPreview';
 export { QueryEditor } from './QueryEditor';
 export { QueryResults } from './QueryResults';
 export { PasswordDialog } from './PasswordDialog';
+export { ConnectionSettingsDialog } from './ConnectionSettingsDialog';
+export type { ConnectionSettings } from './ConnectionSettingsDialog';
 export { MonacoSqlEditor } from './MonacoSqlEditor';

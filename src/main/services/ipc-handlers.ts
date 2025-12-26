@@ -17,6 +17,8 @@ import {
   type GetPasswordRequest,
   type HasPasswordRequest,
   type RemovePasswordRequest,
+  type UpdateConnectionRequest,
+  type RemoveConnectionRequest,
 } from '../../shared/types';
 import fs from 'fs';
 import path from 'path';
@@ -54,6 +56,9 @@ interface StoredRecentConnection {
   filename: string;
   isEncrypted: boolean;
   lastOpened: string;
+  displayName?: string;
+  readOnly?: boolean;
+  createdAt?: string;
 }
 
 function loadPreferences(): StoredPreferences {
@@ -99,26 +104,116 @@ function saveRecentConnections(connections: StoredRecentConnection[]): void {
 function addRecentConnection(
   filePath: string,
   filename: string,
-  isEncrypted: boolean
+  isEncrypted: boolean,
+  displayName?: string,
+  readOnly?: boolean
 ): void {
   const connections = loadRecentConnections();
   const prefs = loadPreferences();
 
+  // Check if this connection already exists
+  const existing = connections.find((c) => c.path === filePath);
+
   // Remove existing entry for this path
   const filtered = connections.filter((c) => c.path !== filePath);
 
-  // Add new entry at the beginning
+  const now = new Date().toISOString();
+
+  // Add new entry at the beginning, preserving existing settings if not provided
   filtered.unshift({
     path: filePath,
     filename,
     isEncrypted,
-    lastOpened: new Date().toISOString(),
+    lastOpened: now,
+    displayName: displayName ?? existing?.displayName ?? filename,
+    readOnly: readOnly ?? existing?.readOnly ?? false,
+    createdAt: existing?.createdAt ?? now,
   });
 
   // Limit to configured max
   const limited = filtered.slice(0, prefs.recentConnectionsLimit);
 
   saveRecentConnections(limited);
+}
+
+/**
+ * Updates an existing connection profile's settings (T006)
+ */
+function updateConnection(
+  filePath: string,
+  updates: { displayName?: string; readOnly?: boolean }
+): { success: boolean; error?: string } {
+  try {
+    const connections = loadRecentConnections();
+    const index = connections.findIndex((c) => c.path === filePath);
+
+    if (index === -1) {
+      return { success: false, error: 'CONNECTION_NOT_FOUND' };
+    }
+
+    // Validate displayName if provided
+    if (updates.displayName !== undefined) {
+      if (
+        updates.displayName.length === 0 ||
+        updates.displayName.length > 100
+      ) {
+        return { success: false, error: 'INVALID_DISPLAY_NAME' };
+      }
+    }
+
+    // Update the connection
+    if (updates.displayName !== undefined) {
+      connections[index].displayName = updates.displayName;
+    }
+    if (updates.readOnly !== undefined) {
+      connections[index].readOnly = updates.readOnly;
+    }
+
+    saveRecentConnections(connections);
+    return { success: true };
+  } catch (error) {
+    return {
+      success: false,
+      error: error instanceof Error ? error.message : 'STORAGE_ERROR',
+    };
+  }
+}
+
+/**
+ * Removes a connection profile from the recent list (T007)
+ */
+function removeConnection(
+  filePath: string,
+  removePassword?: boolean
+): { success: boolean; error?: string } {
+  try {
+    const connections = loadRecentConnections();
+    const filtered = connections.filter((c) => c.path !== filePath);
+
+    if (filtered.length === connections.length) {
+      // Connection was not found, but this is not an error - it may have been removed already
+      return { success: true };
+    }
+
+    saveRecentConnections(filtered);
+
+    // Optionally remove the saved password
+    if (removePassword) {
+      try {
+        passwordStorageService.removePassword(filePath);
+      } catch {
+        // Password removal failure shouldn't fail the entire operation
+        // The connection is already removed from the list
+      }
+    }
+
+    return { success: true };
+  } catch (error) {
+    return {
+      success: false,
+      error: error instanceof Error ? error.message : 'STORAGE_ERROR',
+    };
+  }
 }
 
 export function setupIpcHandlers(): void {
@@ -443,6 +538,25 @@ export function setupIpcHandlers(): void {
               : 'Failed to remove password',
         };
       }
+    }
+  );
+
+  // Connection: Update (T008)
+  ipcMain.handle(
+    IPC_CHANNELS.CONNECTION_UPDATE,
+    async (_event, request: UpdateConnectionRequest) => {
+      return updateConnection(request.path, {
+        displayName: request.displayName,
+        readOnly: request.readOnly,
+      });
+    }
+  );
+
+  // Connection: Remove (T009)
+  ipcMain.handle(
+    IPC_CHANNELS.CONNECTION_REMOVE,
+    async (_event, request: RemoveConnectionRequest) => {
+      return removeConnection(request.path, request.removePassword);
     }
   );
 }

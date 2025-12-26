@@ -35,6 +35,10 @@ import type {
   RemovePasswordRequest,
   RemovePasswordResponse,
   IsPasswordStorageAvailableResponse,
+  UpdateConnectionRequest,
+  UpdateConnectionResponse,
+  RemoveConnectionRequest,
+  RemoveConnectionResponse,
 } from '../shared/types';
 
 // Custom API for SQL Pro
@@ -107,6 +111,18 @@ const sqlProAPI = {
       ipcRenderer.invoke(IPC_CHANNELS.PASSWORD_HAS, request),
     remove: (request: RemovePasswordRequest): Promise<RemovePasswordResponse> =>
       ipcRenderer.invoke(IPC_CHANNELS.PASSWORD_REMOVE, request),
+  },
+
+  // Connection profile operations (T010)
+  connection: {
+    update: (
+      request: UpdateConnectionRequest
+    ): Promise<UpdateConnectionResponse> =>
+      ipcRenderer.invoke(IPC_CHANNELS.CONNECTION_UPDATE, request),
+    remove: (
+      request: RemoveConnectionRequest
+    ): Promise<RemoveConnectionResponse> =>
+      ipcRenderer.invoke(IPC_CHANNELS.CONNECTION_REMOVE, request),
   },
 };
 

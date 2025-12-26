@@ -4,6 +4,7 @@ import type {
   DatabaseSchema,
   TableSchema,
 } from '@/types/database';
+import type { RecentConnection } from '../../../shared/types';
 
 interface ConnectionState {
   // Current connection
@@ -11,13 +12,8 @@ interface ConnectionState {
   schema: DatabaseSchema | null;
   selectedTable: TableSchema | null;
 
-  // Recent connections
-  recentConnections: Array<{
-    path: string;
-    filename: string;
-    isEncrypted: boolean;
-    lastOpened: string;
-  }>;
+  // Recent connections (using shared type with new fields)
+  recentConnections: RecentConnection[];
 
   // Loading states
   isConnecting: boolean;
@@ -30,14 +26,7 @@ interface ConnectionState {
   setConnection: (connection: DatabaseConnection | null) => void;
   setSchema: (schema: DatabaseSchema | null) => void;
   setSelectedTable: (table: TableSchema | null) => void;
-  setRecentConnections: (
-    connections: Array<{
-      path: string;
-      filename: string;
-      isEncrypted: boolean;
-      lastOpened: string;
-    }>
-  ) => void;
+  setRecentConnections: (connections: RecentConnection[]) => void;
   setIsConnecting: (isConnecting: boolean) => void;
   setIsLoadingSchema: (isLoading: boolean) => void;
   setError: (error: string | null) => void;
