@@ -3,7 +3,9 @@ import { useVirtualizer } from '@tanstack/react-virtual';
 import { ArrowUp, ArrowDown, Key, Trash2 } from 'lucide-react';
 import { cn } from '@/lib/utils';
 import { EditableCell } from './EditableCell';
+import { ColumnResizeHandle } from './ColumnResizeHandle';
 import { useChangesStore } from '@/stores';
+import { useResizableColumns } from '@/hooks/useResizableColumns';
 import type { ColumnSchema, SortState, PendingChange } from '@/types/database';
 
 interface EditableDataGridProps {
@@ -112,22 +114,23 @@ export function EditableDataGrid({
     overscan: 10,
   });
 
-  // Calculate column widths
-  const columnWidths = useMemo(() => {
-    const widths = columns.map((col) => {
-      const headerWidth = col.name.length * 8 + 40;
-      const maxContentWidth = rows.slice(0, 100).reduce((max, row) => {
-        const value = row[col.name];
-        const strValue = value === null ? 'NULL' : String(value);
-        return Math.max(max, strValue.length * 7);
-      }, 0);
-      return Math.min(Math.max(headerWidth, maxContentWidth, 80), 400);
-    });
-    // Add width for actions column
-    return [...widths, 50];
-  }, [columns, rows]);
+  // Resizable columns
+  const {
+    columnWidths: dataColumnWidths,
+    totalWidth: dataTotalWidth,
+    handleResizeStart,
+    handleResizeDoubleClick,
+    isResizing,
+    resizingColumn,
+  } = useResizableColumns({
+    columns,
+    rows,
+    minWidth: 50,
+  });
 
-  const totalWidth = columnWidths.reduce((sum, w) => sum + w, 0);
+  // Add width for actions column
+  const columnWidths = [...dataColumnWidths, 50];
+  const totalWidth = dataTotalWidth + 50;
 
   const handleCellEdit = useCallback(
     (rowIndex: number, column: string) => {
@@ -425,7 +428,10 @@ export function EditableDataGrid({
   return (
     <div
       ref={parentRef}
-      className="h-full w-full overflow-auto outline-none"
+      className={cn(
+        'h-full w-full overflow-auto outline-none',
+        isResizing && 'select-none'
+      )}
       tabIndex={0}
       onKeyDown={handleGridKeyDown}
     >
@@ -435,7 +441,7 @@ export function EditableDataGrid({
           {columns.map((col, idx) => (
             <div
               key={col.name}
-              className="flex items-center gap-1 border-r px-3 py-2"
+              className="relative flex items-center gap-1 border-r px-3 py-2"
               style={{ width: columnWidths[idx], minWidth: columnWidths[idx] }}
             >
               <button
@@ -451,6 +457,11 @@ export function EditableDataGrid({
                     <ArrowDown className="h-3 w-3 shrink-0" />
                   ))}
               </button>
+              <ColumnResizeHandle
+                onMouseDown={(e) => handleResizeStart(idx, e)}
+                onDoubleClick={() => handleResizeDoubleClick(idx)}
+                isResizing={resizingColumn === idx}
+              />
             </div>
           ))}
           {/* Actions header */}

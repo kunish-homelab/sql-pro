@@ -1,12 +1,12 @@
-import { useState, useRef, useEffect } from 'react';
+import { useState, useRef, useEffect, memo, ReactNode } from 'react';
+import { Cell, flexRender } from '@tanstack/react-table';
 import { cn } from '@/lib/utils';
+import type { TableRowData } from './hooks/useTableCore';
 import type { ColumnSchema } from '@/types/database';
 
-interface EditableCellProps {
-  value: unknown;
-  column?: ColumnSchema;
-  /** @deprecated Use column.type instead */
-  type: string;
+interface TableCellProps {
+  cell: Cell<TableRowData, unknown>;
+  isFocused: boolean;
   isEditing: boolean;
   hasChange: boolean;
   oldValue?: unknown;
@@ -14,12 +14,12 @@ interface EditableCellProps {
   onSave: (value: unknown) => void;
   onCancel: () => void;
   onKeyDown?: (e: React.KeyboardEvent) => void;
+  onClick?: () => void;
 }
 
-export function EditableCell({
-  value,
-  column,
-  type,
+export const TableCell = memo(function TableCell({
+  cell,
+  isFocused,
   isEditing,
   hasChange,
   oldValue,
@@ -27,18 +27,22 @@ export function EditableCell({
   onSave,
   onCancel,
   onKeyDown,
-}: EditableCellProps) {
+  onClick,
+}: TableCellProps) {
   const [editValue, setEditValue] = useState('');
   const [validationError, setValidationError] = useState<string | null>(null);
   const inputRef = useRef<HTMLInputElement>(null);
 
-  // Use column.type if available, otherwise fall back to type prop
-  const columnType = column?.type ?? type;
+  const value = cell.getValue();
+  const columnMeta = cell.column.columnDef.meta as
+    | { schema?: ColumnSchema; type?: string }
+    | undefined;
+  const columnSchema = columnMeta?.schema;
+  const columnType = columnSchema?.type ?? columnMeta?.type ?? 'text';
 
+  // Initialize edit value when entering edit mode
   useEffect(() => {
     if (isEditing) {
-      // Initialize edit value when entering edit mode - this is intentional
-      // eslint-disable-next-line react-hooks/set-state-in-effect
       setEditValue(value === null ? '' : String(value));
       setValidationError(null);
       setTimeout(() => inputRef.current?.focus(), 0);
@@ -47,14 +51,15 @@ export function EditableCell({
 
   const validateValue = (val: string): string | null => {
     // Check NOT NULL constraint
-    if (column && !column.nullable) {
+    if (columnSchema && !columnSchema.nullable) {
       if (val === '' || val.toLowerCase() === 'null') {
         return 'This field cannot be empty';
       }
     }
 
     // Type validation for numeric types
-    if (columnType.toLowerCase().includes('int')) {
+    const type = columnType.toLowerCase();
+    if (type.includes('int')) {
       if (val !== '' && val.toLowerCase() !== 'null') {
         const parsed = parseInt(val, 10);
         if (isNaN(parsed)) {
@@ -62,9 +67,9 @@ export function EditableCell({
         }
       }
     } else if (
-      columnType.toLowerCase().includes('real') ||
-      columnType.toLowerCase().includes('float') ||
-      columnType.toLowerCase().includes('double')
+      type.includes('real') ||
+      type.includes('float') ||
+      type.includes('double')
     ) {
       if (val !== '' && val.toLowerCase() !== 'null') {
         const parsed = parseFloat(val);
@@ -77,25 +82,7 @@ export function EditableCell({
     return null;
   };
 
-  const handleKeyDown = (e: React.KeyboardEvent) => {
-    if (e.key === 'Tab') {
-      // Save current value before navigating
-      handleSave();
-      // Forward Tab to parent for navigation
-      onKeyDown?.(e);
-    } else if (e.key === 'Enter') {
-      handleSave();
-      // Forward Enter to parent for navigation
-      onKeyDown?.(e);
-    } else if (e.key === 'Escape') {
-      setValidationError(null);
-      onCancel();
-      onKeyDown?.(e);
-    }
-  };
-
   const handleSave = () => {
-    // Validate before saving
     const error = validateValue(editValue);
     if (error) {
       setValidationError(error);
@@ -103,17 +90,18 @@ export function EditableCell({
     }
 
     let newValue: unknown = editValue;
+    const type = columnType.toLowerCase();
 
     // Convert to appropriate type
     if (editValue === '' || editValue.toLowerCase() === 'null') {
       newValue = null;
-    } else if (columnType.toLowerCase().includes('int')) {
+    } else if (type.includes('int')) {
       newValue = parseInt(editValue, 10);
       if (isNaN(newValue as number)) newValue = editValue;
     } else if (
-      columnType.toLowerCase().includes('real') ||
-      columnType.toLowerCase().includes('float') ||
-      columnType.toLowerCase().includes('double')
+      type.includes('real') ||
+      type.includes('float') ||
+      type.includes('double')
     ) {
       newValue = parseFloat(editValue);
       if (isNaN(newValue as number)) newValue = editValue;
@@ -123,16 +111,57 @@ export function EditableCell({
     onSave(newValue);
   };
 
+  const handleKeyDown = (e: React.KeyboardEvent) => {
+    if (e.key === 'Tab') {
+      handleSave();
+      onKeyDown?.(e);
+    } else if (e.key === 'Enter') {
+      handleSave();
+      onKeyDown?.(e);
+    } else if (e.key === 'Escape') {
+      setValidationError(null);
+      onCancel();
+      onKeyDown?.(e);
+    }
+  };
+
+  // For grouped cells, show the aggregated value
+  if (cell.getIsAggregated()) {
+    const renderedValue = flexRender(cell.column.columnDef.aggregatedCell, cell.getContext()) ??
+      (cell.renderValue() as ReactNode);
+    return (
+      <div
+        className="flex h-full items-center px-2 text-sm text-muted-foreground"
+        style={{ width: `var(--col-${cell.column.id}-size)` }}
+      >
+        {renderedValue}
+      </div>
+    );
+  }
+
+  // For placeholder cells in grouped rows
+  if (cell.getIsPlaceholder()) {
+    return (
+      <div
+        className="h-full"
+        style={{ width: `var(--col-${cell.column.id}-size)` }}
+      />
+    );
+  }
+
+  // Edit mode
   if (isEditing) {
     return (
-      <div className="relative w-full">
+      <div
+        className="relative flex h-full items-center"
+        style={{ width: `var(--col-${cell.column.id}-size)` }}
+      >
         <input
           ref={inputRef}
           type="text"
           value={editValue}
           onChange={(e) => {
             setEditValue(e.target.value);
-            // Clear error when user types
             if (validationError) {
               setValidationError(null);
             }
@@ -140,7 +169,7 @@ export function EditableCell({
           onBlur={handleSave}
           onKeyDown={handleKeyDown}
           className={cn(
-            'w-full bg-background px-1 py-0.5 text-sm outline-none ring-2',
+            'h-full w-full bg-background px-2 text-sm outline-none ring-2 ring-inset',
             validationError ? 'ring-destructive' : 'ring-ring'
           )}
           aria-invalid={!!validationError}
@@ -158,13 +187,17 @@ export function EditableCell({
     );
   }
 
+  // Display mode
   return (
     <div
+      onClick={onClick}
       onDoubleClick={onEdit}
       className={cn(
-        'flex h-full w-full cursor-pointer items-center overflow-hidden',
+        'flex h-full cursor-pointer items-center overflow-hidden px-2',
+        isFocused && 'ring-2 ring-inset ring-ring',
         hasChange && 'bg-amber-500/20'
       )}
+      style={{ width: `var(--col-${cell.column.id}-size)` }}
       title={
         hasChange && oldValue !== undefined
           ? `Original: ${oldValue}`
@@ -174,7 +207,7 @@ export function EditableCell({
       <CellDisplay value={value} type={columnType} />
     </div>
   );
-}
+});
 
 function CellDisplay({ value, type }: { value: unknown; type: string }) {
   if (value === null) {

@@ -132,3 +132,20 @@ export interface TableDataResponse {
   rows: Record<string, unknown>[];
   pagination: PaginationState;
 }
+
+// Aggregation types for grouped data
+export type AggregationType = 'count' | 'sum' | 'avg' | 'min' | 'max' | 'none';
+
+// Column group configuration for multi-level headers
+export interface ColumnGroupConfig {
+  id: string;
+  header: string;
+  columns: string[];
+}
+
+// Table grouping state
+export interface TableGroupingState {
+  groupByColumns: string[];
+  expanded: Record<string, boolean>;
+  aggregations: Record<string, AggregationType>;
+}

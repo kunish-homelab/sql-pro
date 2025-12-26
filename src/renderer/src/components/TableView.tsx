@@ -1,4 +1,4 @@
-import { useCallback, useEffect, useState } from 'react';
+import { useCallback, useEffect, useState, useMemo } from 'react';
 import {
   ChevronLeft,
   ChevronRight,
@@ -10,13 +10,14 @@ import {
   Plus,
 } from 'lucide-react';
 import { Button } from '@/components/ui/button';
-import { EditableDataGrid } from './EditableDataGrid';
+import { DataTable, TableRowData } from './data-table';
 import { DiffPreview } from './DiffPreview';
 import {
   useConnectionStore,
   useTableDataStore,
   useChangesStore,
 } from '@/stores';
+import type { PendingChange, SortState } from '@/types/database';
 
 export function TableView() {
   const { connection, selectedTable } = useConnectionStore();
@@ -35,9 +36,10 @@ export function TableView() {
     setIsLoading,
     setError,
   } = useTableDataStore();
-  const { hasChanges, getChangesForTable, addChange } = useChangesStore();
+  const { changes, hasChanges, getChangesForTable, getChangeForRow, addChange } = useChangesStore();
 
   const [showDiffPreview, setShowDiffPreview] = useState(false);
+  const [grouping, setGrouping] = useState<string[]>([]);
 
   const loadData = useCallback(async () => {
     if (!connection || !selectedTable) return;
@@ -99,19 +101,161 @@ export function TableView() {
     loadData();
   };
 
-  const handleSort = (column: string) => {
-    if (sort?.column === column) {
-      setSort({
-        column,
-        direction: sort.direction === 'asc' ? 'desc' : 'asc',
-      });
-    } else {
-      setSort({ column, direction: 'asc' });
-    }
-  };
+  // Handle sort change from DataTable
+  const handleSortChange = useCallback((newSort: SortState | null) => {
+    setSort(newSort);
+  }, [setSort]);
 
   // Find primary key column
   const primaryKeyColumn = selectedTable?.primaryKey[0];
+
+  // Get the row ID for a given row
+  const getRowId = useCallback(
+    (row: Record<string, unknown>, index: number): string | number => {
+      if (primaryKeyColumn && row[primaryKeyColumn] !== undefined) {
+        return row[primaryKeyColumn] as string | number;
+      }
+      if (row.rowid !== undefined) {
+        return row.rowid as number;
+      }
+      return index;
+    },
+    [primaryKeyColumn]
+  );
+
+  // Merge original rows with pending changes, including new inserts
+  const displayRows = useMemo((): TableRowData[] => {
+    if (!selectedTable) return [];
+
+    // Get pending inserts for this table (prepend to existing rows)
+    const insertedRows = changes
+      .filter((c) => c.table === selectedTable.name && c.type === 'insert')
+      .map((c) => ({
+        ...c.newValues,
+        __rowId: c.rowId,
+        __isNew: true,
+        __change: c,
+      })) as TableRowData[];
+
+    // Map existing rows with updates/deletes
+    const existingRows = rows.map((row, index) => {
+      const rowId = getRowId(row, index);
+      const change = getChangeForRow(selectedTable.name, rowId);
+
+      if (change?.type === 'delete') {
+        return { ...row, __deleted: true, __rowId: rowId } as TableRowData;
+      }
+
+      if (change?.type === 'update' && change.newValues) {
+        return {
+          ...row,
+          ...change.newValues,
+          __rowId: rowId,
+          __change: change,
+        } as TableRowData;
+      }
+
+      return { ...row, __rowId: rowId } as TableRowData;
+    });
+
+    // Inserts appear at the top
+    return [...insertedRows, ...existingRows];
+  }, [rows, changes, selectedTable, getRowId, getChangeForRow]);
+
+  // Build changes map for DataTable
+  const changesMap = useMemo(() => {
+    if (!selectedTable) return new Map<string | number, PendingChange>();
+
+    const map = new Map<string | number, PendingChange>();
+    changes
+      .filter((c) => c.table === selectedTable.name)
+      .forEach((c) => map.set(c.rowId, c));
+    return map;
+  }, [changes, selectedTable]);
+
+  // Handle cell change from DataTable
+  const handleCellChange = useCallback(
+    (rowId: string | number, columnId: string, newValue: unknown, oldValue: unknown) => {
+      if (!selectedTable) return;
+
+      // Check if this is a new row (inserted row)
+      const isNewRow = typeof rowId === 'number' && rowId < 0;
+
+      if (isNewRow) {
+        // For new rows, update the existing insert change
+        const existingChange = getChangeForRow(selectedTable.name, rowId);
+        if (existingChange) {
+          addChange({
+            table: selectedTable.name,
+            rowId,
+            type: 'insert',
+            oldValues: null,
+            newValues: { ...existingChange.newValues, [columnId]: newValue },
+          });
+        }
+      } else {
+        // Find the original row in the rows array
+        let originalRow: Record<string, unknown> | undefined;
+        for (let i = 0; i < rows.length; i++) {
+          const rid = getRowId(rows[i], i);
+          if (rid === rowId) {
+            originalRow = rows[i];
+            break;
+          }
+        }
+
+        if (originalRow && newValue !== oldValue) {
+          addChange({
+            table: selectedTable.name,
+            rowId,
+            type: 'update',
+            oldValues: originalRow,
+            newValues: { [columnId]: newValue },
+          });
+        }
+      }
+    },
+    [selectedTable, getChangeForRow, addChange, changes, rows, getRowId]
+  );
+
+  // Handle row delete from DataTable
+  const handleRowDelete = useCallback(
+    (rowId: string | number) => {
+      if (!selectedTable) return;
+
+      const isNewRow = typeof rowId === 'number' && rowId < 0;
+
+      if (isNewRow) {
+        // For new rows, removing the insert
+        addChange({
+          table: selectedTable.name,
+          rowId,
+          type: 'delete',
+          oldValues: null,
+          newValues: null,
+        });
+      } else {
+        // Find the original row
+        let originalRow: Record<string, unknown> | undefined;
+        for (let i = 0; i < rows.length; i++) {
+          const rid = getRowId(rows[i], i);
+          if (rid === rowId) {
+            originalRow = rows[i];
+            break;
+          }
+        }
+
+        addChange({
+          table: selectedTable.name,
+          rowId,
+          type: 'delete',
+          oldValues: originalRow ?? null,
+          newValues: null,
+        });
+      }
+    },
+    [selectedTable, addChange, rows, getRowId]
+  );
 
   // Count changes for current table
   const tableChanges = selectedTable
@@ -202,14 +346,19 @@ export function TableView() {
               <p>{error}</p>
             </div>
           ) : (
-            <EditableDataGrid
-              tableName={selectedTable.name}
+            <DataTable
               columns={columns}
-              rows={rows}
+              data={displayRows}
               sort={sort}
-              onSort={handleSort}
+              onSortChange={handleSortChange}
+              grouping={grouping}
+              onGroupingChange={setGrouping}
+              editable={selectedTable.type !== 'view'}
+              onCellChange={handleCellChange}
+              onRowDelete={handleRowDelete}
+              changes={changesMap}
               primaryKeyColumn={primaryKeyColumn}
-              readOnly={selectedTable.type === 'view'}
+              className="h-full"
             />
           )}
         </div>

@@ -1,7 +1,9 @@
-import { useMemo, useRef } from 'react';
+import { useRef } from 'react';
 import { useVirtualizer } from '@tanstack/react-virtual';
 import { ArrowUp, ArrowDown, Key } from 'lucide-react';
 import { cn } from '@/lib/utils';
+import { ColumnResizeHandle } from './ColumnResizeHandle';
+import { useResizableColumns } from '@/hooks/useResizableColumns';
 import type { ColumnSchema, SortState } from '@/types/database';
 
 interface DataGridProps {
@@ -22,20 +24,19 @@ export function DataGrid({ columns, rows, sort, onSort }: DataGridProps) {
     overscan: 10,
   });
 
-  // Calculate column widths based on content
-  const columnWidths = useMemo(() => {
-    return columns.map((col) => {
-      const headerWidth = col.name.length * 8 + 40; // account for sort icon
-      const maxContentWidth = rows.slice(0, 100).reduce((max, row) => {
-        const value = row[col.name];
-        const strValue = value === null ? 'NULL' : String(value);
-        return Math.max(max, strValue.length * 7);
-      }, 0);
-      return Math.min(Math.max(headerWidth, maxContentWidth, 80), 400);
-    });
-  }, [columns, rows]);
-
-  const totalWidth = columnWidths.reduce((sum, w) => sum + w, 0);
+  // Resizable columns
+  const {
+    columnWidths,
+    totalWidth,
+    handleResizeStart,
+    handleResizeDoubleClick,
+    isResizing,
+    resizingColumn,
+  } = useResizableColumns({
+    columns,
+    rows,
+    minWidth: 50,
+  });
 
   if (columns.length === 0) {
     return (
@@ -46,14 +47,17 @@ export function DataGrid({ columns, rows, sort, onSort }: DataGridProps) {
   }
 
   return (
-    <div ref={parentRef} className="h-full overflow-auto">
+    <div
+      ref={parentRef}
+      className={cn('h-full overflow-auto', isResizing && 'select-none')}
+    >
       <div style={{ minWidth: totalWidth }}>
         {/* Header */}
         <div className="sticky top-0 z-10 flex border-b bg-muted/50 backdrop-blur-sm">
           {columns.map((col, idx) => (
             <div
               key={col.name}
-              className="flex items-center gap-1 border-r px-3 py-2 last:border-r-0"
+              className="relative flex items-center gap-1 border-r px-3 py-2 last:border-r-0"
               style={{ width: columnWidths[idx], minWidth: columnWidths[idx] }}
             >
               <button
@@ -69,6 +73,11 @@ export function DataGrid({ columns, rows, sort, onSort }: DataGridProps) {
                     <ArrowDown className="h-3 w-3 shrink-0" />
                   ))}
               </button>
+              <ColumnResizeHandle
+                onMouseDown={(e) => handleResizeStart(idx, e)}
+                onDoubleClick={() => handleResizeDoubleClick(idx)}
+                isResizing={resizingColumn === idx}
+              />
             </div>
           ))}
         </div>
@@ -148,15 +157,9 @@ function CellValue({ value, type }: CellValueProps) {
   }
 
   const strValue = String(value);
-
-  // Truncate long strings
-  if (strValue.length > 100) {
-    return (
-      <span className="truncate text-sm" title={strValue}>
-        {strValue.substring(0, 100)}...
-      </span>
-    );
-  }
-
-  return <span className="truncate text-sm">{strValue}</span>;
+  return (
+    <span className="whitespace-nowrap text-sm" title={strValue}>
+      {strValue}
+    </span>
+  );
 }
