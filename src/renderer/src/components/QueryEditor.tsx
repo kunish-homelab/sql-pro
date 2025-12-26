@@ -28,7 +28,7 @@ export function QueryEditor() {
   const [showHistory, setShowHistory] = useState(false);
 
   // Build table/column completions from schema
-  const schemaConfig = schema
+  const _schemaConfig = schema
     ? {
         tables: schema.tables.map((t) => ({
           name: t.name,
@@ -36,6 +36,7 @@ export function QueryEditor() {
         })),
       }
     : undefined;
+  void _schemaConfig; // Reserved for future autocomplete implementation
 
   const handleExecute = useCallback(async () => {
     if (!connection || !currentQuery.trim()) return;

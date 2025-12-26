@@ -1,6 +1,6 @@
 import { useState, useMemo, useRef, useCallback } from 'react';
 import { useVirtualizer } from '@tanstack/react-virtual';
-import { ArrowUp, ArrowDown, Key, Plus, Trash2 } from 'lucide-react';
+import { ArrowUp, ArrowDown, Key, Trash2 } from 'lucide-react';
 import { cn } from '@/lib/utils';
 import { EditableCell } from './EditableCell';
 import { useChangesStore } from '@/stores';
@@ -48,9 +48,20 @@ export function EditableDataGrid({
     [primaryKeyColumn]
   );
 
-  // Merge original rows with pending changes
+  // Merge original rows with pending changes, including new inserts
   const displayRows = useMemo(() => {
-    return rows.map((row, index) => {
+    // Get pending inserts for this table (prepend to existing rows)
+    const insertedRows = changes
+      .filter((c) => c.table === tableName && c.type === 'insert')
+      .map((c) => ({
+        ...c.newValues,
+        __rowId: c.rowId,
+        __isNew: true,
+        __change: c,
+      }));
+
+    // Map existing rows with updates/deletes
+    const existingRows = rows.map((row, index) => {
       const rowId = getRowId(row, index);
       const change = getChangeForRow(tableName, rowId);
 
@@ -69,6 +80,9 @@ export function EditableDataGrid({
 
       return { ...row, __rowId: rowId };
     });
+
+    // Inserts appear at the top
+    return [...insertedRows, ...existingRows];
   }, [rows, changes, tableName, getRowId, getChangeForRow]);
 
   // Get changes for a specific cell
@@ -181,9 +195,9 @@ export function EditableDataGrid({
                 <span className="truncate">{col.name}</span>
                 {sort?.column === col.name &&
                   (sort.direction === 'asc' ? (
-                    <ArrowUp className="h-3 w-3 flex-shrink-0" />
+                    <ArrowUp className="h-3 w-3 shrink-0" />
                   ) : (
-                    <ArrowDown className="h-3 w-3 flex-shrink-0" />
+                    <ArrowDown className="h-3 w-3 shrink-0" />
                   ))}
               </button>
             </div>
@@ -207,7 +221,7 @@ export function EditableDataGrid({
         >
           {rowVirtualizer.getVirtualItems().map((virtualRow) => {
             const row = displayRows[virtualRow.index];
-            const isDeleted = row.__deleted;
+            const isDeleted = '__deleted' in row && row.__deleted;
             const rowId = row.__rowId as string | number;
 
             return (
@@ -224,7 +238,7 @@ export function EditableDataGrid({
                 }}
               >
                 {columns.map((col, idx) => {
-                  const value = row[col.name];
+                  const value = (row as Record<string, unknown>)[col.name];
                   const cellChange = getCellChange(rowId, col.name);
                   const originalValue = rows[virtualRow.index]?.[col.name];
                   const isEditing =

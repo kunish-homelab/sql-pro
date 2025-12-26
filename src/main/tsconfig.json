@@ -17,5 +17,5 @@
     "forceConsistentCasingInFileNames": true,
     "composite": true
   },
-  "include": ["src/main/**/*", "src/preload/**/*"]
+  "include": ["./**/*", "../shared/**/*"]
 }

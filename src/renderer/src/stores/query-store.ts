@@ -1,5 +1,5 @@
 import { create } from 'zustand';
-import type { QuerySession, QueryResult } from '@/types/database';
+import type { QueryResult } from '@/types/database';
 
 interface QueryState {
   // Current query session

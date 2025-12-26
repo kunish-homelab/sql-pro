@@ -13,8 +13,7 @@ export function Sidebar() {
     connection,
     isLoadingSchema,
   } = useConnectionStore();
-  const { setTableData, setPagination, setIsLoading, setError, reset } =
-    useTableDataStore();
+  const { setTableData, setIsLoading, setError, reset } = useTableDataStore();
 
   const [tablesExpanded, setTablesExpanded] = useState(true);
   const [viewsExpanded, setViewsExpanded] = useState(true);

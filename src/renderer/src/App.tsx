@@ -4,7 +4,7 @@ import { WelcomeScreen } from '@/components/WelcomeScreen';
 import { DatabaseView } from '@/components/DatabaseView';
 import { TooltipProvider } from '@/components/ui/tooltip';
 
-function App(): JSX.Element {
+function App(): React.JSX.Element {
   const { connection, setRecentConnections } = useConnectionStore();
 
   // Load recent connections on mount
@@ -21,6 +21,8 @@ function App(): JSX.Element {
   return (
     <TooltipProvider>
       <div className="flex h-screen flex-col bg-background text-foreground">
+        {/* Titlebar - draggable area for macOS traffic lights */}
+        <div className="titlebar h-10 shrink-0 border-b border-border/50" />
         {connection ? <DatabaseView /> : <WelcomeScreen />}
       </div>
     </TooltipProvider>

@@ -7,6 +7,7 @@ import {
   Loader2,
   Eye,
   FileText,
+  Plus,
 } from 'lucide-react';
 import { Button } from '@/components/ui/button';
 import { EditableDataGrid } from './EditableDataGrid';
@@ -34,7 +35,7 @@ export function TableView() {
     setIsLoading,
     setError,
   } = useTableDataStore();
-  const { hasChanges, getChangesForTable } = useChangesStore();
+  const { hasChanges, getChangesForTable, addChange } = useChangesStore();
 
   const [showDiffPreview, setShowDiffPreview] = useState(false);
 
@@ -117,6 +118,28 @@ export function TableView() {
     ? getChangesForTable(selectedTable.name)
     : [];
 
+  // Handle adding a new row
+  const handleAddRow = () => {
+    if (!selectedTable || selectedTable.type === 'view') return;
+
+    // Generate temporary negative ID for new row
+    const tempId = -Date.now();
+
+    // Initialize row with NULL values for each column
+    const newRow: Record<string, unknown> = {};
+    columns.forEach((col) => {
+      newRow[col.name] = col.defaultValue ?? null;
+    });
+
+    addChange({
+      table: selectedTable.name,
+      rowId: tempId,
+      type: 'insert',
+      oldValues: null,
+      newValues: newRow,
+    });
+  };
+
   if (!selectedTable) return null;
 
   return (
@@ -138,19 +161,34 @@ export function TableView() {
             )}
           </div>
 
-          {/* Changes indicator & preview button */}
-          {tableChanges.length > 0 && (
-            <Button
-              variant="outline"
-              size="sm"
-              onClick={() => setShowDiffPreview(true)}
-              className="gap-2"
-            >
-              <FileText className="h-4 w-4" />
-              {tableChanges.length} pending{' '}
-              {tableChanges.length === 1 ? 'change' : 'changes'}
-            </Button>
-          )}
+          <div className="flex items-center gap-2">
+            {/* Add Row button */}
+            {selectedTable.type !== 'view' && (
+              <Button
+                variant="outline"
+                size="sm"
+                onClick={handleAddRow}
+                className="gap-2"
+              >
+                <Plus className="h-4 w-4" />
+                Add Row
+              </Button>
+            )}
+
+            {/* Changes indicator & preview button */}
+            {tableChanges.length > 0 && (
+              <Button
+                variant="outline"
+                size="sm"
+                onClick={() => setShowDiffPreview(true)}
+                className="gap-2"
+              >
+                <FileText className="h-4 w-4" />
+                {tableChanges.length} pending{' '}
+                {tableChanges.length === 1 ? 'change' : 'changes'}
+              </Button>
+            )}
+          </div>
         </div>
 
         {/* Data Grid */}
