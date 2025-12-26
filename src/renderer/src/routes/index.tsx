@@ -1,4 +1,5 @@
 import {
+  createHashHistory,
   createRootRoute,
   createRoute,
   createRouter,
@@ -9,6 +10,9 @@ import { DatabasePage } from './database';
 import { RouterErrorFallback } from './error';
 import { RootLayout } from './root';
 import { WelcomePage } from './welcome';
+
+// Use hash history for Electron file:// protocol compatibility
+const hashHistory = createHashHistory();
 
 // Root route with layout
 const rootRoute = createRootRoute({
@@ -45,9 +49,10 @@ const databaseRoute = createRoute({
 // Create the route tree
 const routeTree = rootRoute.addChildren([welcomeRoute, databaseRoute]);
 
-// Create and export the router
+// Create and export the router with hash history for Electron compatibility
 export const router = createRouter({
   routeTree,
+  history: hashHistory,
   defaultPreload: 'intent',
 });
 
