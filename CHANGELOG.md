@@ -1,5 +1,12 @@
 # Changelog
 
+## [1.1.1](https://github.com/kunish-homelab/sql-pro/compare/v1.1.0...v1.1.1) (2025-12-26)
+
+
+### Bug Fixes
+
+* update Node.js version handling in release workflow ([a494209](https://github.com/kunish-homelab/sql-pro/commit/a494209bee6c3eafb0b550cae6f8dd4af2c1ad2a))
+
 ## [1.1.0](https://github.com/kunish-homelab/sql-pro/compare/v1.0.0...v1.1.0) (2025-12-26)
 
 
