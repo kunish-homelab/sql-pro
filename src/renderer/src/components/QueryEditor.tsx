@@ -1,12 +1,11 @@
 import { useState, useCallback } from 'react';
-import CodeMirror from '@uiw/react-codemirror';
-import { sql, SQLite } from '@codemirror/lang-sql';
 import { Play, Clock, AlertCircle, History, X, Loader2 } from 'lucide-react';
 import { Button } from '@/components/ui/button';
 import { ScrollArea } from '@/components/ui/scroll-area';
 import { cn } from '@/lib/utils';
 import { useConnectionStore, useQueryStore } from '@/stores';
 import { QueryResults } from './QueryResults';
+import { MonacoSqlEditor } from './MonacoSqlEditor';
 
 export function QueryEditor() {
   const { connection, schema } = useConnectionStore();
@@ -26,17 +25,6 @@ export function QueryEditor() {
   } = useQueryStore();
 
   const [showHistory, setShowHistory] = useState(false);
-
-  // Build table/column completions from schema
-  const _schemaConfig = schema
-    ? {
-        tables: schema.tables.map((t) => ({
-          name: t.name,
-          columns: t.columns.map((c) => c.name),
-        })),
-      }
-    : undefined;
-  void _schemaConfig; // Reserved for future autocomplete implementation
 
   const handleExecute = useCallback(async () => {
     if (!connection || !currentQuery.trim()) return;
@@ -80,17 +68,6 @@ export function QueryEditor() {
     setExecutionTime,
     addToHistory,
   ]);
-
-  const handleKeyDown = useCallback(
-    (e: React.KeyboardEvent) => {
-      // Cmd/Ctrl + Enter to execute
-      if ((e.metaKey || e.ctrlKey) && e.key === 'Enter') {
-        e.preventDefault();
-        handleExecute();
-      }
-    },
-    [handleExecute]
-  );
 
   const handleHistorySelect = (query: string) => {
     setCurrentQuery(query);
@@ -136,20 +113,12 @@ export function QueryEditor() {
       <div className="flex flex-1 overflow-hidden">
         {/* Editor */}
         <div className="flex flex-1 flex-col">
-          <div className="shrink-0 border-b" onKeyDown={handleKeyDown}>
-            <CodeMirror
+          <div className="shrink-0 border-b">
+            <MonacoSqlEditor
               value={currentQuery}
               onChange={setCurrentQuery}
-              extensions={[sql({ dialect: SQLite })]}
-              height="150px"
-              theme="light"
-              placeholder="Enter your SQL query here..."
-              basicSetup={{
-                lineNumbers: true,
-                highlightActiveLineGutter: true,
-                highlightActiveLine: true,
-                foldGutter: false,
-              }}
+              onExecute={handleExecute}
+              schema={schema}
             />
           </div>
 

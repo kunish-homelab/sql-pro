@@ -272,7 +272,7 @@ export function WelcomeScreen() {
                         </>
                       )}
                     </div>
-                    <span className="truncate text-xs text-muted-foreground">
+                    <span className="block truncate text-xs text-muted-foreground">
                       {conn.path}
                     </span>
                   </div>

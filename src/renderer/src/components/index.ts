@@ -10,3 +10,4 @@ export { DiffPreview } from './DiffPreview';
 export { QueryEditor } from './QueryEditor';
 export { QueryResults } from './QueryResults';
 export { PasswordDialog } from './PasswordDialog';
+export { MonacoSqlEditor } from './MonacoSqlEditor';
