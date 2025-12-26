@@ -1,11 +1,11 @@
-import { useState, useCallback } from 'react';
-import { Play, Clock, AlertCircle, History, X, Loader2 } from 'lucide-react';
+import { AlertCircle, Clock, History, Loader2, Play, X } from 'lucide-react';
+import { useCallback, useState } from 'react';
 import { Button } from '@/components/ui/button';
 import { ScrollArea } from '@/components/ui/scroll-area';
 import { cn } from '@/lib/utils';
 import { useConnectionStore, useQueryStore } from '@/stores';
-import { QueryResults } from './QueryResults';
 import { MonacoSqlEditor } from './MonacoSqlEditor';
+import { QueryResults } from './QueryResults';
 
 export function QueryEditor() {
   const { connection, schema } = useConnectionStore();
@@ -80,7 +80,7 @@ export function QueryEditor() {
       <div className="flex items-center justify-between border-b px-4 py-2">
         <div className="flex items-center gap-2">
           <h2 className="font-medium">SQL Query</h2>
-          <span className="text-xs text-muted-foreground">
+          <span className="text-muted-foreground text-xs">
             Cmd/Ctrl+Enter to execute
           </span>
         </div>
@@ -126,22 +126,22 @@ export function QueryEditor() {
           <div className="flex-1 overflow-hidden">
             {isExecuting ? (
               <div className="flex h-full items-center justify-center">
-                <Loader2 className="h-8 w-8 animate-spin text-muted-foreground" />
+                <Loader2 className="text-muted-foreground h-8 w-8 animate-spin" />
               </div>
             ) : error ? (
               <div className="flex h-full items-center justify-center p-4">
-                <div className="flex max-w-md items-start gap-3 rounded-lg border border-destructive/50 bg-destructive/10 p-4">
-                  <AlertCircle className="h-5 w-5 shrink-0 text-destructive" />
+                <div className="border-destructive/50 bg-destructive/10 flex max-w-md items-start gap-3 rounded-lg border p-4">
+                  <AlertCircle className="text-destructive h-5 w-5 shrink-0" />
                   <div>
-                    <p className="font-medium text-destructive">Query Error</p>
-                    <p className="mt-1 text-sm text-destructive/80">{error}</p>
+                    <p className="text-destructive font-medium">Query Error</p>
+                    <p className="text-destructive/80 mt-1 text-sm">{error}</p>
                   </div>
                 </div>
               </div>
             ) : results ? (
               <div className="flex h-full flex-col">
                 {/* Results Header */}
-                <div className="flex items-center gap-4 border-b px-4 py-2 text-sm text-muted-foreground">
+                <div className="text-muted-foreground flex items-center gap-4 border-b px-4 py-2 text-sm">
                   <span>{results.rowsAffected} rows</span>
                   {executionTime !== null && (
                     <span className="flex items-center gap-1">
@@ -159,7 +159,7 @@ export function QueryEditor() {
                 </div>
               </div>
             ) : (
-              <div className="flex h-full items-center justify-center text-muted-foreground">
+              <div className="text-muted-foreground flex h-full items-center justify-center">
                 <p>Execute a query to see results</p>
               </div>
             )}
@@ -183,17 +183,17 @@ export function QueryEditor() {
             <ScrollArea className="h-full">
               <div className="space-y-1 p-2">
                 {history.length === 0 ? (
-                  <p className="py-8 text-center text-sm text-muted-foreground">
+                  <p className="text-muted-foreground py-8 text-center text-sm">
                     No queries yet
                   </p>
                 ) : (
-                  history.map((item, index) => (
+                  history.map((item) => (
                     <button
-                      key={index}
+                      key={item.executedAt.getTime()}
                       onClick={() => handleHistorySelect(item.query)}
                       className={cn(
-                        'w-full rounded-md px-3 py-2 text-left text-sm transition-colors hover:bg-accent',
-                        !item.success && 'border-l-2 border-destructive'
+                        'hover:bg-accent w-full rounded-md px-3 py-2 text-left text-sm transition-colors',
+                        !item.success && 'border-destructive border-l-2'
                       )}
                     >
                       <div className="flex items-center gap-2">
@@ -202,11 +202,11 @@ export function QueryEditor() {
                             {item.rowsAffected} rows
                           </span>
                         ) : (
-                          <span className="text-xs text-destructive">
+                          <span className="text-destructive text-xs">
                             Failed
                           </span>
                         )}
-                        <span className="text-xs text-muted-foreground">
+                        <span className="text-muted-foreground text-xs">
                           {new Date(item.executedAt).toLocaleTimeString()}
                         </span>
                       </div>

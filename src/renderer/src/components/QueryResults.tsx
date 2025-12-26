@@ -1,6 +1,7 @@
+import type { TableRowData } from './data-table';
+import type { ColumnSchema, QueryResult } from '@/types/database';
 import { useMemo } from 'react';
-import { DataTable, TableRowData } from './data-table';
-import type { QueryResult, ColumnSchema } from '@/types/database';
+import { DataTable } from './data-table';
 
 interface QueryResultsProps {
   results: QueryResult;
@@ -28,7 +29,7 @@ export function QueryResults({ results }: QueryResultsProps) {
 
   if (results.columns.length === 0) {
     return (
-      <div className="flex h-full items-center justify-center text-muted-foreground">
+      <div className="text-muted-foreground flex h-full items-center justify-center">
         <p>Query executed successfully (no results to display)</p>
       </div>
     );

@@ -1,12 +1,12 @@
-import { useState, useMemo, useRef, useCallback, useEffect } from 'react';
+import type { ColumnSchema, PendingChange, SortState } from '@/types/database';
 import { useVirtualizer } from '@tanstack/react-virtual';
-import { ArrowUp, ArrowDown, Key, Trash2 } from 'lucide-react';
-import { cn } from '@/lib/utils';
-import { EditableCell } from './EditableCell';
-import { ColumnResizeHandle } from './ColumnResizeHandle';
-import { useChangesStore } from '@/stores';
+import { ArrowDown, ArrowUp, Key, Trash2 } from 'lucide-react';
+import { useCallback, useEffect, useMemo, useRef, useState } from 'react';
 import { useResizableColumns } from '@/hooks/useResizableColumns';
-import type { ColumnSchema, SortState, PendingChange } from '@/types/database';
+import { cn } from '@/lib/utils';
+import { useChangesStore } from '@/stores';
+import { ColumnResizeHandle } from './ColumnResizeHandle';
+import { EditableCell } from './EditableCell';
 
 interface EditableDataGridProps {
   tableName: string;
@@ -106,7 +106,6 @@ export function EditableDataGrid({
     [tableName, getChangeForRow]
   );
 
-  // eslint-disable-next-line react-hooks/incompatible-library -- TanStack Virtual is safe here
   const rowVirtualizer = useVirtualizer({
     count: displayRows.length,
     getScrollElement: () => parentRef.current,
@@ -419,7 +418,7 @@ export function EditableDataGrid({
 
   if (columns.length === 0) {
     return (
-      <div className="flex h-full items-center justify-center text-muted-foreground">
+      <div className="text-muted-foreground flex h-full items-center justify-center">
         No data to display
       </div>
     );
@@ -437,7 +436,7 @@ export function EditableDataGrid({
     >
       <div style={{ minWidth: totalWidth }}>
         {/* Header */}
-        <div className="sticky top-0 z-10 flex border-b bg-muted/50 backdrop-blur-sm">
+        <div className="bg-muted/50 sticky top-0 z-10 flex border-b backdrop-blur-sm">
           {columns.map((col, idx) => (
             <div
               key={col.name}
@@ -446,7 +445,7 @@ export function EditableDataGrid({
             >
               <button
                 onClick={() => onSort(col.name)}
-                className="flex flex-1 items-center gap-1 text-left text-sm font-medium hover:text-foreground"
+                className="hover:text-foreground flex flex-1 items-center gap-1 text-left text-sm font-medium"
               >
                 {col.isPrimaryKey && <Key className="h-3 w-3 text-amber-500" />}
                 <span className="truncate">{col.name}</span>
@@ -494,7 +493,7 @@ export function EditableDataGrid({
                   'absolute left-0 flex w-full border-b',
                   virtualRow.index % 2 === 0 ? 'bg-background' : 'bg-muted/20',
                   isDeleted && 'bg-red-500/10 line-through opacity-50',
-                  isNew && 'bg-green-500/10 border-l-2 border-l-green-500'
+                  isNew && 'border-l-2 border-l-green-500 bg-green-500/10'
                 )}
                 style={{
                   height: `${virtualRow.size}px`,
@@ -519,7 +518,7 @@ export function EditableDataGrid({
                         'flex items-center border-r px-2',
                         isFocused &&
                           !isEditing &&
-                          'ring-2 ring-inset ring-primary'
+                          'ring-primary ring-2 ring-inset'
                       )}
                       style={{
                         width: columnWidths[idx],
@@ -565,7 +564,7 @@ export function EditableDataGrid({
                   {!readOnly && !isDeleted && (
                     <button
                       onClick={() => handleDeleteRow(virtualRow.index)}
-                      className="rounded p-1 text-muted-foreground hover:bg-destructive/10 hover:text-destructive"
+                      className="text-muted-foreground hover:bg-destructive/10 hover:text-destructive rounded p-1"
                       title="Delete row"
                     >
                       <Trash2 className="h-4 w-4" />

@@ -1,7 +1,8 @@
-import { useState, useCallback, useEffect, RefObject } from 'react';
-import { Table } from '@tanstack/react-table';
+import type { Table } from '@tanstack/react-table';
+import type { RefObject } from 'react';
 import type { TableRowData } from './useTableCore';
 import type { ColumnSchema } from '@/types/database';
+import { useCallback, useEffect, useState } from 'react';
 
 interface CellPosition {
   rowId: string;
@@ -75,12 +76,9 @@ export function useTableEditing({
   }, []);
 
   // Handle cell click
-  const handleCellClick = useCallback(
-    (rowId: string, columnId: string) => {
-      setFocusedCell({ rowId, columnId });
-    },
-    []
-  );
+  const handleCellClick = useCallback((rowId: string, columnId: string) => {
+    setFocusedCell({ rowId, columnId });
+  }, []);
 
   // Handle cell double click
   const handleCellDoubleClick = useCallback(
@@ -188,31 +186,35 @@ export function useTableEditing({
       }
 
       switch (e.key) {
-        case 'ArrowUp':
+        case 'ArrowUp': {
           e.preventDefault();
           const upCell = getAdjacentCell('up');
           if (upCell) setFocusedCell(upCell);
           break;
+        }
 
-        case 'ArrowDown':
+        case 'ArrowDown': {
           e.preventDefault();
           const downCell = getAdjacentCell('down');
           if (downCell) setFocusedCell(downCell);
           break;
+        }
 
-        case 'ArrowLeft':
+        case 'ArrowLeft': {
           e.preventDefault();
           const leftCell = getAdjacentCell('left');
           if (leftCell) setFocusedCell(leftCell);
           break;
+        }
 
-        case 'ArrowRight':
+        case 'ArrowRight': {
           e.preventDefault();
           const rightCell = getAdjacentCell('right');
           if (rightCell) setFocusedCell(rightCell);
           break;
+        }
 
-        case 'Tab':
+        case 'Tab': {
           e.preventDefault();
           const tabCell = getAdjacentCell(e.shiftKey ? 'prev' : 'next');
           if (tabCell) {
@@ -222,6 +224,7 @@ export function useTableEditing({
             }
           }
           break;
+        }
 
         case 'Enter':
           e.preventDefault();
@@ -231,7 +234,7 @@ export function useTableEditing({
           break;
 
         case 'Delete':
-        case 'Backspace':
+        case 'Backspace': {
           if (e.key === 'Delete' && onRowDelete && focusedCell) {
             const row = table
               .getRowModel()
@@ -243,6 +246,7 @@ export function useTableEditing({
             }
           }
           break;
+        }
       }
     },
     [
@@ -294,8 +298,8 @@ export function useTableEditing({
       const type = column.type.toLowerCase();
       if (type.includes('int')) {
         if (value !== '' && value.toLowerCase() !== 'null') {
-          const parsed = parseInt(value, 10);
-          if (isNaN(parsed)) {
+          const parsed = Number.parseInt(value, 10);
+          if (Number.isNaN(parsed)) {
             return 'Must be a valid integer';
           }
         }
@@ -305,8 +309,8 @@ export function useTableEditing({
         type.includes('double')
       ) {
         if (value !== '' && value.toLowerCase() !== 'null') {
-          const parsed = parseFloat(value);
-          if (isNaN(parsed)) {
+          const parsed = Number.parseFloat(value);
+          if (Number.isNaN(parsed)) {
             return 'Must be a valid number';
           }
         }
@@ -320,9 +324,7 @@ export function useTableEditing({
   // Check if a cell is focused
   const isCellFocused = useCallback(
     (rowId: string, columnId: string): boolean => {
-      return (
-        focusedCell?.rowId === rowId && focusedCell?.columnId === columnId
-      );
+      return focusedCell?.rowId === rowId && focusedCell?.columnId === columnId;
     },
     [focusedCell]
   );
@@ -330,9 +332,7 @@ export function useTableEditing({
   // Check if a cell is being edited
   const isCellEditing = useCallback(
     (rowId: string, columnId: string): boolean => {
-      return (
-        editingCell?.rowId === rowId && editingCell?.columnId === columnId
-      );
+      return editingCell?.rowId === rowId && editingCell?.columnId === columnId;
     },
     [editingCell]
   );

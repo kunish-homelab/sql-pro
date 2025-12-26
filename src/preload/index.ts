@@ -1,45 +1,46 @@
-import { contextBridge, ipcRenderer } from 'electron';
-import { electronAPI } from '@electron-toolkit/preload';
-import { IPC_CHANNELS } from '../shared/types';
 import type {
-  OpenDatabaseRequest,
-  OpenDatabaseResponse,
+  ApplyChangesRequest,
+  ApplyChangesResponse,
   CloseDatabaseRequest,
   CloseDatabaseResponse,
+  ExecuteQueryRequest,
+  ExecuteQueryResponse,
+  ExportRequest,
+  ExportResponse,
+  GetPasswordRequest,
+  GetPasswordResponse,
+  GetPreferencesResponse,
+  GetRecentConnectionsResponse,
   GetSchemaRequest,
   GetSchemaResponse,
   GetTableDataRequest,
   GetTableDataResponse,
-  ExecuteQueryRequest,
-  ExecuteQueryResponse,
-  ValidateChangesRequest,
-  ValidateChangesResponse,
-  ApplyChangesRequest,
-  ApplyChangesResponse,
-  OpenFileDialogRequest,
-  OpenFileDialogResponse,
-  SaveFileDialogRequest,
-  SaveFileDialogResponse,
-  ExportRequest,
-  ExportResponse,
-  GetRecentConnectionsResponse,
-  GetPreferencesResponse,
-  SetPreferencesRequest,
-  SetPreferencesResponse,
-  SavePasswordRequest,
-  SavePasswordResponse,
-  GetPasswordRequest,
-  GetPasswordResponse,
   HasPasswordRequest,
   HasPasswordResponse,
-  RemovePasswordRequest,
-  RemovePasswordResponse,
   IsPasswordStorageAvailableResponse,
-  UpdateConnectionRequest,
-  UpdateConnectionResponse,
+  OpenDatabaseRequest,
+  OpenDatabaseResponse,
+  OpenFileDialogRequest,
+  OpenFileDialogResponse,
   RemoveConnectionRequest,
   RemoveConnectionResponse,
+  RemovePasswordRequest,
+  RemovePasswordResponse,
+  SaveFileDialogRequest,
+  SaveFileDialogResponse,
+  SavePasswordRequest,
+  SavePasswordResponse,
+  SetPreferencesRequest,
+  SetPreferencesResponse,
+  UpdateConnectionRequest,
+  UpdateConnectionResponse,
+  ValidateChangesRequest,
+  ValidateChangesResponse,
 } from '../shared/types';
+import process from 'node:process';
+import { electronAPI } from '@electron-toolkit/preload';
+import { contextBridge, ipcRenderer, webUtils } from 'electron';
+import { IPC_CHANNELS } from '../shared/types';
 
 // Custom API for SQL Pro
 const sqlProAPI = {
@@ -123,6 +124,11 @@ const sqlProAPI = {
       request: RemoveConnectionRequest
     ): Promise<RemoveConnectionResponse> =>
       ipcRenderer.invoke(IPC_CHANNELS.CONNECTION_REMOVE, request),
+  },
+
+  // File utilities
+  file: {
+    getPathForFile: (file: File): string => webUtils.getPathForFile(file),
   },
 };
 

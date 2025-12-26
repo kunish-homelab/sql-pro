@@ -19,7 +19,7 @@ export function ColumnResizeHandle({
   return (
     <div
       className={cn(
-        'absolute right-0 top-0 z-20 h-full w-1 cursor-col-resize',
+        'absolute top-0 right-0 z-20 h-full w-1 cursor-col-resize',
         'hover:bg-primary/50 active:bg-primary',
         'transition-colors duration-75',
         isResizing && 'bg-primary'

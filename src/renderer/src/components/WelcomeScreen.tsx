@@ -1,33 +1,65 @@
-import { useState, useEffect } from 'react';
+import type { DragEvent } from 'react';
+import type { RecentConnection } from '../../../shared/types';
+import type { ConnectionSettings } from './ConnectionSettingsDialog';
+import * as DropdownMenu from '@radix-ui/react-dropdown-menu';
 import {
-  Database,
-  FolderOpen,
-  Clock,
-  Lock,
   AlertCircle,
-  Sun,
-  Moon,
-  Monitor,
-  KeyRound,
+  Clock,
+  Database,
   Eye,
+  FolderOpen,
+  KeyRound,
+  Lock,
+  Monitor,
+  Moon,
   MoreVertical,
   Settings,
+  Sun,
   Trash2,
+  Upload,
 } from 'lucide-react';
-import * as DropdownMenu from '@radix-ui/react-dropdown-menu';
+import { useCallback, useEffect, useState } from 'react';
 import { Button } from '@/components/ui/button';
 import {
   Tooltip,
   TooltipContent,
   TooltipTrigger,
 } from '@/components/ui/tooltip';
+import { cn } from '@/lib/utils';
 import { useConnectionStore, useThemeStore } from '@/stores';
+import { ConnectionSettingsDialog } from './ConnectionSettingsDialog';
 import { PasswordDialog } from './PasswordDialog';
-import {
-  ConnectionSettingsDialog,
-  type ConnectionSettings,
-} from './ConnectionSettingsDialog';
-import type { RecentConnection } from '../../../shared/types';
+
+// Supported database file extensions
+const DB_EXTENSIONS = ['.db', '.sqlite', '.sqlite3', '.db3', '.s3db', '.sl3'];
+
+function isDatabaseFile(filename: string): boolean {
+  const lowerName = filename.toLowerCase();
+  return DB_EXTENSIONS.some((ext) => lowerName.endsWith(ext));
+}
+
+// Check if a database has a saved password - moved to top level
+function HasSavedPasswordIndicator({ path }: { path: string }) {
+  const [hasSaved, setHasSaved] = useState(false);
+
+  // Check on mount
+  useEffect(() => {
+    window.sqlPro.password.has({ dbPath: path }).then((result) => {
+      setHasSaved(result.hasPassword);
+    });
+  }, [path]);
+
+  if (!hasSaved) return null;
+
+  return (
+    <Tooltip>
+      <TooltipTrigger asChild>
+        <KeyRound className="h-3 w-3 text-green-500" />
+      </TooltipTrigger>
+      <TooltipContent>Password saved</TooltipContent>
+    </Tooltip>
+  );
+}
 
 export function WelcomeScreen() {
   const {
@@ -56,60 +88,8 @@ export function WelcomeScreen() {
   const [editingConnection, setEditingConnection] =
     useState<RecentConnection | null>(null);
 
-  const handleOpenDatabase = async () => {
-    const result = await window.sqlPro.dialog.openFile();
-    if (result.success && !result.canceled && result.filePath) {
-      const filePath = result.filePath;
-      const filename = filePath.split('/').pop() || filePath;
-
-      // Check if this is an encrypted database by attempting to open it
-      setIsConnecting(true);
-      const probeResult = await window.sqlPro.db.open({ path: filePath });
-      setIsConnecting(false);
-
-      const isEncrypted = probeResult.needsPassword === true;
-
-      // Store pending info and show settings dialog
-      setPendingPath(filePath);
-      setPendingFilename(filename);
-      setPendingIsEncrypted(isEncrypted);
-      setSettingsDialogOpen(true);
-    }
-  };
-
-  const handleSettingsSubmit = async (settings: ConnectionSettings) => {
-    setSettingsDialogOpen(false);
-    setPendingSettings(settings);
-
-    if (!pendingPath) return;
-
-    if (pendingIsEncrypted) {
-      // Check if we have a saved password
-      const savedPasswordResult = await window.sqlPro.password.get({
-        dbPath: pendingPath,
-      });
-      if (savedPasswordResult.success && savedPasswordResult.password) {
-        // Connect with saved password and settings
-        await connectToDatabase(
-          pendingPath,
-          savedPasswordResult.password,
-          settings.readOnly,
-          settings
-        );
-      } else {
-        // Need password - show password dialog
-        setPasswordDialogOpen(true);
-      }
-    } else {
-      // Non-encrypted database - connect directly with settings
-      await connectToDatabase(
-        pendingPath,
-        undefined,
-        settings.readOnly,
-        settings
-      );
-    }
-  };
+  // Drag and drop state
+  const [isDragging, setIsDragging] = useState(false);
 
   const connectToDatabase = async (
     path: string,
@@ -190,6 +170,120 @@ export function WelcomeScreen() {
       setError(err instanceof Error ? err.message : 'Unknown error');
     } finally {
       setIsConnecting(false);
+    }
+  };
+
+  // Shared function to open a database file (used by both dialog and drag-drop)
+  const openDatabaseFile = useCallback(
+    async (filePath: string) => {
+      const filename = filePath.split('/').pop() || filePath;
+
+      // Check if this is an encrypted database by attempting to open it
+      setIsConnecting(true);
+      const probeResult = await window.sqlPro.db.open({ path: filePath });
+      setIsConnecting(false);
+
+      const isEncrypted = probeResult.needsPassword === true;
+
+      // Store pending info and show settings dialog
+      setPendingPath(filePath);
+      setPendingFilename(filename);
+      setPendingIsEncrypted(isEncrypted);
+      setSettingsDialogOpen(true);
+    },
+    [setIsConnecting]
+  );
+
+  const handleOpenDatabase = async () => {
+    const result = await window.sqlPro.dialog.openFile();
+    if (result.success && !result.canceled && result.filePath) {
+      await openDatabaseFile(result.filePath);
+    }
+  };
+
+  // Drag and drop handlers
+  const handleDragOver = useCallback((e: DragEvent<HTMLDivElement>) => {
+    e.preventDefault();
+    e.stopPropagation();
+
+    // Check if dragging files
+    if (e.dataTransfer.types.includes('Files')) {
+      setIsDragging(true);
+    }
+  }, []);
+
+  const handleDragLeave = useCallback((e: DragEvent<HTMLDivElement>) => {
+    e.preventDefault();
+    e.stopPropagation();
+
+    // Only set dragging to false if leaving the drop zone entirely
+    const rect = e.currentTarget.getBoundingClientRect();
+    const x = e.clientX;
+    const y = e.clientY;
+
+    if (x < rect.left || x > rect.right || y < rect.top || y > rect.bottom) {
+      setIsDragging(false);
+    }
+  }, []);
+
+  const handleDrop = useCallback(
+    async (e: DragEvent<HTMLDivElement>) => {
+      e.preventDefault();
+      e.stopPropagation();
+      setIsDragging(false);
+
+      const files = Array.from(e.dataTransfer.files);
+      if (files.length === 0) return;
+
+      // Find the first database file
+      const dbFile = files.find((file) => isDatabaseFile(file.name));
+
+      if (dbFile) {
+        // Use Electron's webUtils to get the file path
+        const filePath = window.sqlPro.file.getPathForFile(dbFile);
+        if (filePath) {
+          await openDatabaseFile(filePath);
+        } else {
+          setError('Unable to access file path');
+        }
+      } else {
+        setError(`Please drop a database file (${DB_EXTENSIONS.join(', ')})`);
+      }
+    },
+    [openDatabaseFile, setError]
+  );
+
+  const handleSettingsSubmit = async (settings: ConnectionSettings) => {
+    setSettingsDialogOpen(false);
+    setPendingSettings(settings);
+
+    if (!pendingPath) return;
+
+    if (pendingIsEncrypted) {
+      // Check if we have a saved password
+      const savedPasswordResult = await window.sqlPro.password.get({
+        dbPath: pendingPath,
+      });
+      if (savedPasswordResult.success && savedPasswordResult.password) {
+        // Connect with saved password and settings
+        await connectToDatabase(
+          pendingPath,
+          savedPasswordResult.password,
+          settings.readOnly,
+          settings
+        );
+      } else {
+        // Need password - show password dialog
+        setPasswordDialogOpen(true);
+      }
+    } else {
+      // Non-encrypted database - connect directly with settings
+      await connectToDatabase(
+        pendingPath,
+        undefined,
+        settings.readOnly,
+        settings
+      );
     }
   };
 
@@ -325,33 +419,28 @@ export function WelcomeScreen() {
     }
   };
 
-  // Check if a database has a saved password
-  const HasSavedPasswordIndicator = ({ path }: { path: string }) => {
-    const [hasSaved, setHasSaved] = useState(false);
-
-    // Check on mount
-    useEffect(() => {
-      window.sqlPro.password.has({ dbPath: path }).then((result) => {
-        setHasSaved(result.hasPassword);
-      });
-    }, [path]);
-
-    if (!hasSaved) return null;
-
-    return (
-      <Tooltip>
-        <TooltipTrigger asChild>
-          <KeyRound className="h-3 w-3 text-green-500" />
-        </TooltipTrigger>
-        <TooltipContent>Password saved</TooltipContent>
-      </Tooltip>
-    );
-  };
-
   return (
-    <div className="relative flex h-full items-center justify-center">
+    <div
+      className="relative flex h-full items-center justify-center"
+      onDragOver={handleDragOver}
+      onDragLeave={handleDragLeave}
+      onDrop={handleDrop}
+    >
+      {/* Drag overlay */}
+      {isDragging && (
+        <div className="bg-primary/5 border-primary pointer-events-none absolute inset-4 z-50 flex flex-col items-center justify-center rounded-2xl border-2 border-dashed">
+          <Upload className="text-primary mb-4 h-12 w-12" />
+          <p className="text-primary text-lg font-medium">
+            Drop database file here
+          </p>
+          <p className="text-muted-foreground mt-1 text-sm">
+            {DB_EXTENSIONS.join(', ')}
+          </p>
+        </div>
+      )}
+
       {/* Theme Toggle - Top Right */}
-      <div className="absolute right-4 top-4">
+      <div className="absolute top-4 right-4">
         <Tooltip>
           <TooltipTrigger asChild>
             <Button variant="ghost" size="icon" onClick={cycleTheme}>
@@ -362,41 +451,51 @@ export function WelcomeScreen() {
         </Tooltip>
       </div>
 
-      <div className="w-full max-w-md space-y-8 px-4">
+      <div
+        className={cn(
+          'w-full max-w-md space-y-8 px-4',
+          isDragging && 'opacity-30'
+        )}
+      >
         {/* Logo & Title */}
         <div className="text-center">
-          <div className="mx-auto mb-4 flex h-16 w-16 items-center justify-center rounded-2xl bg-primary/10">
-            <Database className="h-8 w-8 text-primary" />
+          <div className="bg-primary/10 mx-auto mb-4 flex h-16 w-16 items-center justify-center rounded-2xl">
+            <Database className="text-primary h-8 w-8" />
           </div>
           <h1 className="text-2xl font-semibold tracking-tight">SQL Pro</h1>
-          <p className="mt-1 text-sm text-muted-foreground">
+          <p className="text-muted-foreground mt-1 text-sm">
             Professional SQLite Database Manager
           </p>
         </div>
 
         {/* Error Message */}
         {error && (
-          <div className="flex items-center gap-2 rounded-lg border border-destructive/50 bg-destructive/10 p-3 text-sm text-destructive">
+          <div className="border-destructive/50 bg-destructive/10 text-destructive flex items-center gap-2 rounded-lg border p-3 text-sm">
             <AlertCircle className="h-4 w-4 shrink-0" />
             <span>{error}</span>
           </div>
         )}
 
         {/* Open Database Button */}
-        <Button
-          className="w-full"
-          size="lg"
-          onClick={handleOpenDatabase}
-          disabled={isConnecting}
-        >
-          <FolderOpen className="mr-2 h-4 w-4" />
-          {isConnecting ? 'Opening...' : 'Open Database'}
-        </Button>
+        <div className="space-y-2">
+          <Button
+            className="w-full"
+            size="lg"
+            onClick={handleOpenDatabase}
+            disabled={isConnecting}
+          >
+            <FolderOpen className="mr-2 h-4 w-4" />
+            {isConnecting ? 'Opening...' : 'Open Database'}
+          </Button>
+          <p className="text-muted-foreground text-center text-xs">
+            or drag and drop a database file
+          </p>
+        </div>
 
         {/* Recent Connections */}
         {recentConnections.length > 0 && (
           <div className="space-y-3">
-            <div className="flex items-center gap-2 text-sm text-muted-foreground">
+            <div className="text-muted-foreground flex items-center gap-2 text-sm">
               <Clock className="h-4 w-4" />
               <span>Recent Databases</span>
             </div>
@@ -404,7 +503,7 @@ export function WelcomeScreen() {
               {recentConnections.slice(0, 5).map((conn) => (
                 <div
                   key={conn.path}
-                  className="group flex w-full items-center gap-2 overflow-hidden rounded-lg px-3 py-2 text-left text-sm transition-colors hover:bg-accent"
+                  className="group hover:bg-accent flex w-full items-center gap-2 overflow-hidden rounded-lg px-3 py-2 text-left text-sm transition-colors"
                 >
                   <button
                     onClick={() =>
@@ -416,9 +515,9 @@ export function WelcomeScreen() {
                     }
                     disabled={isConnecting}
                     aria-label={`Open ${conn.displayName || conn.filename}${conn.readOnly ? ' (read-only)' : ''}${conn.isEncrypted ? ' (encrypted)' : ''}`}
-                    className="flex min-w-0 flex-1 items-center gap-3 rounded-md focus:outline-none focus:ring-2 focus:ring-ring focus:ring-offset-2 disabled:opacity-50"
+                    className="focus:ring-ring flex min-w-0 flex-1 items-center gap-3 rounded-md focus:ring-2 focus:ring-offset-2 focus:outline-none disabled:opacity-50"
                   >
-                    <Database className="h-4 w-4 shrink-0 text-muted-foreground" />
+                    <Database className="text-muted-foreground h-4 w-4 shrink-0" />
                     <div className="min-w-0 flex-1">
                       <div className="flex items-center gap-2">
                         <span className="truncate font-medium">
@@ -427,19 +526,19 @@ export function WelcomeScreen() {
                         {conn.readOnly && (
                           <Tooltip>
                             <TooltipTrigger asChild>
-                              <Eye className="h-3 w-3 text-muted-foreground" />
+                              <Eye className="text-muted-foreground h-3 w-3" />
                             </TooltipTrigger>
                             <TooltipContent>Read-only</TooltipContent>
                           </Tooltip>
                         )}
                         {conn.isEncrypted && (
                           <>
-                            <Lock className="h-3 w-3 text-muted-foreground" />
+                            <Lock className="text-muted-foreground h-3 w-3" />
                             <HasSavedPasswordIndicator path={conn.path} />
                           </>
                         )}
                       </div>
-                      <span className="block truncate text-xs text-muted-foreground">
+                      <span className="text-muted-foreground block truncate text-xs">
                         {conn.path}
                       </span>
                     </div>
@@ -449,29 +548,29 @@ export function WelcomeScreen() {
                   <DropdownMenu.Root>
                     <DropdownMenu.Trigger asChild>
                       <button
-                        className="rounded p-1 opacity-0 transition-opacity hover:bg-accent-foreground/10 group-hover:opacity-100 focus:opacity-100 focus:outline-none focus:ring-2 focus:ring-ring"
+                        className="hover:bg-accent-foreground/10 focus:ring-ring rounded p-1 opacity-0 transition-opacity group-hover:opacity-100 focus:opacity-100 focus:ring-2 focus:outline-none"
                         aria-label={`Options for ${conn.displayName || conn.filename}`}
                       >
-                        <MoreVertical className="h-4 w-4 text-muted-foreground" />
+                        <MoreVertical className="text-muted-foreground h-4 w-4" />
                       </button>
                     </DropdownMenu.Trigger>
                     <DropdownMenu.Portal>
                       <DropdownMenu.Content
-                        className="min-w-40 rounded-md border bg-popover p-1 shadow-md"
+                        className="bg-popover min-w-40 rounded-md border p-1 shadow-md"
                         align="end"
                         sideOffset={4}
                         aria-label={`Actions for ${conn.displayName || conn.filename}`}
                       >
                         <DropdownMenu.Item
-                          className="flex cursor-pointer items-center gap-2 rounded-sm px-2 py-1.5 text-sm outline-none hover:bg-accent focus:bg-accent"
+                          className="hover:bg-accent focus:bg-accent flex cursor-pointer items-center gap-2 rounded-sm px-2 py-1.5 text-sm outline-none"
                           onSelect={() => handleEditConnection(conn)}
                         >
                           <Settings className="h-4 w-4" />
                           Edit Settings
                         </DropdownMenu.Item>
-                        <DropdownMenu.Separator className="my-1 h-px bg-border" />
+                        <DropdownMenu.Separator className="bg-border my-1 h-px" />
                         <DropdownMenu.Item
-                          className="flex cursor-pointer items-center gap-2 rounded-sm px-2 py-1.5 text-sm text-destructive outline-none hover:bg-destructive/10 focus:bg-destructive/10"
+                          className="text-destructive hover:bg-destructive/10 focus:bg-destructive/10 flex cursor-pointer items-center gap-2 rounded-sm px-2 py-1.5 text-sm outline-none"
                           onSelect={() => handleRemoveConnection(conn)}
                         >
                           <Trash2 className="h-4 w-4" />

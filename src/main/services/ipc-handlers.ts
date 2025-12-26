@@ -1,27 +1,27 @@
-import { ipcMain, dialog, app } from 'electron';
+import type {
+  ApplyChangesRequest,
+  CloseDatabaseRequest,
+  ExecuteQueryRequest,
+  ExportRequest,
+  GetPasswordRequest,
+  GetSchemaRequest,
+  GetTableDataRequest,
+  HasPasswordRequest,
+  OpenDatabaseRequest,
+  OpenFileDialogRequest,
+  RemoveConnectionRequest,
+  RemovePasswordRequest,
+  SaveFileDialogRequest,
+  SavePasswordRequest,
+  UpdateConnectionRequest,
+  ValidateChangesRequest,
+} from '../../shared/types';
+import fs from 'node:fs';
+import path from 'node:path';
+import { app, dialog, ipcMain } from 'electron';
+import { IPC_CHANNELS } from '../../shared/types';
 import { databaseService } from './database';
 import { passwordStorageService } from './password-storage';
-import {
-  IPC_CHANNELS,
-  type OpenDatabaseRequest,
-  type CloseDatabaseRequest,
-  type GetSchemaRequest,
-  type GetTableDataRequest,
-  type ExecuteQueryRequest,
-  type ValidateChangesRequest,
-  type ApplyChangesRequest,
-  type OpenFileDialogRequest,
-  type SaveFileDialogRequest,
-  type ExportRequest,
-  type SavePasswordRequest,
-  type GetPasswordRequest,
-  type HasPasswordRequest,
-  type RemovePasswordRequest,
-  type UpdateConnectionRequest,
-  type RemoveConnectionRequest,
-} from '../../shared/types';
-import fs from 'fs';
-import path from 'path';
 
 // Lazy-loaded paths (app.getPath only works after app ready)
 let _preferencesPath: string | null = null;
@@ -368,7 +368,7 @@ export function setupIpcHandlers(): void {
           case 'csv': {
             const header =
               request.includeHeaders !== false
-                ? columns.map((c) => `"${c.name}"`).join(',') + '\n'
+                ? `${columns.map((c) => `"${c.name}"`).join(',')}\n`
                 : '';
             const body = rows
               .map((row) =>

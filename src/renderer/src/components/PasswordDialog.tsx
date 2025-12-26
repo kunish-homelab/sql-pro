@@ -1,6 +1,6 @@
-import { useState, useEffect } from 'react';
-import { Lock, Info } from 'lucide-react';
 import * as Dialog from '@radix-ui/react-dialog';
+import { Info, Lock } from 'lucide-react';
+import { useEffect, useState } from 'react';
 import { Button } from '@/components/ui/button';
 import {
   Tooltip,
@@ -63,16 +63,16 @@ export function PasswordDialog({
   return (
     <Dialog.Root open={open} onOpenChange={onOpenChange}>
       <Dialog.Portal>
-        <Dialog.Overlay className="fixed inset-0 bg-black/50 data-[state=open]:animate-in data-[state=closed]:animate-out data-[state=closed]:fade-out-0 data-[state=open]:fade-in-0" />
-        <Dialog.Content className="fixed left-1/2 top-1/2 w-full max-w-md -translate-x-1/2 -translate-y-1/2 rounded-lg border bg-background p-6 shadow-lg data-[state=open]:animate-in data-[state=closed]:animate-out data-[state=closed]:fade-out-0 data-[state=open]:fade-in-0 data-[state=closed]:zoom-out-95 data-[state=open]:zoom-in-95 data-[state=closed]:slide-out-to-left-1/2 data-[state=closed]:slide-out-to-top-[48%] data-[state=open]:slide-in-from-left-1/2 data-[state=open]:slide-in-from-top-[48%]">
+        <Dialog.Overlay className="data-[state=open]:animate-in data-[state=closed]:animate-out data-[state=closed]:fade-out-0 data-[state=open]:fade-in-0 fixed inset-0 bg-black/50" />
+        <Dialog.Content className="bg-background data-[state=open]:animate-in data-[state=closed]:animate-out data-[state=closed]:fade-out-0 data-[state=open]:fade-in-0 data-[state=closed]:zoom-out-95 data-[state=open]:zoom-in-95 data-[state=closed]:slide-out-to-left-1/2 data-[state=closed]:slide-out-to-top-[48%] data-[state=open]:slide-in-from-left-1/2 data-[state=open]:slide-in-from-top-[48%] fixed top-1/2 left-1/2 w-full max-w-md -translate-x-1/2 -translate-y-1/2 rounded-lg border p-6 shadow-lg">
           <div className="flex flex-col items-center text-center">
-            <div className="mb-4 flex h-12 w-12 items-center justify-center rounded-full bg-primary/10">
-              <Lock className="h-6 w-6 text-primary" />
+            <div className="bg-primary/10 mb-4 flex h-12 w-12 items-center justify-center rounded-full">
+              <Lock className="text-primary h-6 w-6" />
             </div>
             <Dialog.Title className="text-lg font-semibold">
               Encrypted Database
             </Dialog.Title>
-            <Dialog.Description className="mt-2 text-sm text-muted-foreground">
+            <Dialog.Description className="text-muted-foreground mt-2 text-sm">
               Enter the password to open{' '}
               <span className="font-medium">{filename}</span>
             </Dialog.Description>
@@ -86,9 +86,9 @@ export function PasswordDialog({
               placeholder="Enter password"
               autoFocus
               className={cn(
-                'w-full rounded-md border border-input bg-background px-3 py-2 text-sm',
+                'border-input bg-background w-full rounded-md border px-3 py-2 text-sm',
                 'placeholder:text-muted-foreground',
-                'focus:outline-none focus:ring-2 focus:ring-ring focus:ring-offset-2'
+                'focus:ring-ring focus:ring-2 focus:ring-offset-2 focus:outline-none'
               )}
             />
 
@@ -105,13 +105,13 @@ export function PasswordDialog({
                   checked={rememberPassword}
                   onChange={(e) => setRememberPassword(e.target.checked)}
                   disabled={!isStorageAvailable}
-                  className="h-4 w-4 rounded border-input"
+                  className="border-input h-4 w-4 rounded"
                 />
                 <span>Remember password</span>
                 {!isStorageAvailable && (
                   <Tooltip>
                     <TooltipTrigger asChild>
-                      <Info className="h-3.5 w-3.5 text-muted-foreground" />
+                      <Info className="text-muted-foreground h-3.5 w-3.5" />
                     </TooltipTrigger>
                     <TooltipContent>
                       <p>Secure storage is not available on this system</p>
@@ -125,7 +125,7 @@ export function PasswordDialog({
                 <button
                   type="button"
                   onClick={handleForgetPassword}
-                  className="text-xs text-muted-foreground hover:text-foreground hover:underline"
+                  className="text-muted-foreground hover:text-foreground text-xs hover:underline"
                 >
                   Forget saved password
                 </button>

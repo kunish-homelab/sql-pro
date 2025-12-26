@@ -1,12 +1,12 @@
 import {
   Database,
-  X,
-  Lock,
   FileText,
+  Lock,
+  Monitor,
+  Moon,
   RefreshCw,
   Sun,
-  Moon,
-  Monitor,
+  X,
 } from 'lucide-react';
 import { Button } from '@/components/ui/button';
 import { Separator } from '@/components/ui/separator';
@@ -16,8 +16,8 @@ import {
   TooltipTrigger,
 } from '@/components/ui/tooltip';
 import {
-  useConnectionStore,
   useChangesStore,
+  useConnectionStore,
   useTableDataStore,
   useThemeStore,
 } from '@/stores';
@@ -106,13 +106,13 @@ export function Toolbar({ onOpenChanges }: ToolbarProps) {
     <div className="flex h-12 items-center gap-2 border-b px-3">
       {/* Database Info */}
       <div className="flex items-center gap-2">
-        <Database className="h-4 w-4 text-muted-foreground" />
+        <Database className="text-muted-foreground h-4 w-4" />
         <span className="font-medium">{connection.filename}</span>
         {connection.isEncrypted && (
-          <Lock className="h-3 w-3 text-muted-foreground" />
+          <Lock className="text-muted-foreground h-3 w-3" />
         )}
         {connection.isReadOnly && (
-          <span className="rounded bg-secondary px-1.5 py-0.5 text-xs text-muted-foreground">
+          <span className="bg-secondary text-muted-foreground rounded px-1.5 py-0.5 text-xs">
             Read-only
           </span>
         )}

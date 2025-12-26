@@ -25,8 +25,8 @@ function parseTableReferences(sql: string): TableReference[] {
   // Match FROM table [AS] [alias] and JOIN table [AS] [alias]
   const tablePattern = /(?:FROM|JOIN)\s+(\w+)(?:\s+(?:AS\s+)?(\w+))?/gi;
 
-  let match;
-  while ((match = tablePattern.exec(normalizedSql)) !== null) {
+  let match = tablePattern.exec(normalizedSql);
+  while (match !== null) {
     const tableName = match[1];
     const alias = match[2] || null;
 
@@ -55,6 +55,7 @@ function parseTableReferences(sql: string): TableReference[] {
     } else {
       references.push({ tableName, alias });
     }
+    match = tablePattern.exec(normalizedSql);
   }
 
   return references;
@@ -243,7 +244,7 @@ export function createSqlCompletionProvider(
               insertText: column.name,
               filterText: column.name.toLowerCase(),
               range,
-              sortText: '0_' + column.name, // Highest priority
+              sortText: `0_${column.name}`, // Highest priority
             });
           });
           return { suggestions };
@@ -260,7 +261,7 @@ export function createSqlCompletionProvider(
           insertText: keyword,
           filterText: keyword.toLowerCase(),
           range,
-          sortText: '2_' + keyword,
+          sortText: `2_${keyword}`,
         });
       });
 
@@ -280,7 +281,7 @@ export function createSqlCompletionProvider(
             insertText: table.name,
             filterText: table.name.toLowerCase(),
             range,
-            sortText: '3_' + table.name,
+            sortText: `3_${table.name}`,
           });
         });
 
@@ -329,7 +330,7 @@ export function createSqlCompletionProvider(
             insertText: view.name,
             filterText: view.name.toLowerCase(),
             range,
-            sortText: '3_' + view.name,
+            sortText: `3_${view.name}`,
           });
         });
       }

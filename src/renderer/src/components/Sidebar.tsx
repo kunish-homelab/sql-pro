@@ -1,9 +1,9 @@
+import type { TableSchema } from '@/types/database';
+import { ChevronDown, ChevronRight, Eye, Search, Table } from 'lucide-react';
 import { useState } from 'react';
-import { Table, Eye, ChevronRight, ChevronDown, Search } from 'lucide-react';
 import { ScrollArea } from '@/components/ui/scroll-area';
 import { cn } from '@/lib/utils';
 import { useConnectionStore, useTableDataStore } from '@/stores';
-import type { TableSchema } from '@/types/database';
 
 export function Sidebar() {
   const {
@@ -62,17 +62,17 @@ export function Sidebar() {
     ) || [];
 
   return (
-    <div className="flex h-full w-full flex-col overflow-hidden border-r bg-muted/30">
+    <div className="bg-muted/30 flex h-full w-full flex-col overflow-hidden border-r">
       {/* Search */}
       <div className="p-2">
         <div className="relative">
-          <Search className="absolute left-2.5 top-1/2 h-4 w-4 -translate-y-1/2 text-muted-foreground" />
+          <Search className="text-muted-foreground absolute top-1/2 left-2.5 h-4 w-4 -translate-y-1/2" />
           <input
             type="text"
             placeholder="Search tables..."
             value={searchQuery}
             onChange={(e) => setSearchQuery(e.target.value)}
-            className="w-full rounded-md border border-input bg-background py-1.5 pl-8 pr-3 text-sm placeholder:text-muted-foreground focus:outline-none focus:ring-2 focus:ring-ring"
+            className="border-input bg-background placeholder:text-muted-foreground focus:ring-ring w-full rounded-md border py-1.5 pr-3 pl-8 text-sm focus:ring-2 focus:outline-none"
           />
         </div>
       </div>
@@ -81,7 +81,7 @@ export function Sidebar() {
       <ScrollArea className="flex-1">
         <div className="p-2">
           {isLoadingSchema ? (
-            <div className="flex items-center justify-center py-8 text-sm text-muted-foreground">
+            <div className="text-muted-foreground flex items-center justify-center py-8 text-sm">
               Loading schema...
             </div>
           ) : (
@@ -91,7 +91,7 @@ export function Sidebar() {
                 <div className="mb-2">
                   <button
                     onClick={() => setTablesExpanded(!tablesExpanded)}
-                    className="flex w-full items-center gap-1 rounded px-2 py-1 text-sm font-medium text-muted-foreground hover:bg-accent"
+                    className="text-muted-foreground hover:bg-accent flex w-full items-center gap-1 rounded px-2 py-1 text-sm font-medium"
                   >
                     {tablesExpanded ? (
                       <ChevronDown className="h-4 w-4" />
@@ -120,7 +120,7 @@ export function Sidebar() {
                 <div>
                   <button
                     onClick={() => setViewsExpanded(!viewsExpanded)}
-                    className="flex w-full items-center gap-1 rounded px-2 py-1 text-sm font-medium text-muted-foreground hover:bg-accent"
+                    className="text-muted-foreground hover:bg-accent flex w-full items-center gap-1 rounded px-2 py-1 text-sm font-medium"
                   >
                     {viewsExpanded ? (
                       <ChevronDown className="h-4 w-4" />
@@ -147,7 +147,7 @@ export function Sidebar() {
 
               {/* Empty State */}
               {filteredTables.length === 0 && filteredViews.length === 0 && (
-                <div className="py-8 text-center text-sm text-muted-foreground">
+                <div className="text-muted-foreground py-8 text-center text-sm">
                   {searchQuery
                     ? 'No tables match your search'
                     : 'No tables found'}
@@ -180,13 +180,13 @@ function TableItem({ table, isSelected, onClick, isView }: TableItemProps) {
       )}
     >
       {isView ? (
-        <Eye className="h-4 w-4 shrink-0 text-muted-foreground" />
+        <Eye className="text-muted-foreground h-4 w-4 shrink-0" />
       ) : (
-        <Table className="h-4 w-4 shrink-0 text-muted-foreground" />
+        <Table className="text-muted-foreground h-4 w-4 shrink-0" />
       )}
       <span className="truncate">{table.name}</span>
       {table.rowCount !== undefined && (
-        <span className="ml-auto text-xs text-muted-foreground">
+        <span className="text-muted-foreground ml-auto text-xs">
           {table.rowCount.toLocaleString()}
         </span>
       )}

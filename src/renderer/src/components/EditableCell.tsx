@@ -1,6 +1,6 @@
-import { useState, useRef, useEffect } from 'react';
-import { cn } from '@/lib/utils';
 import type { ColumnSchema } from '@/types/database';
+import { useEffect, useRef, useState } from 'react';
+import { cn } from '@/lib/utils';
 
 interface EditableCellProps {
   value: unknown;
@@ -38,10 +38,12 @@ export function EditableCell({
   useEffect(() => {
     if (isEditing) {
       // Initialize edit value when entering edit mode - this is intentional
-      // eslint-disable-next-line react-hooks/set-state-in-effect
+      // eslint-disable-next-line react-hooks-extra/no-direct-set-state-in-use-effect
       setEditValue(value === null ? '' : String(value));
+      // eslint-disable-next-line react-hooks-extra/no-direct-set-state-in-use-effect
       setValidationError(null);
-      setTimeout(() => inputRef.current?.focus(), 0);
+      const timeoutId = setTimeout(() => inputRef.current?.focus(), 0);
+      return () => clearTimeout(timeoutId);
     }
   }, [isEditing, value]);
 
@@ -56,8 +58,8 @@ export function EditableCell({
     // Type validation for numeric types
     if (columnType.toLowerCase().includes('int')) {
       if (val !== '' && val.toLowerCase() !== 'null') {
-        const parsed = parseInt(val, 10);
-        if (isNaN(parsed)) {
+        const parsed = Number.parseInt(val, 10);
+        if (Number.isNaN(parsed)) {
           return 'Must be a valid integer';
         }
       }
@@ -67,14 +69,43 @@ export function EditableCell({
       columnType.toLowerCase().includes('double')
     ) {
       if (val !== '' && val.toLowerCase() !== 'null') {
-        const parsed = parseFloat(val);
-        if (isNaN(parsed)) {
+        const parsed = Number.parseFloat(val);
+        if (Number.isNaN(parsed)) {
           return 'Must be a valid number';
         }
       }
     }
 
     return null;
+  };
+
+  const handleSave = () => {
+    // Validate before saving
+    const error = validateValue(editValue);
+    if (error) {
+      setValidationError(error);
+      return;
+    }
+
+    let newValue: unknown = editValue;
+
+    // Convert to appropriate type
+    if (editValue === '' || editValue.toLowerCase() === 'null') {
+      newValue = null;
+    } else if (columnType.toLowerCase().includes('int')) {
+      newValue = Number.parseInt(editValue, 10);
+      if (Number.isNaN(newValue as number)) newValue = editValue;
+    } else if (
+      columnType.toLowerCase().includes('real') ||
+      columnType.toLowerCase().includes('float') ||
+      columnType.toLowerCase().includes('double')
+    ) {
+      newValue = Number.parseFloat(editValue);
+      if (Number.isNaN(newValue as number)) newValue = editValue;
+    }
+
+    setValidationError(null);
+    onSave(newValue);
   };
 
   const handleKeyDown = (e: React.KeyboardEvent) => {
@@ -94,35 +125,6 @@ export function EditableCell({
     }
   };
 
-  const handleSave = () => {
-    // Validate before saving
-    const error = validateValue(editValue);
-    if (error) {
-      setValidationError(error);
-      return;
-    }
-
-    let newValue: unknown = editValue;
-
-    // Convert to appropriate type
-    if (editValue === '' || editValue.toLowerCase() === 'null') {
-      newValue = null;
-    } else if (columnType.toLowerCase().includes('int')) {
-      newValue = parseInt(editValue, 10);
-      if (isNaN(newValue as number)) newValue = editValue;
-    } else if (
-      columnType.toLowerCase().includes('real') ||
-      columnType.toLowerCase().includes('float') ||
-      columnType.toLowerCase().includes('double')
-    ) {
-      newValue = parseFloat(editValue);
-      if (isNaN(newValue as number)) newValue = editValue;
-    }
-
-    setValidationError(null);
-    onSave(newValue);
-  };
-
   if (isEditing) {
     return (
       <div className="relative w-full">
@@ -140,7 +142,7 @@ export function EditableCell({
           onBlur={handleSave}
           onKeyDown={handleKeyDown}
           className={cn(
-            'w-full bg-background px-1 py-0.5 text-sm outline-none ring-2',
+            'bg-background w-full px-1 py-0.5 text-sm ring-2 outline-none',
             validationError ? 'ring-destructive' : 'ring-ring'
           )}
           aria-invalid={!!validationError}
@@ -149,7 +151,7 @@ export function EditableCell({
         {validationError && (
           <div
             id="cell-error"
-            className="absolute -top-6 left-0 z-50 whitespace-nowrap rounded bg-destructive px-1.5 py-0.5 text-xs text-destructive-foreground shadow-sm"
+            className="bg-destructive text-destructive-foreground absolute -top-6 left-0 z-50 rounded px-1.5 py-0.5 text-xs whitespace-nowrap shadow-sm"
           >
             {validationError}
           </div>
@@ -178,7 +180,7 @@ export function EditableCell({
 
 function CellDisplay({ value, type }: { value: unknown; type: string }) {
   if (value === null) {
-    return <span className="text-sm italic text-muted-foreground">NULL</span>;
+    return <span className="text-muted-foreground text-sm italic">NULL</span>;
   }
 
   if (typeof value === 'boolean') {
@@ -190,12 +192,12 @@ function CellDisplay({ value, type }: { value: unknown; type: string }) {
   }
 
   if (type.toLowerCase().includes('blob')) {
-    return <span className="text-sm italic text-muted-foreground">[BLOB]</span>;
+    return <span className="text-muted-foreground text-sm italic">[BLOB]</span>;
   }
 
   const strValue = String(value);
   return (
-    <span className="whitespace-nowrap text-sm" title={strValue}>
+    <span className="text-sm whitespace-nowrap" title={strValue}>
       {strValue}
     </span>
   );

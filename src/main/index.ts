@@ -1,6 +1,7 @@
-import { app, shell, BrowserWindow } from 'electron';
-import { join } from 'path';
-import { setupIpcHandlers, cleanupIpcHandlers } from './services/ipc-handlers';
+import { join } from 'node:path';
+import process from 'node:process';
+import { app, BrowserWindow, shell } from 'electron';
+import { cleanupIpcHandlers, setupIpcHandlers } from './services/ipc-handlers';
 
 // Inline utilities to avoid @electron-toolkit/utils initialization issues
 // Use getter to defer app.isPackaged access until after app ready
@@ -53,8 +54,8 @@ function createWindow(): void {
     return { action: 'deny' };
   });
 
-  if (is.dev && process.env['ELECTRON_RENDERER_URL']) {
-    mainWindow.loadURL(process.env['ELECTRON_RENDERER_URL']);
+  if (is.dev && process.env.ELECTRON_RENDERER_URL) {
+    mainWindow.loadURL(process.env.ELECTRON_RENDERER_URL);
   } else {
     mainWindow.loadFile(join(__dirname, '../renderer/index.html'));
   }

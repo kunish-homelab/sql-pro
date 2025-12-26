@@ -1,10 +1,10 @@
-import { useRef } from 'react';
+import type { ColumnSchema, SortState } from '@/types/database';
 import { useVirtualizer } from '@tanstack/react-virtual';
-import { ArrowUp, ArrowDown, Key } from 'lucide-react';
+import { ArrowDown, ArrowUp, Key } from 'lucide-react';
+import { useRef } from 'react';
+import { useResizableColumns } from '@/hooks/useResizableColumns';
 import { cn } from '@/lib/utils';
 import { ColumnResizeHandle } from './ColumnResizeHandle';
-import { useResizableColumns } from '@/hooks/useResizableColumns';
-import type { ColumnSchema, SortState } from '@/types/database';
 
 interface DataGridProps {
   columns: ColumnSchema[];
@@ -16,7 +16,6 @@ interface DataGridProps {
 export function DataGrid({ columns, rows, sort, onSort }: DataGridProps) {
   const parentRef = useRef<HTMLDivElement>(null);
 
-  // eslint-disable-next-line react-hooks/incompatible-library -- TanStack Virtual is safe here
   const rowVirtualizer = useVirtualizer({
     count: rows.length,
     getScrollElement: () => parentRef.current,
@@ -40,7 +39,7 @@ export function DataGrid({ columns, rows, sort, onSort }: DataGridProps) {
 
   if (columns.length === 0) {
     return (
-      <div className="flex h-full items-center justify-center text-muted-foreground">
+      <div className="text-muted-foreground flex h-full items-center justify-center">
         No data to display
       </div>
     );
@@ -53,7 +52,7 @@ export function DataGrid({ columns, rows, sort, onSort }: DataGridProps) {
     >
       <div style={{ minWidth: totalWidth }}>
         {/* Header */}
-        <div className="sticky top-0 z-10 flex border-b bg-muted/50 backdrop-blur-sm">
+        <div className="bg-muted/50 sticky top-0 z-10 flex border-b backdrop-blur-sm">
           {columns.map((col, idx) => (
             <div
               key={col.name}
@@ -62,7 +61,7 @@ export function DataGrid({ columns, rows, sort, onSort }: DataGridProps) {
             >
               <button
                 onClick={() => onSort(col.name)}
-                className="flex flex-1 items-center gap-1 text-left text-sm font-medium hover:text-foreground"
+                className="hover:text-foreground flex flex-1 items-center gap-1 text-left text-sm font-medium"
               >
                 {col.isPrimaryKey && <Key className="h-3 w-3 text-amber-500" />}
                 <span className="truncate">{col.name}</span>
@@ -134,7 +133,7 @@ interface CellValueProps {
 
 function CellValue({ value, type }: CellValueProps) {
   if (value === null) {
-    return <span className="text-sm italic text-muted-foreground">NULL</span>;
+    return <span className="text-muted-foreground text-sm italic">NULL</span>;
   }
 
   if (typeof value === 'boolean') {
@@ -148,7 +147,7 @@ function CellValue({ value, type }: CellValueProps) {
   // Blob/binary data
   if (value instanceof Uint8Array || type.toLowerCase().includes('blob')) {
     return (
-      <span className="text-sm italic text-muted-foreground">
+      <span className="text-muted-foreground text-sm italic">
         [BLOB{' '}
         {typeof value === 'object' ? (value as ArrayBuffer).byteLength : '?'}{' '}
         bytes]
@@ -158,7 +157,7 @@ function CellValue({ value, type }: CellValueProps) {
 
   const strValue = String(value);
   return (
-    <span className="whitespace-nowrap text-sm" title={strValue}>
+    <span className="text-sm whitespace-nowrap" title={strValue}>
       {strValue}
     </span>
   );

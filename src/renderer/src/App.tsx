@@ -1,11 +1,14 @@
+import { QueryClientProvider } from '@tanstack/react-query';
+import { RouterProvider } from '@tanstack/react-router';
 import { useEffect } from 'react';
-import { useConnectionStore } from '@/stores';
-import { WelcomeScreen } from '@/components/WelcomeScreen';
-import { DatabaseView } from '@/components/DatabaseView';
+import { ErrorBoundary } from '@/components/ErrorBoundary';
 import { TooltipProvider } from '@/components/ui/tooltip';
+import { queryClient } from '@/lib/query-client';
+import { router } from '@/routes';
+import { useConnectionStore } from '@/stores';
 
 function App(): React.JSX.Element {
-  const { connection, setRecentConnections } = useConnectionStore();
+  const { setRecentConnections } = useConnectionStore();
 
   // Load recent connections on mount
   useEffect(() => {
@@ -19,15 +22,13 @@ function App(): React.JSX.Element {
   }, [setRecentConnections]);
 
   return (
-    <TooltipProvider>
-      <div className="flex h-screen flex-col overflow-hidden bg-background text-foreground">
-        {/* Titlebar - draggable area for macOS traffic lights */}
-        <div className="titlebar h-10 shrink-0 border-b border-border/50" />
-        <div className="min-h-0 flex-1">
-          {connection ? <DatabaseView /> : <WelcomeScreen />}
-        </div>
-      </div>
-    </TooltipProvider>
+    <ErrorBoundary>
+      <QueryClientProvider client={queryClient}>
+        <TooltipProvider>
+          <RouterProvider router={router} />
+        </TooltipProvider>
+      </QueryClientProvider>
+    </ErrorBoundary>
   );
 }
 

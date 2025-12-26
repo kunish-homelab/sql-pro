@@ -67,6 +67,8 @@ export interface PendingChange {
   timestamp: Date;
   isValid: boolean;
   validationError?: string;
+  /** Primary key column name for UPDATE/DELETE operations */
+  primaryKeyColumn?: string;
 }
 
 // Query session

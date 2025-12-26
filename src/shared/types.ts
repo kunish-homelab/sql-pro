@@ -140,6 +140,8 @@ export interface PendingChangeInfo {
   type: ChangeType;
   oldValues: Record<string, unknown> | null;
   newValues: Record<string, unknown> | null;
+  /** Primary key column name for UPDATE/DELETE operations */
+  primaryKeyColumn?: string;
 }
 
 export interface ValidateChangesRequest {

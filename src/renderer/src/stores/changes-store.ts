@@ -1,5 +1,5 @@
+import type { ChangeType, PendingChange } from '@/types/database';
 import { create } from 'zustand';
-import type { PendingChange, ChangeType } from '@/types/database';
 
 interface ChangesState {
   // Pending changes

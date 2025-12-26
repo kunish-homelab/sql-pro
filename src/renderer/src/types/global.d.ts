@@ -1,5 +1,5 @@
-import type { SqlProAPI } from '../../../preload/index';
 import type { ElectronAPI } from '@electron-toolkit/preload';
+import type { SqlProAPI } from '../../../preload/index';
 
 declare global {
   interface Window {

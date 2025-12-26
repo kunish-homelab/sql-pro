@@ -1,13 +1,14 @@
-import Database from 'better-sqlite3-multiple-ciphers';
-import { readFileSync } from 'fs';
 import type {
   ColumnInfo,
-  TableInfo,
-  IndexInfo,
   ForeignKeyInfo,
+  IndexInfo,
   PendingChangeInfo,
+  TableInfo,
   ValidationResult,
 } from '../../shared/types';
+import { Buffer } from 'node:buffer';
+import { readFileSync } from 'node:fs';
+import Database from 'better-sqlite3-multiple-ciphers';
 
 interface ConnectionInfo {
   id: string;
@@ -499,12 +500,24 @@ class DatabaseService {
       }
 
       // Get paginated data
+      // Include rowid in results for UPDATE/DELETE operations on tables without explicit primary key
+      // Note: views and WITHOUT ROWID tables don't have rowid, so we try with rowid first and fall back to SELECT *
       const offset = (page - 1) * pageSize;
-      const rows = conn.db
-        .prepare(
-          `SELECT * FROM "${table}" ${whereClause} ${orderBy} LIMIT ? OFFSET ?`
-        )
-        .all(...params, pageSize, offset) as Record<string, unknown>[];
+      let rows: Record<string, unknown>[];
+      try {
+        rows = conn.db
+          .prepare(
+            `SELECT rowid, * FROM "${table}" ${whereClause} ${orderBy} LIMIT ? OFFSET ?`
+          )
+          .all(...params, pageSize, offset) as Record<string, unknown>[];
+      } catch {
+        // Fallback for views or WITHOUT ROWID tables
+        rows = conn.db
+          .prepare(
+            `SELECT * FROM "${table}" ${whereClause} ${orderBy} LIMIT ? OFFSET ?`
+          )
+          .all(...params, pageSize, offset) as Record<string, unknown>[];
+      }
 
       return { success: true, columns, rows, totalRows };
     } catch (error) {
@@ -690,12 +703,16 @@ class DatabaseService {
         const setClause = Object.keys(values)
           .map((col) => `"${col}" = ?`)
           .join(', ');
-        const sql = `UPDATE "${change.table}" SET ${setClause} WHERE rowid = ?`;
+        // Use primary key column if provided, otherwise fall back to rowid
+        const whereColumn = change.primaryKeyColumn || 'rowid';
+        const sql = `UPDATE "${change.table}" SET ${setClause} WHERE "${whereColumn}" = ?`;
         db.prepare(sql).run(...Object.values(values), change.rowId);
         break;
       }
       case 'delete': {
-        const sql = `DELETE FROM "${change.table}" WHERE rowid = ?`;
+        // Use primary key column if provided, otherwise fall back to rowid
+        const whereColumn = change.primaryKeyColumn || 'rowid';
+        const sql = `DELETE FROM "${change.table}" WHERE "${whereColumn}" = ?`;
         db.prepare(sql).run(change.rowId);
         break;
       }

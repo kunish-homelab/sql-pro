@@ -24,8 +24,8 @@ export function ResizablePanel({
     if (storageKey) {
       const stored = localStorage.getItem(`panel-width-${storageKey}`);
       if (stored) {
-        const parsed = parseInt(stored, 10);
-        if (!isNaN(parsed) && parsed >= minWidth && parsed <= maxWidth) {
+        const parsed = Number.parseInt(stored, 10);
+        if (!Number.isNaN(parsed) && parsed >= minWidth && parsed <= maxWidth) {
           return parsed;
         }
       }
@@ -112,7 +112,7 @@ export function ResizablePanel({
       {/* Resize handle */}
       <div
         className={cn(
-          'absolute top-0 z-10 h-full w-1 cursor-col-resize transition-colors hover:bg-primary/50',
+          'hover:bg-primary/50 absolute top-0 z-10 h-full w-1 cursor-col-resize transition-colors',
           side === 'left' ? 'right-0' : 'left-0',
           isResizing && 'bg-primary/50'
         )}
@@ -121,7 +121,7 @@ export function ResizablePanel({
       />
 
       {/* Panel content - children handle their own scrolling */}
-      <div className="h-full w-full min-h-0 min-w-0">{children}</div>
+      <div className="h-full min-h-0 w-full min-w-0">{children}</div>
     </div>
   );
 }

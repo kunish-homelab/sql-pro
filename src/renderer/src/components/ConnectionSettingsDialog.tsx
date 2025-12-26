@@ -1,6 +1,6 @@
-import { useState, useEffect } from 'react';
-import { Settings, Info } from 'lucide-react';
 import * as Dialog from '@radix-ui/react-dialog';
+import { Info, Settings } from 'lucide-react';
+import { useEffect, useState } from 'react';
 import { Button } from '@/components/ui/button';
 import {
   Tooltip,
@@ -119,13 +119,13 @@ function DialogFormContent({
   return (
     <>
       <div className="flex flex-col items-center text-center">
-        <div className="mb-4 flex h-12 w-12 items-center justify-center rounded-full bg-primary/10">
-          <Settings className="h-6 w-6 text-primary" />
+        <div className="bg-primary/10 mb-4 flex h-12 w-12 items-center justify-center rounded-full">
+          <Settings className="text-primary h-6 w-6" />
         </div>
         <Dialog.Title className="text-lg font-semibold">
           {dialogTitle}
         </Dialog.Title>
-        <Dialog.Description className="mt-2 text-sm text-muted-foreground">
+        <Dialog.Description className="text-muted-foreground mt-2 text-sm">
           Configure settings for <span className="font-medium">{filename}</span>
         </Dialog.Description>
       </div>
@@ -144,31 +144,31 @@ function DialogFormContent({
             placeholder="Enter a name for this connection"
             autoFocus
             className={cn(
-              'w-full rounded-md border bg-background px-3 py-2 text-sm',
+              'bg-background w-full rounded-md border px-3 py-2 text-sm',
               'placeholder:text-muted-foreground',
-              'focus:outline-none focus:ring-2 focus:ring-ring focus:ring-offset-2',
+              'focus:ring-ring focus:ring-2 focus:ring-offset-2 focus:outline-none',
               validationError ? 'border-destructive' : 'border-input'
             )}
           />
           {validationError && (
-            <p className="text-xs text-destructive">{validationError}</p>
+            <p className="text-destructive text-xs">{validationError}</p>
           )}
-          <p className="text-xs text-muted-foreground">
+          <p className="text-muted-foreground text-xs">
             {displayName.trim().length}/{MAX_DISPLAY_NAME_LENGTH} characters
           </p>
         </div>
 
         {/* Read-Only Checkbox */}
-        <label className="flex cursor-pointer items-center gap-3 rounded-md border border-input p-3 hover:bg-accent/50">
+        <label className="border-input hover:bg-accent/50 flex cursor-pointer items-center gap-3 rounded-md border p-3">
           <input
             type="checkbox"
             checked={readOnly}
             onChange={(e) => setReadOnly(e.target.checked)}
-            className="h-4 w-4 rounded border-input"
+            className="border-input h-4 w-4 rounded"
           />
           <div className="flex-1">
             <span className="text-sm font-medium">Open in read-only mode</span>
-            <p className="text-xs text-muted-foreground">
+            <p className="text-muted-foreground text-xs">
               Prevents accidental modifications to the database
             </p>
           </div>
@@ -178,9 +178,9 @@ function DialogFormContent({
         {isEncrypted && (
           <label
             className={cn(
-              'flex items-center gap-3 rounded-md border border-input p-3',
+              'border-input flex items-center gap-3 rounded-md border p-3',
               isStorageAvailable
-                ? 'cursor-pointer hover:bg-accent/50'
+                ? 'hover:bg-accent/50 cursor-pointer'
                 : 'cursor-not-allowed opacity-50'
             )}
           >
@@ -189,7 +189,7 @@ function DialogFormContent({
               checked={rememberPassword}
               onChange={(e) => setRememberPassword(e.target.checked)}
               disabled={!isStorageAvailable}
-              className="h-4 w-4 rounded border-input"
+              className="border-input h-4 w-4 rounded"
             />
             <div className="flex-1">
               <div className="flex items-center gap-2">
@@ -197,7 +197,7 @@ function DialogFormContent({
                 {!isStorageAvailable && (
                   <Tooltip>
                     <TooltipTrigger asChild>
-                      <Info className="h-3.5 w-3.5 text-muted-foreground" />
+                      <Info className="text-muted-foreground h-3.5 w-3.5" />
                     </TooltipTrigger>
                     <TooltipContent>
                       <p>Secure storage is not available on this system</p>
@@ -205,7 +205,7 @@ function DialogFormContent({
                   </Tooltip>
                 )}
               </div>
-              <p className="text-xs text-muted-foreground">
+              <p className="text-muted-foreground text-xs">
                 Securely store password in system keychain
               </p>
             </div>
@@ -244,8 +244,8 @@ export function ConnectionSettingsDialog({
   return (
     <Dialog.Root open={open} onOpenChange={onOpenChange}>
       <Dialog.Portal>
-        <Dialog.Overlay className="fixed inset-0 bg-black/50 data-[state=open]:animate-in data-[state=closed]:animate-out data-[state=closed]:fade-out-0 data-[state=open]:fade-in-0" />
-        <Dialog.Content className="fixed left-1/2 top-1/2 w-full max-w-md -translate-x-1/2 -translate-y-1/2 rounded-lg border bg-background p-6 shadow-lg data-[state=open]:animate-in data-[state=closed]:animate-out data-[state=closed]:fade-out-0 data-[state=open]:fade-in-0 data-[state=closed]:zoom-out-95 data-[state=open]:zoom-in-95 data-[state=closed]:slide-out-to-left-1/2 data-[state=closed]:slide-out-to-top-[48%] data-[state=open]:slide-in-from-left-1/2 data-[state=open]:slide-in-from-top-[48%]">
+        <Dialog.Overlay className="data-[state=open]:animate-in data-[state=closed]:animate-out data-[state=closed]:fade-out-0 data-[state=open]:fade-in-0 fixed inset-0 bg-black/50" />
+        <Dialog.Content className="bg-background data-[state=open]:animate-in data-[state=closed]:animate-out data-[state=closed]:fade-out-0 data-[state=open]:fade-in-0 data-[state=closed]:zoom-out-95 data-[state=open]:zoom-in-95 data-[state=closed]:slide-out-to-left-1/2 data-[state=closed]:slide-out-to-top-[48%] data-[state=open]:slide-in-from-left-1/2 data-[state=open]:slide-in-from-top-[48%] fixed top-1/2 left-1/2 w-full max-w-md -translate-x-1/2 -translate-y-1/2 rounded-lg border p-6 shadow-lg">
           {open && (
             <DialogFormContent
               onOpenChange={onOpenChange}

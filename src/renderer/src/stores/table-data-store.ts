@@ -1,10 +1,10 @@
-import { create } from 'zustand';
 import type {
   ColumnSchema,
+  FilterState,
   PaginationState,
   SortState,
-  FilterState,
 } from '@/types/database';
+import { create } from 'zustand';
 
 interface TableDataState {
   // Current table data

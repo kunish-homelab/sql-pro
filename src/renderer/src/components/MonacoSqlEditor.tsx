@@ -1,26 +1,23 @@
-import { useRef, useEffect, useCallback, useState } from 'react';
-import Editor, {
-  loader,
-  type OnMount,
-  type BeforeMount,
-} from '@monaco-editor/react';
+import type { BeforeMount, OnMount } from '@monaco-editor/react';
 import type * as Monaco from 'monaco-editor';
 import type { DatabaseSchema } from '@/types/database';
-import { useThemeStore } from '@/stores';
-import { cn } from '@/lib/utils';
+import Editor, { loader } from '@monaco-editor/react';
+// Configure Monaco to use local package with Vite worker
+import * as monaco from 'monaco-editor';
+import EditorWorker from 'monaco-editor/esm/vs/editor/editor.worker?worker';
+import { useCallback, useEffect, useRef, useState } from 'react';
 import {
   createSqlCompletionProvider,
   defineCustomThemes,
 } from '@/lib/monaco-sql-config';
 
-// Configure Monaco to use local package with Vite worker
-import * as monaco from 'monaco-editor';
-import editorWorker from 'monaco-editor/esm/vs/editor/editor.worker?worker';
+import { cn } from '@/lib/utils';
+import { useThemeStore } from '@/stores';
 
 // Set up Monaco environment for Vite
-self.MonacoEnvironment = {
+globalThis.MonacoEnvironment = {
   getWorker() {
-    return new editorWorker();
+    return new EditorWorker();
   },
 };
 
@@ -62,8 +59,8 @@ export function MonacoSqlEditor({
 
   // Parse initial height from prop (support 'px' suffix)
   const parseHeight = (h: string): number => {
-    const num = parseInt(h, 10);
-    return isNaN(num) ? 150 : num;
+    const num = Number.parseInt(h, 10);
+    return Number.isNaN(num) ? 150 : num;
   };
 
   // Store default height for double-click reset
@@ -252,14 +249,14 @@ export function MonacoSqlEditor({
         onDoubleClick={handleDoubleClick}
         className={cn(
           'h-1.5 cursor-ns-resize transition-colors',
-          'bg-transparent hover:bg-primary/20',
+          'hover:bg-primary/20 bg-transparent',
           isResizing && 'bg-primary/30'
         )}
         title="Drag to resize, double-click to restore default"
       >
         {/* Visual indicator in center of handle */}
-        <div className="mx-auto h-full w-8 flex items-center justify-center">
-          <div className="h-0.5 w-4 rounded-full bg-muted-foreground/30" />
+        <div className="mx-auto flex h-full w-8 items-center justify-center">
+          <div className="bg-muted-foreground/30 h-0.5 w-4 rounded-full" />
         </div>
       </div>
     </div>

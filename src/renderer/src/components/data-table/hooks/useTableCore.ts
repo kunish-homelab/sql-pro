@@ -1,19 +1,25 @@
-import { useMemo, useState, useCallback } from 'react';
-import {
-  useReactTable,
-  getCoreRowModel,
-  getGroupedRowModel,
-  getExpandedRowModel,
-  getSortedRowModel,
+import type {
   ColumnDef,
   ColumnSizingState,
-  GroupingState,
   ExpandedState,
-  SortingState,
+  GroupingState,
   Row,
-  flexRender,
+  SortingState,
 } from '@tanstack/react-table';
-import type { ColumnSchema, SortState, AggregationType } from '@/types/database';
+import type {
+  AggregationType,
+  ColumnSchema,
+  SortState,
+} from '@/types/database';
+import {
+  flexRender,
+  getCoreRowModel,
+  getExpandedRowModel,
+  getGroupedRowModel,
+  getSortedRowModel,
+  useReactTable,
+} from '@tanstack/react-table';
+import { useCallback, useMemo, useState } from 'react';
 
 // Row data type with internal metadata
 export interface TableRowData extends Record<string, unknown> {
@@ -44,13 +50,13 @@ interface UseTableCoreOptions {
 
 // Aggregation functions
 const aggregationFunctions = {
-  count: <T,>(_columnId: string, leafRows: Row<T>[]) => leafRows.length,
-  sum: <T,>(columnId: string, leafRows: Row<T>[]) =>
+  count: <T>(_columnId: string, leafRows: Row<T>[]) => leafRows.length,
+  sum: <T>(columnId: string, leafRows: Row<T>[]) =>
     leafRows.reduce((sum, row) => {
       const value = row.getValue(columnId);
       return sum + (typeof value === 'number' ? value : 0);
     }, 0),
-  avg: <T,>(columnId: string, leafRows: Row<T>[]) => {
+  avg: <T>(columnId: string, leafRows: Row<T>[]) => {
     if (leafRows.length === 0) return 0;
     const sum = leafRows.reduce((acc, row) => {
       const value = row.getValue(columnId);
@@ -58,13 +64,13 @@ const aggregationFunctions = {
     }, 0);
     return sum / leafRows.length;
   },
-  min: <T,>(columnId: string, leafRows: Row<T>[]) => {
+  min: <T>(columnId: string, leafRows: Row<T>[]) => {
     const values = leafRows
       .map((row) => row.getValue(columnId))
       .filter((v): v is number => typeof v === 'number');
     return values.length > 0 ? Math.min(...values) : null;
   },
-  max: <T,>(columnId: string, leafRows: Row<T>[]) => {
+  max: <T>(columnId: string, leafRows: Row<T>[]) => {
     const values = leafRows
       .map((row) => row.getValue(columnId))
       .filter((v): v is number => typeof v === 'number');
@@ -221,6 +227,7 @@ export function useTableCore({
   });
 
   // Generate CSS variables for column sizing (performance optimization)
+  const tableColumnSizing = table.getState().columnSizing;
   const columnSizeVars = useMemo(() => {
     const headers = table.getFlatHeaders();
     const vars: Record<string, string> = {};
@@ -228,7 +235,8 @@ export function useTableCore({
       vars[`--col-${header.id}-size`] = `${header.getSize()}px`;
     });
     return vars;
-  }, [table.getState().columnSizing]);
+    // eslint-disable-next-line react-hooks/exhaustive-deps
+  }, [table, tableColumnSizing]);
 
   // Reset column size to auto-calculated value
   const resetColumnSize = useCallback(

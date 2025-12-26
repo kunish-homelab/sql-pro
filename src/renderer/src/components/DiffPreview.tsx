@@ -1,66 +1,77 @@
-import { useState, useEffect } from 'react';
+import type { PendingChange } from '@/lib/collections';
 import {
-  X,
-  Check,
   AlertCircle,
-  Trash2,
-  Edit3,
-  Plus,
+  Check,
   ChevronDown,
   ChevronRight,
+  Edit3,
+  Plus,
+  Trash2,
   Undo2,
+  X,
 } from 'lucide-react';
+import { useEffect, useMemo, useState } from 'react';
 import { Button } from '@/components/ui/button';
 import { ScrollArea } from '@/components/ui/scroll-area';
+import { usePendingChanges } from '@/hooks/usePendingChanges';
 import { cn } from '@/lib/utils';
-import {
-  useChangesStore,
-  useConnectionStore,
-  useTableDataStore,
-} from '@/stores';
-import type { PendingChange } from '@/types/database';
+import { useConnectionStore } from '@/stores';
 
 interface DiffPreviewProps {
   onClose: () => void;
+  onApplied?: () => void;
 }
 
-export function DiffPreview({ onClose }: DiffPreviewProps) {
+export function DiffPreview({ onClose, onApplied }: DiffPreviewProps) {
   const { connection } = useConnectionStore();
+
   const {
     changes,
+    hasChanges,
     isValidating,
     isApplying,
+    validationErrors,
+    applyChanges,
     removeChange,
-    clearChanges,
-    setValidationResult,
-    setIsValidating,
-    setIsApplying,
-  } = useChangesStore();
-  const { triggerReload } = useTableDataStore();
+    clearAllChanges,
+    undoLastChange,
+  } = usePendingChanges({
+    connectionId: connection?.id || null,
+  });
 
   const [expandedChanges, setExpandedChanges] = useState<Set<string>>(
-    new Set(changes.map((c) => c.id))
+    () => new Set(changes.map((c) => c.id))
   );
+
+  // Update expanded set when changes are added using useMemo to derive state
+  const expandedWithNewChanges = useMemo(() => {
+    const newSet = new Set(expandedChanges);
+    changes.forEach((c) => {
+      if (!expandedChanges.has(c.id)) {
+        newSet.add(c.id);
+      }
+    });
+    // Only return new set if there are actual additions
+    return newSet.size !== expandedChanges.size ? newSet : expandedChanges;
+  }, [changes, expandedChanges]);
+
+  // Sync state when derived value changes
+  if (expandedWithNewChanges !== expandedChanges) {
+    setExpandedChanges(expandedWithNewChanges);
+  }
 
   // Global Ctrl+Z handler for undo
   useEffect(() => {
     const handleKeyDown = (e: KeyboardEvent) => {
       if ((e.ctrlKey || e.metaKey) && e.key === 'z' && !e.shiftKey) {
         e.preventDefault();
-        // Find and remove the most recent change by timestamp
-        if (changes.length > 0) {
-          const sortedChanges = [...changes].sort(
-            (a, b) =>
-              new Date(b.timestamp).getTime() - new Date(a.timestamp).getTime()
-          );
-          removeChange(sortedChanges[0].id);
-        }
+        undoLastChange();
       }
     };
 
     window.addEventListener('keydown', handleKeyDown);
     return () => window.removeEventListener('keydown', handleKeyDown);
-  }, [changes, removeChange]);
+  }, [undoLastChange]);
 
   const toggleExpanded = (id: string) => {
     const newExpanded = new Set(expandedChanges);
@@ -72,91 +83,35 @@ export function DiffPreview({ onClose }: DiffPreviewProps) {
     setExpandedChanges(newExpanded);
   };
 
-  const handleValidate = async () => {
-    if (!connection) return;
-
-    setIsValidating(true);
-    try {
-      const result = await window.sqlPro.db.validateChanges({
-        connectionId: connection.id,
-        changes: changes.map((c) => ({
-          id: c.id,
-          table: c.table,
-          rowId: c.rowId,
-          type: c.type,
-          oldValues: c.oldValues,
-          newValues: c.newValues,
-        })),
-      });
-
-      if (result.success && result.results) {
-        setValidationResult(result.results);
-      }
-    } finally {
-      setIsValidating(false);
-    }
-  };
-
   const handleApply = async () => {
-    if (!connection) return;
-
-    // First validate
-    await handleValidate();
-
-    // Get fresh changes from store after validation
-    const latestChanges = useChangesStore.getState().changes;
-
-    // Check if all changes are valid
-    const invalidChanges = latestChanges.filter((c) => !c.isValid);
-    if (invalidChanges.length > 0) {
-      return;
-    }
-
-    setIsApplying(true);
-    try {
-      const result = await window.sqlPro.db.applyChanges({
-        connectionId: connection.id,
-        changes: latestChanges.map((c) => ({
-          id: c.id,
-          table: c.table,
-          rowId: c.rowId,
-          type: c.type,
-          oldValues: c.oldValues,
-          newValues: c.newValues,
-        })),
-      });
-
-      if (result.success) {
-        clearChanges();
-        triggerReload(); // Trigger data reload
-        onClose();
-      } else {
-        // Show error to user
-        console.error('Failed to apply changes:', result.error);
-        alert(`Failed to apply changes: ${result.error}`);
-      }
-    } catch (error) {
-      console.error('Error applying changes:', error);
-      alert(
-        `Error applying changes: ${error instanceof Error ? error.message : 'Unknown error'}`
-      );
-    } finally {
-      setIsApplying(false);
+    const success = await applyChanges();
+    if (success) {
+      onApplied?.();
+      onClose();
     }
   };
 
-  const invalidCount = changes.filter((c) => !c.isValid).length;
+  const handleDiscard = () => {
+    clearAllChanges();
+    onClose();
+  };
+
+  const invalidCount = validationErrors.size;
   const insertCount = changes.filter((c) => c.type === 'insert').length;
   const updateCount = changes.filter((c) => c.type === 'update').length;
   const deleteCount = changes.filter((c) => c.type === 'delete').length;
 
+  if (!hasChanges) {
+    return null;
+  }
+
   return (
-    <div className="flex h-full w-full flex-col overflow-hidden border-l bg-background">
+    <div className="bg-background flex h-full w-full flex-col overflow-hidden border-l">
       {/* Header */}
       <div className="flex items-center justify-between border-b px-4 py-3">
         <div>
           <h2 className="font-semibold">Review Changes</h2>
-          <p className="text-sm text-muted-foreground">
+          <p className="text-muted-foreground text-sm">
             {changes.length} pending{' '}
             {changes.length === 1 ? 'change' : 'changes'}
           </p>
@@ -198,6 +153,7 @@ export function DiffPreview({ onClose }: DiffPreviewProps) {
               isExpanded={expandedChanges.has(change.id)}
               onToggle={() => toggleExpanded(change.id)}
               onRemove={() => removeChange(change.id)}
+              validationError={validationErrors.get(change.id)}
             />
           ))}
         </div>
@@ -205,7 +161,7 @@ export function DiffPreview({ onClose }: DiffPreviewProps) {
 
       {/* Validation Error */}
       {invalidCount > 0 && (
-        <div className="flex items-center gap-2 border-t bg-destructive/10 px-4 py-2 text-sm text-destructive">
+        <div className="bg-destructive/10 text-destructive flex items-center gap-2 border-t px-4 py-2 text-sm">
           <AlertCircle className="h-4 w-4" />
           <span>
             {invalidCount} {invalidCount === 1 ? 'change has' : 'changes have'}{' '}
@@ -219,7 +175,7 @@ export function DiffPreview({ onClose }: DiffPreviewProps) {
         <Button
           variant="outline"
           className="flex-1"
-          onClick={clearChanges}
+          onClick={handleDiscard}
           disabled={isApplying}
         >
           <Undo2 className="mr-2 h-4 w-4" />
@@ -247,6 +203,7 @@ interface ChangeItemProps {
   isExpanded: boolean;
   onToggle: () => void;
   onRemove: () => void;
+  validationError?: string;
 }
 
 function ChangeItem({
@@ -254,6 +211,7 @@ function ChangeItem({
   isExpanded,
   onToggle,
   onRemove,
+  validationError,
 }: ChangeItemProps) {
   const getTypeIcon = () => {
     switch (change.type) {
@@ -277,6 +235,8 @@ function ChangeItem({
     }
   };
 
+  const hasError = validationError || !change.isValid;
+
   return (
     <div className={cn('rounded-lg border', getTypeBg())}>
       {/* Header */}
@@ -289,24 +249,22 @@ function ChangeItem({
           )}
           {getTypeIcon()}
           <span className="font-medium">{change.table}</span>
-          <span className="text-sm text-muted-foreground">
-            Row {change.rowId}
+          <span className="text-muted-foreground text-sm">
+            Row {String(change.rowId)}
           </span>
         </button>
         <div className="flex-1" />
-        {!change.isValid && (
-          <AlertCircle className="h-4 w-4 text-destructive" />
-        )}
+        {hasError && <AlertCircle className="text-destructive h-4 w-4" />}
         <button
           onClick={onRemove}
-          className="rounded p-1 hover:bg-background/50"
+          className="hover:bg-background/50 rounded p-1"
           title="Undo this change"
         >
           <Undo2 className="h-4 w-4" />
         </button>
         <button
           onClick={onRemove}
-          className="rounded p-1 hover:bg-background/50"
+          className="hover:bg-background/50 rounded p-1"
           title="Remove change"
         >
           <X className="h-4 w-4" />
@@ -316,9 +274,9 @@ function ChangeItem({
       {/* Details */}
       {isExpanded && (
         <div className="border-t px-3 py-2">
-          {change.validationError && (
-            <div className="mb-2 rounded bg-destructive/10 px-2 py-1 text-sm text-destructive">
-              {change.validationError}
+          {(validationError || change.validationError) && (
+            <div className="bg-destructive/10 text-destructive mb-2 rounded px-2 py-1 text-sm">
+              {validationError || change.validationError}
             </div>
           )}
           <DiffDetails change={change} />
@@ -335,7 +293,7 @@ function DiffDetails({ change }: { change: PendingChange }) {
         {change.oldValues &&
           Object.entries(change.oldValues).map(([key, value]) => (
             <div key={key} className="flex gap-2">
-              <span className="font-medium text-muted-foreground">{key}:</span>
+              <span className="text-muted-foreground font-medium">{key}:</span>
               <span className="text-red-600 line-through">
                 {formatValue(value)}
               </span>
@@ -351,7 +309,7 @@ function DiffDetails({ change }: { change: PendingChange }) {
         {change.newValues &&
           Object.entries(change.newValues).map(([key, value]) => (
             <div key={key} className="flex gap-2">
-              <span className="font-medium text-muted-foreground">{key}:</span>
+              <span className="text-muted-foreground font-medium">{key}:</span>
               <span className="text-green-600">{formatValue(value)}</span>
             </div>
           ))}
@@ -376,7 +334,7 @@ function DiffDetails({ change }: { change: PendingChange }) {
 
         return (
           <div key={key} className="flex gap-2">
-            <span className="font-medium text-muted-foreground">{key}:</span>
+            <span className="text-muted-foreground font-medium">{key}:</span>
             <span className="text-red-600 line-through">
               {formatValue(oldValue)}
             </span>

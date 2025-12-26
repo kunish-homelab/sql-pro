@@ -1,13 +1,14 @@
 {
   "name": "sql-pro",
   "version": "1.0.0",
+  "packageManager": "pnpm@10.26.2",
   "description": "Professional SQLite database manager with SQLCipher support and diff preview",
-  "main": "./out/main/index.js",
   "author": {
     "name": "kunish",
     "email": "kunish.butt@gmail.com"
   },
   "license": "MIT",
+  "main": "./out/main/index.js",
   "scripts": {
     "dev": "electron-vite dev",
     "build": "electron-vite build",
@@ -16,8 +17,8 @@
     "build:win": "pnpm run build && electron-builder --win",
     "build:mac": "pnpm run build && electron-builder --mac",
     "build:linux": "pnpm run build && electron-builder --linux",
-    "lint": "eslint . --fix",
-    "format": "prettier --write \"**/*.{ts,tsx,json,md}\"",
+    "lint": "eslint --fix .",
+    "format": "prettier --write .",
     "typecheck:main": "tsc --noEmit -p src/main/tsconfig.json",
     "typecheck:preload": "tsc --noEmit -p src/preload/tsconfig.json",
     "typecheck:renderer": "tsc --noEmit -p src/renderer/tsconfig.json",
@@ -35,6 +36,13 @@
     "@radix-ui/react-slot": "^1.2.4",
     "@radix-ui/react-tabs": "^1.1.13",
     "@radix-ui/react-tooltip": "^1.2.8",
+    "@tanstack/db": "^0.5.16",
+    "@tanstack/query-core": "^5.90.12",
+    "@tanstack/query-db-collection": "^1.0.12",
+    "@tanstack/react-db": "^0.1.60",
+    "@tanstack/react-devtools": "^0.9.0",
+    "@tanstack/react-query": "^5.90.12",
+    "@tanstack/react-router": "^1.143.11",
     "@tanstack/react-table": "^8.21.3",
     "@tanstack/react-virtual": "^3.13.13",
     "better-sqlite3-multiple-ciphers": "^12.5.0",
@@ -46,37 +54,33 @@
     "zustand": "^5.0.9"
   },
   "devDependencies": {
+    "@antfu/eslint-config": "^6.7.3",
     "@commitlint/cli": "^20.2.0",
     "@commitlint/config-conventional": "^20.2.0",
     "@electron/notarize": "^3.1.1",
     "@electron/rebuild": "^4.0.2",
-    "@eslint/js": "^9.39.2",
-    "@tailwindcss/postcss": "^4.1.18",
+    "@eslint-react/eslint-plugin": "^2.4.0",
+    "@tailwindcss/vite": "^4.1.18",
+    "@tanstack/react-query-devtools": "^5.91.1",
+    "@tanstack/react-router-devtools": "^1.143.11",
     "@types/better-sqlite3": "^7.6.13",
     "@types/node": "^25.0.3",
     "@types/react": "^19.2.7",
     "@types/react-dom": "^19.2.3",
-    "@typescript-eslint/eslint-plugin": "^8.50.1",
-    "@typescript-eslint/parser": "^8.50.1",
     "@vitejs/plugin-react": "^5.1.2",
-    "autoprefixer": "^10.4.23",
     "electron": "^39.2.7",
     "electron-builder": "^26.0.12",
     "electron-vite": "^5.0.0",
     "eslint": "^9.39.2",
-    "eslint-config-prettier": "^10.1.8",
-    "eslint-plugin-react": "^7.37.5",
-    "eslint-plugin-react-hooks": "^7.0.1",
-    "globals": "^16.5.0",
+    "eslint-plugin-react-refresh": "^0.4.26",
     "husky": "^9.1.7",
     "lint-staged": "^16.2.7",
-    "postcss": "^8.5.6",
     "prettier": "^3.7.4",
+    "prettier-plugin-tailwindcss": "^0.7.2",
     "react": "^19.2.3",
     "react-dom": "^19.2.3",
     "tailwindcss": "^4.1.18",
     "typescript": "^5.9.3",
-    "typescript-eslint": "^8.50.1",
     "vite": "^7.3.0"
   },
   "lint-staged": {
@@ -87,6 +91,5 @@
     "*.{json,md}": [
       "prettier --write"
     ]
-  },
-  "packageManager": "pnpm@10.26.2"
+  }
 }

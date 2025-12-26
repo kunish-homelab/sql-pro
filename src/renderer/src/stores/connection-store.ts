@@ -1,10 +1,10 @@
-import { create } from 'zustand';
+import type { RecentConnection } from '../../../shared/types';
 import type {
   DatabaseConnection,
   DatabaseSchema,
   TableSchema,
 } from '@/types/database';
-import type { RecentConnection } from '../../../shared/types';
+import { create } from 'zustand';
 
 interface ConnectionState {
   // Current connection

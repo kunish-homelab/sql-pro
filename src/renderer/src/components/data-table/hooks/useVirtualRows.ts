@@ -1,7 +1,9 @@
-import { useCallback, useEffect, RefObject } from 'react';
-import { useVirtualizer, VirtualItem } from '@tanstack/react-virtual';
-import { Row, Table } from '@tanstack/react-table';
+import type { Row, Table } from '@tanstack/react-table';
+import type { VirtualItem } from '@tanstack/react-virtual';
+import type { RefObject } from 'react';
 import type { TableRowData } from './useTableCore';
+import { useVirtualizer } from '@tanstack/react-virtual';
+import { useCallback, useEffect } from 'react';
 
 interface UseVirtualRowsOptions {
   table: Table<TableRowData>;

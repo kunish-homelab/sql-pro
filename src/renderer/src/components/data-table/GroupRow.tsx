@@ -1,15 +1,15 @@
-import { memo } from 'react';
-import { Row } from '@tanstack/react-table';
-import { ChevronRight, ChevronDown } from 'lucide-react';
-import { cn } from '@/lib/utils';
+import type { Row } from '@tanstack/react-table';
 import type { TableRowData } from './hooks/useTableCore';
+import { ChevronDown, ChevronRight } from 'lucide-react';
+import { memo } from 'react';
+import { cn } from '@/lib/utils';
 
 interface GroupRowProps {
   row: Row<TableRowData>;
   style?: React.CSSProperties;
 }
 
-export const GroupRow = memo(function GroupRow({ row, style }: GroupRowProps) {
+export const GroupRow = memo(({ row, style }: GroupRowProps) => {
   const isExpanded = row.getIsExpanded();
   const groupingValue = row.groupingValue;
   const leafCount = row.subRows.length;
@@ -17,7 +17,7 @@ export const GroupRow = memo(function GroupRow({ row, style }: GroupRowProps) {
   return (
     <div
       className={cn(
-        'flex items-center border-b border-border bg-muted/50 hover:bg-muted/70',
+        'border-border bg-muted/50 hover:bg-muted/70 flex items-center border-b',
         'select-none'
       )}
       style={style}
@@ -32,7 +32,7 @@ export const GroupRow = memo(function GroupRow({ row, style }: GroupRowProps) {
 
         {/* Chevron */}
         <button
-          className="flex h-5 w-5 items-center justify-center rounded hover:bg-accent"
+          className="hover:bg-accent flex h-5 w-5 items-center justify-center rounded"
           onClick={(e) => {
             e.stopPropagation();
             row.toggleExpanded();
@@ -48,13 +48,13 @@ export const GroupRow = memo(function GroupRow({ row, style }: GroupRowProps) {
         {/* Group value */}
         <span className="font-medium">
           {row.groupingColumnId && (
-            <span className="mr-1 text-muted-foreground">
+            <span className="text-muted-foreground mr-1">
               {row.groupingColumnId}:
             </span>
           )}
           <span>
             {groupingValue === null ? (
-              <span className="italic text-muted-foreground">NULL</span>
+              <span className="text-muted-foreground italic">NULL</span>
             ) : (
               String(groupingValue)
             )}
@@ -62,7 +62,7 @@ export const GroupRow = memo(function GroupRow({ row, style }: GroupRowProps) {
         </span>
 
         {/* Row count */}
-        <span className="rounded-full bg-primary/10 px-2 py-0.5 text-xs text-primary">
+        <span className="bg-primary/10 text-primary rounded-full px-2 py-0.5 text-xs">
           {leafCount} {leafCount === 1 ? 'row' : 'rows'}
         </span>
       </div>
@@ -80,7 +80,7 @@ export const GroupRow = memo(function GroupRow({ row, style }: GroupRowProps) {
             return (
               <div
                 key={cell.id}
-                className="px-2 text-sm text-muted-foreground"
+                className="text-muted-foreground px-2 text-sm"
                 style={{ width: `var(--col-${cell.column.id}-size)` }}
               />
             );
@@ -95,7 +95,7 @@ export const GroupRow = memo(function GroupRow({ row, style }: GroupRowProps) {
               style={{ width: `var(--col-${cell.column.id}-size)` }}
             >
               {aggregatedValue !== null && aggregatedValue !== undefined ? (
-                <span className="font-mono tabular-nums text-muted-foreground">
+                <span className="text-muted-foreground font-mono tabular-nums">
                   {typeof aggregatedValue === 'number'
                     ? formatAggregatedValue(aggregatedValue)
                     : String(aggregatedValue)}

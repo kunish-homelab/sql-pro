@@ -1,21 +1,21 @@
 {
   "compilerOptions": {
+    "composite": true,
     "target": "ESNext",
     "lib": ["ESNext"],
     "module": "ESNext",
-    "skipLibCheck": true,
-    "esModuleInterop": true,
     "moduleResolution": "bundler",
-    "allowSyntheticDefaultImports": true,
     "resolveJsonModule": true,
-    "isolatedModules": true,
-    "noEmit": true,
     "strict": true,
+    "noFallthroughCasesInSwitch": true,
     "noUnusedLocals": true,
     "noUnusedParameters": true,
-    "noFallthroughCasesInSwitch": true,
+    "noEmit": true,
+    "allowSyntheticDefaultImports": true,
+    "esModuleInterop": true,
     "forceConsistentCasingInFileNames": true,
-    "composite": true
+    "isolatedModules": true,
+    "skipLibCheck": true
   },
   "include": ["./**/*", "../shared/**/*"]
 }
