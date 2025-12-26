@@ -1,4 +1,3 @@
 nodeLinker: hoisted
-shellEmulator: true
 trustPolicy: no-downgrade
 neverBuiltDependencies: []
