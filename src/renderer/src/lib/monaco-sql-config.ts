@@ -199,6 +199,287 @@ const SQL_KEYWORDS = [
 ];
 
 /**
+ * Represents a SQL validation error in Monaco marker format.
+ */
+export interface SqlValidationError {
+  startLineNumber: number;
+  startColumn: number;
+  endLineNumber: number;
+  endColumn: number;
+  message: string;
+  severity: 'error' | 'warning' | 'info';
+}
+
+/**
+ * Common SQL keyword typos and their corrections.
+ * Maps typo to correct keyword.
+ */
+const SQL_TYPOS: Record<string, string> = {
+  SELEC: 'SELECT',
+  SLECT: 'SELECT',
+  SELET: 'SELECT',
+  SECELT: 'SELECT',
+  SELCT: 'SELECT',
+  FRON: 'FROM',
+  FORM: 'FROM',
+  FRMO: 'FROM',
+  WHER: 'WHERE',
+  WHRE: 'WHERE',
+  WEHRE: 'WHERE',
+  ORDERY: 'ORDER',
+  ODER: 'ORDER',
+  GRUOP: 'GROUP',
+  GROPU: 'GROUP',
+  JION: 'JOIN',
+  JOIIN: 'JOIN',
+  INSRT: 'INSERT',
+  INSET: 'INSERT',
+  UDPATE: 'UPDATE',
+  UPADTE: 'UPDATE',
+  DELTE: 'DELETE',
+  DELEET: 'DELETE',
+  CRAETE: 'CREATE',
+  CRATE: 'CREATE',
+  TABL: 'TABLE',
+  TABEL: 'TABLE',
+  VALUS: 'VALUES',
+  VLAUES: 'VALUES',
+  DISINCT: 'DISTINCT',
+  DISTINT: 'DISTINCT',
+  LIMTI: 'LIMIT',
+  LIMT: 'LIMIT',
+  OFSET: 'OFFSET',
+  HAVIGN: 'HAVING',
+  HAIVNG: 'HAVING',
+};
+
+/**
+ * Set of valid SQL keywords for quick lookup.
+ */
+const SQL_KEYWORDS_SET = new Set(SQL_KEYWORDS.map((k) => k.toUpperCase()));
+
+/**
+ * Validates SQL syntax and returns array of validation errors.
+ * This is a lightweight validation for common issues, not a full SQL parser.
+ *
+ * Checks for:
+ * - Empty/whitespace-only input (no errors)
+ * - Unclosed parentheses
+ * - Unclosed string quotes (single and double)
+ * - Common SQL keyword typos
+ *
+ * @param sql - The SQL string to validate
+ * @returns Array of validation errors in Monaco marker format
+ */
+export function validateSql(sql: string): SqlValidationError[] {
+  const errors: SqlValidationError[] = [];
+
+  // Return empty array for empty/whitespace-only input
+  if (!sql || !sql.trim()) {
+    return errors;
+  }
+
+  const lines = sql.split('\n');
+
+  // Track parentheses and quotes state
+  let parenDepth = 0;
+  let openParenLocations: Array<{ line: number; col: number }> = [];
+  let inSingleQuote = false;
+  let singleQuoteStart: { line: number; col: number } | null = null;
+  let inDoubleQuote = false;
+  let doubleQuoteStart: { line: number; col: number } | null = null;
+  let inLineComment = false;
+  let inBlockComment = false;
+
+  // Process character by character
+  for (let lineIdx = 0; lineIdx < lines.length; lineIdx++) {
+    const line = lines[lineIdx];
+    const lineNumber = lineIdx + 1; // Monaco uses 1-based line numbers
+    inLineComment = false; // Reset at start of each line
+
+    for (let colIdx = 0; colIdx < line.length; colIdx++) {
+      const char = line[colIdx];
+      const nextChar = line[colIdx + 1];
+      const column = colIdx + 1; // Monaco uses 1-based column numbers
+
+      // Handle block comment start
+      if (!inSingleQuote && !inDoubleQuote && !inLineComment && char === '/' && nextChar === '*') {
+        inBlockComment = true;
+        colIdx++; // Skip the *
+        continue;
+      }
+
+      // Handle block comment end
+      if (inBlockComment && char === '*' && nextChar === '/') {
+        inBlockComment = false;
+        colIdx++; // Skip the /
+        continue;
+      }
+
+      // Skip if in block comment
+      if (inBlockComment) {
+        continue;
+      }
+
+      // Handle line comment start
+      if (!inSingleQuote && !inDoubleQuote && char === '-' && nextChar === '-') {
+        inLineComment = true;
+        break; // Rest of line is comment
+      }
+
+      // Skip if in line comment
+      if (inLineComment) {
+        continue;
+      }
+
+      // Handle single quotes
+      if (char === "'" && !inDoubleQuote) {
+        // Check for escaped quote ('')
+        if (inSingleQuote && nextChar === "'") {
+          colIdx++; // Skip escaped quote
+          continue;
+        }
+        if (inSingleQuote) {
+          inSingleQuote = false;
+          singleQuoteStart = null;
+        } else {
+          inSingleQuote = true;
+          singleQuoteStart = { line: lineNumber, col: column };
+        }
+        continue;
+      }
+
+      // Handle double quotes
+      if (char === '"' && !inSingleQuote) {
+        // Check for escaped quote ("")
+        if (inDoubleQuote && nextChar === '"') {
+          colIdx++; // Skip escaped quote
+          continue;
+        }
+        if (inDoubleQuote) {
+          inDoubleQuote = false;
+          doubleQuoteStart = null;
+        } else {
+          inDoubleQuote = true;
+          doubleQuoteStart = { line: lineNumber, col: column };
+        }
+        continue;
+      }
+
+      // Skip parenthesis tracking if in string
+      if (inSingleQuote || inDoubleQuote) {
+        continue;
+      }
+
+      // Handle parentheses
+      if (char === '(') {
+        parenDepth++;
+        openParenLocations.push({ line: lineNumber, col: column });
+      } else if (char === ')') {
+        if (parenDepth > 0) {
+          parenDepth--;
+          openParenLocations.pop();
+        } else {
+          // Unexpected closing parenthesis
+          errors.push({
+            startLineNumber: lineNumber,
+            startColumn: column,
+            endLineNumber: lineNumber,
+            endColumn: column + 1,
+            message: 'Unexpected closing parenthesis',
+            severity: 'error',
+          });
+        }
+      }
+    }
+  }
+
+  // Check for unclosed quotes
+  if (inSingleQuote && singleQuoteStart) {
+    errors.push({
+      startLineNumber: singleQuoteStart.line,
+      startColumn: singleQuoteStart.col,
+      endLineNumber: singleQuoteStart.line,
+      endColumn: singleQuoteStart.col + 1,
+      message: 'Unclosed string literal (single quote)',
+      severity: 'error',
+    });
+  }
+
+  if (inDoubleQuote && doubleQuoteStart) {
+    errors.push({
+      startLineNumber: doubleQuoteStart.line,
+      startColumn: doubleQuoteStart.col,
+      endLineNumber: doubleQuoteStart.line,
+      endColumn: doubleQuoteStart.col + 1,
+      message: 'Unclosed string literal (double quote)',
+      severity: 'error',
+    });
+  }
+
+  // Check for unclosed block comment
+  if (inBlockComment) {
+    errors.push({
+      startLineNumber: lines.length,
+      startColumn: 1,
+      endLineNumber: lines.length,
+      endColumn: (lines[lines.length - 1]?.length || 0) + 1,
+      message: 'Unclosed block comment',
+      severity: 'error',
+    });
+  }
+
+  // Check for unclosed parentheses
+  for (const loc of openParenLocations) {
+    errors.push({
+      startLineNumber: loc.line,
+      startColumn: loc.col,
+      endLineNumber: loc.line,
+      endColumn: loc.col + 1,
+      message: 'Unclosed parenthesis',
+      severity: 'error',
+    });
+  }
+
+  // Check for keyword typos (only if not in string or comment context)
+  const wordPattern = /\b([A-Za-z_][A-Za-z0-9_]*)\b/g;
+  for (let lineIdx = 0; lineIdx < lines.length; lineIdx++) {
+    const line = lines[lineIdx];
+    const lineNumber = lineIdx + 1;
+
+    // Remove comments and strings for typo detection
+    let cleanLine = line;
+
+    // Remove line comments
+    const lineCommentIdx = cleanLine.indexOf('--');
+    if (lineCommentIdx !== -1) {
+      cleanLine = cleanLine.substring(0, lineCommentIdx);
+    }
+
+    // Simple approach: find words and check for typos
+    let match: RegExpExecArray | null;
+    while ((match = wordPattern.exec(cleanLine)) !== null) {
+      const word = match[1].toUpperCase();
+      const correction = SQL_TYPOS[word];
+
+      if (correction) {
+        const column = match.index + 1;
+        errors.push({
+          startLineNumber: lineNumber,
+          startColumn: column,
+          endLineNumber: lineNumber,
+          endColumn: column + match[1].length,
+          message: `Did you mean '${correction}'?`,
+          severity: 'warning',
+        });
+      }
+    }
+  }
+
+  return errors;
+}
+
+/**
  * Creates a SQL completion provider that suggests SQL keywords, table names, and column names
  * from the connected database schema. (US1: Intelligent Autocomplete)
  *
