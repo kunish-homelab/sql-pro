@@ -1,4 +1,5 @@
 import type { ColumnInfo, PendingChangeInfo } from '../../../shared/types';
+import type { FilterState } from '@/types/database';
 import { createCollection, localOnlyCollectionOptions } from '@tanstack/db';
 import { queryCollectionOptions } from '@tanstack/query-db-collection';
 import { sqlPro } from './api';
@@ -26,20 +27,8 @@ export interface TableDataQueryParams {
   pageSize: number;
   sortColumn?: string;
   sortDirection?: 'asc' | 'desc';
-  filters?: Array<{
-    column: string;
-    operator:
-      | 'eq'
-      | 'neq'
-      | 'gt'
-      | 'lt'
-      | 'gte'
-      | 'lte'
-      | 'like'
-      | 'isnull'
-      | 'notnull';
-    value: string;
-  }>;
+  /** Server-side filters using FilterState type from database.ts */
+  filters?: FilterState[];
 }
 
 export interface TableDataMeta {

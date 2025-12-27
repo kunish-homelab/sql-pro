@@ -7,6 +7,11 @@ export {
 } from './DataTable';
 
 export { GroupRow } from './GroupRow';
+
+// Filter components
+export { ActiveFilters, type ActiveFiltersProps } from './ActiveFilters';
+export { ColumnFilterPopover } from './ColumnFilterPopover';
+
 // Hooks
 export { useTableCore } from './hooks/useTableCore';
 export { useTableEditing } from './hooks/useTableEditing';
