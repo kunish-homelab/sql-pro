@@ -578,7 +578,8 @@ class DatabaseService {
                 params.push(f.value);
                 return `"${f.column}" <= ?`;
               case 'like':
-                params.push(`%${f.value}%`);
+                // Value already contains the % wildcards from frontend (e.g., %term%, term%, %term)
+                params.push(f.value);
                 return `"${f.column}" LIKE ?`;
               case 'isnull':
                 return `"${f.column}" IS NULL`;
