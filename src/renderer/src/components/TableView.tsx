@@ -11,9 +11,13 @@ import {
   FileText,
   Loader2,
   Plus,
+  Search,
+  X,
 } from 'lucide-react';
 import { useCallback, useMemo, useRef, useState } from 'react';
 import { Button } from '@/components/ui/button';
+import { Input } from '@/components/ui/input';
+import { useClientSearch } from '@/hooks/useClientSearch';
 import { usePendingChanges } from '@/hooks/usePendingChanges';
 import { useTableData } from '@/hooks/useTableData';
 import { useConnectionStore } from '@/stores';
@@ -32,6 +36,7 @@ export function TableView() {
   const [grouping, setGrouping] = useState<string[]>([]);
   const [showDiffPreview, setShowDiffPreview] = useState(false);
   const [filters, setFilters] = useState<UIFilterState[]>([]);
+  const [searchTerm, setSearchTerm] = useState('');
 
   // Track the newly inserted row ID for auto-focus
   const [newRowId, setNewRowId] = useState<string | number | null>(null);
@@ -98,6 +103,13 @@ export function TableView() {
       } as TableRowData;
     });
   }, [rows, pendingChanges]);
+
+  // Client-side search on displayed rows
+  const { filteredRows: searchFilteredRows, stats: searchStats } = useClientSearch({
+    rows: displayRows,
+    columns,
+    searchTerm,
+  });
 
   // Build changes map for DataTable
   const changesMap = useMemo(() => {
@@ -233,6 +245,28 @@ export function TableView() {
           </div>
 
           <div className="flex items-center gap-2">
+            {/* Search Input */}
+            <div className="relative">
+              <Search className="text-muted-foreground absolute left-2.5 top-1/2 h-4 w-4 -translate-y-1/2" />
+              <Input
+                type="text"
+                placeholder="Search in results..."
+                value={searchTerm}
+                onChange={(e) => setSearchTerm(e.target.value)}
+                className="h-8 w-56 pl-8 pr-8 text-sm"
+              />
+              {searchTerm && (
+                <button
+                  type="button"
+                  onClick={() => setSearchTerm('')}
+                  className="text-muted-foreground hover:text-foreground absolute right-2 top-1/2 -translate-y-1/2"
+                  title="Clear search"
+                >
+                  <X className="h-4 w-4" />
+                </button>
+              )}
+            </div>
+
             {/* Add Row button */}
             {selectedTable.type !== 'view' && (
               <Button
