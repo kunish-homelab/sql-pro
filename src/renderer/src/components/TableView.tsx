@@ -234,8 +234,20 @@ export function TableView() {
           <div className="flex items-center gap-2">
             <h2 className="font-medium">{selectedTable.name}</h2>
             <span className="text-muted-foreground text-sm">
-              ({totalRows.toLocaleString()} rows)
+              {searchStats.isSearching ? (
+                <>
+                  ({searchStats.matchedRows.toLocaleString()} of{' '}
+                  {searchStats.totalRows.toLocaleString()} rows)
+                </>
+              ) : (
+                <>({totalRows.toLocaleString()} rows)</>
+              )}
             </span>
+            {searchStats.isSearching && (
+              <span className="bg-primary/10 text-primary rounded px-1.5 py-0.5 text-xs font-medium">
+                Filtered
+              </span>
+            )}
             {selectedTable.type === 'view' && (
               <span className="bg-secondary text-muted-foreground flex items-center gap-1 rounded px-1.5 py-0.5 text-xs">
                 <Eye className="h-3 w-3" />
@@ -316,7 +328,7 @@ export function TableView() {
             <DataTable
               ref={dataTableRef}
               columns={columns}
-              data={displayRows}
+              data={searchFilteredRows}
               sort={sort}
               onSortChange={handleSortChange}
               grouping={grouping}
