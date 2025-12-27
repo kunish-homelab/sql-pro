@@ -157,6 +157,7 @@ export function WelcomeScreen() {
 
         if (schemaResult.success) {
           setSchema({
+            schemas: schemaResult.schemas || [],
             tables: schemaResult.tables || [],
             views: schemaResult.views || [],
           });

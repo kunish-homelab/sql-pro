@@ -190,6 +190,7 @@ export function useCommands() {
           });
           if (result.success) {
             setSchema({
+              schemas: result.schemas || [],
               tables: result.tables || [],
               views: result.views || [],
             });

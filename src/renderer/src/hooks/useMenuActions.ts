@@ -85,6 +85,7 @@ export function useMenuActions() {
               .then((result) => {
                 if (result.success) {
                   setSchema({
+                    schemas: result.schemas || [],
                     tables: result.tables || [],
                     views: result.views || [],
                   });

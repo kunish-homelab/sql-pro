@@ -43,6 +43,7 @@ import type {
 const mockTables: TableInfo[] = [
   {
     name: 'users',
+    schema: 'main',
     type: 'table',
     columns: [
       {
@@ -98,11 +99,13 @@ const mockTables: TableInfo[] = [
         sql: 'CREATE UNIQUE INDEX idx_users_email ON users(email)',
       },
     ],
+    triggers: [],
     rowCount: 150,
     sql: 'CREATE TABLE users (id INTEGER PRIMARY KEY, name TEXT NOT NULL, email TEXT NOT NULL, age INTEGER, created_at DATETIME DEFAULT CURRENT_TIMESTAMP, is_active BOOLEAN DEFAULT 1)',
   },
   {
     name: 'products',
+    schema: 'main',
     type: 'table',
     columns: [
       {
@@ -158,11 +161,13 @@ const mockTables: TableInfo[] = [
       },
     ],
     indexes: [],
+    triggers: [],
     rowCount: 85,
     sql: 'CREATE TABLE products (id INTEGER PRIMARY KEY, name TEXT NOT NULL, description TEXT, price REAL NOT NULL, stock INTEGER DEFAULT 0, category_id INTEGER REFERENCES categories(id) ON DELETE SET NULL)',
   },
   {
     name: 'orders',
+    schema: 'main',
     type: 'table',
     columns: [
       {
@@ -224,11 +229,13 @@ const mockTables: TableInfo[] = [
         sql: 'CREATE INDEX idx_orders_status ON orders(status)',
       },
     ],
+    triggers: [],
     rowCount: 320,
     sql: "CREATE TABLE orders (id INTEGER PRIMARY KEY, user_id INTEGER NOT NULL REFERENCES users(id) ON DELETE CASCADE, total REAL NOT NULL, status TEXT DEFAULT 'pending', created_at DATETIME DEFAULT CURRENT_TIMESTAMP)",
   },
   {
     name: 'categories',
+    schema: 'main',
     type: 'table',
     columns: [
       {
@@ -262,6 +269,7 @@ const mockTables: TableInfo[] = [
       },
     ],
     indexes: [],
+    triggers: [],
     rowCount: 12,
     sql: 'CREATE TABLE categories (id INTEGER PRIMARY KEY, name TEXT NOT NULL, parent_id INTEGER REFERENCES categories(id))',
   },
@@ -271,6 +279,7 @@ const mockTables: TableInfo[] = [
 const mockViews: TableInfo[] = [
   {
     name: 'active_users',
+    schema: 'main',
     type: 'view',
     columns: [
       {
@@ -298,10 +307,12 @@ const mockViews: TableInfo[] = [
     primaryKey: [],
     foreignKeys: [],
     indexes: [],
+    triggers: [],
     sql: 'CREATE VIEW active_users AS SELECT id, name, email FROM users WHERE is_active = 1',
   },
   {
     name: 'order_summary',
+    schema: 'main',
     type: 'view',
     columns: [
       {
@@ -336,6 +347,7 @@ const mockViews: TableInfo[] = [
     primaryKey: [],
     foreignKeys: [],
     indexes: [],
+    triggers: [],
     sql: 'CREATE VIEW order_summary AS SELECT u.id as user_id, u.name as user_name, COUNT(o.id) as total_orders, SUM(o.total) as total_spent FROM users u LEFT JOIN orders o ON u.id = o.user_id GROUP BY u.id',
   },
 ];
@@ -644,6 +656,13 @@ export const mockSqlProAPI = {
       await delay(200);
       return {
         success: true,
+        schemas: [
+          {
+            name: 'main',
+            tables: mockTables,
+            views: mockViews,
+          },
+        ],
         tables: mockTables,
         views: mockViews,
       };
@@ -864,6 +883,13 @@ export const initMockMode = async () => {
       connectedAt: new Date(),
     },
     schema: {
+      schemas: [
+        {
+          name: 'main',
+          tables: mockTables,
+          views: mockViews,
+        },
+      ],
       tables: mockTables,
       views: mockViews,
     },
