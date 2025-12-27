@@ -1342,6 +1342,165 @@ export function validateSql(sql: string): SqlValidationError[] {
 }
 
 /**
+ * Creates a SQL hover provider that shows documentation for SQL keywords and functions.
+ * When hovering over a keyword, displays syntax, description, and example from SQL_DOCS.
+ *
+ * Features:
+ * - Case-insensitive keyword matching
+ * - Supports compound keywords (e.g., "LEFT JOIN", "ORDER BY", "IS NOT NULL")
+ * - Formatted markdown output with syntax highlighting
+ */
+export function createSqlHoverProvider(
+  monaco: typeof Monaco
+): Monaco.languages.HoverProvider {
+  return {
+    provideHover: (model, position) => {
+      const word = model.getWordAtPosition(position);
+      if (!word) {
+        return null;
+      }
+
+      const lineContent = model.getLineContent(position.lineNumber);
+      const wordStart = word.startColumn - 1;
+      const wordEnd = word.endColumn - 1;
+      const upperWord = word.word.toUpperCase();
+
+      // Try to match compound keywords by looking at surrounding words
+      // Check for compound keywords that start with this word
+      const compoundKeywords = [
+        'ORDER BY',
+        'GROUP BY',
+        'INSERT INTO',
+        'DELETE FROM',
+        'CREATE TABLE',
+        'DROP TABLE',
+        'ALTER TABLE',
+        'LEFT JOIN',
+        'RIGHT JOIN',
+        'INNER JOIN',
+        'OUTER JOIN',
+        'CROSS JOIN',
+        'LEFT OUTER JOIN',
+        'RIGHT OUTER JOIN',
+        'FULL OUTER JOIN',
+        'UNION ALL',
+        'IS NULL',
+        'IS NOT NULL',
+        'PRIMARY KEY',
+        'FOREIGN KEY',
+      ];
+
+      // Get text after the word to check for compound keywords
+      const textAfterWord = lineContent.substring(wordEnd).trim();
+      let matchedKeyword: string | null = null;
+      let matchEndColumn = word.endColumn;
+
+      // Check if current word starts a compound keyword
+      for (const compound of compoundKeywords) {
+        const parts = compound.split(' ');
+        if (parts[0] === upperWord) {
+          // Check if the following words match
+          const remainingParts = parts.slice(1).join(' ');
+          const regex = new RegExp(`^\\s*(${remainingParts.replace(/\s+/g, '\\s+')})`, 'i');
+          const match = textAfterWord.match(regex);
+          if (match) {
+            // Found a compound keyword
+            matchedKeyword = compound;
+            matchEndColumn = word.endColumn + match[0].length;
+            break;
+          }
+        }
+      }
+
+      // Also check if current word is the second part of a compound keyword
+      if (!matchedKeyword) {
+        const textBeforeWord = lineContent.substring(0, wordStart).trimEnd();
+        for (const compound of compoundKeywords) {
+          const parts = compound.split(' ');
+          const lastPart = parts[parts.length - 1];
+          if (lastPart === upperWord && parts.length >= 2) {
+            // Check if preceding words match
+            const precedingParts = parts.slice(0, -1);
+            const precedingText = precedingParts.join('\\s+');
+            const regex = new RegExp(`(${precedingText})\\s*$`, 'i');
+            const match = textBeforeWord.match(regex);
+            if (match) {
+              matchedKeyword = compound;
+              // Adjust the range to include the preceding words
+              const startOffset = textBeforeWord.length - match[0].length;
+              // We'll use a range that covers the full compound keyword
+              return {
+                contents: [formatHoverContent(compound)],
+                range: {
+                  startLineNumber: position.lineNumber,
+                  startColumn: startOffset + 1,
+                  endLineNumber: position.lineNumber,
+                  endColumn: word.endColumn,
+                },
+              };
+            }
+          }
+        }
+      }
+
+      // If we found a compound keyword, use it
+      const lookupKey = matchedKeyword || upperWord;
+      const docEntry = SQL_DOCS[lookupKey];
+
+      if (!docEntry) {
+        return null;
+      }
+
+      return {
+        contents: [formatHoverContent(lookupKey)],
+        range: {
+          startLineNumber: position.lineNumber,
+          startColumn: word.startColumn,
+          endLineNumber: position.lineNumber,
+          endColumn: matchedKeyword ? matchEndColumn : word.endColumn,
+        },
+      };
+    },
+  };
+}
+
+/**
+ * Formats the hover content for a SQL keyword with markdown.
+ */
+function formatHoverContent(keyword: string): Monaco.IMarkdownString {
+  const doc = SQL_DOCS[keyword];
+  if (!doc) {
+    return { value: '' };
+  }
+
+  const lines: string[] = [];
+
+  // Keyword as header
+  lines.push(`**${keyword}**`);
+  lines.push('');
+
+  // Syntax block
+  lines.push('```sql');
+  lines.push(doc.syntax);
+  lines.push('```');
+  lines.push('');
+
+  // Description
+  lines.push(doc.description);
+
+  // Example if available
+  if (doc.example) {
+    lines.push('');
+    lines.push('**Example:**');
+    lines.push('```sql');
+    lines.push(doc.example);
+    lines.push('```');
+  }
+
+  return { value: lines.join('\n') };
+}
+
+/**
  * Creates a SQL completion provider that suggests SQL keywords, table names, and column names
  * from the connected database schema. (US1: Intelligent Autocomplete)
  *
