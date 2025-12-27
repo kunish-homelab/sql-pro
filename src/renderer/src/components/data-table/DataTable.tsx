@@ -5,6 +5,7 @@ import type {
   PendingChange,
   SortState,
 } from '@/types/database';
+import type { UIFilterState } from '@/lib/filter-utils';
 import { useCallback, useEffect, useImperativeHandle, useRef } from 'react';
 import { cn } from '@/lib/utils';
 import { useTableFont } from '@/stores';
@@ -53,6 +54,11 @@ export interface DataTableProps {
   // Auto-focus new row
   newRowId?: string | number | null;
   onNewRowFocused?: () => void;
+
+  // Filtering
+  filters?: UIFilterState[];
+  onFilterAdd?: (filter: UIFilterState) => void;
+  onFilterRemove?: (columnId: string) => void;
 }
 
 export interface DataTableRef {
@@ -80,6 +86,9 @@ export const DataTable = function DataTable({
   groupRowHeight = 44,
   newRowId,
   onNewRowFocused,
+  filters,
+  onFilterAdd,
+  onFilterRemove,
 }: DataTableProps & { ref?: React.RefObject<DataTableRef | null> }) {
   const containerRef = useRef<HTMLDivElement>(null);
   const tableFont = useTableFont();
@@ -226,6 +235,9 @@ export const DataTable = function DataTable({
         onResetColumnSize={resetColumnSize}
         onToggleGrouping={toggleGrouping}
         grouping={grouping}
+        filters={filters}
+        onFilterAdd={onFilterAdd}
+        onFilterRemove={onFilterRemove}
       />
 
       {/* Virtualized body */}

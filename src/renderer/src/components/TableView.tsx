@@ -1,5 +1,6 @@
 import type { DataTableRef, TableRowData } from './data-table';
 import type { PendingChange, SortState } from '@/types/database';
+import type { UIFilterState } from '@/lib/filter-utils';
 import {
   ChevronLeft,
   ChevronRight,
@@ -28,6 +29,7 @@ export function TableView() {
   const [sort, setSort] = useState<SortState | null>(null);
   const [grouping, setGrouping] = useState<string[]>([]);
   const [showDiffPreview, setShowDiffPreview] = useState(false);
+  const [filters, setFilters] = useState<UIFilterState[]>([]);
 
   // Track the newly inserted row ID for auto-focus
   const [newRowId, setNewRowId] = useState<string | number | null>(null);
@@ -105,6 +107,32 @@ export function TableView() {
   const handleSortChange = useCallback((newSort: SortState | null) => {
     setSort(newSort);
     setPage(1); // Reset to first page on sort change
+  }, []);
+
+  // Handle filter add/update from ColumnFilterPopover
+  const handleFilterAdd = useCallback((filter: UIFilterState) => {
+    setFilters((prevFilters) => {
+      // Check if a filter already exists for this column
+      const existingIndex = prevFilters.findIndex((f) => f.column === filter.column);
+      if (existingIndex >= 0) {
+        // Update existing filter
+        const newFilters = [...prevFilters];
+        newFilters[existingIndex] = filter;
+        return newFilters;
+      }
+      // Add new filter
+      return [...prevFilters, filter];
+    });
+  }, []);
+
+  // Handle filter removal by column id
+  const handleFilterRemove = useCallback((columnId: string) => {
+    setFilters((prevFilters) => prevFilters.filter((f) => f.column !== columnId));
+  }, []);
+
+  // Handle clearing all filters
+  const handleFiltersClear = useCallback(() => {
+    setFilters([]);
   }, []);
 
   // Handle cell change from DataTable
@@ -250,6 +278,9 @@ export function TableView() {
               className="h-full"
               newRowId={newRowId}
               onNewRowFocused={handleNewRowFocused}
+              filters={filters}
+              onFilterAdd={handleFilterAdd}
+              onFilterRemove={handleFilterRemove}
             />
           )}
         </div>
