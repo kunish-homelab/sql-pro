@@ -9,7 +9,6 @@ import {
   Eye,
   FolderOpen,
   KeyRound,
-  Lock,
   Monitor,
   Moon,
   MoreVertical,
@@ -496,90 +495,73 @@ export function WelcomeScreen() {
 
         {/* Recent Connections */}
         {recentConnections.length > 0 && (
-          <div className="space-y-3">
-            <div className="text-muted-foreground flex items-center gap-2 text-sm">
-              <Clock className="h-4 w-4" />
-              <span>Recent Databases</span>
+          <div className="space-y-2">
+            <div className="flex items-center justify-between">
+              <label className="text-sm font-medium">Recent Connections</label>
+              <Clock className="text-muted-foreground h-4 w-4" />
             </div>
             <div className="space-y-1">
-              {recentConnections.slice(0, 5).map((conn) => (
-                <div
-                  key={conn.path}
-                  className="group hover:bg-accent flex w-full items-center gap-2 overflow-hidden rounded-lg px-3 py-2 text-left text-sm transition-colors"
-                >
-                  <button
+              {recentConnections.map((conn) => (
+                <div key={conn.path} className="group flex items-center gap-2">
+                  <Button
+                    variant="ghost"
+                    className="flex-1 justify-start text-left"
                     onClick={() =>
                       handleRecentClick(
                         conn.path,
                         conn.isEncrypted,
-                        conn.readOnly
+                        conn.isReadOnly
                       )
                     }
                     disabled={isConnecting}
-                    aria-label={`Open ${conn.displayName || conn.filename}${conn.readOnly ? ' (read-only)' : ''}${conn.isEncrypted ? ' (encrypted)' : ''}`}
-                    className="focus:ring-ring flex min-w-0 flex-1 items-center gap-3 rounded-md focus:ring-2 focus:ring-offset-2 focus:outline-none disabled:opacity-50"
                   >
-                    <Database className="text-muted-foreground h-4 w-4 shrink-0" />
-                    <div className="min-w-0 flex-1">
-                      <div className="flex items-center gap-2">
-                        <span className="truncate font-medium">
-                          {conn.displayName || conn.filename}
-                        </span>
-                        {conn.readOnly && (
-                          <Tooltip>
-                            <TooltipTrigger asChild>
-                              <Eye className="text-muted-foreground h-3 w-3" />
-                            </TooltipTrigger>
-                            <TooltipContent>Read-only</TooltipContent>
-                          </Tooltip>
-                        )}
-                        {conn.isEncrypted && (
-                          <>
-                            <Lock className="text-muted-foreground h-3 w-3" />
-                            <HasSavedPasswordIndicator path={conn.path} />
-                          </>
-                        )}
+                    <Database className="text-muted-foreground mr-2 h-4 w-4" />
+                    <div className="flex-1 overflow-hidden">
+                      <div className="truncate text-sm">
+                        {conn.displayName || conn.filename}
                       </div>
-                      <span className="text-muted-foreground block truncate text-xs">
+                      <div className="text-muted-foreground text-xs">
                         {conn.path}
-                      </span>
+                      </div>
                     </div>
-                  </button>
-
-                  {/* Context Menu */}
+                    <div className="ml-2 flex items-center gap-1">
+                      {conn.isReadOnly && (
+                        <Tooltip>
+                          <TooltipTrigger asChild>
+                            <Eye className="text-muted-foreground h-3 w-3" />
+                          </TooltipTrigger>
+                          <TooltipContent>Read-only</TooltipContent>
+                        </Tooltip>
+                      )}
+                      <HasSavedPasswordIndicator path={conn.path} />
+                    </div>
+                  </Button>
                   <DropdownMenu.Root>
                     <DropdownMenu.Trigger asChild>
-                      <button
-                        className="hover:bg-accent-foreground/10 focus:ring-ring rounded p-1 opacity-0 transition-opacity group-hover:opacity-100 focus:opacity-100 focus:ring-2 focus:outline-none"
-                        aria-label={`Options for ${conn.displayName || conn.filename}`}
+                      <Button
+                        variant="ghost"
+                        size="sm"
+                        className="text-muted-foreground opacity-0 group-hover:opacity-100"
                       >
-                        <MoreVertical className="text-muted-foreground h-4 w-4" />
-                      </button>
+                        <MoreVertical className="h-4 w-4" />
+                      </Button>
                     </DropdownMenu.Trigger>
-                    <DropdownMenu.Portal>
-                      <DropdownMenu.Content
-                        className="bg-popover min-w-40 rounded-md border p-1 shadow-md"
-                        align="end"
-                        sideOffset={4}
-                        aria-label={`Actions for ${conn.displayName || conn.filename}`}
+                    <DropdownMenu.Content align="end">
+                      <DropdownMenu.Item
+                        onClick={() => handleEditConnection(conn)}
                       >
-                        <DropdownMenu.Item
-                          className="hover:bg-accent focus:bg-accent flex cursor-pointer items-center gap-2 rounded-sm px-2 py-1.5 text-sm outline-none"
-                          onSelect={() => handleEditConnection(conn)}
-                        >
-                          <Settings className="h-4 w-4" />
-                          Edit Settings
-                        </DropdownMenu.Item>
-                        <DropdownMenu.Separator className="bg-border my-1 h-px" />
-                        <DropdownMenu.Item
-                          className="text-destructive hover:bg-destructive/10 focus:bg-destructive/10 flex cursor-pointer items-center gap-2 rounded-sm px-2 py-1.5 text-sm outline-none"
-                          onSelect={() => handleRemoveConnection(conn)}
-                        >
-                          <Trash2 className="h-4 w-4" />
-                          Remove from List
-                        </DropdownMenu.Item>
-                      </DropdownMenu.Content>
-                    </DropdownMenu.Portal>
+                        <Settings className="mr-2 h-4 w-4" />
+                        <span>Edit</span>
+                      </DropdownMenu.Item>
+                      <DropdownMenu.Separator />
+                      <DropdownMenu.Item
+                        onClick={() => handleRemoveConnection(conn)}
+                        className="text-destructive"
+                      >
+                        <Trash2 className="mr-2 h-4 w-4" />
+                        <span>Remove</span>
+                      </DropdownMenu.Item>
+                    </DropdownMenu.Content>
                   </DropdownMenu.Root>
                 </div>
               ))}
@@ -588,45 +570,28 @@ export function WelcomeScreen() {
         )}
       </div>
 
-      {/* Connection Settings Dialog (New Connection) */}
+      {/* Dialogs */}
       <ConnectionSettingsDialog
         open={settingsDialogOpen}
         onOpenChange={setSettingsDialogOpen}
         onSubmit={handleSettingsSubmit}
-        filename={pendingFilename}
-        dbPath={pendingPath || ''}
+        pendingFilename={pendingFilename}
         isEncrypted={pendingIsEncrypted}
-        mode="new"
       />
 
-      {/* Edit Connection Settings Dialog */}
-      {editingConnection && (
-        <ConnectionSettingsDialog
-          open={editDialogOpen}
-          onOpenChange={(open) => {
-            setEditDialogOpen(open);
-            if (!open) setEditingConnection(null);
-          }}
-          onSubmit={handleEditSubmit}
-          filename={editingConnection.filename}
-          dbPath={editingConnection.path}
-          isEncrypted={editingConnection.isEncrypted}
-          mode="edit"
-          initialValues={{
-            displayName:
-              editingConnection.displayName || editingConnection.filename,
-            readOnly: editingConnection.readOnly || false,
-          }}
-        />
-      )}
+      <ConnectionSettingsDialog
+        open={editDialogOpen}
+        onOpenChange={setEditDialogOpen}
+        onSubmit={handleEditSubmit}
+        editingConnection={editingConnection}
+        isEncrypted={editingConnection?.isEncrypted || false}
+      />
 
-      {/* Password Dialog */}
       <PasswordDialog
         open={passwordDialogOpen}
         onOpenChange={setPasswordDialogOpen}
         onSubmit={handlePasswordSubmit}
-        filename={pendingFilename || pendingPath?.split('/').pop() || ''}
-        dbPath={pendingPath || ''}
+        filename={pendingFilename}
       />
     </div>
   );
