@@ -39,7 +39,7 @@ export function DataGrid({ columns, rows, sort, onSort }: DataGridProps) {
 
   if (columns.length === 0) {
     return (
-      <div className="text-muted-foreground flex h-full items-center justify-center">
+      <div className="bg-grid-dot text-muted-foreground flex h-full items-center justify-center">
         No data to display
       </div>
     );
