@@ -13,6 +13,7 @@ import {
   createSqlHoverProvider,
   createSqlValidator,
   defineCustomThemes,
+  formatSql,
 } from '@/lib/monaco-sql-config';
 
 import { cn } from '@/lib/utils';
@@ -112,6 +113,52 @@ export function MonacoSqlEditor({
         monacoInstance.KeyMod.CtrlCmd | monacoInstance.KeyCode.Enter,
         () => onExecute()
       );
+
+      // Register Cmd/Ctrl+Shift+F shortcut for SQL formatting
+      editor.addAction({
+        id: 'sql-format',
+        label: 'Format SQL',
+        keybindings: [
+          monacoInstance.KeyMod.CtrlCmd |
+            monacoInstance.KeyMod.Shift |
+            monacoInstance.KeyCode.KeyF,
+        ],
+        run: (ed) => {
+          const model = ed.getModel();
+          if (!model) return;
+
+          // Get current value and cursor position
+          const currentValue = model.getValue();
+          const cursorPosition = ed.getPosition();
+
+          // Format the SQL
+          const formattedValue = formatSql(currentValue);
+
+          // Only update if the value changed
+          if (formattedValue !== currentValue) {
+            // Use executeEdits to preserve undo history
+            const fullRange = model.getFullModelRange();
+            ed.executeEdits('sql-format', [
+              {
+                range: fullRange,
+                text: formattedValue,
+              },
+            ]);
+
+            // Try to restore cursor position (may not be exact after formatting)
+            if (cursorPosition) {
+              // Clamp cursor to valid range after formatting
+              const lineCount = model.getLineCount();
+              const newLine = Math.min(cursorPosition.lineNumber, lineCount);
+              const newColumn = Math.min(
+                cursorPosition.column,
+                model.getLineMaxColumn(newLine)
+              );
+              ed.setPosition({ lineNumber: newLine, column: newColumn });
+            }
+          }
+        },
+      });
 
       // US1: Register initial completion provider with current schema
       completionDisposableRef.current =
