@@ -11,6 +11,7 @@ import { useCallback, useEffect, useRef, useState } from 'react';
 import {
   createSqlCompletionProvider,
   createSqlHoverProvider,
+  createSqlValidator,
   defineCustomThemes,
 } from '@/lib/monaco-sql-config';
 
@@ -65,6 +66,11 @@ export function MonacoSqlEditor({
   const monacoRef = useRef<typeof Monaco | null>(null);
   const completionDisposableRef = useRef<Monaco.IDisposable | null>(null);
   const hoverDisposableRef = useRef<Monaco.IDisposable | null>(null);
+  const validatorRef = useRef<{
+    validate: (model: Monaco.editor.ITextModel) => void;
+    dispose: () => void;
+  } | null>(null);
+  const modelChangeListenerRef = useRef<Monaco.IDisposable | null>(null);
   const containerRef = useRef<HTMLDivElement | null>(null);
   const vimModeRef = useRef<VimMode | null>(null);
   const vimStatusRef = useRef<HTMLDivElement | null>(null);
@@ -120,6 +126,21 @@ export function MonacoSqlEditor({
           'sql',
           createSqlHoverProvider(monacoInstance)
         );
+
+      // Create SQL validator and set up model change listener for live validation
+      validatorRef.current = createSqlValidator(monacoInstance);
+      const model = editor.getModel();
+      if (model) {
+        // Perform initial validation
+        validatorRef.current.validate(model);
+
+        // Listen for model content changes to trigger validation
+        modelChangeListenerRef.current = model.onDidChangeContent(() => {
+          if (validatorRef.current && model) {
+            validatorRef.current.validate(model);
+          }
+        });
+      }
 
       // Focus editor on mount
       editor.focus();
@@ -190,6 +211,13 @@ export function MonacoSqlEditor({
       }
       if (hoverDisposableRef.current) {
         hoverDisposableRef.current.dispose();
+      }
+      if (modelChangeListenerRef.current) {
+        modelChangeListenerRef.current.dispose();
+      }
+      if (validatorRef.current) {
+        validatorRef.current.dispose();
+        validatorRef.current = null;
       }
       if (vimModeRef.current) {
         vimModeRef.current.dispose();
