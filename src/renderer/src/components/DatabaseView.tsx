@@ -1,11 +1,18 @@
 import * as Tabs from '@radix-ui/react-tabs';
-import { Code, Table } from 'lucide-react';
+import { Code, Info, Table } from 'lucide-react';
 import { useEffect, useState } from 'react';
+import { Button } from '@/components/ui/button';
+import {
+  Tooltip,
+  TooltipContent,
+  TooltipTrigger,
+} from '@/components/ui/tooltip';
 import { cn } from '@/lib/utils';
 import { useChangesStore, useConnectionStore } from '@/stores';
 import { DiffPreview } from './DiffPreview';
 import { QueryEditor } from './QueryEditor';
 import { ResizablePanel } from './ResizablePanel';
+import { SchemaDetailsPanel } from './SchemaDetailsPanel';
 import { Sidebar } from './Sidebar';
 import { TableView } from './TableView';
 import { Toolbar } from './Toolbar';
@@ -17,6 +24,7 @@ export function DatabaseView() {
   const { hasChanges } = useChangesStore();
   const [activeTab, setActiveTab] = useState<TabValue>('data');
   const [showChangesPanel, setShowChangesPanel] = useState(false);
+  const [showDetailsPanel, setShowDetailsPanel] = useState(false);
 
   // Keyboard shortcuts for tab switching
   useEffect(() => {
@@ -40,6 +48,10 @@ export function DatabaseView() {
           case '2':
             e.preventDefault();
             setActiveTab('query');
+            break;
+          case '3':
+            e.preventDefault();
+            setShowDetailsPanel((prev) => !prev);
             break;
         }
       }
@@ -107,6 +119,32 @@ export function DatabaseView() {
                 ⌘2
               </kbd>
             </Tabs.Trigger>
+
+            {/* Schema Details Toggle */}
+            <div className="ml-auto flex items-center px-2">
+              <Tooltip>
+                <TooltipTrigger asChild>
+                  <Button
+                    variant={showDetailsPanel ? 'secondary' : 'ghost'}
+                    size="sm"
+                    onClick={() => setShowDetailsPanel((prev) => !prev)}
+                    disabled={!selectedTable}
+                    className="gap-1.5"
+                  >
+                    <Info className="h-4 w-4" />
+                    <span className="hidden sm:inline">Schema</span>
+                    <kbd className="bg-muted text-muted-foreground hidden rounded px-1 py-0.5 font-mono text-[10px] sm:inline-block">
+                      ⌘3
+                    </kbd>
+                  </Button>
+                </TooltipTrigger>
+                <TooltipContent>
+                  {selectedTable
+                    ? 'View schema details'
+                    : 'Select a table to view schema details'}
+                </TooltipContent>
+              </Tooltip>
+            </div>
           </Tabs.List>
 
           {/* Tab Content */}
@@ -141,6 +179,22 @@ export function DatabaseView() {
             storageKey="changes-panel"
           >
             <DiffPreview onClose={() => setShowChangesPanel(false)} />
+          </ResizablePanel>
+        )}
+
+        {/* Schema Details Panel - Resizable */}
+        {showDetailsPanel && (
+          <ResizablePanel
+            side="right"
+            defaultWidth={360}
+            minWidth={280}
+            maxWidth={500}
+            storageKey="schema-details-panel"
+          >
+            <SchemaDetailsPanel
+              table={selectedTable}
+              onClose={() => setShowDetailsPanel(false)}
+            />
           </ResizablePanel>
         )}
       </div>
