@@ -1,6 +1,6 @@
 import * as Tabs from '@radix-ui/react-tabs';
 import { Code, Table } from 'lucide-react';
-import { useState } from 'react';
+import { useEffect, useState } from 'react';
 import { cn } from '@/lib/utils';
 import { useChangesStore, useConnectionStore } from '@/stores';
 import { DiffPreview } from './DiffPreview';
@@ -17,6 +17,37 @@ export function DatabaseView() {
   const { hasChanges } = useChangesStore();
   const [activeTab, setActiveTab] = useState<TabValue>('data');
   const [showChangesPanel, setShowChangesPanel] = useState(false);
+
+  // Keyboard shortcuts for tab switching
+  useEffect(() => {
+    const handleKeyDown = (e: KeyboardEvent) => {
+      // Skip if user is typing in an input
+      const target = e.target as HTMLElement;
+      if (
+        target.tagName === 'INPUT' ||
+        target.tagName === 'TEXTAREA' ||
+        target.isContentEditable
+      ) {
+        return;
+      }
+
+      if (e.metaKey || e.ctrlKey) {
+        switch (e.key) {
+          case '1':
+            e.preventDefault();
+            setActiveTab('data');
+            break;
+          case '2':
+            e.preventDefault();
+            setActiveTab('query');
+            break;
+        }
+      }
+    };
+
+    window.addEventListener('keydown', handleKeyDown);
+    return () => window.removeEventListener('keydown', handleKeyDown);
+  }, []);
 
   return (
     <div className="flex h-full flex-col">
@@ -46,6 +77,7 @@ export function DatabaseView() {
           <Tabs.List className="flex border-b px-2">
             <Tabs.Trigger
               value="data"
+              data-tab="data"
               className={cn(
                 'flex items-center gap-2 border-b-2 px-4 py-2 text-sm font-medium transition-colors',
                 activeTab === 'data'
@@ -55,9 +87,13 @@ export function DatabaseView() {
             >
               <Table className="h-4 w-4" />
               Data Browser
+              <kbd className="bg-muted text-muted-foreground ml-1 hidden rounded px-1 py-0.5 font-mono text-[10px] sm:inline-block">
+                ⌘1
+              </kbd>
             </Tabs.Trigger>
             <Tabs.Trigger
               value="query"
+              data-tab="query"
               className={cn(
                 'flex items-center gap-2 border-b-2 px-4 py-2 text-sm font-medium transition-colors',
                 activeTab === 'query'
@@ -67,6 +103,9 @@ export function DatabaseView() {
             >
               <Code className="h-4 w-4" />
               SQL Query
+              <kbd className="bg-muted text-muted-foreground ml-1 hidden rounded px-1 py-0.5 font-mono text-[10px] sm:inline-block">
+                ⌘2
+              </kbd>
             </Tabs.Trigger>
           </Tabs.List>
 

@@ -54,6 +54,7 @@
     "clsx": "^2.1.1",
     "lucide-react": "^0.562.0",
     "monaco-editor": "^0.55.1",
+    "monaco-vim": "^0.4.4",
     "tailwind-merge": "^3.4.0",
     "zustand": "^5.0.9"
   },

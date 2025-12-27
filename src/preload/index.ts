@@ -18,6 +18,7 @@ import type {
   HasPasswordRequest,
   HasPasswordResponse,
   IsPasswordStorageAvailableResponse,
+  MenuAction,
   OpenDatabaseRequest,
   OpenDatabaseResponse,
   OpenFileDialogRequest,
@@ -129,6 +130,16 @@ const sqlProAPI = {
   // File utilities
   file: {
     getPathForFile: (file: File): string => webUtils.getPathForFile(file),
+  },
+
+  // Menu action listener
+  menu: {
+    onAction: (callback: (action: MenuAction) => void): (() => void) => {
+      const handler = (_event: Electron.IpcRendererEvent, action: MenuAction) =>
+        callback(action);
+      ipcRenderer.on(IPC_CHANNELS.MENU_ACTION, handler);
+      return () => ipcRenderer.off(IPC_CHANNELS.MENU_ACTION, handler);
+    },
   },
 };
 

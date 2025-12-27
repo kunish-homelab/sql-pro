@@ -7,6 +7,7 @@ import type {
 } from '@/types/database';
 import { useCallback, useImperativeHandle, useRef } from 'react';
 import { cn } from '@/lib/utils';
+import { useTableFont } from '@/stores';
 import { useTableCore } from './hooks/useTableCore';
 import { useTableEditing } from './hooks/useTableEditing';
 import { useVirtualRows } from './hooks/useVirtualRows';
@@ -75,6 +76,7 @@ export const DataTable = function DataTable({
   groupRowHeight = 44,
 }: DataTableProps & { ref?: React.RefObject<DataTableRef | null> }) {
   const containerRef = useRef<HTMLDivElement>(null);
+  const tableFont = useTableFont();
 
   // Initialize TanStack Table
   const { table, columnSizeVars, resetColumnSize, toggleGrouping, grouping } =
@@ -149,7 +151,11 @@ export const DataTable = function DataTable({
         'focus-visible:ring-ring focus-visible:ring-2 focus-visible:ring-offset-2',
         className
       )}
-      style={columnSizeVars as React.CSSProperties}
+      style={{
+        ...(columnSizeVars as React.CSSProperties),
+        fontFamily: tableFont.family || undefined,
+        fontSize: tableFont.size ? `${tableFont.size}px` : undefined,
+      }}
       tabIndex={0}
       onKeyDown={handleKeyDown}
       onFocus={handleContainerFocus}

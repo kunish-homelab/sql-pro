@@ -1,5 +1,5 @@
 import { AlertCircle, Clock, History, Loader2, Play, X } from 'lucide-react';
-import { useCallback, useState } from 'react';
+import { useCallback, useEffect, useState } from 'react';
 import { Button } from '@/components/ui/button';
 import { ScrollArea } from '@/components/ui/scroll-area';
 import { sqlPro } from '@/lib/api';
@@ -26,6 +26,19 @@ export function QueryEditor() {
   } = useQueryStore();
 
   const [showHistory, setShowHistory] = useState(false);
+
+  // Keyboard shortcut for history toggle
+  useEffect(() => {
+    const handleKeyDown = (e: KeyboardEvent) => {
+      if ((e.metaKey || e.ctrlKey) && e.key === 'h') {
+        e.preventDefault();
+        setShowHistory((prev) => !prev);
+      }
+    };
+
+    window.addEventListener('keydown', handleKeyDown);
+    return () => window.removeEventListener('keydown', handleKeyDown);
+  }, []);
 
   const handleExecute = useCallback(async () => {
     if (!connection || !currentQuery.trim()) return;
@@ -94,6 +107,9 @@ export function QueryEditor() {
           >
             <History className="h-4 w-4" />
             History
+            <kbd className="bg-muted text-muted-foreground ml-1 rounded px-1 py-0.5 font-mono text-[10px]">
+              ⌘H
+            </kbd>
           </Button>
           <Button
             size="sm"

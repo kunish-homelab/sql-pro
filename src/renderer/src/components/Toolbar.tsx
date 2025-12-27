@@ -135,7 +135,12 @@ export function Toolbar({ onOpenChanges }: ToolbarProps) {
             />
           </Button>
         </TooltipTrigger>
-        <TooltipContent>Refresh Schema</TooltipContent>
+        <TooltipContent>
+          <span>Refresh Schema</span>
+          <kbd className="bg-muted ml-2 rounded px-1 py-0.5 font-mono text-xs">
+            ⇧⌘R
+          </kbd>
+        </TooltipContent>
       </Tooltip>
 
       <div className="flex-1" />
@@ -161,6 +166,33 @@ export function Toolbar({ onOpenChanges }: ToolbarProps) {
           </Button>
         </TooltipTrigger>
         <TooltipContent>{getThemeLabel()}</TooltipContent>
+      </Tooltip>
+
+      {/* Command Palette Hint */}
+      <Tooltip>
+        <TooltipTrigger asChild>
+          <Button
+            variant="ghost"
+            size="sm"
+            onClick={() => {
+              // Trigger command palette via keyboard event
+              window.dispatchEvent(
+                new KeyboardEvent('keydown', {
+                  key: 'k',
+                  metaKey: true,
+                  bubbles: true,
+                })
+              );
+            }}
+            className="text-muted-foreground gap-1.5 text-xs"
+          >
+            <span>Commands</span>
+            <kbd className="bg-muted rounded px-1 py-0.5 font-mono text-[10px]">
+              ⌘K
+            </kbd>
+          </Button>
+        </TooltipTrigger>
+        <TooltipContent>Open command palette</TooltipContent>
       </Tooltip>
 
       {/* Disconnect */}

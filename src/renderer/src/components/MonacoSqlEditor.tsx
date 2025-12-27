@@ -1,10 +1,12 @@
 import type { BeforeMount, OnMount } from '@monaco-editor/react';
 import type * as Monaco from 'monaco-editor';
+import type { VimMode } from 'monaco-vim';
 import type { DatabaseSchema } from '@/types/database';
 import Editor, { loader } from '@monaco-editor/react';
 // Configure Monaco to use local package with Vite worker
 import * as monaco from 'monaco-editor';
 import EditorWorker from 'monaco-editor/esm/vs/editor/editor.worker?worker';
+import { initVimMode } from 'monaco-vim';
 import { useCallback, useEffect, useRef, useState } from 'react';
 import {
   createSqlCompletionProvider,
@@ -12,7 +14,11 @@ import {
 } from '@/lib/monaco-sql-config';
 
 import { cn } from '@/lib/utils';
-import { useThemeStore } from '@/stores';
+import { useEditorFont, useSettingsStore, useThemeStore } from '@/stores';
+
+// Default monospace font stack
+const DEFAULT_FONT_FAMILY =
+  'ui-monospace, SFMono-Regular, Menlo, Monaco, Consolas, monospace';
 
 // Set up Monaco environment for Vite
 globalThis.MonacoEnvironment = {
@@ -52,10 +58,15 @@ export function MonacoSqlEditor({
   maxHeight = 500,
 }: MonacoSqlEditorProps) {
   const { theme } = useThemeStore();
+  const { editorVimMode, tabSize } = useSettingsStore();
+  const editorFont = useEditorFont();
   const editorRef = useRef<Monaco.editor.IStandaloneCodeEditor | null>(null);
   const monacoRef = useRef<typeof Monaco | null>(null);
   const completionDisposableRef = useRef<Monaco.IDisposable | null>(null);
   const containerRef = useRef<HTMLDivElement | null>(null);
+  const vimModeRef = useRef<VimMode | null>(null);
+  const vimStatusRef = useRef<HTMLDivElement | null>(null);
+  const [editorReady, setEditorReady] = useState(false);
 
   // Parse initial height from prop (support 'px' suffix)
   const parseHeight = (h: string): number => {
@@ -103,6 +114,9 @@ export function MonacoSqlEditor({
 
       // Focus editor on mount
       editor.focus();
+
+      // Mark editor as ready for vim mode initialization
+      setEditorReady(true);
     },
     [onExecute, schema]
   );
@@ -124,11 +138,50 @@ export function MonacoSqlEditor({
       );
   }, [schema]);
 
+  // Initialize or dispose vim mode based on editorMode setting
+  // Must wait for both editor to be ready AND vimStatusRef to be mounted
+  useEffect(() => {
+    // Wait for editor to be ready
+    if (!editorReady || !editorRef.current) return;
+
+    if (editorVimMode) {
+      // Wait for status bar element to be available (it renders when editorMode === 'vim')
+      // Use requestAnimationFrame to ensure DOM is painted
+      const initVim = () => {
+        if (!vimStatusRef.current || !editorRef.current) {
+          // Status bar not yet rendered, retry on next frame
+          requestAnimationFrame(initVim);
+          return;
+        }
+
+        // Initialize vim mode if not already active
+        if (!vimModeRef.current) {
+          vimModeRef.current = initVimMode(
+            editorRef.current,
+            vimStatusRef.current
+          );
+        }
+      };
+
+      requestAnimationFrame(initVim);
+    } else {
+      // Dispose vim mode if active
+      if (vimModeRef.current) {
+        vimModeRef.current.dispose();
+        vimModeRef.current = null;
+      }
+    }
+  }, [editorVimMode, editorReady]);
+
   // Cleanup on unmount
   useEffect(() => {
     return () => {
       if (completionDisposableRef.current) {
         completionDisposableRef.current.dispose();
+      }
+      if (vimModeRef.current) {
+        vimModeRef.current.dispose();
+        vimModeRef.current = null;
       }
     };
   }, []);
@@ -209,11 +262,10 @@ export function MonacoSqlEditor({
             glyphMargin: false,
 
             // Typography
-            fontSize: 13,
-            fontFamily:
-              'ui-monospace, SFMono-Regular, Menlo, Monaco, Consolas, monospace',
+            fontSize: editorFont.size,
+            fontFamily: editorFont.family || DEFAULT_FONT_FAMILY,
             fontLigatures: false,
-            tabSize: 2,
+            tabSize,
 
             // Editing
             wordWrap: 'on',
@@ -242,6 +294,14 @@ export function MonacoSqlEditor({
           }}
         />
       </div>
+
+      {/* Vim status bar - shows vim mode and command input */}
+      {editorVimMode && (
+        <div
+          ref={vimStatusRef}
+          className="bg-muted/50 text-muted-foreground border-t px-2 py-1 font-mono text-xs"
+        />
+      )}
 
       {/* Resize handle - drag to resize, double-click to restore default */}
       <div

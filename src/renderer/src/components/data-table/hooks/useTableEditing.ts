@@ -3,6 +3,8 @@ import type { RefObject } from 'react';
 import type { TableRowData } from './useTableCore';
 import type { ColumnSchema } from '@/types/database';
 import { useCallback, useEffect, useState } from 'react';
+import { useVimKeyHandler } from '@/hooks/useVimKeyHandler';
+import { useSettingsStore } from '@/stores';
 
 interface CellPosition {
   rowId: string;
@@ -49,6 +51,10 @@ export function useTableEditing({
 }: UseTableEditingOptions): UseTableEditingReturn {
   const [focusedCell, setFocusedCell] = useState<CellPosition | null>(null);
   const [editingCell, setEditingCell] = useState<CellPosition | null>(null);
+
+  // Vim mode support
+  const appVimMode = useSettingsStore((s) => s.appVimMode);
+  const { handleKey: handleVimKey, resetSequence } = useVimKeyHandler();
 
   // Start editing a cell
   const startEditing = useCallback(
@@ -170,6 +176,65 @@ export function useTableEditing({
     [focusedCell, table]
   );
 
+  // Jump to specific positions (for vim gg, G, 0, $)
+  const jumpToPosition = useCallback(
+    (position: 'top' | 'bottom' | 'start' | 'end'): CellPosition | null => {
+      const rows = table.getRowModel().rows;
+      const columns = table.getVisibleLeafColumns();
+
+      if (rows.length === 0 || columns.length === 0) return null;
+
+      // Find first/last non-group row
+      const findNonGroupRow = (fromStart: boolean): number => {
+        if (fromStart) {
+          for (let i = 0; i < rows.length; i++) {
+            if (!rows[i].getIsGrouped?.()) return i;
+          }
+        } else {
+          for (let i = rows.length - 1; i >= 0; i--) {
+            if (!rows[i].getIsGrouped?.()) return i;
+          }
+        }
+        return -1;
+      };
+
+      const currentColIndex = focusedCell
+        ? columns.findIndex((c) => c.id === focusedCell.columnId)
+        : 0;
+      const currentRowIndex = focusedCell
+        ? rows.findIndex((r) => r.id === focusedCell.rowId)
+        : 0;
+
+      let targetRowIndex = currentRowIndex;
+      let targetColIndex = currentColIndex >= 0 ? currentColIndex : 0;
+
+      switch (position) {
+        case 'top':
+          targetRowIndex = findNonGroupRow(true);
+          break;
+        case 'bottom':
+          targetRowIndex = findNonGroupRow(false);
+          break;
+        case 'start':
+          targetColIndex = 0;
+          break;
+        case 'end':
+          targetColIndex = columns.length - 1;
+          break;
+      }
+
+      if (targetRowIndex === -1) return null;
+
+      const targetRow = rows[targetRowIndex];
+      const targetCol = columns[targetColIndex];
+
+      if (!targetRow || !targetCol) return null;
+
+      return { rowId: targetRow.id, columnId: targetCol.id };
+    },
+    [focusedCell, table]
+  );
+
   // Handle keyboard navigation
   const handleKeyDown = useCallback(
     (e: React.KeyboardEvent) => {
@@ -180,11 +245,83 @@ export function useTableEditing({
         if (e.key === 'Escape') {
           e.preventDefault();
           stopEditing();
+          resetSequence();
         }
         // Tab and Enter are handled by cell editor
         return;
       }
 
+      // Handle vim keys when appVimMode is enabled
+      if (appVimMode) {
+        const { command, handled } = handleVimKey(e.key, e.shiftKey);
+
+        if (handled) {
+          e.preventDefault();
+
+          switch (command) {
+            case 'move-down': {
+              const downCell = getAdjacentCell('down');
+              if (downCell) setFocusedCell(downCell);
+              break;
+            }
+            case 'move-up': {
+              const upCell = getAdjacentCell('up');
+              if (upCell) setFocusedCell(upCell);
+              break;
+            }
+            case 'move-left': {
+              const leftCell = getAdjacentCell('left');
+              if (leftCell) setFocusedCell(leftCell);
+              break;
+            }
+            case 'move-right': {
+              const rightCell = getAdjacentCell('right');
+              if (rightCell) setFocusedCell(rightCell);
+              break;
+            }
+            case 'jump-top': {
+              const topCell = jumpToPosition('top');
+              if (topCell) setFocusedCell(topCell);
+              break;
+            }
+            case 'jump-bottom': {
+              const bottomCell = jumpToPosition('bottom');
+              if (bottomCell) setFocusedCell(bottomCell);
+              break;
+            }
+            case 'jump-start': {
+              const startCell = jumpToPosition('start');
+              if (startCell) setFocusedCell(startCell);
+              break;
+            }
+            case 'jump-end': {
+              const endCell = jumpToPosition('end');
+              if (endCell) setFocusedCell(endCell);
+              break;
+            }
+            case 'enter-edit': {
+              if (editable) {
+                startEditing(focusedCell.rowId, focusedCell.columnId);
+              }
+              break;
+            }
+            case 'exit-mode': {
+              resetSequence();
+              break;
+            }
+            // 'select' is same as enter-edit for table
+            case 'select': {
+              if (editable) {
+                startEditing(focusedCell.rowId, focusedCell.columnId);
+              }
+              break;
+            }
+          }
+          return;
+        }
+      }
+
+      // Standard keyboard navigation (always active)
       switch (e.key) {
         case 'ArrowUp': {
           e.preventDefault();
@@ -253,7 +390,11 @@ export function useTableEditing({
       focusedCell,
       editingCell,
       editable,
+      appVimMode,
       getAdjacentCell,
+      jumpToPosition,
+      handleVimKey,
+      resetSequence,
       startEditing,
       stopEditing,
       onRowDelete,

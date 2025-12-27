@@ -1,0 +1,183 @@
+import { create } from 'zustand';
+import { persist } from 'zustand/middleware';
+
+// Common monospace fonts available on different platforms
+export const MONOSPACE_FONTS = [
+  { name: 'System Default', value: '' },
+  { name: 'SF Mono', value: 'SF Mono' },
+  { name: 'Menlo', value: 'Menlo' },
+  { name: 'Monaco', value: 'Monaco' },
+  { name: 'Consolas', value: 'Consolas' },
+  { name: 'Fira Code', value: 'Fira Code' },
+  { name: 'JetBrains Mono', value: 'JetBrains Mono' },
+  { name: 'Source Code Pro', value: 'Source Code Pro' },
+  { name: 'IBM Plex Mono', value: 'IBM Plex Mono' },
+  { name: 'Cascadia Code', value: 'Cascadia Code' },
+  { name: 'Ubuntu Mono', value: 'Ubuntu Mono' },
+  { name: 'Roboto Mono', value: 'Roboto Mono' },
+  { name: 'Hack', value: 'Hack' },
+  { name: 'Inconsolata', value: 'Inconsolata' },
+] as const;
+
+// Font configuration for each category
+export interface FontConfig {
+  family: string;
+  size: number;
+}
+
+// Font categories
+export type FontCategory = 'editor' | 'table' | 'ui';
+
+interface FontSettings {
+  editor: FontConfig;
+  table: FontConfig;
+  ui: FontConfig;
+  syncAll: boolean;
+}
+
+interface SettingsState {
+  // Vim modes (independent)
+  editorVimMode: boolean; // Monaco editor vim mode
+  appVimMode: boolean; // Sidebar + DataTable vim navigation
+
+  // Font settings
+  fonts: FontSettings;
+
+  // Tab settings
+  tabSize: number;
+
+  // Actions
+  setEditorVimMode: (enabled: boolean) => void;
+  setAppVimMode: (enabled: boolean) => void;
+  setFont: (category: FontCategory, config: Partial<FontConfig>) => void;
+  setSyncAll: (sync: boolean) => void;
+  setTabSize: (size: number) => void;
+}
+
+const DEFAULT_FONT_CONFIG: FontConfig = {
+  family: '',
+  size: 14,
+};
+
+const DEFAULT_FONTS: FontSettings = {
+  editor: { ...DEFAULT_FONT_CONFIG },
+  table: { ...DEFAULT_FONT_CONFIG },
+  ui: { ...DEFAULT_FONT_CONFIG, size: 13 },
+  syncAll: true,
+};
+
+// Migration function to handle old settings format
+interface OldSettingsFormat {
+  editorMode?: 'vim' | 'normal';
+  fontSize?: number;
+  fontFamily?: string;
+  tabSize?: number;
+}
+
+function migrateOldSettings(
+  persisted: unknown
+): Partial<SettingsState> | undefined {
+  if (!persisted || typeof persisted !== 'object') return undefined;
+
+  const old = persisted as OldSettingsFormat & Partial<SettingsState>;
+
+  // Check if already migrated (has fonts object)
+  if ('fonts' in old && old.fonts) {
+    return old as Partial<SettingsState>;
+  }
+
+  // Migrate from old format
+  const editorVimMode = old.editorMode === 'vim';
+  const fontSize = old.fontSize ?? 14;
+  const fontFamily = old.fontFamily ?? '';
+
+  return {
+    editorVimMode,
+    appVimMode: false,
+    fonts: {
+      editor: { family: fontFamily, size: fontSize },
+      table: { family: fontFamily, size: fontSize },
+      ui: { family: fontFamily, size: 13 },
+      syncAll: true,
+    },
+    tabSize: old.tabSize ?? 2,
+  };
+}
+
+export const useSettingsStore = create<SettingsState>()(
+  persist(
+    (set, get) => ({
+      // Default to vim mode for editor
+      editorVimMode: true,
+      appVimMode: false,
+
+      fonts: DEFAULT_FONTS,
+
+      tabSize: 2,
+
+      setEditorVimMode: (enabled) => set({ editorVimMode: enabled }),
+
+      setAppVimMode: (enabled) => set({ appVimMode: enabled }),
+
+      setFont: (category, config) => {
+        const { fonts } = get();
+        const newConfig = { ...fonts[category], ...config };
+
+        if (fonts.syncAll) {
+          // Sync all fonts when syncAll is enabled
+          set({
+            fonts: {
+              ...fonts,
+              editor: { ...newConfig },
+              table: { ...newConfig },
+              ui: { ...newConfig },
+            },
+          });
+        } else {
+          // Only update the specific category
+          set({
+            fonts: {
+              ...fonts,
+              [category]: newConfig,
+            },
+          });
+        }
+      },
+
+      setSyncAll: (sync) => {
+        const { fonts } = get();
+        if (sync) {
+          // When enabling sync, use editor font as the source of truth
+          const editorFont = fonts.editor;
+          set({
+            fonts: {
+              editor: { ...editorFont },
+              table: { ...editorFont },
+              ui: { ...editorFont },
+              syncAll: true,
+            },
+          });
+        } else {
+          set({
+            fonts: {
+              ...fonts,
+              syncAll: false,
+            },
+          });
+        }
+      },
+
+      setTabSize: (size) => set({ tabSize: size }),
+    }),
+    {
+      name: 'sql-pro-settings',
+      migrate: migrateOldSettings,
+      version: 1,
+    }
+  )
+);
+
+// Selector hooks for convenience
+export const useEditorFont = () => useSettingsStore((s) => s.fonts.editor);
+export const useTableFont = () => useSettingsStore((s) => s.fonts.table);
+export const useUIFont = () => useSettingsStore((s) => s.fonts.ui);

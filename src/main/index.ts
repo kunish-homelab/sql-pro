@@ -2,6 +2,7 @@ import { join } from 'node:path';
 import process from 'node:process';
 import { app, BrowserWindow, shell } from 'electron';
 import { cleanupIpcHandlers, setupIpcHandlers } from './services/ipc-handlers';
+import { createApplicationMenu } from './services/menu';
 
 // Inline utilities to avoid @electron-toolkit/utils initialization issues
 // Use getter to defer app.isPackaged access until after app ready
@@ -66,6 +67,9 @@ app.whenReady().then(() => {
 
   // Setup IPC handlers for database operations
   setupIpcHandlers();
+
+  // Create native application menu
+  createApplicationMenu();
 
   app.on('browser-window-created', (_, window) => {
     watchWindowShortcuts(window);

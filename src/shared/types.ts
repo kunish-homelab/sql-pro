@@ -362,4 +362,19 @@ export const IPC_CHANNELS = {
   // Connection profile operations
   CONNECTION_UPDATE: 'connection:update',
   CONNECTION_REMOVE: 'connection:remove',
+
+  // Menu actions (main -> renderer)
+  MENU_ACTION: 'menu:action',
 } as const;
+
+// Menu action types
+export type MenuAction =
+  | 'open-database'
+  | 'close-database'
+  | 'refresh-schema'
+  | 'open-settings'
+  | 'toggle-command-palette'
+  | 'switch-to-data'
+  | 'switch-to-query'
+  | 'execute-query'
+  | 'toggle-history';
