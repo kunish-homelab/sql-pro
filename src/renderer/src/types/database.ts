@@ -36,6 +36,15 @@ export interface ForeignKeySchema {
   onUpdate?: string;
 }
 
+// Trigger information
+export interface TriggerSchema {
+  name: string;
+  tableName: string;
+  timing: 'BEFORE' | 'AFTER' | 'INSTEAD OF';
+  event: 'INSERT' | 'UPDATE' | 'DELETE';
+  sql: string;
+}
+
 // Table schema
 export interface TableSchema {
   name: string;
@@ -45,6 +54,7 @@ export interface TableSchema {
   primaryKey: string[];
   foreignKeys: ForeignKeySchema[];
   indexes: IndexSchema[];
+  triggers: TriggerSchema[];
   rowCount?: number;
   sql: string;
 }
