@@ -155,7 +155,7 @@ export function DatabaseView() {
             {selectedTable ? (
               <TableView />
             ) : (
-              <div className="text-muted-foreground flex h-full items-center justify-center">
+              <div className="bg-grid-dot text-muted-foreground flex h-full items-center justify-center">
                 <p>Select a table from the sidebar to view its data</p>
               </div>
             )}
