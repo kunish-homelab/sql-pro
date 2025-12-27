@@ -1,5 +1,12 @@
 # Changelog
 
+## [1.3.0](https://github.com/kunish-homelab/sql-pro/compare/v1.2.0...v1.3.0) (2025-12-27)
+
+
+### Features
+
+* add Vim key navigation support and command palette ([4de0c99](https://github.com/kunish-homelab/sql-pro/commit/4de0c993b26387ba4d34b62fd6ece42fa928b73e))
+
 ## [1.2.0](https://github.com/kunish-homelab/sql-pro/compare/v1.1.1...v1.2.0) (2025-12-26)
 
 
