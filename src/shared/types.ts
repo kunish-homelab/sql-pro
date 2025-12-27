@@ -61,6 +61,14 @@ export interface ForeignKeyInfo {
   onUpdate?: string;
 }
 
+export interface TriggerInfo {
+  name: string;
+  tableName: string;
+  timing: 'BEFORE' | 'AFTER' | 'INSTEAD OF';
+  event: 'INSERT' | 'UPDATE' | 'DELETE';
+  sql: string;
+}
+
 export interface TableInfo {
   name: string;
   schema: string; // Database schema (e.g., 'main', 'temp' for SQLite)
@@ -69,6 +77,7 @@ export interface TableInfo {
   primaryKey: string[];
   foreignKeys: ForeignKeyInfo[];
   indexes: IndexInfo[];
+  triggers: TriggerInfo[];
   rowCount?: number;
   sql: string;
 }
