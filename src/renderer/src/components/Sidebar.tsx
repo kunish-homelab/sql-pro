@@ -1,4 +1,4 @@
-import type { SchemaInfo, TableSchema } from '@/types/database';
+import type { SchemaInfo, TableSchema, TriggerSchema } from '@/types/database';
 import {
   ChevronDown,
   ChevronRight,
@@ -7,6 +7,7 @@ import {
   Search,
   Settings,
   Table,
+  Zap,
 } from 'lucide-react';
 import { useCallback, useEffect, useMemo, useRef, useState } from 'react';
 import { Button } from '@/components/ui/button';
@@ -40,12 +41,13 @@ export function Sidebar() {
   const [expandedSchemas, setExpandedSchemas] = useState<
     Record<string, boolean>
   >({ main: true });
-  // Expansion state for tables/views within schemas (key is "schemaName:tables" or "schemaName:views")
+  // Expansion state for tables/views within schemas (key is "schemaName:tables" or "schemaName:views" or "schemaName:triggers")
   const [expandedSections, setExpandedSections] = useState<
     Record<string, boolean>
   >({
     'main:tables': true,
     'main:views': true,
+    'main:triggers': true,
   });
   const [searchQuery, setSearchQuery] = useState('');
   const [settingsOpen, setSettingsOpen] = useState(false);
@@ -114,11 +116,15 @@ export function Sidebar() {
         for (const s of schema.schemas) {
           const tablesKey = `${s.name}:tables`;
           const viewsKey = `${s.name}:views`;
+          const triggersKey = `${s.name}:triggers`;
           if (next[tablesKey] === undefined) {
             next[tablesKey] = true;
           }
           if (next[viewsKey] === undefined) {
             next[viewsKey] = true;
+          }
+          if (next[triggersKey] === undefined) {
+            next[triggersKey] = true;
           }
         }
         return next;
@@ -167,16 +173,32 @@ export function Sidebar() {
     if (!schema?.schemas) return [];
 
     return schema.schemas
-      .map((s) => ({
-        ...s,
-        tables: s.tables.filter((t) =>
-          t.name.toLowerCase().includes(searchQuery.toLowerCase())
-        ),
-        views: s.views.filter((v) =>
-          v.name.toLowerCase().includes(searchQuery.toLowerCase())
-        ),
-      }))
-      .filter((s) => s.tables.length > 0 || s.views.length > 0 || !searchQuery);
+      .map((s) => {
+        // Aggregate all triggers from all tables in this schema
+        const allTriggers: TriggerSchema[] = s.tables.flatMap(
+          (t) => t.triggers || []
+        );
+
+        return {
+          ...s,
+          tables: s.tables.filter((t) =>
+            t.name.toLowerCase().includes(searchQuery.toLowerCase())
+          ),
+          views: s.views.filter((v) =>
+            v.name.toLowerCase().includes(searchQuery.toLowerCase())
+          ),
+          triggers: allTriggers.filter((tr) =>
+            tr.name.toLowerCase().includes(searchQuery.toLowerCase())
+          ),
+        };
+      })
+      .filter(
+        (s) =>
+          s.tables.length > 0 ||
+          s.views.length > 0 ||
+          s.triggers.length > 0 ||
+          !searchQuery
+      );
   }, [schema?.schemas, searchQuery]);
 
   // Combined list of navigable items for vim navigation
@@ -436,7 +458,7 @@ export function Sidebar() {
 }
 
 interface SchemaSectionProps {
-  schemaInfo: SchemaInfo;
+  schemaInfo: SchemaInfo & { triggers: TriggerSchema[] };
   showSchemaHeader: boolean;
   isSchemaExpanded: boolean;
   onToggleSchema: () => void;
@@ -468,8 +490,10 @@ function SchemaSection({
 }: SchemaSectionProps) {
   const tablesKey = `${schemaInfo.name}:tables`;
   const viewsKey = `${schemaInfo.name}:views`;
+  const triggersKey = `${schemaInfo.name}:triggers`;
   const tablesExpanded = expandedSections[tablesKey] !== false;
   const viewsExpanded = expandedSections[viewsKey] !== false;
+  const triggersExpanded = expandedSections[triggersKey] !== false;
 
   return (
     <div className="mb-2">
@@ -530,7 +554,7 @@ function SchemaSection({
 
           {/* Views Section */}
           {schemaInfo.views.length > 0 && (
-            <div>
+            <div className="mb-1">
               <button
                 onClick={() => onToggleSection(viewsKey)}
                 className="text-muted-foreground hover:bg-accent flex w-full items-center gap-1 rounded px-2 py-1 text-sm font-medium"
@@ -560,6 +584,33 @@ function SchemaSection({
                       />
                     );
                   })}
+                </div>
+              )}
+            </div>
+          )}
+
+          {/* Triggers Section */}
+          {schemaInfo.triggers.length > 0 && (
+            <div>
+              <button
+                onClick={() => onToggleSection(triggersKey)}
+                className="text-muted-foreground hover:bg-accent flex w-full items-center gap-1 rounded px-2 py-1 text-sm font-medium"
+              >
+                {triggersExpanded ? (
+                  <ChevronDown className="h-4 w-4" />
+                ) : (
+                  <ChevronRight className="h-4 w-4" />
+                )}
+                Triggers ({schemaInfo.triggers.length})
+              </button>
+              {triggersExpanded && (
+                <div className="mt-1 space-y-0.5">
+                  {schemaInfo.triggers.map((trigger) => (
+                    <TriggerItem
+                      key={`${schemaInfo.name}:${trigger.name}`}
+                      trigger={trigger}
+                    />
+                  ))}
                 </div>
               )}
             </div>
@@ -608,5 +659,21 @@ function TableItem({
         </span>
       )}
     </button>
+  );
+}
+
+interface TriggerItemProps {
+  trigger: TriggerSchema;
+}
+
+function TriggerItem({ trigger }: TriggerItemProps) {
+  return (
+    <div className="text-foreground hover:bg-accent/50 flex w-full items-center gap-2 rounded px-2 py-1.5 text-sm transition-colors">
+      <Zap className="text-muted-foreground h-4 w-4 shrink-0" />
+      <span className="truncate">{trigger.name}</span>
+      <span className="text-muted-foreground ml-auto text-xs">
+        {trigger.timing} {trigger.event}
+      </span>
+    </div>
   );
 }
