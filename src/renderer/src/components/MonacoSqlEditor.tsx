@@ -10,6 +10,7 @@ import { initVimMode } from 'monaco-vim';
 import { useCallback, useEffect, useRef, useState } from 'react';
 import {
   createSqlCompletionProvider,
+  createSqlHoverProvider,
   defineCustomThemes,
 } from '@/lib/monaco-sql-config';
 
@@ -63,6 +64,7 @@ export function MonacoSqlEditor({
   const editorRef = useRef<Monaco.editor.IStandaloneCodeEditor | null>(null);
   const monacoRef = useRef<typeof Monaco | null>(null);
   const completionDisposableRef = useRef<Monaco.IDisposable | null>(null);
+  const hoverDisposableRef = useRef<Monaco.IDisposable | null>(null);
   const containerRef = useRef<HTMLDivElement | null>(null);
   const vimModeRef = useRef<VimMode | null>(null);
   const vimStatusRef = useRef<HTMLDivElement | null>(null);
@@ -110,6 +112,13 @@ export function MonacoSqlEditor({
         monacoInstance.languages.registerCompletionItemProvider(
           'sql',
           createSqlCompletionProvider(monacoInstance, schema)
+        );
+
+      // Register hover provider for SQL documentation
+      hoverDisposableRef.current =
+        monacoInstance.languages.registerHoverProvider(
+          'sql',
+          createSqlHoverProvider(monacoInstance)
         );
 
       // Focus editor on mount
@@ -178,6 +187,9 @@ export function MonacoSqlEditor({
     return () => {
       if (completionDisposableRef.current) {
         completionDisposableRef.current.dispose();
+      }
+      if (hoverDisposableRef.current) {
+        hoverDisposableRef.current.dispose();
       }
       if (vimModeRef.current) {
         vimModeRef.current.dispose();
