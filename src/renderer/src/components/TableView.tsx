@@ -345,6 +345,12 @@ export function TableView() {
               filters={filters}
               onFilterAdd={handleFilterAdd}
               onFilterRemove={handleFilterRemove}
+              // Empty state context
+              totalRowsBeforeClientSearch={displayRows.length}
+              hasActiveFilters={filters.length > 0}
+              hasActiveSearch={searchTerm.length > 0}
+              onClearFilters={handleFiltersClear}
+              onClearSearch={() => setSearchTerm('')}
             />
           )}
         </div>

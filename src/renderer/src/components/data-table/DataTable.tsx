@@ -6,7 +6,9 @@ import type {
   SortState,
 } from '@/types/database';
 import type { UIFilterState } from '@/lib/filter-utils';
+import { Filter, SearchX } from 'lucide-react';
 import { useCallback, useEffect, useImperativeHandle, useRef } from 'react';
+import { Button } from '@/components/ui/button';
 import { cn } from '@/lib/utils';
 import { useTableFont } from '@/stores';
 import { useTableCore } from './hooks/useTableCore';
@@ -59,6 +61,13 @@ export interface DataTableProps {
   filters?: UIFilterState[];
   onFilterAdd?: (filter: UIFilterState) => void;
   onFilterRemove?: (columnId: string) => void;
+
+  // Empty state context
+  totalRowsBeforeClientSearch?: number;
+  hasActiveFilters?: boolean;
+  hasActiveSearch?: boolean;
+  onClearFilters?: () => void;
+  onClearSearch?: () => void;
 }
 
 export interface DataTableRef {
@@ -89,6 +98,11 @@ export const DataTable = function DataTable({
   filters,
   onFilterAdd,
   onFilterRemove,
+  totalRowsBeforeClientSearch,
+  hasActiveFilters,
+  hasActiveSearch,
+  onClearFilters,
+  onClearSearch,
 }: DataTableProps & { ref?: React.RefObject<DataTableRef | null> }) {
   const containerRef = useRef<HTMLDivElement>(null);
   const tableFont = useTableFont();
@@ -257,13 +271,78 @@ export const DataTable = function DataTable({
 
       {/* Empty state */}
       {rows.length === 0 && (
-        <div className="text-muted-foreground flex h-32 items-center justify-center">
-          No data
-        </div>
+        <EmptyState
+          hasActiveFilters={hasActiveFilters}
+          hasActiveSearch={hasActiveSearch}
+          totalRowsBeforeClientSearch={totalRowsBeforeClientSearch}
+          onClearFilters={onClearFilters}
+          onClearSearch={onClearSearch}
+        />
       )}
     </div>
   );
 };
+
+/**
+ * Empty state component that distinguishes between:
+ * 1. No data in table - simple "No data" message
+ * 2. No results from server-side filters - "No matching results" with clear filters
+ * 3. No results from client-side search - "No matching results" with clear search
+ */
+function EmptyState({
+  hasActiveFilters,
+  hasActiveSearch,
+  totalRowsBeforeClientSearch,
+  onClearFilters,
+  onClearSearch,
+}: {
+  hasActiveFilters?: boolean;
+  hasActiveSearch?: boolean;
+  totalRowsBeforeClientSearch?: number;
+  onClearFilters?: () => void;
+  onClearSearch?: () => void;
+}) {
+  // Case 3: Client-side search produced no results (but there were rows before search)
+  if (hasActiveSearch && totalRowsBeforeClientSearch && totalRowsBeforeClientSearch > 0) {
+    return (
+      <div className="text-muted-foreground flex h-32 flex-col items-center justify-center gap-3">
+        <div className="flex items-center gap-2">
+          <SearchX className="h-5 w-5" />
+          <span>No matching results for your search</span>
+        </div>
+        {onClearSearch && (
+          <Button variant="outline" size="sm" onClick={onClearSearch}>
+            Clear search
+          </Button>
+        )}
+      </div>
+    );
+  }
+
+  // Case 2: Server-side filters produced no results
+  if (hasActiveFilters) {
+    return (
+      <div className="text-muted-foreground flex h-32 flex-col items-center justify-center gap-3">
+        <div className="flex items-center gap-2">
+          <Filter className="h-5 w-5" />
+          <span>No matching results for the current filters</span>
+        </div>
+        {onClearFilters && (
+          <Button variant="outline" size="sm" onClick={onClearFilters}>
+            Clear all filters
+          </Button>
+        )}
+      </div>
+    );
+  }
+
+  // Case 1: Table is truly empty (no data)
+  return (
+    <div className="text-muted-foreground flex h-32 items-center justify-center">
+      No data
+    </div>
+  );
+}
 
 // Re-export types
 export type { TableRowData };
