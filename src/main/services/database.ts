@@ -3,7 +3,9 @@ import type {
   ForeignKeyInfo,
   IndexInfo,
   PendingChangeInfo,
+  SchemaInfo,
   TableInfo,
+  TriggerInfo,
   ValidationResult,
 } from '../../shared/types';
 import { Buffer } from 'node:buffer';
@@ -347,6 +349,8 @@ class DatabaseService {
       const foreignKeys = this.getForeignKeys(db, item.name, schema);
       const indexes =
         type === 'table' ? this.getIndexes(db, item.name, schema) : [];
+      const triggers =
+        type === 'table' ? this.getTriggers(db, item.name, schema) : [];
       const rowCount =
         type === 'table' ? this.getRowCount(db, item.name, schema) : undefined;
 
@@ -358,6 +362,7 @@ class DatabaseService {
         primaryKey,
         foreignKeys,
         indexes,
+        triggers,
         rowCount,
         sql: item.sql || '',
       };
@@ -455,6 +460,58 @@ class DatabaseService {
           sql: sqlResult?.sql || '',
         };
       });
+  }
+
+  private getTriggers(
+    db: Database.Database,
+    tableName: string,
+    schema: string = 'main'
+  ): TriggerInfo[] {
+    const triggers = db
+      .prepare(
+        `SELECT name, tbl_name, sql FROM "${schema}".sqlite_master WHERE type = 'trigger' AND tbl_name = ? AND name NOT LIKE 'sqlite_%' ORDER BY name`
+      )
+      .all(tableName) as Array<{ name: string; tbl_name: string; sql: string }>;
+
+    return triggers.map((trigger) => {
+      const { timing, event } = this.parseTriggerSql(trigger.sql || '');
+
+      return {
+        name: trigger.name,
+        tableName: trigger.tbl_name,
+        timing,
+        event,
+        sql: trigger.sql || '',
+      };
+    });
+  }
+
+  private parseTriggerSql(sql: string): {
+    timing: 'BEFORE' | 'AFTER' | 'INSTEAD OF';
+    event: 'INSERT' | 'UPDATE' | 'DELETE';
+  } {
+    const upperSql = sql.toUpperCase();
+
+    // Determine timing
+    let timing: 'BEFORE' | 'AFTER' | 'INSTEAD OF' = 'BEFORE';
+    if (upperSql.includes('INSTEAD OF')) {
+      timing = 'INSTEAD OF';
+    } else if (upperSql.includes('AFTER')) {
+      timing = 'AFTER';
+    } else if (upperSql.includes('BEFORE')) {
+      timing = 'BEFORE';
+    }
+
+    // Determine event - match the event that comes after timing keyword
+    let event: 'INSERT' | 'UPDATE' | 'DELETE' = 'INSERT';
+    const triggerMatch = upperSql.match(
+      /(?:BEFORE|AFTER|INSTEAD\s+OF)\s+(INSERT|UPDATE|DELETE)/
+    );
+    if (triggerMatch) {
+      event = triggerMatch[1] as 'INSERT' | 'UPDATE' | 'DELETE';
+    }
+
+    return { timing, event };
   }
 
   private getRowCount(
