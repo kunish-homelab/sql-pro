@@ -368,7 +368,7 @@ export function Sidebar() {
   return (
     <div
       ref={containerRef}
-      className="bg-muted/30 flex h-full w-full flex-col overflow-hidden border-r outline-none"
+      className="bg-muted/30 bg-grid-dot flex h-full w-full flex-col overflow-hidden border-r outline-none"
       tabIndex={0}
       onKeyDown={handleKeyDown}
     >
