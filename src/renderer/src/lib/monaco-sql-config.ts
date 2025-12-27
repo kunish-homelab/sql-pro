@@ -739,6 +739,388 @@ const SQL_TYPOS: Record<string, string> = {
 const SQL_KEYWORDS_SET = new Set(SQL_KEYWORDS.map((k) => k.toUpperCase()));
 
 /**
+ * Documentation entry for SQL keywords and functions.
+ */
+export interface SqlDocEntry {
+  syntax: string;
+  description: string;
+  example?: string;
+}
+
+/**
+ * Documentation for SQL keywords and functions used by the hover provider.
+ * Includes standard SQL keywords, aggregate functions, and SQLite-specific commands.
+ */
+export const SQL_DOCS: Record<string, SqlDocEntry> = {
+  // Query Keywords
+  SELECT: {
+    syntax: 'SELECT [DISTINCT] column1, column2, ... FROM table',
+    description: 'Retrieves data from one or more tables. Use DISTINCT to return only unique rows.',
+    example: 'SELECT name, age FROM users WHERE age > 18',
+  },
+  FROM: {
+    syntax: 'FROM table_name [alias]',
+    description: 'Specifies the table(s) to query data from. Can include table aliases for readability.',
+    example: 'SELECT * FROM users u',
+  },
+  WHERE: {
+    syntax: 'WHERE condition',
+    description: 'Filters rows based on a specified condition. Only rows where the condition is true are returned.',
+    example: 'SELECT * FROM users WHERE status = \'active\'',
+  },
+  AND: {
+    syntax: 'condition1 AND condition2',
+    description: 'Combines multiple conditions. All conditions must be true for the row to be included.',
+    example: 'WHERE age > 18 AND status = \'active\'',
+  },
+  OR: {
+    syntax: 'condition1 OR condition2',
+    description: 'Combines multiple conditions. At least one condition must be true for the row to be included.',
+    example: 'WHERE status = \'active\' OR status = \'pending\'',
+  },
+  NOT: {
+    syntax: 'NOT condition',
+    description: 'Negates a condition. Returns true if the condition is false.',
+    example: 'WHERE NOT status = \'inactive\'',
+  },
+  IN: {
+    syntax: 'column IN (value1, value2, ...)',
+    description: 'Checks if a value matches any value in a list or subquery.',
+    example: 'WHERE status IN (\'active\', \'pending\')',
+  },
+  LIKE: {
+    syntax: 'column LIKE pattern',
+    description: 'Pattern matching with wildcards. Use % for any sequence, _ for single character.',
+    example: 'WHERE name LIKE \'John%\'',
+  },
+  BETWEEN: {
+    syntax: 'column BETWEEN value1 AND value2',
+    description: 'Selects values within a given inclusive range.',
+    example: 'WHERE age BETWEEN 18 AND 65',
+  },
+  AS: {
+    syntax: 'expression AS alias',
+    description: 'Creates an alias for a column or table to make results more readable.',
+    example: 'SELECT name AS user_name FROM users AS u',
+  },
+  DISTINCT: {
+    syntax: 'SELECT DISTINCT column1, column2, ...',
+    description: 'Returns only unique rows, removing duplicates from the result set.',
+    example: 'SELECT DISTINCT status FROM users',
+  },
+
+  // JOIN Keywords
+  JOIN: {
+    syntax: 'table1 JOIN table2 ON condition',
+    description: 'Combines rows from two tables based on a related column. Same as INNER JOIN.',
+    example: 'SELECT * FROM users JOIN orders ON users.id = orders.user_id',
+  },
+  'INNER JOIN': {
+    syntax: 'table1 INNER JOIN table2 ON condition',
+    description: 'Returns rows that have matching values in both tables.',
+    example: 'SELECT * FROM users INNER JOIN orders ON users.id = orders.user_id',
+  },
+  'LEFT JOIN': {
+    syntax: 'table1 LEFT JOIN table2 ON condition',
+    description: 'Returns all rows from the left table, and matching rows from the right table. NULL for non-matches.',
+    example: 'SELECT * FROM users LEFT JOIN orders ON users.id = orders.user_id',
+  },
+  'RIGHT JOIN': {
+    syntax: 'table1 RIGHT JOIN table2 ON condition',
+    description: 'Returns all rows from the right table, and matching rows from the left table. NULL for non-matches.',
+    example: 'SELECT * FROM orders RIGHT JOIN users ON users.id = orders.user_id',
+  },
+  'OUTER JOIN': {
+    syntax: 'table1 OUTER JOIN table2 ON condition',
+    description: 'Returns all rows when there is a match in either table.',
+    example: 'SELECT * FROM users FULL OUTER JOIN orders ON users.id = orders.user_id',
+  },
+  'CROSS JOIN': {
+    syntax: 'table1 CROSS JOIN table2',
+    description: 'Returns the Cartesian product of both tables (all possible combinations).',
+    example: 'SELECT * FROM colors CROSS JOIN sizes',
+  },
+  ON: {
+    syntax: 'JOIN table ON condition',
+    description: 'Specifies the join condition between tables.',
+    example: 'JOIN orders ON users.id = orders.user_id',
+  },
+
+  // Grouping and Ordering
+  'ORDER BY': {
+    syntax: 'ORDER BY column1 [ASC|DESC], column2 [ASC|DESC], ...',
+    description: 'Sorts the result set by one or more columns. ASC for ascending (default), DESC for descending.',
+    example: 'SELECT * FROM users ORDER BY name ASC, age DESC',
+  },
+  'GROUP BY': {
+    syntax: 'GROUP BY column1, column2, ...',
+    description: 'Groups rows with the same values. Often used with aggregate functions.',
+    example: 'SELECT status, COUNT(*) FROM users GROUP BY status',
+  },
+  HAVING: {
+    syntax: 'HAVING condition',
+    description: 'Filters groups based on aggregate conditions. Used after GROUP BY.',
+    example: 'SELECT status, COUNT(*) FROM users GROUP BY status HAVING COUNT(*) > 5',
+  },
+  LIMIT: {
+    syntax: 'LIMIT count [OFFSET offset]',
+    description: 'Restricts the number of rows returned by the query.',
+    example: 'SELECT * FROM users LIMIT 10',
+  },
+  OFFSET: {
+    syntax: 'OFFSET number',
+    description: 'Skips the specified number of rows before returning results. Used with LIMIT for pagination.',
+    example: 'SELECT * FROM users LIMIT 10 OFFSET 20',
+  },
+
+  // Aggregate Functions
+  COUNT: {
+    syntax: 'COUNT(expression) or COUNT(*)',
+    description: 'Returns the number of rows. COUNT(*) counts all rows, COUNT(column) counts non-NULL values.',
+    example: 'SELECT COUNT(*) FROM users',
+  },
+  SUM: {
+    syntax: 'SUM(expression)',
+    description: 'Returns the sum of all values in a numeric column. NULL values are ignored.',
+    example: 'SELECT SUM(amount) FROM orders',
+  },
+  AVG: {
+    syntax: 'AVG(expression)',
+    description: 'Returns the average value of a numeric column. NULL values are ignored.',
+    example: 'SELECT AVG(price) FROM products',
+  },
+  MIN: {
+    syntax: 'MIN(expression)',
+    description: 'Returns the minimum value in a column. Works with numbers, strings, and dates.',
+    example: 'SELECT MIN(price) FROM products',
+  },
+  MAX: {
+    syntax: 'MAX(expression)',
+    description: 'Returns the maximum value in a column. Works with numbers, strings, and dates.',
+    example: 'SELECT MAX(created_at) FROM orders',
+  },
+
+  // Set Operations
+  UNION: {
+    syntax: 'query1 UNION query2',
+    description: 'Combines results of two queries, removing duplicates. Both queries must have the same columns.',
+    example: 'SELECT name FROM customers UNION SELECT name FROM employees',
+  },
+  'UNION ALL': {
+    syntax: 'query1 UNION ALL query2',
+    description: 'Combines results of two queries, keeping all duplicates.',
+    example: 'SELECT name FROM customers UNION ALL SELECT name FROM employees',
+  },
+  EXCEPT: {
+    syntax: 'query1 EXCEPT query2',
+    description: 'Returns rows from the first query that are not in the second query.',
+    example: 'SELECT name FROM all_users EXCEPT SELECT name FROM banned_users',
+  },
+  INTERSECT: {
+    syntax: 'query1 INTERSECT query2',
+    description: 'Returns only rows that appear in both queries.',
+    example: 'SELECT name FROM customers INTERSECT SELECT name FROM newsletter_subscribers',
+  },
+
+  // Data Modification
+  'INSERT INTO': {
+    syntax: 'INSERT INTO table (col1, col2, ...) VALUES (val1, val2, ...)',
+    description: 'Inserts new rows into a table.',
+    example: 'INSERT INTO users (name, email) VALUES (\'John\', \'john@example.com\')',
+  },
+  VALUES: {
+    syntax: 'VALUES (value1, value2, ...)',
+    description: 'Specifies the values to insert into a table.',
+    example: 'INSERT INTO users (name) VALUES (\'John\'), (\'Jane\')',
+  },
+  UPDATE: {
+    syntax: 'UPDATE table SET col1 = val1, col2 = val2, ... [WHERE condition]',
+    description: 'Modifies existing rows in a table. Use WHERE to specify which rows to update.',
+    example: 'UPDATE users SET status = \'active\' WHERE id = 1',
+  },
+  SET: {
+    syntax: 'SET column1 = value1, column2 = value2, ...',
+    description: 'Specifies the columns and values to update.',
+    example: 'UPDATE users SET name = \'John\', age = 30 WHERE id = 1',
+  },
+  'DELETE FROM': {
+    syntax: 'DELETE FROM table [WHERE condition]',
+    description: 'Removes rows from a table. Use WHERE to specify which rows to delete.',
+    example: 'DELETE FROM users WHERE status = \'inactive\'',
+  },
+
+  // Table Operations
+  'CREATE TABLE': {
+    syntax: 'CREATE TABLE table_name (column1 type1, column2 type2, ...)',
+    description: 'Creates a new table with the specified columns and data types.',
+    example: 'CREATE TABLE users (id INTEGER PRIMARY KEY, name TEXT NOT NULL)',
+  },
+  'DROP TABLE': {
+    syntax: 'DROP TABLE [IF EXISTS] table_name',
+    description: 'Removes a table and all its data from the database.',
+    example: 'DROP TABLE IF EXISTS temp_users',
+  },
+  'ALTER TABLE': {
+    syntax: 'ALTER TABLE table_name action',
+    description: 'Modifies an existing table structure (add/drop columns, rename, etc.).',
+    example: 'ALTER TABLE users ADD COLUMN email TEXT',
+  },
+
+  // Constraints
+  'PRIMARY KEY': {
+    syntax: 'column_name type PRIMARY KEY',
+    description: 'Uniquely identifies each row in a table. Cannot contain NULL values.',
+    example: 'CREATE TABLE users (id INTEGER PRIMARY KEY, name TEXT)',
+  },
+  'FOREIGN KEY': {
+    syntax: 'FOREIGN KEY (column) REFERENCES other_table(column)',
+    description: 'Creates a link between tables by referencing a primary key in another table.',
+    example: 'FOREIGN KEY (user_id) REFERENCES users(id)',
+  },
+  UNIQUE: {
+    syntax: 'column_name type UNIQUE',
+    description: 'Ensures all values in a column are different.',
+    example: 'CREATE TABLE users (id INTEGER, email TEXT UNIQUE)',
+  },
+  DEFAULT: {
+    syntax: 'column_name type DEFAULT value',
+    description: 'Sets a default value for a column when no value is specified.',
+    example: 'CREATE TABLE users (status TEXT DEFAULT \'active\')',
+  },
+  CHECK: {
+    syntax: 'CHECK (condition)',
+    description: 'Ensures all values in a column satisfy a specific condition.',
+    example: 'CREATE TABLE users (age INTEGER CHECK(age >= 0))',
+  },
+  CONSTRAINT: {
+    syntax: 'CONSTRAINT name constraint_definition',
+    description: 'Defines a named constraint on one or more columns.',
+    example: 'CONSTRAINT pk_user PRIMARY KEY (id)',
+  },
+  REFERENCES: {
+    syntax: 'REFERENCES table_name(column_name)',
+    description: 'Specifies the table and column that a foreign key references.',
+    example: 'user_id INTEGER REFERENCES users(id)',
+  },
+  CASCADE: {
+    syntax: 'ON DELETE CASCADE / ON UPDATE CASCADE',
+    description: 'Automatically propagates changes from parent to child tables.',
+    example: 'FOREIGN KEY (user_id) REFERENCES users(id) ON DELETE CASCADE',
+  },
+  INDEX: {
+    syntax: 'CREATE INDEX index_name ON table(column)',
+    description: 'Creates an index to speed up queries on the specified column(s).',
+    example: 'CREATE INDEX idx_user_email ON users(email)',
+  },
+
+  // Conditional Expressions
+  CASE: {
+    syntax: 'CASE WHEN condition THEN result [ELSE default] END',
+    description: 'Conditional expression that returns different values based on conditions.',
+    example: 'SELECT CASE WHEN age < 18 THEN \'minor\' ELSE \'adult\' END FROM users',
+  },
+  WHEN: {
+    syntax: 'WHEN condition THEN result',
+    description: 'Specifies a condition and result within a CASE expression.',
+    example: 'CASE WHEN status = \'A\' THEN \'Active\' WHEN status = \'I\' THEN \'Inactive\' END',
+  },
+  THEN: {
+    syntax: 'WHEN condition THEN result',
+    description: 'Specifies the value to return when the preceding WHEN condition is true.',
+    example: 'CASE WHEN age >= 18 THEN \'adult\' END',
+  },
+  ELSE: {
+    syntax: 'ELSE default_value',
+    description: 'Specifies the default value in a CASE expression when no WHEN condition matches.',
+    example: 'CASE WHEN status = \'A\' THEN \'Active\' ELSE \'Unknown\' END',
+  },
+  END: {
+    syntax: 'CASE ... END',
+    description: 'Marks the end of a CASE expression.',
+    example: 'SELECT CASE WHEN x > 0 THEN \'positive\' END FROM numbers',
+  },
+  EXISTS: {
+    syntax: 'EXISTS (subquery)',
+    description: 'Tests whether a subquery returns any rows. Returns true if at least one row exists.',
+    example: 'SELECT * FROM users WHERE EXISTS (SELECT 1 FROM orders WHERE orders.user_id = users.id)',
+  },
+  NULL: {
+    syntax: 'NULL',
+    description: 'Represents a missing or unknown value. Use IS NULL or IS NOT NULL to check.',
+    example: 'SELECT * FROM users WHERE email IS NULL',
+  },
+  'IS NULL': {
+    syntax: 'column IS NULL',
+    description: 'Tests if a value is NULL. Regular = comparison does not work with NULL.',
+    example: 'SELECT * FROM users WHERE deleted_at IS NULL',
+  },
+  'IS NOT NULL': {
+    syntax: 'column IS NOT NULL',
+    description: 'Tests if a value is not NULL.',
+    example: 'SELECT * FROM users WHERE email IS NOT NULL',
+  },
+
+  // Transaction Control
+  BEGIN: {
+    syntax: 'BEGIN [TRANSACTION]',
+    description: 'Starts a new transaction. Changes are not committed until COMMIT.',
+    example: 'BEGIN TRANSACTION',
+  },
+  COMMIT: {
+    syntax: 'COMMIT',
+    description: 'Saves all changes made during the current transaction.',
+    example: 'COMMIT',
+  },
+  ROLLBACK: {
+    syntax: 'ROLLBACK [TO SAVEPOINT savepoint_name]',
+    description: 'Reverts all changes made during the current transaction.',
+    example: 'ROLLBACK',
+  },
+  TRANSACTION: {
+    syntax: 'BEGIN TRANSACTION / END TRANSACTION',
+    description: 'A sequence of operations performed as a single logical unit of work.',
+    example: 'BEGIN TRANSACTION; UPDATE accounts SET balance = balance - 100; COMMIT;',
+  },
+  SAVEPOINT: {
+    syntax: 'SAVEPOINT savepoint_name',
+    description: 'Creates a point within a transaction to which you can later roll back.',
+    example: 'SAVEPOINT my_savepoint',
+  },
+  RELEASE: {
+    syntax: 'RELEASE SAVEPOINT savepoint_name',
+    description: 'Removes a savepoint, making it no longer available for rollback.',
+    example: 'RELEASE SAVEPOINT my_savepoint',
+  },
+
+  // SQLite-specific Commands
+  PRAGMA: {
+    syntax: 'PRAGMA pragma_name [= value]',
+    description: 'SQLite-specific command to query or modify database settings and metadata.',
+    example: 'PRAGMA table_info(users)',
+  },
+  VACUUM: {
+    syntax: 'VACUUM',
+    description: 'Rebuilds the database file, reclaiming unused space and defragmenting.',
+    example: 'VACUUM',
+  },
+  ATTACH: {
+    syntax: 'ATTACH DATABASE filename AS schema_name',
+    description: 'Attaches another database file to the current connection.',
+    example: 'ATTACH DATABASE \'archive.db\' AS archive',
+  },
+  DETACH: {
+    syntax: 'DETACH DATABASE schema_name',
+    description: 'Detaches a previously attached database from the current connection.',
+    example: 'DETACH DATABASE archive',
+  },
+  EXPLAIN: {
+    syntax: 'EXPLAIN [QUERY PLAN] statement',
+    description: 'Shows how SQLite will execute a query. QUERY PLAN shows the high-level strategy.',
+    example: 'EXPLAIN QUERY PLAN SELECT * FROM users WHERE id = 1',
+  },
+};
+
+/**
  * Validates SQL syntax and returns array of validation errors.
  * This is a lightweight validation for common issues, not a full SQL parser.
  *
