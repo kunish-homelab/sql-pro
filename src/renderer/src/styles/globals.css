@@ -166,3 +166,13 @@ textarea,
 [role='button'] {
   -webkit-app-region: no-drag;
 }
+
+/* Grid background patterns */
+.bg-grid-dot {
+  background-image: radial-gradient(
+    circle,
+    var(--grid-color) 1px,
+    transparent 1px
+  );
+  background-size: 24px 24px;
+}

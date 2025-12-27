@@ -1,25 +1,25 @@
 {
   "active": true,
-  "spec": "005-add-and-enhance-schema-support",
+  "spec": "004-add-grid-design-elements-to-ui",
   "state": "building",
   "subtasks": {
-    "completed": 6,
-    "total": 8,
+    "completed": 1,
+    "total": 10,
     "in_progress": 1,
     "failed": 0
   },
   "phase": {
-    "current": "Integration",
+    "current": "CSS Foundation",
     "id": null,
-    "total": 2
+    "total": 3
   },
   "workers": {
     "active": 0,
     "max": 1
   },
   "session": {
-    "number": 8,
-    "started_at": "2025-12-28T00:25:57.426951"
+    "number": 3,
+    "started_at": "2025-12-28T01:08:52.356258"
   },
-  "last_update": "2025-12-28T00:52:24.478878"
+  "last_update": "2025-12-28T01:15:30.688166"
 }
