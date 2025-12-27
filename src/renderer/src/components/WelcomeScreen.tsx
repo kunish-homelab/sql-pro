@@ -510,7 +510,7 @@ export function WelcomeScreen() {
                       handleRecentClick(
                         conn.path,
                         conn.isEncrypted,
-                        conn.isReadOnly
+                        conn.readOnly
                       )
                     }
                     disabled={isConnecting}
@@ -525,7 +525,7 @@ export function WelcomeScreen() {
                       </div>
                     </div>
                     <div className="ml-2 flex items-center gap-1">
-                      {conn.isReadOnly && (
+                      {conn.readOnly && (
                         <Tooltip>
                           <TooltipTrigger asChild>
                             <Eye className="text-muted-foreground h-3 w-3" />
@@ -575,16 +575,24 @@ export function WelcomeScreen() {
         open={settingsDialogOpen}
         onOpenChange={setSettingsDialogOpen}
         onSubmit={handleSettingsSubmit}
-        pendingFilename={pendingFilename}
+        filename={pendingFilename}
+        dbPath={pendingPath || ''}
         isEncrypted={pendingIsEncrypted}
+        mode="new"
       />
 
       <ConnectionSettingsDialog
         open={editDialogOpen}
         onOpenChange={setEditDialogOpen}
         onSubmit={handleEditSubmit}
-        editingConnection={editingConnection}
+        filename={editingConnection?.filename || ''}
+        dbPath={editingConnection?.path || ''}
         isEncrypted={editingConnection?.isEncrypted || false}
+        mode="edit"
+        initialValues={{
+          displayName: editingConnection?.displayName,
+          readOnly: editingConnection?.readOnly,
+        }}
       />
 
       <PasswordDialog
@@ -592,6 +600,7 @@ export function WelcomeScreen() {
         onOpenChange={setPasswordDialogOpen}
         onSubmit={handlePasswordSubmit}
         filename={pendingFilename}
+        dbPath={pendingPath || ''}
       />
     </div>
   );

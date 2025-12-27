@@ -54,17 +54,42 @@ export function SettingsDialog({ open, onOpenChange }: SettingsDialogProps) {
     let cancelled = false;
 
     async function loadSystemFonts() {
+      // Common monospace fallback fonts
+      const fallbackFonts = [
+        'Cascadia Code',
+        'Consolas',
+        'Courier New',
+        'Fira Code',
+        'Hack',
+        'IBM Plex Mono',
+        'Inconsolata',
+        'JetBrains Mono',
+        'Menlo',
+        'Monaco',
+        'Roboto Mono',
+        'SF Mono',
+        'Source Code Pro',
+        'Ubuntu Mono',
+      ];
+
       try {
         // Check if Font Access API is available
         if ('queryLocalFonts' in window) {
+          // Add a timeout to prevent hanging
+          const timeoutPromise = new Promise<never>((_, reject) =>
+            setTimeout(() => reject(new Error('Font query timeout')), 3000)
+          );
+
           // Request permission and get fonts
-          const fonts = await (
+          const fontsPromise = (
             window as Window & {
               queryLocalFonts: () => Promise<
                 Array<{ family: string; fullName: string; style: string }>
               >;
             }
           ).queryLocalFonts();
+
+          const fonts = await Promise.race([fontsPromise, timeoutPromise]);
 
           if (cancelled) return;
 
@@ -108,35 +133,14 @@ export function SettingsDialog({ open, onOpenChange }: SettingsDialogProps) {
           console.warn(
             'Font Access API not available, using fallback font list'
           );
-          setSystemFonts([
-            'Cascadia Code',
-            'Consolas',
-            'Courier New',
-            'Fira Code',
-            'Hack',
-            'IBM Plex Mono',
-            'Inconsolata',
-            'JetBrains Mono',
-            'Menlo',
-            'Monaco',
-            'Roboto Mono',
-            'SF Mono',
-            'Source Code Pro',
-            'Ubuntu Mono',
-          ]);
+          setSystemFonts(fallbackFonts);
         }
       } catch (error) {
         console.error('Failed to load system fonts:', error);
-        // Fallback to common fonts on error
-        setSystemFonts([
-          'Cascadia Code',
-          'Consolas',
-          'Courier New',
-          'Fira Code',
-          'Menlo',
-          'Monaco',
-          'SF Mono',
-        ]);
+        // Fallback to common fonts on error or timeout
+        if (!cancelled) {
+          setSystemFonts(fallbackFonts);
+        }
       } finally {
         if (!cancelled) {
           setFontsLoading(false);
