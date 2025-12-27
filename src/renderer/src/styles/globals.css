@@ -176,3 +176,10 @@ textarea,
   );
   background-size: 24px 24px;
 }
+
+.bg-grid-line {
+  background-image:
+    linear-gradient(var(--grid-color) 1px, transparent 1px),
+    linear-gradient(to right, var(--grid-color) 1px, transparent 1px);
+  background-size: 24px 24px;
+}
