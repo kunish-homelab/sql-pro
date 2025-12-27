@@ -17,6 +17,7 @@ import { Button } from '@/components/ui/button';
 import { usePendingChanges } from '@/hooks/usePendingChanges';
 import { useTableData } from '@/hooks/useTableData';
 import { useConnectionStore } from '@/stores';
+import { ActiveFilters } from './data-table/ActiveFilters';
 import { DataTable } from './data-table';
 import { DiffPreview } from './DiffPreview';
 
@@ -259,6 +260,13 @@ export function TableView() {
             )}
           </div>
         </div>
+
+        {/* Active Filters Display */}
+        <ActiveFilters
+          filters={filters}
+          onFilterRemove={handleFilterRemove}
+          onFiltersClear={handleFiltersClear}
+        />
 
         {/* Data Grid */}
         <div className="min-h-0 min-w-0 flex-1">
