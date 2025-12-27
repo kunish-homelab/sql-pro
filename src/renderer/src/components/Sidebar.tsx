@@ -1,7 +1,8 @@
-import type { TableSchema } from '@/types/database';
+import type { SchemaInfo, TableSchema } from '@/types/database';
 import {
   ChevronDown,
   ChevronRight,
+  Database,
   Eye,
   Search,
   Settings,
@@ -35,8 +36,17 @@ export function Sidebar() {
   } = useConnectionStore();
   const { setTableData, setIsLoading, setError, reset } = useTableDataStore();
 
-  const [tablesExpanded, setTablesExpanded] = useState(true);
-  const [viewsExpanded, setViewsExpanded] = useState(true);
+  // Expansion state for schemas (key is schema name)
+  const [expandedSchemas, setExpandedSchemas] = useState<
+    Record<string, boolean>
+  >({ main: true });
+  // Expansion state for tables/views within schemas (key is "schemaName:tables" or "schemaName:views")
+  const [expandedSections, setExpandedSections] = useState<
+    Record<string, boolean>
+  >({
+    'main:tables': true,
+    'main:views': true,
+  });
   const [searchQuery, setSearchQuery] = useState('');
   const [settingsOpen, setSettingsOpen] = useState(false);
 
@@ -61,6 +71,61 @@ export function Sidebar() {
     return () => window.removeEventListener('keydown', handleKeyDown);
   }, []);
 
+  // Determine if we have multiple schemas (to show/hide schema-level grouping)
+  const hasMultipleSchemas = useMemo(() => {
+    if (!schema?.schemas) return false;
+    // Filter out empty schemas
+    const nonEmptySchemas = schema.schemas.filter(
+      (s) => s.tables.length > 0 || s.views.length > 0
+    );
+    return nonEmptySchemas.length > 1;
+  }, [schema?.schemas]);
+
+  // Toggle schema expansion
+  const toggleSchema = useCallback((schemaName: string) => {
+    setExpandedSchemas((prev) => ({
+      ...prev,
+      [schemaName]: !prev[schemaName],
+    }));
+  }, []);
+
+  // Toggle section (tables/views) expansion
+  const toggleSection = useCallback((key: string) => {
+    setExpandedSections((prev) => ({
+      ...prev,
+      [key]: !prev[key],
+    }));
+  }, []);
+
+  // Initialize expansion state for new schemas
+  useEffect(() => {
+    if (schema?.schemas) {
+      setExpandedSchemas((prev) => {
+        const next = { ...prev };
+        for (const s of schema.schemas) {
+          if (next[s.name] === undefined) {
+            next[s.name] = true; // Expand by default
+          }
+        }
+        return next;
+      });
+      setExpandedSections((prev) => {
+        const next = { ...prev };
+        for (const s of schema.schemas) {
+          const tablesKey = `${s.name}:tables`;
+          const viewsKey = `${s.name}:views`;
+          if (next[tablesKey] === undefined) {
+            next[tablesKey] = true;
+          }
+          if (next[viewsKey] === undefined) {
+            next[viewsKey] = true;
+          }
+        }
+        return next;
+      });
+    }
+  }, [schema?.schemas]);
+
   const handleSelectTable = useCallback(
     async (table: TableSchema) => {
       if (!connection) return;
@@ -72,6 +137,7 @@ export function Sidebar() {
       try {
         const result = await sqlPro.db.getTableData({
           connectionId: connection.id,
+          schema: table.schema,
           table: table.name,
           page: 1,
           pageSize: 100,
@@ -96,33 +162,48 @@ export function Sidebar() {
     [connection, setSelectedTable, reset, setIsLoading, setTableData, setError]
   );
 
-  const filteredTables = useMemo(
-    () =>
-      schema?.tables.filter((t) =>
-        t.name.toLowerCase().includes(searchQuery.toLowerCase())
-      ) || [],
-    [schema?.tables, searchQuery]
-  );
+  // Filter schemas based on search query
+  const filteredSchemas = useMemo(() => {
+    if (!schema?.schemas) return [];
 
-  const filteredViews = useMemo(
-    () =>
-      schema?.views.filter((v) =>
-        v.name.toLowerCase().includes(searchQuery.toLowerCase())
-      ) || [],
-    [schema?.views, searchQuery]
-  );
+    return schema.schemas
+      .map((s) => ({
+        ...s,
+        tables: s.tables.filter((t) =>
+          t.name.toLowerCase().includes(searchQuery.toLowerCase())
+        ),
+        views: s.views.filter((v) =>
+          v.name.toLowerCase().includes(searchQuery.toLowerCase())
+        ),
+      }))
+      .filter((s) => s.tables.length > 0 || s.views.length > 0 || !searchQuery);
+  }, [schema?.schemas, searchQuery]);
 
   // Combined list of navigable items for vim navigation
   const navigableItems = useMemo(() => {
     const items: Array<{ type: 'table' | 'view'; item: TableSchema }> = [];
-    if (tablesExpanded) {
-      filteredTables.forEach((t) => items.push({ type: 'table', item: t }));
+
+    for (const schemaInfo of filteredSchemas) {
+      const isSchemaExpanded = hasMultipleSchemas
+        ? expandedSchemas[schemaInfo.name] !== false
+        : true;
+      if (!isSchemaExpanded) continue;
+
+      const tablesKey = `${schemaInfo.name}:tables`;
+      const viewsKey = `${schemaInfo.name}:views`;
+
+      if (expandedSections[tablesKey] !== false) {
+        schemaInfo.tables.forEach((t) =>
+          items.push({ type: 'table', item: t })
+        );
+      }
+      if (expandedSections[viewsKey] !== false) {
+        schemaInfo.views.forEach((v) => items.push({ type: 'view', item: v }));
+      }
     }
-    if (viewsExpanded) {
-      filteredViews.forEach((v) => items.push({ type: 'view', item: v }));
-    }
+
     return items;
-  }, [filteredTables, filteredViews, tablesExpanded, viewsExpanded]);
+  }, [filteredSchemas, hasMultipleSchemas, expandedSchemas, expandedSections]);
 
   // Handle vim keyboard navigation
   const handleKeyDown = useCallback(
@@ -175,15 +256,9 @@ export function Sidebar() {
           case 'toggle-expand': {
             // Toggle expand for the section containing the focused item
             if (focusedIndex >= 0 && focusedIndex < navigableItems.length) {
-              const { type } = navigableItems[focusedIndex];
-              if (type === 'table') {
-                setTablesExpanded((prev) => !prev);
-              } else {
-                setViewsExpanded((prev) => !prev);
-              }
-            } else {
-              // No item focused, toggle tables by default
-              setTablesExpanded((prev) => !prev);
+              const { item } = navigableItems[focusedIndex];
+              const sectionKey = `${item.schema}:${item.type === 'table' ? 'tables' : 'views'}`;
+              toggleSection(sectionKey);
             }
             break;
           }
@@ -212,6 +287,7 @@ export function Sidebar() {
       navigableItems,
       focusedIndex,
       handleSelectTable,
+      toggleSection,
       resetSequence,
     ]
   );
@@ -220,7 +296,9 @@ export function Sidebar() {
   useEffect(() => {
     if (selectedTable) {
       const idx = navigableItems.findIndex(
-        (n) => n.item.name === selectedTable.name
+        (n) =>
+          n.item.name === selectedTable.name &&
+          n.item.schema === selectedTable.schema
       );
       if (idx !== -1) {
         // eslint-disable-next-line react-hooks-extra/no-direct-set-state-in-use-effect -- Intentionally sync state with props
@@ -228,6 +306,42 @@ export function Sidebar() {
       }
     }
   }, [selectedTable, navigableItems]);
+
+  // Helper to get the index for vim focus within navigable items
+  const getItemIndex = useCallback(
+    (schemaName: string, type: 'table' | 'view', itemIndex: number) => {
+      let count = 0;
+      for (const s of filteredSchemas) {
+        const isSchemaExpanded = hasMultipleSchemas
+          ? expandedSchemas[s.name] !== false
+          : true;
+        if (!isSchemaExpanded) continue;
+
+        if (s.name === schemaName) {
+          if (type === 'table') {
+            return count + itemIndex;
+          } else {
+            const tablesKey = `${s.name}:tables`;
+            if (expandedSections[tablesKey] !== false) {
+              count += s.tables.length;
+            }
+            return count + itemIndex;
+          }
+        }
+
+        const tablesKey = `${s.name}:tables`;
+        const viewsKey = `${s.name}:views`;
+        if (expandedSections[tablesKey] !== false) {
+          count += s.tables.length;
+        }
+        if (expandedSections[viewsKey] !== false) {
+          count += s.views.length;
+        }
+      }
+      return -1;
+    },
+    [filteredSchemas, hasMultipleSchemas, expandedSchemas, expandedSections]
+  );
 
   return (
     <div
@@ -264,75 +378,25 @@ export function Sidebar() {
             </div>
           ) : (
             <>
-              {/* Tables Section */}
-              {filteredTables.length > 0 && (
-                <div className="mb-2">
-                  <button
-                    onClick={() => setTablesExpanded(!tablesExpanded)}
-                    className="text-muted-foreground hover:bg-accent flex w-full items-center gap-1 rounded px-2 py-1 text-sm font-medium"
-                  >
-                    {tablesExpanded ? (
-                      <ChevronDown className="h-4 w-4" />
-                    ) : (
-                      <ChevronRight className="h-4 w-4" />
-                    )}
-                    Tables ({filteredTables.length})
-                  </button>
-                  {tablesExpanded && (
-                    <div className="mt-1 space-y-0.5">
-                      {filteredTables.map((table, idx) => (
-                        <TableItem
-                          key={table.name}
-                          table={table}
-                          isSelected={selectedTable?.name === table.name}
-                          isFocused={appVimMode && focusedIndex === idx}
-                          onClick={() => handleSelectTable(table)}
-                        />
-                      ))}
-                    </div>
-                  )}
-                </div>
-              )}
-
-              {/* Views Section */}
-              {filteredViews.length > 0 && (
-                <div>
-                  <button
-                    onClick={() => setViewsExpanded(!viewsExpanded)}
-                    className="text-muted-foreground hover:bg-accent flex w-full items-center gap-1 rounded px-2 py-1 text-sm font-medium"
-                  >
-                    {viewsExpanded ? (
-                      <ChevronDown className="h-4 w-4" />
-                    ) : (
-                      <ChevronRight className="h-4 w-4" />
-                    )}
-                    Views ({filteredViews.length})
-                  </button>
-                  {viewsExpanded && (
-                    <div className="mt-1 space-y-0.5">
-                      {filteredViews.map((view, idx) => {
-                        // Views come after tables in the navigableItems array
-                        const viewIndex = tablesExpanded
-                          ? filteredTables.length + idx
-                          : idx;
-                        return (
-                          <TableItem
-                            key={view.name}
-                            table={view}
-                            isSelected={selectedTable?.name === view.name}
-                            isFocused={appVimMode && focusedIndex === viewIndex}
-                            onClick={() => handleSelectTable(view)}
-                            isView
-                          />
-                        );
-                      })}
-                    </div>
-                  )}
-                </div>
-              )}
+              {filteredSchemas.map((schemaInfo) => (
+                <SchemaSection
+                  key={schemaInfo.name}
+                  schemaInfo={schemaInfo}
+                  showSchemaHeader={hasMultipleSchemas}
+                  isSchemaExpanded={expandedSchemas[schemaInfo.name] !== false}
+                  onToggleSchema={() => toggleSchema(schemaInfo.name)}
+                  expandedSections={expandedSections}
+                  onToggleSection={toggleSection}
+                  selectedTable={selectedTable}
+                  focusedIndex={focusedIndex}
+                  appVimMode={appVimMode}
+                  getItemIndex={getItemIndex}
+                  onSelectTable={handleSelectTable}
+                />
+              ))}
 
               {/* Empty State */}
-              {filteredTables.length === 0 && filteredViews.length === 0 && (
+              {filteredSchemas.length === 0 && (
                 <div className="text-muted-foreground py-8 text-center text-sm">
                   {searchQuery
                     ? 'No tables match your search'
@@ -367,6 +431,141 @@ export function Sidebar() {
 
       {/* Settings Dialog */}
       <SettingsDialog open={settingsOpen} onOpenChange={setSettingsOpen} />
+    </div>
+  );
+}
+
+interface SchemaSectionProps {
+  schemaInfo: SchemaInfo;
+  showSchemaHeader: boolean;
+  isSchemaExpanded: boolean;
+  onToggleSchema: () => void;
+  expandedSections: Record<string, boolean>;
+  onToggleSection: (key: string) => void;
+  selectedTable: TableSchema | null;
+  focusedIndex: number;
+  appVimMode: boolean;
+  getItemIndex: (
+    schemaName: string,
+    type: 'table' | 'view',
+    itemIndex: number
+  ) => number;
+  onSelectTable: (table: TableSchema) => void;
+}
+
+function SchemaSection({
+  schemaInfo,
+  showSchemaHeader,
+  isSchemaExpanded,
+  onToggleSchema,
+  expandedSections,
+  onToggleSection,
+  selectedTable,
+  focusedIndex,
+  appVimMode,
+  getItemIndex,
+  onSelectTable,
+}: SchemaSectionProps) {
+  const tablesKey = `${schemaInfo.name}:tables`;
+  const viewsKey = `${schemaInfo.name}:views`;
+  const tablesExpanded = expandedSections[tablesKey] !== false;
+  const viewsExpanded = expandedSections[viewsKey] !== false;
+
+  return (
+    <div className="mb-2">
+      {/* Schema Header (only shown when multiple schemas) */}
+      {showSchemaHeader && (
+        <button
+          onClick={onToggleSchema}
+          className="text-muted-foreground hover:bg-accent flex w-full items-center gap-1 rounded px-2 py-1 text-sm font-medium"
+        >
+          {isSchemaExpanded ? (
+            <ChevronDown className="h-4 w-4" />
+          ) : (
+            <ChevronRight className="h-4 w-4" />
+          )}
+          <Database className="h-3.5 w-3.5" />
+          <span className="ml-1">{schemaInfo.name}</span>
+        </button>
+      )}
+
+      {/* Schema Content */}
+      {isSchemaExpanded && (
+        <div className={showSchemaHeader ? 'ml-4' : ''}>
+          {/* Tables Section */}
+          {schemaInfo.tables.length > 0 && (
+            <div className="mb-1">
+              <button
+                onClick={() => onToggleSection(tablesKey)}
+                className="text-muted-foreground hover:bg-accent flex w-full items-center gap-1 rounded px-2 py-1 text-sm font-medium"
+              >
+                {tablesExpanded ? (
+                  <ChevronDown className="h-4 w-4" />
+                ) : (
+                  <ChevronRight className="h-4 w-4" />
+                )}
+                Tables ({schemaInfo.tables.length})
+              </button>
+              {tablesExpanded && (
+                <div className="mt-1 space-y-0.5">
+                  {schemaInfo.tables.map((table, idx) => {
+                    const itemIdx = getItemIndex(schemaInfo.name, 'table', idx);
+                    return (
+                      <TableItem
+                        key={`${table.schema}:${table.name}`}
+                        table={table}
+                        isSelected={
+                          selectedTable?.name === table.name &&
+                          selectedTable?.schema === table.schema
+                        }
+                        isFocused={appVimMode && focusedIndex === itemIdx}
+                        onClick={() => onSelectTable(table)}
+                      />
+                    );
+                  })}
+                </div>
+              )}
+            </div>
+          )}
+
+          {/* Views Section */}
+          {schemaInfo.views.length > 0 && (
+            <div>
+              <button
+                onClick={() => onToggleSection(viewsKey)}
+                className="text-muted-foreground hover:bg-accent flex w-full items-center gap-1 rounded px-2 py-1 text-sm font-medium"
+              >
+                {viewsExpanded ? (
+                  <ChevronDown className="h-4 w-4" />
+                ) : (
+                  <ChevronRight className="h-4 w-4" />
+                )}
+                Views ({schemaInfo.views.length})
+              </button>
+              {viewsExpanded && (
+                <div className="mt-1 space-y-0.5">
+                  {schemaInfo.views.map((view, idx) => {
+                    const itemIdx = getItemIndex(schemaInfo.name, 'view', idx);
+                    return (
+                      <TableItem
+                        key={`${view.schema}:${view.name}`}
+                        table={view}
+                        isSelected={
+                          selectedTable?.name === view.name &&
+                          selectedTable?.schema === view.schema
+                        }
+                        isFocused={appVimMode && focusedIndex === itemIdx}
+                        onClick={() => onSelectTable(view)}
+                        isView
+                      />
+                    );
+                  })}
+                </div>
+              )}
+            </div>
+          )}
+        </div>
+      )}
     </div>
   );
 }

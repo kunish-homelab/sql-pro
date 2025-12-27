@@ -5,7 +5,7 @@ import type {
   PendingChange,
   SortState,
 } from '@/types/database';
-import { useCallback, useImperativeHandle, useRef } from 'react';
+import { useCallback, useEffect, useImperativeHandle, useRef } from 'react';
 import { cn } from '@/lib/utils';
 import { useTableFont } from '@/stores';
 import { useTableCore } from './hooks/useTableCore';
@@ -37,7 +37,7 @@ export interface DataTableProps {
     oldValue: unknown
   ) => void;
   onRowDelete?: (rowId: string | number) => void;
-  onRowInsert?: (values: Record<string, unknown>) => void;
+  onRowInsert?: () => void;
 
   // Change tracking
   changes?: Map<string | number, PendingChange>;
@@ -49,6 +49,10 @@ export interface DataTableProps {
   // Row heights
   dataRowHeight?: number;
   groupRowHeight?: number;
+
+  // Auto-focus new row
+  newRowId?: string | number | null;
+  onNewRowFocused?: () => void;
 }
 
 export interface DataTableRef {
@@ -74,6 +78,8 @@ export const DataTable = function DataTable({
   primaryKeyColumn,
   dataRowHeight = 36,
   groupRowHeight = 44,
+  newRowId,
+  onNewRowFocused,
 }: DataTableProps & { ref?: React.RefObject<DataTableRef | null> }) {
   const containerRef = useRef<HTMLDivElement>(null);
   const tableFont = useTableFont();
@@ -107,6 +113,8 @@ export const DataTable = function DataTable({
     handleKeyDown,
     handleCellSave,
     stopEditing,
+    startEditing,
+    setFocusedCell,
     isCellFocused,
     isCellEditing,
   } = useTableEditing({
@@ -117,6 +125,58 @@ export const DataTable = function DataTable({
     onRowDelete,
     onRowInsert,
   });
+
+  // Auto-focus and start editing the first editable cell of new row
+  useEffect(() => {
+    if (newRowId === null || newRowId === undefined) return;
+
+    // Find the new row
+    const newRow = rows.find((r) => {
+      const rowData = r.original as TableRowData;
+      return rowData.__rowId === newRowId;
+    });
+
+    if (!newRow) return;
+
+    // Find the first non-primary-key column (more likely to be editable)
+    const visibleColumns = table.getVisibleLeafColumns();
+    const firstEditableColumn = visibleColumns.find((col) => {
+      // Skip primary key columns for auto-increment tables
+      if (primaryKeyColumn && col.id === primaryKeyColumn) {
+        const colSchema = columns.find((c) => c.name === col.id);
+        if (colSchema?.isPrimaryKey) {
+          const type = colSchema.type.toLowerCase();
+          if (type.includes('int') || type === 'integer') {
+            return false;
+          }
+        }
+      }
+      return true;
+    });
+
+    if (firstEditableColumn) {
+      // Focus the container first
+      containerRef.current?.focus();
+
+      // Set focused cell and start editing
+      const timer = setTimeout(() => {
+        setFocusedCell({ rowId: newRow.id, columnId: firstEditableColumn.id });
+        startEditing(newRow.id, firstEditableColumn.id);
+        onNewRowFocused?.();
+      }, 0);
+
+      return () => clearTimeout(timer);
+    }
+  }, [
+    newRowId,
+    rows,
+    table,
+    columns,
+    primaryKeyColumn,
+    setFocusedCell,
+    startEditing,
+    onNewRowFocused,
+  ]);
 
   // Expose imperative methods
   useImperativeHandle(ref, () => ({

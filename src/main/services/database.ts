@@ -273,10 +273,13 @@ class DatabaseService {
     }
   }
 
-  getSchema(
-    connectionId: string
-  ):
-    | { success: true; tables: TableInfo[]; views: TableInfo[] }
+  getSchema(connectionId: string):
+    | {
+        success: true;
+        schemas: SchemaInfo[];
+        tables: TableInfo[];
+        views: TableInfo[];
+      }
     | { success: false; error: string } {
     const conn = this.connections.get(connectionId);
     if (!conn) {
@@ -284,9 +287,37 @@ class DatabaseService {
     }
 
     try {
-      const tables = this.getTablesAndViews(conn.db, 'table');
-      const views = this.getTablesAndViews(conn.db, 'view');
-      return { success: true, tables, views };
+      // Get all attached databases/schemas using PRAGMA database_list
+      // Returns: seq, name, file (e.g., 0, main, /path/to/db.sqlite)
+      const databaseList = conn.db
+        .prepare('PRAGMA database_list')
+        .all() as Array<{ seq: number; name: string; file: string }>;
+
+      const schemas: SchemaInfo[] = [];
+      const allTables: TableInfo[] = [];
+      const allViews: TableInfo[] = [];
+
+      for (const dbInfo of databaseList) {
+        const schemaName = dbInfo.name;
+
+        // Get tables and views for this schema
+        const tables = this.getTablesAndViews(conn.db, 'table', schemaName);
+        const views = this.getTablesAndViews(conn.db, 'view', schemaName);
+
+        // Only add schema if it has tables or views (skip empty temp schema)
+        if (tables.length > 0 || views.length > 0 || schemaName === 'main') {
+          schemas.push({
+            name: schemaName,
+            tables,
+            views,
+          });
+        }
+
+        allTables.push(...tables);
+        allViews.push(...views);
+      }
+
+      return { success: true, schemas, tables: allTables, views: allViews };
     } catch (error) {
       return {
         success: false,
@@ -297,27 +328,31 @@ class DatabaseService {
 
   private getTablesAndViews(
     db: Database.Database,
-    type: 'table' | 'view'
+    type: 'table' | 'view',
+    schema: string = 'main'
   ): TableInfo[] {
     const sqliteType = type === 'table' ? 'table' : 'view';
+    // Query the schema-specific sqlite_master table
     const items = db
       .prepare(
-        `SELECT name, sql FROM sqlite_master WHERE type = ? AND name NOT LIKE 'sqlite_%' ORDER BY name`
+        `SELECT name, sql FROM "${schema}".sqlite_master WHERE type = ? AND name NOT LIKE 'sqlite_%' ORDER BY name`
       )
       .all(sqliteType) as Array<{ name: string; sql: string }>;
 
     return items.map((item) => {
-      const columns = this.getColumns(db, item.name);
+      const columns = this.getColumns(db, item.name, schema);
       const primaryKey = columns
         .filter((c) => c.isPrimaryKey)
         .map((c) => c.name);
-      const foreignKeys = this.getForeignKeys(db, item.name);
-      const indexes = type === 'table' ? this.getIndexes(db, item.name) : [];
+      const foreignKeys = this.getForeignKeys(db, item.name, schema);
+      const indexes =
+        type === 'table' ? this.getIndexes(db, item.name, schema) : [];
       const rowCount =
-        type === 'table' ? this.getRowCount(db, item.name) : undefined;
+        type === 'table' ? this.getRowCount(db, item.name, schema) : undefined;
 
       return {
         name: item.name,
+        schema,
         type,
         columns,
         primaryKey,
@@ -329,9 +364,14 @@ class DatabaseService {
     });
   }
 
-  private getColumns(db: Database.Database, tableName: string): ColumnInfo[] {
+  private getColumns(
+    db: Database.Database,
+    tableName: string,
+    schema: string = 'main'
+  ): ColumnInfo[] {
+    // Use schema-qualified PRAGMA for table_info
     const columns = db
-      .prepare(`PRAGMA table_info("${tableName}")`)
+      .prepare(`PRAGMA "${schema}".table_info("${tableName}")`)
       .all() as Array<{
       cid: number;
       name: string;
@@ -352,10 +392,11 @@ class DatabaseService {
 
   private getForeignKeys(
     db: Database.Database,
-    tableName: string
+    tableName: string,
+    schema: string = 'main'
   ): ForeignKeyInfo[] {
     const fks = db
-      .prepare(`PRAGMA foreign_key_list("${tableName}")`)
+      .prepare(`PRAGMA "${schema}".foreign_key_list("${tableName}")`)
       .all() as Array<{
       id: number;
       seq: number;
@@ -375,9 +416,13 @@ class DatabaseService {
     }));
   }
 
-  private getIndexes(db: Database.Database, tableName: string): IndexInfo[] {
+  private getIndexes(
+    db: Database.Database,
+    tableName: string,
+    schema: string = 'main'
+  ): IndexInfo[] {
     const indexList = db
-      .prepare(`PRAGMA index_list("${tableName}")`)
+      .prepare(`PRAGMA "${schema}".index_list("${tableName}")`)
       .all() as Array<{
       seq: number;
       name: string;
@@ -390,7 +435,7 @@ class DatabaseService {
       .filter((idx) => !idx.name.startsWith('sqlite_'))
       .map((idx) => {
         const indexInfo = db
-          .prepare(`PRAGMA index_info("${idx.name}")`)
+          .prepare(`PRAGMA "${schema}".index_info("${idx.name}")`)
           .all() as Array<{
           seqno: number;
           cid: number;
@@ -399,7 +444,7 @@ class DatabaseService {
 
         const sqlResult = db
           .prepare(
-            `SELECT sql FROM sqlite_master WHERE type = 'index' AND name = ?`
+            `SELECT sql FROM "${schema}".sqlite_master WHERE type = 'index' AND name = ?`
           )
           .get(idx.name) as { sql: string } | undefined;
 
@@ -412,9 +457,13 @@ class DatabaseService {
       });
   }
 
-  private getRowCount(db: Database.Database, tableName: string): number {
+  private getRowCount(
+    db: Database.Database,
+    tableName: string,
+    schema: string = 'main'
+  ): number {
     const result = db
-      .prepare(`SELECT COUNT(*) as count FROM "${tableName}"`)
+      .prepare(`SELECT COUNT(*) as count FROM "${schema}"."${tableName}"`)
       .get() as { count: number };
     return result.count;
   }
@@ -426,7 +475,8 @@ class DatabaseService {
     pageSize: number,
     sortColumn?: string,
     sortDirection?: 'asc' | 'desc',
-    filters?: Array<{ column: string; operator: string; value: string }>
+    filters?: Array<{ column: string; operator: string; value: string }>,
+    schema: string = 'main'
   ):
     | {
         success: true;
@@ -441,7 +491,8 @@ class DatabaseService {
     }
 
     try {
-      const columns = this.getColumns(conn.db, table);
+      const columns = this.getColumns(conn.db, table, schema);
+      const qualifiedTable = `"${schema}"."${table}"`;
 
       // Build WHERE clause from filters
       let whereClause = '';
@@ -489,7 +540,9 @@ class DatabaseService {
 
       // Get total count
       const countResult = conn.db
-        .prepare(`SELECT COUNT(*) as count FROM "${table}" ${whereClause}`)
+        .prepare(
+          `SELECT COUNT(*) as count FROM ${qualifiedTable} ${whereClause}`
+        )
         .get(...params) as { count: number };
       const totalRows = countResult.count;
 
@@ -507,14 +560,14 @@ class DatabaseService {
       try {
         rows = conn.db
           .prepare(
-            `SELECT rowid, * FROM "${table}" ${whereClause} ${orderBy} LIMIT ? OFFSET ?`
+            `SELECT rowid, * FROM ${qualifiedTable} ${whereClause} ${orderBy} LIMIT ? OFFSET ?`
           )
           .all(...params, pageSize, offset) as Record<string, unknown>[];
       } catch {
         // Fallback for views or WITHOUT ROWID tables
         rows = conn.db
           .prepare(
-            `SELECT * FROM "${table}" ${whereClause} ${orderBy} LIMIT ? OFFSET ?`
+            `SELECT * FROM ${qualifiedTable} ${whereClause} ${orderBy} LIMIT ? OFFSET ?`
           )
           .all(...params, pageSize, offset) as Record<string, unknown>[];
       }
@@ -602,10 +655,12 @@ class DatabaseService {
 
     const results: ValidationResult[] = changes.map((change) => {
       try {
+        const schema = change.schema || 'main';
+
         // Basic validation - check if table exists
         const tableExists = conn.db
           .prepare(
-            `SELECT name FROM sqlite_master WHERE type='table' AND name=?`
+            `SELECT name FROM "${schema}".sqlite_master WHERE type='table' AND name=?`
           )
           .get(change.table);
 
@@ -613,13 +668,13 @@ class DatabaseService {
           return {
             changeId: change.id,
             isValid: false,
-            error: `Table "${change.table}" does not exist`,
+            error: `Table "${schema}"."${change.table}" does not exist`,
           };
         }
 
         // Check if values match column types (basic check)
         if (change.type === 'insert' || change.type === 'update') {
-          const columns = this.getColumns(conn.db, change.table);
+          const columns = this.getColumns(conn.db, change.table, schema);
           const values = change.newValues || {};
 
           for (const col of columns) {
@@ -689,12 +744,15 @@ class DatabaseService {
   }
 
   private applyChange(db: Database.Database, change: PendingChangeInfo): void {
+    const schema = change.schema || 'main';
+    const qualifiedTable = `"${schema}"."${change.table}"`;
+
     switch (change.type) {
       case 'insert': {
         const values = change.newValues!;
         const columns = Object.keys(values);
         const placeholders = columns.map(() => '?').join(', ');
-        const sql = `INSERT INTO "${change.table}" ("${columns.join('", "')}") VALUES (${placeholders})`;
+        const sql = `INSERT INTO ${qualifiedTable} ("${columns.join('", "')}") VALUES (${placeholders})`;
         db.prepare(sql).run(...Object.values(values));
         break;
       }
@@ -705,14 +763,14 @@ class DatabaseService {
           .join(', ');
         // Use primary key column if provided, otherwise fall back to rowid
         const whereColumn = change.primaryKeyColumn || 'rowid';
-        const sql = `UPDATE "${change.table}" SET ${setClause} WHERE "${whereColumn}" = ?`;
+        const sql = `UPDATE ${qualifiedTable} SET ${setClause} WHERE "${whereColumn}" = ?`;
         db.prepare(sql).run(...Object.values(values), change.rowId);
         break;
       }
       case 'delete': {
         // Use primary key column if provided, otherwise fall back to rowid
         const whereColumn = change.primaryKeyColumn || 'rowid';
-        const sql = `DELETE FROM "${change.table}" WHERE "${whereColumn}" = ?`;
+        const sql = `DELETE FROM ${qualifiedTable} WHERE "${whereColumn}" = ?`;
         db.prepare(sql).run(change.rowId);
         break;
       }

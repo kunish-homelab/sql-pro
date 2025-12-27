@@ -266,7 +266,8 @@ export function setupIpcHandlers(): void {
         request.pageSize,
         request.sortColumn,
         request.sortDirection,
-        request.filters
+        request.filters,
+        request.schema
       );
     }
   );

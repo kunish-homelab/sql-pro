@@ -30,3 +30,6 @@ coverage
 # Misc
 *.bak
 *.tmp
+
+# Auto Claude data directory
+.auto-claude/

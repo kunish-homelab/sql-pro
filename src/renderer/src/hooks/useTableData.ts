@@ -16,6 +16,7 @@ import {
 
 export interface UseTableDataOptions {
   connectionId: string | null;
+  schema?: string; // Database schema (defaults to 'main' for SQLite)
   table: string | null;
   page?: number;
   pageSize?: number;
@@ -40,7 +41,7 @@ export interface UseTableDataResult {
 
   // Mutations (optimistic)
   updateRow: (rowId: string | number, updates: Record<string, unknown>) => void;
-  insertRow: (values: Record<string, unknown>) => void;
+  insertRow: (values: Record<string, unknown>) => string | number;
   deleteRow: (rowId: string | number) => void;
 
   // Change management
@@ -59,6 +60,7 @@ export interface UseTableDataResult {
 export function useTableData(options: UseTableDataOptions): UseTableDataResult {
   const {
     connectionId,
+    schema = 'main', // Default to 'main' for SQLite
     table,
     page = 1,
     pageSize = 100,
@@ -85,6 +87,7 @@ export function useTableData(options: UseTableDataOptions): UseTableDataResult {
     queryKey: [
       'tableData',
       connectionId,
+      schema,
       table,
       page,
       pageSize,
@@ -99,6 +102,7 @@ export function useTableData(options: UseTableDataOptions): UseTableDataResult {
 
       const response = await sqlPro.db.getTableData({
         connectionId,
+        schema,
         table,
         page,
         pageSize,
@@ -139,8 +143,10 @@ export function useTableData(options: UseTableDataOptions): UseTableDataResult {
     // Use void to mark intentional dependency read for reactivity
     void pendingChangesVersion;
     if (!table) return [];
-    return getAllPendingChanges().filter((c) => c.table === table);
-  }, [table, pendingChangesVersion]);
+    return getAllPendingChanges().filter(
+      (c) => c.table === table && c.schema === schema
+    );
+  }, [table, schema, pendingChangesVersion]);
 
   // Merge fetched data with pending changes for display
   const displayRows = useMemo(() => {
@@ -201,6 +207,7 @@ export function useTableData(options: UseTableDataOptions): UseTableDataResult {
       const existingRow = baseRows.find((r) => r.__rowId === rowId);
       addPendingChange({
         table,
+        schema,
         rowId,
         type: 'update',
         oldValues: existingRow ? { ...existingRow } : null,
@@ -208,24 +215,26 @@ export function useTableData(options: UseTableDataOptions): UseTableDataResult {
         primaryKeyColumn,
       });
     },
-    [table, dataQuery.data?.rows, primaryKeyColumn]
+    [table, schema, dataQuery.data?.rows, primaryKeyColumn]
   );
 
   const insertRow = useCallback(
-    (values: Record<string, unknown>) => {
-      if (!table) return;
+    (values: Record<string, unknown>): string | number => {
+      if (!table) return -1;
 
       // Generate a temporary ID for new rows
       const tempId = -Date.now();
       addPendingChange({
         table,
+        schema,
         rowId: tempId,
         type: 'insert',
         oldValues: null,
         newValues: values,
       });
+      return tempId;
     },
-    [table]
+    [table, schema]
   );
 
   const deleteRow = useCallback(
@@ -236,6 +245,7 @@ export function useTableData(options: UseTableDataOptions): UseTableDataResult {
       const existingRow = baseRows.find((r) => r.__rowId === rowId);
       addPendingChange({
         table,
+        schema,
         rowId,
         type: 'delete',
         oldValues: existingRow ? { ...existingRow } : null,
@@ -243,14 +253,14 @@ export function useTableData(options: UseTableDataOptions): UseTableDataResult {
         primaryKeyColumn,
       });
     },
-    [table, dataQuery.data?.rows, primaryKeyColumn]
+    [table, schema, dataQuery.data?.rows, primaryKeyColumn]
   );
 
   const clearChanges = useCallback(() => {
     if (table) {
-      clearPendingChanges(table);
+      clearPendingChanges(table, schema);
     }
-  }, [table]);
+  }, [table, schema]);
 
   const refetch = useCallback(() => {
     dataQuery.refetch();

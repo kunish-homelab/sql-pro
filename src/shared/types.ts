@@ -63,6 +63,7 @@ export interface ForeignKeyInfo {
 
 export interface TableInfo {
   name: string;
+  schema: string; // Database schema (e.g., 'main', 'temp' for SQLite)
   type: 'table' | 'view';
   columns: ColumnInfo[];
   primaryKey: string[];
@@ -72,8 +73,15 @@ export interface TableInfo {
   sql: string;
 }
 
+export interface SchemaInfo {
+  name: string;
+  tables: TableInfo[];
+  views: TableInfo[];
+}
+
 export interface GetSchemaResponse {
   success: boolean;
+  schemas?: SchemaInfo[];
   tables?: TableInfo[];
   views?: TableInfo[];
   error?: string;
@@ -83,6 +91,7 @@ export interface GetSchemaResponse {
 
 export interface GetTableDataRequest {
   connectionId: string;
+  schema?: string; // Database schema (defaults to 'main' for SQLite)
   table: string;
   page: number;
   pageSize: number;
@@ -136,6 +145,7 @@ export type ChangeType = 'insert' | 'update' | 'delete';
 export interface PendingChangeInfo {
   id: string;
   table: string;
+  schema?: string; // Database schema (defaults to 'main' for SQLite)
   rowId: string | number;
   type: ChangeType;
   oldValues: Record<string, unknown> | null;

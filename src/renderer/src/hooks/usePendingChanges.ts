@@ -10,6 +10,7 @@ import {
 
 export interface UsePendingChangesOptions {
   connectionId: string | null;
+  schema?: string; // Database schema (defaults to 'main' for SQLite)
   table?: string;
 }
 
@@ -41,7 +42,7 @@ export interface UsePendingChangesResult {
 export function usePendingChanges(
   options: UsePendingChangesOptions
 ): UsePendingChangesResult {
-  const { connectionId, table } = options;
+  const { connectionId, schema = 'main', table } = options;
 
   const [isValidating, setIsValidating] = useState(false);
   const [isApplying, setIsApplying] = useState(false);
@@ -67,11 +68,11 @@ export function usePendingChanges(
     return getAllPendingChanges();
   }, [changesVersion]);
 
-  // Filter changes by table if specified
+  // Filter changes by table and schema if specified
   const changes = useMemo(() => {
     if (!table) return allChanges;
-    return allChanges.filter((c) => c.table === table);
-  }, [allChanges, table]);
+    return allChanges.filter((c) => c.table === table && c.schema === schema);
+  }, [allChanges, table, schema]);
 
   const validateChanges = useCallback(async (): Promise<boolean> => {
     if (!connectionId || changes.length === 0) {
@@ -85,6 +86,7 @@ export function usePendingChanges(
       const changeInfos: PendingChangeInfo[] = changes.map((c) => ({
         id: c.id,
         table: c.table,
+        schema: c.schema,
         rowId: c.rowId,
         type: c.type,
         oldValues: c.oldValues,
@@ -130,7 +132,7 @@ export function usePendingChanges(
   const applyChanges = useCallback(async (): Promise<boolean> => {
     // Get current changes directly to avoid stale closure
     const currentChanges = getAllPendingChanges().filter(
-      (c) => !table || c.table === table
+      (c) => !table || (c.table === table && c.schema === schema)
     );
 
     if (!connectionId || currentChanges.length === 0) {
@@ -148,12 +150,13 @@ export function usePendingChanges(
     try {
       // Re-fetch changes after validation to get the latest state
       const changesToApply = getAllPendingChanges().filter(
-        (c) => !table || c.table === table
+        (c) => !table || (c.table === table && c.schema === schema)
       );
 
       const changeInfos: PendingChangeInfo[] = changesToApply.map((c) => ({
         id: c.id,
         table: c.table,
+        schema: c.schema,
         rowId: c.rowId,
         type: c.type,
         oldValues: c.oldValues,
@@ -171,7 +174,7 @@ export function usePendingChanges(
       }
 
       // Clear all applied changes
-      clearPendingChanges(table);
+      clearPendingChanges(table, schema);
 
       return true;
     } catch (error) {
@@ -180,7 +183,7 @@ export function usePendingChanges(
     } finally {
       setIsApplying(false);
     }
-  }, [connectionId, table, validateChanges]);
+  }, [connectionId, schema, table, validateChanges]);
 
   const removeChange = useCallback((id: string) => {
     pendingChangesCollection.delete(id);
@@ -192,9 +195,9 @@ export function usePendingChanges(
   }, []);
 
   const clearAllChanges = useCallback(() => {
-    clearPendingChanges(table);
+    clearPendingChanges(table, schema);
     setValidationErrors(new Map());
-  }, [table]);
+  }, [table, schema]);
 
   const undoLastChange = useCallback(() => {
     if (changes.length === 0) return;

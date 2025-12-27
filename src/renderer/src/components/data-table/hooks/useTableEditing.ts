@@ -22,7 +22,7 @@ interface UseTableEditingOptions {
     oldValue: unknown
   ) => void;
   onRowDelete?: (rowId: string | number) => void;
-  onRowInsert?: (values: Record<string, unknown>) => void;
+  onRowInsert?: () => void;
 }
 
 interface UseTableEditingReturn {
@@ -46,8 +46,7 @@ export function useTableEditing({
   editable = true,
   onCellChange,
   onRowDelete,
-  // onRowInsert is reserved for future use
-  onRowInsert: _onRowInsert,
+  onRowInsert,
 }: UseTableEditingOptions): UseTableEditingReturn {
   const [focusedCell, setFocusedCell] = useState<CellPosition | null>(null);
   const [editingCell, setEditingCell] = useState<CellPosition | null>(null);
@@ -238,6 +237,36 @@ export function useTableEditing({
   // Handle keyboard navigation
   const handleKeyDown = useCallback(
     (e: React.KeyboardEvent) => {
+      // Handle Tab while editing - save and move to next cell
+      if (editingCell && e.key === 'Tab') {
+        e.preventDefault();
+        // The cell editor will call handleCellSave before this
+        // We need to move to next cell and continue editing
+        const nextCell = getAdjacentCell(e.shiftKey ? 'prev' : 'next');
+        if (nextCell) {
+          stopEditing();
+          setFocusedCell(nextCell);
+          // Start editing the next cell after a brief delay (using queueMicrotask for immediate execution)
+          queueMicrotask(() => {
+            startEditing(nextCell.rowId, nextCell.columnId);
+          });
+        }
+        return;
+      }
+
+      // Handle Enter while editing - save and move down
+      if (editingCell && e.key === 'Enter' && !e.shiftKey) {
+        e.preventDefault();
+        const nextCell = getAdjacentCell('down');
+        if (nextCell) {
+          stopEditing();
+          setFocusedCell(nextCell);
+        } else {
+          stopEditing();
+        }
+        return;
+      }
+
       if (!focusedCell) return;
 
       // If editing, let the cell handle most keys
@@ -247,7 +276,19 @@ export function useTableEditing({
           stopEditing();
           resetSequence();
         }
-        // Tab and Enter are handled by cell editor
+        return;
+      }
+
+      // Handle vim 'o' for insert row (outside of vim mode handling for priority)
+      if (
+        e.key === 'o' &&
+        editable &&
+        onRowInsert &&
+        !e.ctrlKey &&
+        !e.metaKey
+      ) {
+        e.preventDefault();
+        onRowInsert();
         return;
       }
 
@@ -398,6 +439,7 @@ export function useTableEditing({
       startEditing,
       stopEditing,
       onRowDelete,
+      onRowInsert,
       table,
     ]
   );

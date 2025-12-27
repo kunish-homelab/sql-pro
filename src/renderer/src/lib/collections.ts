@@ -184,6 +184,7 @@ export function createTableRowsCollection(params: TableDataQueryParams) {
 export interface PendingChange {
   id: string;
   table: string;
+  schema?: string; // Database schema (defaults to 'main' for SQLite)
   rowId: string | number;
   type: 'insert' | 'update' | 'delete';
   oldValues: Record<string, unknown> | null;
@@ -243,10 +244,13 @@ export function addPendingChange(
     primaryKeyColumn?: string;
   }
 ): void {
-  // Find existing change for this row
+  // Find existing change for this row (must match both table and schema)
   const allChanges = getAllPendingChanges();
   const existing = allChanges.find(
-    (c: PendingChange) => c.table === change.table && c.rowId === change.rowId
+    (c: PendingChange) =>
+      c.table === change.table &&
+      c.schema === change.schema &&
+      c.rowId === change.rowId
   );
 
   if (existing) {
@@ -288,22 +292,29 @@ export function addPendingChange(
 }
 
 /**
- * Clear all pending changes for a specific table or all tables.
+ * Clear all pending changes for a specific table/schema or all tables.
  */
-export function clearPendingChanges(table?: string): void {
+export function clearPendingChanges(table?: string, schema?: string): void {
   const changes = getAllPendingChanges();
   const toDelete = table
-    ? changes.filter((c: PendingChange) => c.table === table)
+    ? changes.filter(
+        (c: PendingChange) => c.table === table && c.schema === schema
+      )
     : changes;
 
   toDelete.forEach((c: PendingChange) => pendingChangesCollection.delete(c.id));
 }
 
 /**
- * Get pending changes for a specific table.
+ * Get pending changes for a specific table and schema.
  */
-export function getPendingChangesForTable(table: string): PendingChange[] {
-  return getAllPendingChanges().filter((c: PendingChange) => c.table === table);
+export function getPendingChangesForTable(
+  table: string,
+  schema?: string
+): PendingChange[] {
+  return getAllPendingChanges().filter(
+    (c: PendingChange) => c.table === table && c.schema === schema
+  );
 }
 
 /**
@@ -311,9 +322,11 @@ export function getPendingChangesForTable(table: string): PendingChange[] {
  */
 export function getPendingChangeForRow(
   table: string,
-  rowId: string | number
+  rowId: string | number,
+  schema?: string
 ): PendingChange | undefined {
   return getAllPendingChanges().find(
-    (c: PendingChange) => c.table === table && c.rowId === rowId
+    (c: PendingChange) =>
+      c.table === table && c.schema === schema && c.rowId === rowId
   );
 }

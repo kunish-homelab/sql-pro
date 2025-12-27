@@ -39,6 +39,7 @@ export interface ForeignKeySchema {
 // Table schema
 export interface TableSchema {
   name: string;
+  schema: string; // Database schema (e.g., 'main', 'temp' for SQLite; 'public', 'information_schema' for PostgreSQL)
   type: 'table' | 'view';
   columns: ColumnSchema[];
   primaryKey: string[];
@@ -48,8 +49,17 @@ export interface TableSchema {
   sql: string;
 }
 
-// Database schema (all tables)
+// Schema information
+export interface SchemaInfo {
+  name: string;
+  tables: TableSchema[];
+  views: TableSchema[];
+}
+
+// Database schema (all schemas with their tables)
 export interface DatabaseSchema {
+  schemas: SchemaInfo[];
+  // Convenience accessors for flat list (all tables/views across schemas)
   tables: TableSchema[];
   views: TableSchema[];
 }
@@ -60,6 +70,7 @@ export type ChangeType = 'insert' | 'update' | 'delete';
 export interface PendingChange {
   id: string;
   table: string;
+  schema?: string; // Database schema (defaults to 'main' for SQLite)
   rowId: string | number;
   type: ChangeType;
   oldValues: Record<string, unknown> | null;

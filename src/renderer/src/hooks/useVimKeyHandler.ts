@@ -16,7 +16,8 @@ export type VimCommand =
   // Actions
   | 'enter-edit' // i or Enter
   | 'exit-mode' // Escape
-  | 'toggle-expand' // o
+  | 'toggle-expand' // o (for sidebar tree)
+  | 'insert-row' // o (for table)
   | 'search' // /
   | 'select'; // Enter
 
