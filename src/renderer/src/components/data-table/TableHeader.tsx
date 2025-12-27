@@ -2,15 +2,27 @@ import type { Header, Table } from '@tanstack/react-table';
 import type { TableRowData } from './hooks/useTableCore';
 import type { ColumnSchema } from '@/types/database';
 import { flexRender } from '@tanstack/react-table';
-import { ArrowDown, ArrowUp, Key, Layers } from 'lucide-react';
-import { memo, useRef } from 'react';
+import { ArrowDown, ArrowUp, Filter, Key, Layers } from 'lucide-react';
+import { memo, useRef, useState } from 'react';
 import { cn } from '@/lib/utils';
+import { ColumnFilterPopover } from './ColumnFilterPopover';
+import {
+  type UIFilterState,
+  type ColumnTypeCategory,
+  getColumnTypeCategory,
+} from '@/lib/filter-utils';
 
 interface HeaderCellProps {
   header: Header<TableRowData, unknown>;
   onResetColumnSize?: (columnId: string) => void;
   onToggleGrouping?: (columnId: string) => void;
   isGrouped: boolean;
+  /** Existing filter for this column (if any) */
+  existingFilter?: UIFilterState;
+  /** Callback when a filter is applied */
+  onFilterAdd?: (filter: UIFilterState) => void;
+  /** Callback when a filter is cleared/removed */
+  onFilterRemove?: (columnId: string) => void;
 }
 
 const HeaderCell = memo(
@@ -19,9 +31,14 @@ const HeaderCell = memo(
     onResetColumnSize,
     onToggleGrouping,
     isGrouped,
+    existingFilter,
+    onFilterAdd,
+    onFilterRemove,
   }: HeaderCellProps) => {
     // Track clicks for double-click detection on resize handle
     const lastClickTimeRef = useRef<number>(0);
+    // State for filter popover
+    const [filterPopoverOpen, setFilterPopoverOpen] = useState(false);
 
     if (header.isPlaceholder) {
       return (
@@ -54,6 +71,23 @@ const HeaderCell = memo(
         onToggleGrouping(header.column.id);
       }
     };
+
+    // Determine column type for filter operators
+    const columnSchema = columnMeta?.schema;
+    const columnTypeCategory: ColumnTypeCategory = columnSchema
+      ? getColumnTypeCategory(columnSchema)
+      : 'text';
+
+    // Filter handlers
+    const handleFilterApply = (filter: UIFilterState) => {
+      onFilterAdd?.(filter);
+    };
+
+    const handleFilterClear = () => {
+      onFilterRemove?.(header.column.id);
+    };
+
+    const hasActiveFilter = Boolean(existingFilter);
 
     return (
       <div
@@ -106,6 +140,35 @@ const HeaderCell = memo(
           </button>
         )}
 
+        {/* Filter button with popover (visible on hover or when filter active) */}
+        {onFilterAdd && (
+          <ColumnFilterPopover
+            columnName={header.column.id}
+            columnType={columnTypeCategory}
+            existingFilter={existingFilter}
+            onApply={handleFilterApply}
+            onClear={handleFilterClear}
+            open={filterPopoverOpen}
+            onOpenChange={setFilterPopoverOpen}
+          >
+            <button
+              className={cn(
+                'mr-1 flex h-5 w-5 items-center justify-center rounded opacity-0',
+                'transition-opacity group-hover:opacity-100',
+                'hover:bg-accent',
+                hasActiveFilter && 'text-primary opacity-100'
+              )}
+              onClick={(e) => {
+                e.stopPropagation();
+                setFilterPopoverOpen(true);
+              }}
+              title={hasActiveFilter ? 'Edit filter' : 'Filter this column'}
+            >
+              <Filter className="h-3 w-3" />
+            </button>
+          </ColumnFilterPopover>
+        )}
+
         {/* Resize handle */}
         {header.column.getCanResize() && (
           <div
@@ -147,6 +210,12 @@ interface TableHeaderProps {
   onResetColumnSize?: (columnId: string) => void;
   onToggleGrouping?: (columnId: string) => void;
   grouping?: string[];
+  /** Active filters indexed by column name */
+  filters?: UIFilterState[];
+  /** Callback when a filter is applied */
+  onFilterAdd?: (filter: UIFilterState) => void;
+  /** Callback when a filter is removed from a column */
+  onFilterRemove?: (columnId: string) => void;
 }
 
 export const TableHeader = memo(
@@ -155,7 +224,19 @@ export const TableHeader = memo(
     onResetColumnSize,
     onToggleGrouping,
     grouping = [],
+    filters = [],
+    onFilterAdd,
+    onFilterRemove,
   }: TableHeaderProps) => {
+    // Create a map of column id to existing filter for quick lookup
+    const filtersByColumn = filters.reduce<Record<string, UIFilterState>>(
+      (acc, filter) => {
+        acc[filter.column] = filter;
+        return acc;
+      },
+      {}
+    );
+
     return (
       <div className="bg-background sticky top-0 z-10">
         {table.getHeaderGroups().map((headerGroup) => (
@@ -167,6 +248,9 @@ export const TableHeader = memo(
                 onResetColumnSize={onResetColumnSize}
                 onToggleGrouping={onToggleGrouping}
                 isGrouped={grouping.includes(header.column.id)}
+                existingFilter={filtersByColumn[header.column.id]}
+                onFilterAdd={onFilterAdd}
+                onFilterRemove={onFilterRemove}
               />
             ))}
           </div>
