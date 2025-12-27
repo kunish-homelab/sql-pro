@@ -1501,6 +1501,103 @@ function formatHoverContent(keyword: string): Monaco.IMarkdownString {
 }
 
 /**
+ * Creates a SQL validator that updates Monaco markers with debouncing.
+ * This prevents excessive validation during active typing (300ms delay).
+ *
+ * Usage:
+ * 1. Create validator: const validator = createSqlValidator(monaco)
+ * 2. Call validate on model changes: validator.validate(model)
+ * 3. Dispose when done: validator.dispose()
+ *
+ * @param monaco - The Monaco editor instance
+ * @returns Object with validate and dispose methods
+ */
+export function createSqlValidator(monaco: typeof Monaco): {
+  validate: (model: Monaco.editor.ITextModel) => void;
+  dispose: () => void;
+} {
+  let debounceTimeout: ReturnType<typeof setTimeout> | null = null;
+  const DEBOUNCE_MS = 300;
+  let lastModel: Monaco.editor.ITextModel | null = null;
+
+  /**
+   * Converts SqlValidationError severity to Monaco MarkerSeverity.
+   */
+  function toMarkerSeverity(
+    severity: SqlValidationError['severity']
+  ): Monaco.MarkerSeverity {
+    switch (severity) {
+      case 'error':
+        return monaco.MarkerSeverity.Error;
+      case 'warning':
+        return monaco.MarkerSeverity.Warning;
+      case 'info':
+        return monaco.MarkerSeverity.Info;
+      default:
+        return monaco.MarkerSeverity.Error;
+    }
+  }
+
+  /**
+   * Performs the actual validation and sets markers.
+   */
+  function doValidate(model: Monaco.editor.ITextModel): void {
+    const sql = model.getValue();
+    const errors = validateSql(sql);
+
+    // Convert to Monaco marker format
+    const markers: Monaco.editor.IMarkerData[] = errors.map((error) => ({
+      startLineNumber: error.startLineNumber,
+      startColumn: error.startColumn,
+      endLineNumber: error.endLineNumber,
+      endColumn: error.endColumn,
+      message: error.message,
+      severity: toMarkerSeverity(error.severity),
+    }));
+
+    // Set markers on the model
+    monaco.editor.setModelMarkers(model, 'sql-validation', markers);
+  }
+
+  /**
+   * Validates the model with debouncing.
+   */
+  function validate(model: Monaco.editor.ITextModel): void {
+    lastModel = model;
+
+    // Clear any pending timeout
+    if (debounceTimeout !== null) {
+      clearTimeout(debounceTimeout);
+    }
+
+    // Schedule new validation
+    debounceTimeout = setTimeout(() => {
+      doValidate(model);
+      debounceTimeout = null;
+    }, DEBOUNCE_MS);
+  }
+
+  /**
+   * Disposes the validator, clearing timeout and markers.
+   */
+  function dispose(): void {
+    // Clear pending timeout
+    if (debounceTimeout !== null) {
+      clearTimeout(debounceTimeout);
+      debounceTimeout = null;
+    }
+
+    // Clear markers from last model
+    if (lastModel) {
+      monaco.editor.setModelMarkers(lastModel, 'sql-validation', []);
+      lastModel = null;
+    }
+  }
+
+  return { validate, dispose };
+}
+
+/**
  * Creates a SQL completion provider that suggests SQL keywords, table names, and column names
  * from the connected database schema. (US1: Intelligent Autocomplete)
  *
