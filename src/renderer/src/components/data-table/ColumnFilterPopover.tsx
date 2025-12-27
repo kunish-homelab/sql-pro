@@ -18,6 +18,7 @@ import {
   type ColumnTypeCategory,
   type UIFilterState,
   type OperatorDefinition,
+  type FilterErrorField,
   getOperatorsForColumnType,
   validateFilterValue,
   generateFilterId,
@@ -68,6 +69,7 @@ export function ColumnFilterPopover({
   const [value, setValue] = useState(existingFilter?.value || '');
   const [secondValue, setSecondValue] = useState(existingFilter?.secondValue || '');
   const [error, setError] = useState<string | undefined>();
+  const [errorField, setErrorField] = useState<FilterErrorField>(null);
 
   // Get current operator definition
   const currentOperator = operators.find(
@@ -86,12 +88,14 @@ export function ColumnFilterPopover({
       setSecondValue('');
     }
     setError(undefined);
+    setErrorField(null);
   }, [existingFilter, defaultOperator, open]);
 
   // Clear values when operator changes if the new operator doesn't require values
   const handleOperatorChange = useCallback((newOperator: string) => {
     setSelectedOperator(newOperator as UIOperator);
     setError(undefined);
+    setErrorField(null);
 
     const newOpDef = operators.find((op) => op.value === newOperator);
     if (!newOpDef?.requiresValue) {
@@ -114,6 +118,7 @@ export function ColumnFilterPopover({
 
     if (!validation.isValid) {
       setError(validation.error);
+      setErrorField(validation.errorField || null);
       return;
     }
 
@@ -147,6 +152,7 @@ export function ColumnFilterPopover({
     setSecondValue('');
     setSelectedOperator(defaultOperator);
     setError(undefined);
+    setErrorField(null);
     onClear();
     onOpenChange?.(false);
   }, [defaultOperator, onClear, onOpenChange]);
@@ -164,6 +170,10 @@ export function ColumnFilterPopover({
 
   const showValueInput = currentOperator?.requiresValue ?? true;
   const showSecondValueInput = currentOperator?.requiresSecondValue ?? false;
+
+  // Determine which inputs should show error styling
+  const hasValueError = errorField === 'value' || errorField === 'both';
+  const hasSecondValueError = errorField === 'secondValue' || errorField === 'both';
 
   return (
     <Popover open={open} onOpenChange={onOpenChange}>
@@ -203,7 +213,7 @@ export function ColumnFilterPopover({
                 {showSecondValueInput ? 'From' : 'Value'}
               </label>
               <Input
-                className={cn('h-9', error && 'border-destructive')}
+                className={cn('h-9', hasValueError && 'border-destructive')}
                 type={columnType === 'numeric' ? 'number' : 'text'}
                 placeholder={
                   columnType === 'numeric' ? 'Enter number...' : 'Enter value...'
@@ -212,6 +222,7 @@ export function ColumnFilterPopover({
                 onChange={(e) => {
                   setValue(e.target.value);
                   setError(undefined);
+                  setErrorField(null);
                 }}
                 onKeyDown={handleKeyDown}
                 autoFocus
@@ -224,7 +235,7 @@ export function ColumnFilterPopover({
             <div className="flex flex-col gap-1.5">
               <label className="text-muted-foreground text-xs">To</label>
               <Input
-                className={cn('h-9', error && 'border-destructive')}
+                className={cn('h-9', hasSecondValueError && 'border-destructive')}
                 type={columnType === 'numeric' ? 'number' : 'text'}
                 placeholder={
                   columnType === 'numeric' ? 'Enter number...' : 'Enter value...'
@@ -233,6 +244,7 @@ export function ColumnFilterPopover({
                 onChange={(e) => {
                   setSecondValue(e.target.value);
                   setError(undefined);
+                  setErrorField(null);
                 }}
                 onKeyDown={handleKeyDown}
               />

@@ -411,13 +411,25 @@ export function generateCompactFilterLabel(
 // Filter Validation
 // ============================================================================
 
+/**
+ * Indicates which input field has an error
+ */
+export type FilterErrorField = 'value' | 'secondValue' | 'both' | null;
+
 export interface FilterValidationResult {
   isValid: boolean;
   error?: string;
+  /** Which input field has the error (for highlighting specific inputs) */
+  errorField?: FilterErrorField;
 }
 
 /**
  * Validate filter value based on operator and column type
+ *
+ * Validates:
+ * - Non-null operators require values
+ * - Numeric columns require valid numeric input
+ * - Between operator requires both values, and min < max for numeric columns
  */
 export function validateFilterValue(
   uiOperator: UIOperator,
@@ -432,13 +444,17 @@ export function validateFilterValue(
 
   // All other operators require a value
   if (!value.trim()) {
-    return { isValid: false, error: 'Value is required' };
+    return { isValid: false, error: 'Value is required', errorField: 'value' };
   }
 
   // Between operator requires second value
   if (uiOperator === 'between') {
     if (!secondValue?.trim()) {
-      return { isValid: false, error: 'Second value is required for range filter' };
+      return {
+        isValid: false,
+        error: 'Second value is required for range filter',
+        errorField: 'secondValue',
+      };
     }
 
     // For numeric columns, validate both values are numbers and min < max
@@ -447,13 +463,25 @@ export function validateFilterValue(
       const numSecondValue = parseFloat(secondValue);
 
       if (isNaN(numValue)) {
-        return { isValid: false, error: 'First value must be a valid number' };
+        return {
+          isValid: false,
+          error: 'First value must be a valid number',
+          errorField: 'value',
+        };
       }
       if (isNaN(numSecondValue)) {
-        return { isValid: false, error: 'Second value must be a valid number' };
+        return {
+          isValid: false,
+          error: 'Second value must be a valid number',
+          errorField: 'secondValue',
+        };
       }
       if (numValue >= numSecondValue) {
-        return { isValid: false, error: 'First value must be less than second value' };
+        return {
+          isValid: false,
+          error: 'From value must be less than To value',
+          errorField: 'both',
+        };
       }
     }
   }
@@ -472,7 +500,11 @@ export function validateFilterValue(
     if (numericOperators.includes(uiOperator)) {
       const numValue = parseFloat(value);
       if (isNaN(numValue)) {
-        return { isValid: false, error: 'Value must be a valid number' };
+        return {
+          isValid: false,
+          error: 'Value must be a valid number',
+          errorField: 'value',
+        };
       }
     }
   }
