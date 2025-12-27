@@ -125,6 +125,486 @@ function getTablesInScope(
   return inScope;
 }
 
+/**
+ * Keywords that trigger a new line before them during formatting.
+ */
+const NEWLINE_BEFORE_KEYWORDS = new Set([
+  'SELECT',
+  'FROM',
+  'WHERE',
+  'ORDER BY',
+  'GROUP BY',
+  'HAVING',
+  'LIMIT',
+  'OFFSET',
+  'UNION',
+  'UNION ALL',
+  'EXCEPT',
+  'INTERSECT',
+  'INSERT INTO',
+  'UPDATE',
+  'DELETE FROM',
+  'CREATE TABLE',
+  'DROP TABLE',
+  'ALTER TABLE',
+  'SET',
+  'VALUES',
+]);
+
+/**
+ * Keywords that trigger indentation (JOIN clauses).
+ */
+const INDENT_KEYWORDS = new Set([
+  'JOIN',
+  'LEFT JOIN',
+  'RIGHT JOIN',
+  'INNER JOIN',
+  'OUTER JOIN',
+  'CROSS JOIN',
+  'LEFT OUTER JOIN',
+  'RIGHT OUTER JOIN',
+  'FULL OUTER JOIN',
+]);
+
+/**
+ * Token types for SQL tokenization.
+ */
+type SqlTokenType = 'keyword' | 'identifier' | 'string' | 'number' | 'operator' | 'comment' | 'whitespace' | 'punctuation';
+
+interface SqlToken {
+  type: SqlTokenType;
+  value: string;
+  original: string; // Original value before transformation
+}
+
+/**
+ * Tokenizes SQL string, preserving string literals and comments.
+ */
+function tokenizeSql(sql: string): SqlToken[] {
+  const tokens: SqlToken[] = [];
+  let i = 0;
+
+  while (i < sql.length) {
+    const char = sql[i];
+    const nextChar = sql[i + 1];
+
+    // Skip whitespace
+    if (/\s/.test(char)) {
+      let ws = '';
+      while (i < sql.length && /\s/.test(sql[i])) {
+        ws += sql[i];
+        i++;
+      }
+      tokens.push({ type: 'whitespace', value: ' ', original: ws });
+      continue;
+    }
+
+    // Line comment --
+    if (char === '-' && nextChar === '-') {
+      let comment = '';
+      while (i < sql.length && sql[i] !== '\n') {
+        comment += sql[i];
+        i++;
+      }
+      tokens.push({ type: 'comment', value: comment, original: comment });
+      continue;
+    }
+
+    // Block comment /* */
+    if (char === '/' && nextChar === '*') {
+      let comment = '/*';
+      i += 2;
+      while (i < sql.length) {
+        if (sql[i] === '*' && sql[i + 1] === '/') {
+          comment += '*/';
+          i += 2;
+          break;
+        }
+        comment += sql[i];
+        i++;
+      }
+      tokens.push({ type: 'comment', value: comment, original: comment });
+      continue;
+    }
+
+    // Single-quoted string
+    if (char === "'") {
+      let str = "'";
+      i++;
+      while (i < sql.length) {
+        if (sql[i] === "'" && sql[i + 1] === "'") {
+          str += "''";
+          i += 2;
+          continue;
+        }
+        if (sql[i] === "'") {
+          str += "'";
+          i++;
+          break;
+        }
+        str += sql[i];
+        i++;
+      }
+      tokens.push({ type: 'string', value: str, original: str });
+      continue;
+    }
+
+    // Double-quoted identifier
+    if (char === '"') {
+      let str = '"';
+      i++;
+      while (i < sql.length) {
+        if (sql[i] === '"' && sql[i + 1] === '"') {
+          str += '""';
+          i += 2;
+          continue;
+        }
+        if (sql[i] === '"') {
+          str += '"';
+          i++;
+          break;
+        }
+        str += sql[i];
+        i++;
+      }
+      tokens.push({ type: 'identifier', value: str, original: str });
+      continue;
+    }
+
+    // Backtick identifier (MySQL style, but common)
+    if (char === '`') {
+      let str = '`';
+      i++;
+      while (i < sql.length && sql[i] !== '`') {
+        str += sql[i];
+        i++;
+      }
+      if (i < sql.length) {
+        str += '`';
+        i++;
+      }
+      tokens.push({ type: 'identifier', value: str, original: str });
+      continue;
+    }
+
+    // Numbers
+    if (/\d/.test(char)) {
+      let num = '';
+      while (i < sql.length && /[\d.]/.test(sql[i])) {
+        num += sql[i];
+        i++;
+      }
+      tokens.push({ type: 'number', value: num, original: num });
+      continue;
+    }
+
+    // Operators and punctuation
+    if (/[(),;*=<>!+\-/%]/.test(char)) {
+      // Multi-character operators
+      const twoChar = char + nextChar;
+      if (['<=', '>=', '<>', '!=', '||', '<<', '>>'].includes(twoChar)) {
+        tokens.push({ type: 'operator', value: twoChar, original: twoChar });
+        i += 2;
+        continue;
+      }
+      const type = ['(', ')', ',', ';'].includes(char) ? 'punctuation' : 'operator';
+      tokens.push({ type, value: char, original: char });
+      i++;
+      continue;
+    }
+
+    // Identifiers and keywords
+    if (/[a-zA-Z_]/.test(char)) {
+      let word = '';
+      while (i < sql.length && /[a-zA-Z0-9_]/.test(sql[i])) {
+        word += sql[i];
+        i++;
+      }
+      const upperWord = word.toUpperCase();
+      // Check if it's a keyword
+      if (SQL_KEYWORDS_SET.has(upperWord)) {
+        tokens.push({ type: 'keyword', value: upperWord, original: word });
+      } else {
+        tokens.push({ type: 'identifier', value: word, original: word });
+      }
+      continue;
+    }
+
+    // Dot for qualified names
+    if (char === '.') {
+      tokens.push({ type: 'punctuation', value: '.', original: '.' });
+      i++;
+      continue;
+    }
+
+    // Any other character
+    tokens.push({ type: 'punctuation', value: char, original: char });
+    i++;
+  }
+
+  return tokens;
+}
+
+/**
+ * Formats SQL code with proper indentation and keyword capitalization.
+ *
+ * Features:
+ * - Uppercases SQL keywords (SELECT, FROM, WHERE, etc.)
+ * - Adds line breaks after major clauses
+ * - Indents JOIN clauses
+ * - Handles multi-statement queries (separated by semicolons)
+ * - Preserves string literals and comments
+ * - Adds proper spacing around operators
+ *
+ * @param sql - The SQL string to format
+ * @returns The formatted SQL string
+ */
+export function formatSql(sql: string): string {
+  if (!sql || !sql.trim()) {
+    return sql;
+  }
+
+  const tokens = tokenizeSql(sql);
+  const result: string[] = [];
+  let indentLevel = 0;
+  let currentLineLength = 0;
+  const indent = '  '; // 2 spaces
+  let parenDepth = 0;
+  let isFirstToken = true;
+  let prevToken: SqlToken | null = null;
+  let prevNonWhitespaceToken: SqlToken | null = null;
+
+  /**
+   * Checks if a sequence of tokens forms a compound keyword.
+   */
+  function checkCompoundKeyword(startIndex: number): { keyword: string; length: number } | null {
+    const compounds = [
+      ['ORDER', 'BY'],
+      ['GROUP', 'BY'],
+      ['INSERT', 'INTO'],
+      ['DELETE', 'FROM'],
+      ['CREATE', 'TABLE'],
+      ['DROP', 'TABLE'],
+      ['ALTER', 'TABLE'],
+      ['LEFT', 'JOIN'],
+      ['RIGHT', 'JOIN'],
+      ['INNER', 'JOIN'],
+      ['OUTER', 'JOIN'],
+      ['CROSS', 'JOIN'],
+      ['LEFT', 'OUTER', 'JOIN'],
+      ['RIGHT', 'OUTER', 'JOIN'],
+      ['FULL', 'OUTER', 'JOIN'],
+      ['IS', 'NOT', 'NULL'],
+      ['IS', 'NULL'],
+      ['NOT', 'NULL'],
+      ['UNION', 'ALL'],
+      ['PRIMARY', 'KEY'],
+      ['FOREIGN', 'KEY'],
+    ];
+
+    for (const compound of compounds) {
+      let match = true;
+      let tokenIndex = startIndex;
+      for (let j = 0; j < compound.length; j++) {
+        // Skip whitespace tokens
+        while (tokenIndex < tokens.length && tokens[tokenIndex].type === 'whitespace') {
+          tokenIndex++;
+        }
+        if (tokenIndex >= tokens.length) {
+          match = false;
+          break;
+        }
+        if (tokens[tokenIndex].type !== 'keyword' || tokens[tokenIndex].value !== compound[j]) {
+          match = false;
+          break;
+        }
+        tokenIndex++;
+      }
+      if (match) {
+        return { keyword: compound.join(' '), length: tokenIndex - startIndex };
+      }
+    }
+    return null;
+  }
+
+  function addNewLine(): void {
+    // Remove trailing whitespace
+    while (result.length > 0 && result[result.length - 1] === ' ') {
+      result.pop();
+    }
+    result.push('\n');
+    result.push(indent.repeat(indentLevel));
+    currentLineLength = indentLevel * indent.length;
+  }
+
+  function addSpace(): void {
+    if (result.length > 0 && result[result.length - 1] !== ' ' && result[result.length - 1] !== '\n' && !/^\s+$/.test(result[result.length - 1] || '')) {
+      result.push(' ');
+      currentLineLength++;
+    }
+  }
+
+  let i = 0;
+  while (i < tokens.length) {
+    const token = tokens[i];
+
+    // Skip whitespace - we control spacing ourselves
+    if (token.type === 'whitespace') {
+      prevToken = token;
+      i++;
+      continue;
+    }
+
+    // Handle comments - preserve them with spacing
+    if (token.type === 'comment') {
+      if (!isFirstToken) {
+        addSpace();
+      }
+      result.push(token.value);
+      currentLineLength += token.value.length;
+      if (token.value.startsWith('--')) {
+        addNewLine();
+      }
+      prevToken = token;
+      prevNonWhitespaceToken = token;
+      i++;
+      isFirstToken = false;
+      continue;
+    }
+
+    // Check for compound keywords
+    if (token.type === 'keyword') {
+      const compound = checkCompoundKeyword(i);
+      if (compound) {
+        const upperKeyword = compound.keyword;
+
+        // Handle newline before certain keywords
+        if (!isFirstToken && NEWLINE_BEFORE_KEYWORDS.has(upperKeyword)) {
+          // Reset indent for major clauses
+          if (parenDepth === 0) {
+            indentLevel = 0;
+          }
+          addNewLine();
+        } else if (!isFirstToken && INDENT_KEYWORDS.has(upperKeyword)) {
+          // JOIN clauses get their own line with indent
+          if (parenDepth === 0) {
+            indentLevel = 1;
+          }
+          addNewLine();
+        } else if (!isFirstToken) {
+          addSpace();
+        }
+
+        result.push(upperKeyword);
+        currentLineLength += upperKeyword.length;
+
+        // Skip the tokens that make up the compound keyword
+        i += compound.length;
+        prevToken = token;
+        prevNonWhitespaceToken = token;
+        isFirstToken = false;
+        continue;
+      }
+
+      // Single keyword handling
+      const upperKeyword = token.value;
+
+      if (!isFirstToken && NEWLINE_BEFORE_KEYWORDS.has(upperKeyword)) {
+        if (parenDepth === 0) {
+          indentLevel = 0;
+        }
+        addNewLine();
+      } else if (!isFirstToken && INDENT_KEYWORDS.has(upperKeyword)) {
+        if (parenDepth === 0) {
+          indentLevel = 1;
+        }
+        addNewLine();
+      } else if (!isFirstToken) {
+        addSpace();
+      }
+
+      result.push(upperKeyword);
+      currentLineLength += upperKeyword.length;
+      prevToken = token;
+      prevNonWhitespaceToken = token;
+      i++;
+      isFirstToken = false;
+      continue;
+    }
+
+    // Handle punctuation
+    if (token.type === 'punctuation') {
+      if (token.value === '(') {
+        parenDepth++;
+        if (prevNonWhitespaceToken?.type === 'keyword' && ['COUNT', 'SUM', 'AVG', 'MIN', 'MAX', 'COALESCE', 'IFNULL', 'NULLIF', 'CAST', 'SUBSTR', 'SUBSTRING', 'LENGTH', 'UPPER', 'LOWER', 'TRIM', 'REPLACE', 'INSTR', 'ROUND', 'ABS', 'RANDOM', 'DATE', 'TIME', 'DATETIME', 'STRFTIME', 'PRINTF', 'TYPEOF', 'EXISTS'].includes(prevNonWhitespaceToken.value)) {
+          // No space before ( for function calls
+        } else {
+          addSpace();
+        }
+        result.push('(');
+        currentLineLength++;
+      } else if (token.value === ')') {
+        parenDepth = Math.max(0, parenDepth - 1);
+        result.push(')');
+        currentLineLength++;
+      } else if (token.value === ',') {
+        result.push(',');
+        currentLineLength++;
+      } else if (token.value === ';') {
+        result.push(';');
+        currentLineLength++;
+        // Add newline after semicolon for multi-statement queries
+        if (i < tokens.length - 1) {
+          addNewLine();
+          addNewLine(); // Extra blank line between statements
+        }
+      } else if (token.value === '.') {
+        // No space around dots (table.column)
+        result.push('.');
+        currentLineLength++;
+      } else {
+        if (!isFirstToken) {
+          addSpace();
+        }
+        result.push(token.value);
+        currentLineLength += token.value.length;
+      }
+      prevToken = token;
+      prevNonWhitespaceToken = token;
+      i++;
+      isFirstToken = false;
+      continue;
+    }
+
+    // Handle operators - add spaces around them
+    if (token.type === 'operator') {
+      addSpace();
+      result.push(token.value);
+      currentLineLength += token.value.length;
+      addSpace();
+      prevToken = token;
+      prevNonWhitespaceToken = token;
+      i++;
+      isFirstToken = false;
+      continue;
+    }
+
+    // Handle identifiers, strings, numbers
+    if (!isFirstToken && prevNonWhitespaceToken?.value !== '.' && prevNonWhitespaceToken?.value !== '(' && prevNonWhitespaceToken?.type !== 'operator') {
+      // No space after dot or opening paren or operator
+      addSpace();
+    }
+    result.push(token.value);
+    currentLineLength += token.value.length;
+    prevToken = token;
+    prevNonWhitespaceToken = token;
+    i++;
+    isFirstToken = false;
+  }
+
+  return result.join('').trim();
+}
+
 // SQL Keywords for autocomplete (US1)
 const SQL_KEYWORDS = [
   'SELECT',
