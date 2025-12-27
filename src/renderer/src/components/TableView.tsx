@@ -1,6 +1,7 @@
 import type { DataTableRef, TableRowData } from './data-table';
 import type { PendingChange, SortState } from '@/types/database';
 import type { UIFilterState } from '@/lib/filter-utils';
+import { convertUIFiltersToAPIFilters } from '@/lib/filter-utils';
 import {
   ChevronLeft,
   ChevronRight,
@@ -37,6 +38,11 @@ export function TableView() {
   // Find primary key column
   const primaryKeyColumn = selectedTable?.primaryKey[0];
 
+  // Convert UI filters to API filters
+  const apiFilters = useMemo(() => {
+    return convertUIFiltersToAPIFilters(filters);
+  }, [filters]);
+
   // Use TanStack DB hooks for data and changes
   const {
     rows,
@@ -57,6 +63,7 @@ export function TableView() {
     pageSize,
     sortColumn: sort?.column,
     sortDirection: sort?.direction,
+    filters: apiFilters,
     enabled: Boolean(connection && selectedTable),
     primaryKeyColumn,
   });
@@ -123,16 +130,19 @@ export function TableView() {
       // Add new filter
       return [...prevFilters, filter];
     });
+    setPage(1); // Reset to first page on filter change
   }, []);
 
   // Handle filter removal by column id
   const handleFilterRemove = useCallback((columnId: string) => {
     setFilters((prevFilters) => prevFilters.filter((f) => f.column !== columnId));
+    setPage(1); // Reset to first page on filter change
   }, []);
 
   // Handle clearing all filters
   const handleFiltersClear = useCallback(() => {
     setFilters([]);
+    setPage(1); // Reset to first page on filter change
   }, []);
 
   // Handle cell change from DataTable
