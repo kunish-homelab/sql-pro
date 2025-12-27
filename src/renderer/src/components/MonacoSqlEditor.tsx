@@ -376,6 +376,13 @@ export function MonacoSqlEditor({
               horizontalScrollbarSize: 10,
             },
 
+            // Find/Replace (Cmd/Ctrl+F to find, Cmd/Ctrl+H to replace)
+            find: {
+              addExtraSpaceOnTop: true,
+              autoFindInSelection: 'multiline',
+              seedSearchStringFromSelection: 'always',
+            },
+
             // Padding
             padding: { top: 8, bottom: 8 },
           }}
