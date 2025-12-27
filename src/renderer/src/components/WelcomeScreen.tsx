@@ -422,7 +422,7 @@ export function WelcomeScreen() {
 
   return (
     <div
-      className="relative flex h-full items-center justify-center"
+      className="bg-grid-dot relative flex h-full items-center justify-center"
       onDragOver={handleDragOver}
       onDragLeave={handleDragLeave}
       onDrop={handleDrop}
