@@ -9,6 +9,7 @@ import type {
   HasPasswordRequest,
   OpenDatabaseRequest,
   OpenFileDialogRequest,
+  QueryHistoryEntry,
   RemoveConnectionRequest,
   RemovePasswordRequest,
   SaveFileDialogRequest,
@@ -26,6 +27,7 @@ import { passwordStorageService } from './password-storage';
 // Lazy-loaded paths (app.getPath only works after app ready)
 let _preferencesPath: string | null = null;
 let _recentConnectionsPath: string | null = null;
+let _queryHistoryPath: string | null = null;
 
 function getPreferencesPath(): string {
   if (!_preferencesPath) {
@@ -42,6 +44,16 @@ function getRecentConnectionsPath(): string {
     );
   }
   return _recentConnectionsPath;
+}
+
+function getQueryHistoryPath(): string {
+  if (!_queryHistoryPath) {
+    _queryHistoryPath = path.join(
+      app.getPath('userData'),
+      'query-history.json'
+    );
+  }
+  return _queryHistoryPath;
 }
 
 interface StoredPreferences {
@@ -99,6 +111,106 @@ function saveRecentConnections(connections: StoredRecentConnection[]): void {
     getRecentConnectionsPath(),
     JSON.stringify(connections, null, 2)
   );
+}
+
+// Query history storage format: { [dbPath]: QueryHistoryEntry[] }
+interface StoredQueryHistory {
+  [dbPath: string]: QueryHistoryEntry[];
+}
+
+/**
+ * Loads all query history from storage
+ */
+function loadAllQueryHistory(): StoredQueryHistory {
+  try {
+    const historyPath = getQueryHistoryPath();
+    if (fs.existsSync(historyPath)) {
+      return JSON.parse(fs.readFileSync(historyPath, 'utf-8'));
+    }
+  } catch {
+    // Return empty if file doesn't exist or is invalid
+  }
+  return {};
+}
+
+/**
+ * Saves all query history to storage
+ */
+function saveAllQueryHistory(history: StoredQueryHistory): void {
+  fs.writeFileSync(getQueryHistoryPath(), JSON.stringify(history, null, 2));
+}
+
+/**
+ * Loads query history for a specific database
+ */
+export function loadQueryHistory(dbPath: string): QueryHistoryEntry[] {
+  const allHistory = loadAllQueryHistory();
+  return allHistory[dbPath] || [];
+}
+
+/**
+ * Saves a query history entry for a specific database
+ */
+export function saveQueryHistoryEntry(entry: QueryHistoryEntry): void {
+  const allHistory = loadAllQueryHistory();
+  const dbHistory = allHistory[entry.dbPath] || [];
+
+  // Add new entry at the beginning (most recent first)
+  dbHistory.unshift(entry);
+
+  allHistory[entry.dbPath] = dbHistory;
+  saveAllQueryHistory(allHistory);
+}
+
+/**
+ * Deletes a specific query history entry
+ */
+export function deleteQueryHistoryEntry(
+  dbPath: string,
+  entryId: string
+): { success: boolean; error?: string } {
+  try {
+    const allHistory = loadAllQueryHistory();
+    const dbHistory = allHistory[dbPath] || [];
+
+    const filtered = dbHistory.filter((entry) => entry.id !== entryId);
+
+    if (filtered.length === dbHistory.length) {
+      // Entry not found, but not an error
+      return { success: true };
+    }
+
+    allHistory[dbPath] = filtered;
+    saveAllQueryHistory(allHistory);
+    return { success: true };
+  } catch (error) {
+    return {
+      success: false,
+      error: error instanceof Error ? error.message : 'STORAGE_ERROR',
+    };
+  }
+}
+
+/**
+ * Clears all query history for a specific database
+ */
+export function clearQueryHistory(
+  dbPath: string
+): { success: boolean; error?: string } {
+  try {
+    const allHistory = loadAllQueryHistory();
+
+    // Remove history for this database
+    delete allHistory[dbPath];
+
+    saveAllQueryHistory(allHistory);
+    return { success: true };
+  } catch (error) {
+    return {
+      success: false,
+      error: error instanceof Error ? error.message : 'STORAGE_ERROR',
+    };
+  }
 }
 
 function addRecentConnection(
