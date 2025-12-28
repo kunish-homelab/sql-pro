@@ -1,6 +1,10 @@
 import { describe, expect, it } from 'vitest';
 
-import { formatSql, parseTableReferences, validateSql } from './monaco-sql-config';
+import {
+  formatSql,
+  parseTableReferences,
+  validateSql,
+} from './monaco-sql-config';
 
 describe('formatSql', () => {
   describe('edge cases and empty input', () => {
@@ -1139,7 +1143,7 @@ describe('parseTableReferences', () => {
     });
   });
 
-  describe('JOIN clause', () => {
+  describe('jOIN clause', () => {
     it('should parse table in simple JOIN without alias', () => {
       // Note: Due to regex pattern behavior, when there's no explicit alias,
       // JOIN keyword may be consumed as potential alias (then filtered),
@@ -1323,9 +1327,7 @@ describe('parseTableReferences', () => {
     });
 
     it('should not treat ORDER as alias', () => {
-      const result = parseTableReferences(
-        'SELECT * FROM users ORDER BY id'
-      );
+      const result = parseTableReferences('SELECT * FROM users ORDER BY id');
       const usersRef = result.find((r) => r.tableName === 'users');
       expect(usersRef?.alias).toBeNull();
     });
@@ -1496,6 +1498,640 @@ describe('parseTableReferences', () => {
     it('should handle single character alias', () => {
       const result = parseTableReferences('SELECT * FROM users u');
       expect(result).toEqual([{ tableName: 'users', alias: 'u' }]);
+    });
+  });
+});
+
+describe('formatSql edge cases', () => {
+  describe('deeply nested subqueries', () => {
+    it('should handle nested subqueries in WHERE clause', () => {
+      const sql =
+        'select * from users where id in (select user_id from orders where status in (select id from statuses))';
+      const result = formatSql(sql);
+      expect(result).toContain('SELECT');
+      expect(result).toContain('WHERE');
+      expect(result).toContain('IN');
+    });
+
+    it('should handle subquery in SELECT clause', () => {
+      const sql =
+        'select name, (select count(*) from orders where orders.user_id = users.id) as order_count from users';
+      const result = formatSql(sql);
+      expect(result).toContain('SELECT');
+      expect(result).toContain('COUNT(');
+    });
+
+    it('should handle subquery in FROM clause (derived table)', () => {
+      const sql =
+        'select * from (select id, name from users where active = 1) as active_users';
+      const result = formatSql(sql);
+      expect(result).toContain('SELECT');
+      expect(result).toContain('FROM');
+    });
+  });
+
+  describe('multiple statements', () => {
+    it('should format three consecutive statements', () => {
+      const sql = 'select 1; select 2; select 3;';
+      const result = formatSql(sql);
+      expect(result.match(/SELECT/g)?.length).toBe(3);
+      expect(result).toContain(';');
+    });
+
+    it('should handle statements with different query types', () => {
+      const sql =
+        "select * from users; insert into logs (msg) values ('test'); update users set active = 1;";
+      const result = formatSql(sql);
+      expect(result).toContain('SELECT');
+      // Note: INSERT INTO may not be combined as compound keyword in all cases
+      expect(result.toLowerCase()).toContain('insert');
+      expect(result).toContain('UPDATE');
+    });
+  });
+
+  describe('special SQL constructs', () => {
+    it('should handle CASE with multiple WHEN clauses', () => {
+      const sql =
+        'select case when a = 1 then "one" when a = 2 then "two" when a = 3 then "three" else "other" end from t';
+      const result = formatSql(sql);
+      expect(result).toContain('CASE');
+      expect(result.match(/WHEN/g)?.length).toBe(3);
+      expect(result).toContain('ELSE');
+      expect(result).toContain('END');
+    });
+
+    it('should handle EXISTS with subquery', () => {
+      const sql =
+        'select * from users where exists (select 1 from orders where orders.user_id = users.id)';
+      const result = formatSql(sql);
+      expect(result).toContain('EXISTS');
+    });
+
+    it('should handle NOT EXISTS', () => {
+      const sql =
+        'select * from users where not exists (select 1 from banned where banned.user_id = users.id)';
+      const result = formatSql(sql);
+      expect(result).toContain('NOT');
+      expect(result).toContain('EXISTS');
+    });
+
+    it('should handle UNION with ALL', () => {
+      const sql = 'select id from users union all select id from admins';
+      const result = formatSql(sql);
+      expect(result).toContain('UNION');
+      // Note: ALL may not be combined with UNION in all cases
+      expect(result.toLowerCase()).toContain('all');
+    });
+
+    it('should handle EXCEPT', () => {
+      const sql = 'select id from all_users except select id from banned';
+      const result = formatSql(sql);
+      expect(result).toContain('EXCEPT');
+    });
+
+    it('should handle INTERSECT', () => {
+      const sql =
+        'select id from customers intersect select id from subscribers';
+      const result = formatSql(sql);
+      expect(result).toContain('INTERSECT');
+    });
+  });
+
+  describe('complex JOIN scenarios', () => {
+    it('should handle LEFT with OUTER JOIN (limitation)', () => {
+      // Note: The formatter doesn't combine left outer join as a single compound keyword
+      const sql =
+        'select * from users left outer join orders on users.id = orders.user_id';
+      const result = formatSql(sql);
+      expect(result).toContain('JOIN');
+      expect(result).toContain('ON');
+    });
+
+    it('should handle RIGHT with OUTER JOIN (limitation)', () => {
+      // Note: The formatter doesn't combine right outer join as a single compound keyword
+      const sql =
+        'select * from orders right outer join users on users.id = orders.user_id';
+      const result = formatSql(sql);
+      expect(result).toContain('JOIN');
+      expect(result).toContain('ON');
+    });
+
+    it('should handle FULL as identifier before JOIN', () => {
+      // Note: FULL is not a recognized keyword in the formatter, so it stays as identifier
+      const sql = 'select * from a full outer join b on a.id = b.id';
+      const result = formatSql(sql);
+      expect(result).toContain('JOIN');
+      expect(result).toContain('ON');
+    });
+
+    it('should handle query with multiple JOINs', () => {
+      // Test that multiple JOIN statements are present
+      const sql =
+        'select * from a join b on a.id = b.id join c on b.id = c.id join d on c.id = d.id';
+      const result = formatSql(sql);
+      expect(result.match(/JOIN/g)?.length).toBeGreaterThanOrEqual(3);
+    });
+
+    it('should handle self-join with different aliases', () => {
+      const sql =
+        'select e.name, m.name from employees e join employees m on e.manager_id = m.id';
+      const result = formatSql(sql);
+      expect(result).toContain('JOIN');
+      expect(result).toContain('ON');
+    });
+  });
+
+  describe('special characters in identifiers', () => {
+    it('should preserve spaces in backtick-quoted identifiers', () => {
+      const sql = 'select `first name`, `last name` from `user data`';
+      const result = formatSql(sql);
+      expect(result).toContain('`first name`');
+      expect(result).toContain('`last name`');
+      expect(result).toContain('`user data`');
+    });
+
+    it('should preserve spaces in double-quoted identifiers', () => {
+      const sql = 'select "first name", "last name" from "user data"';
+      const result = formatSql(sql);
+      expect(result).toContain('"first name"');
+      expect(result).toContain('"last name"');
+      expect(result).toContain('"user data"');
+    });
+  });
+
+  describe('string edge cases', () => {
+    it('should handle empty string literal', () => {
+      const sql = "select * from users where name = ''";
+      const result = formatSql(sql);
+      expect(result).toContain("''");
+    });
+
+    it('should handle string with only escaped quote', () => {
+      const sql = "select * from users where val = ''''";
+      const result = formatSql(sql);
+      expect(result).toContain("''''");
+    });
+
+    it('should handle multiple escaped quotes in string', () => {
+      const sql = "select * from users where note = 'It''s a test''s case'";
+      const result = formatSql(sql);
+      expect(result).toContain("'It''s a test''s case'");
+    });
+
+    it('should handle string with newline inside', () => {
+      const sql = "select * from users where note = 'line1\nline2'";
+      const result = formatSql(sql);
+      expect(result).toContain("'line1\nline2'");
+    });
+  });
+
+  describe('comment edge cases', () => {
+    it('should handle comment at very start', () => {
+      const sql = '-- comment\nselect * from users';
+      const result = formatSql(sql);
+      // Comments are preserved in some form
+      expect(result).toContain('--');
+      expect(result).toContain('SELECT');
+    });
+
+    it('should handle block comment in query', () => {
+      const sql = 'select /* comment */ * from users';
+      const result = formatSql(sql);
+      expect(result).toContain('/* comment */');
+    });
+
+    it('should handle line comment at end', () => {
+      const sql = 'select * from users -- comment';
+      const result = formatSql(sql);
+      expect(result).toContain('-- comment');
+    });
+
+    it('should handle block comment with asterisks inside', () => {
+      const sql = 'select /* * * * */ * from users';
+      const result = formatSql(sql);
+      expect(result).toContain('/* * * * */');
+    });
+  });
+
+  describe('operator edge cases', () => {
+    it('should handle concatenation operator', () => {
+      const sql = "select first_name || ' ' || last_name from users";
+      const result = formatSql(sql);
+      // The formatter may add spaces around || operator
+      expect(result).toContain('first_name');
+      expect(result).toContain('last_name');
+    });
+
+    it('should handle bitwise operators', () => {
+      const sql = 'select a << 2, b >> 1 from numbers';
+      const result = formatSql(sql);
+      expect(result).toContain('<<');
+      expect(result).toContain('>>');
+    });
+
+    it('should handle modulo operator', () => {
+      const sql = 'select value % 10 from numbers';
+      const result = formatSql(sql);
+      expect(result).toContain('%');
+    });
+  });
+
+  describe('aggregate functions with DISTINCT', () => {
+    it('should handle COUNT with DISTINCT', () => {
+      const sql = 'select count(distinct user_id) from orders';
+      const result = formatSql(sql);
+      expect(result).toContain('COUNT(');
+      expect(result).toContain('DISTINCT');
+    });
+
+    it('should handle SUM with DISTINCT', () => {
+      const sql = 'select sum(distinct amount) from payments';
+      const result = formatSql(sql);
+      expect(result).toContain('SUM(');
+      expect(result).toContain('DISTINCT');
+    });
+  });
+
+  describe('cREATE TABLE edge cases', () => {
+    it('should handle CREATE TABLE with multiple constraints', () => {
+      const sql =
+        'create table users (id integer primary key, email text unique not null, age integer check(age >= 0), status text default "active")';
+      const result = formatSql(sql);
+      // The formatter preserves CREATE TABLE as keywords
+      expect(result.toLowerCase()).toContain('create');
+      expect(result.toLowerCase()).toContain('table');
+      // Constraint keywords are uppercased
+      expect(result).toContain('UNIQUE');
+      expect(result).toContain('NOT');
+      expect(result).toContain('NULL');
+      expect(result).toContain('CHECK');
+      expect(result).toContain('DEFAULT');
+    });
+
+    it('should handle CREATE TABLE with foreign key', () => {
+      const sql =
+        'create table orders (id integer primary key, user_id integer references users(id) on delete cascade)';
+      const result = formatSql(sql);
+      // The formatter preserves CREATE TABLE as keywords
+      expect(result.toLowerCase()).toContain('create');
+      expect(result.toLowerCase()).toContain('table');
+      expect(result).toContain('REFERENCES');
+      expect(result).toContain('CASCADE');
+    });
+  });
+});
+
+describe('validateSql edge cases', () => {
+  describe('boundary conditions', () => {
+    it('should handle single character input', () => {
+      const errors = validateSql('a');
+      expect(errors).toEqual([]);
+    });
+
+    it('should handle very long single line', () => {
+      const longQuery = `SELECT * FROM users WHERE ${'id = 1 OR '.repeat(100)}id = 999`;
+      const errors = validateSql(longQuery);
+      expect(errors).toEqual([]);
+    });
+
+    it('should handle many empty lines', () => {
+      const sql = '\n\n\n\nSELECT * FROM users\n\n\n\n';
+      const errors = validateSql(sql);
+      expect(errors).toEqual([]);
+    });
+
+    it('should handle tab characters mixed with spaces', () => {
+      const sql = 'SELECT\t*\t\tFROM\t users';
+      const errors = validateSql(sql);
+      expect(errors).toEqual([]);
+    });
+  });
+
+  describe('complex parentheses scenarios', () => {
+    it('should validate deeply nested parentheses (5 levels)', () => {
+      const sql = 'SELECT * FROM t WHERE ((((a = 1))))';
+      expect(validateSql(sql)).toEqual([]);
+    });
+
+    it('should detect unclosed parenthesis at various depths', () => {
+      const sql = 'SELECT * FROM t WHERE (((a = 1))';
+      const errors = validateSql(sql);
+      expect(errors.length).toBe(1);
+      expect(errors[0].message.toLowerCase()).toContain('parenthesis');
+    });
+
+    it('should handle multiple balanced parentheses groups', () => {
+      const sql = 'SELECT (a + b) * (c + d) FROM t WHERE (x = 1) AND (y = 2)';
+      expect(validateSql(sql)).toEqual([]);
+    });
+
+    it('should detect multiple mismatched closing parentheses', () => {
+      const sql = 'SELECT * FROM users))';
+      const errors = validateSql(sql);
+      expect(errors.length).toBe(2);
+    });
+  });
+
+  describe('quote boundary conditions', () => {
+    it('should handle single quote at end of input', () => {
+      const errors = validateSql("SELECT * FROM users WHERE name = '");
+      expect(errors.length).toBeGreaterThan(0);
+      expect(
+        errors.some((e) => e.message.toLowerCase().includes('unclosed'))
+      ).toBe(true);
+    });
+
+    it('should handle double quote at end of input', () => {
+      const errors = validateSql('SELECT * FROM users WHERE "col');
+      expect(errors.length).toBeGreaterThan(0);
+      expect(
+        errors.some((e) => e.message.toLowerCase().includes('unclosed'))
+      ).toBe(true);
+    });
+
+    it('should handle alternating quote types', () => {
+      const sql =
+        "SELECT * FROM users WHERE name = 'John' AND \"col\" = 1 AND city = 'NYC'";
+      expect(validateSql(sql)).toEqual([]);
+    });
+
+    it('should handle many escaped quotes', () => {
+      const sql = "SELECT * FROM t WHERE v = ''''''''";
+      expect(validateSql(sql)).toEqual([]);
+    });
+  });
+
+  describe('comment boundary conditions', () => {
+    it('should handle comment with only dashes', () => {
+      const sql = 'SELECT * FROM users -----';
+      expect(validateSql(sql)).toEqual([]);
+    });
+
+    it('should handle block comment immediately after content', () => {
+      const sql = 'SELECT*/*comment*/FROM users';
+      expect(validateSql(sql)).toEqual([]);
+    });
+
+    it('should handle nested-looking block comment (not actually nested)', () => {
+      const sql = 'SELECT * FROM users /* outer /* inner */ still_comment */';
+      // Block comments don't nest in SQL, so the first */ closes it
+      // The 'still_comment */' part is outside the comment
+      const errors = validateSql(sql);
+      // This may or may not produce errors depending on implementation
+      // The key is it doesn't crash
+      expect(Array.isArray(errors)).toBe(true);
+    });
+
+    it('should handle line comment at end without newline', () => {
+      const sql = 'SELECT * FROM users -- comment';
+      expect(validateSql(sql)).toEqual([]);
+    });
+  });
+
+  describe('mixed error scenarios', () => {
+    it('should detect both unclosed quote and unclosed parenthesis', () => {
+      const sql = "SELECT * FROM users WHERE (name = 'test";
+      const errors = validateSql(sql);
+      expect(errors.length).toBeGreaterThanOrEqual(2);
+    });
+
+    it('should detect typo with unclosed parenthesis', () => {
+      const sql = 'SELEC * FROM users WHERE (id = 1';
+      const errors = validateSql(sql);
+      expect(errors.some((e) => e.message.includes('SELECT'))).toBe(true);
+      expect(
+        errors.some((e) => e.message.toLowerCase().includes('parenthesis'))
+      ).toBe(true);
+    });
+
+    it('should detect multiple different typos', () => {
+      const sql = 'SELEC * FRON users WHER id = 1';
+      const errors = validateSql(sql);
+      expect(errors.some((e) => e.message.includes('SELECT'))).toBe(true);
+      expect(errors.some((e) => e.message.includes('FROM'))).toBe(true);
+      expect(errors.some((e) => e.message.includes('WHERE'))).toBe(true);
+    });
+  });
+
+  describe('valid SQL edge cases', () => {
+    it('should validate empty SELECT list with asterisk', () => {
+      const sql = 'SELECT * FROM t';
+      expect(validateSql(sql)).toEqual([]);
+    });
+
+    it('should validate SELECT with expressions only', () => {
+      const sql = 'SELECT 1 + 1, 2 * 3';
+      expect(validateSql(sql)).toEqual([]);
+    });
+
+    it('should validate query with all major clauses', () => {
+      const sql = `
+        SELECT u.id, COUNT(*) as cnt
+        FROM users u
+        JOIN orders o ON u.id = o.user_id
+        WHERE u.status = 'active'
+        GROUP BY u.id
+        HAVING COUNT(*) > 5
+        ORDER BY cnt DESC
+        LIMIT 10 OFFSET 20
+      `;
+      expect(validateSql(sql)).toEqual([]);
+    });
+  });
+
+  describe('unicode and special characters', () => {
+    it('should handle unicode in strings', () => {
+      const sql = "SELECT * FROM users WHERE name = '日本語'";
+      expect(validateSql(sql)).toEqual([]);
+    });
+
+    it('should handle emoji in strings', () => {
+      const sql = "SELECT * FROM posts WHERE content = '👍🎉'";
+      expect(validateSql(sql)).toEqual([]);
+    });
+
+    it('should handle non-ASCII identifiers (if quoted)', () => {
+      const sql = 'SELECT * FROM "用户表" WHERE "姓名" = \'test\'';
+      expect(validateSql(sql)).toEqual([]);
+    });
+  });
+});
+
+describe('parseTableReferences edge cases', () => {
+  describe('complex alias scenarios', () => {
+    it('should handle same table aliased multiple times (self-join)', () => {
+      const result = parseTableReferences(
+        'SELECT * FROM employees e1 JOIN employees e2 ON e1.manager_id = e2.id'
+      );
+      expect(result).toHaveLength(2);
+      expect(result).toContainEqual({ tableName: 'employees', alias: 'e1' });
+      expect(result).toContainEqual({ tableName: 'employees', alias: 'e2' });
+    });
+
+    it('should handle very long alias', () => {
+      const longAlias = 'very_long_alias_name_that_goes_on_for_a_while';
+      const result = parseTableReferences(`SELECT * FROM users ${longAlias}`);
+      expect(result).toEqual([{ tableName: 'users', alias: longAlias }]);
+    });
+
+    it('should handle alias that looks like table name', () => {
+      const result = parseTableReferences('SELECT * FROM users orders');
+      expect(result).toEqual([{ tableName: 'users', alias: 'orders' }]);
+    });
+  });
+
+  describe('subquery scenarios', () => {
+    it('should parse tables from multiple subqueries', () => {
+      const sql =
+        'SELECT * FROM (SELECT * FROM a) JOIN (SELECT * FROM b) ON true';
+      const result = parseTableReferences(sql);
+      expect(result).toContainEqual({ tableName: 'a', alias: null });
+      expect(result).toContainEqual({ tableName: 'b', alias: null });
+    });
+
+    it('should handle correlated subquery', () => {
+      const sql =
+        'SELECT * FROM outer_table o WHERE EXISTS (SELECT 1 FROM inner_table i WHERE i.id = o.id)';
+      const result = parseTableReferences(sql);
+      expect(result).toContainEqual({ tableName: 'outer_table', alias: 'o' });
+      expect(result).toContainEqual({ tableName: 'inner_table', alias: 'i' });
+    });
+  });
+
+  describe('uNION/set operation scenarios', () => {
+    it('should parse tables from UNION query', () => {
+      const sql = 'SELECT * FROM table1 UNION SELECT * FROM table2';
+      const result = parseTableReferences(sql);
+      expect(result).toContainEqual({ tableName: 'table1', alias: null });
+      expect(result).toContainEqual({ tableName: 'table2', alias: null });
+    });
+
+    it('should parse tables from UNION ALL with aliases', () => {
+      const sql = 'SELECT * FROM table1 t1 UNION ALL SELECT * FROM table2 t2';
+      const result = parseTableReferences(sql);
+      expect(result).toContainEqual({ tableName: 'table1', alias: 't1' });
+      expect(result).toContainEqual({ tableName: 'table2', alias: 't2' });
+    });
+
+    it('should parse tables from set operations (current limitation)', () => {
+      // Note: EXCEPT and INTERSECT are not in the filtered keywords list,
+      // so they may be captured as aliases. This documents actual behavior.
+      const sql =
+        'SELECT * FROM a EXCEPT SELECT * FROM b INTERSECT SELECT * FROM c';
+      const result = parseTableReferences(sql);
+      // At minimum, tables a, b, and c should be recognized as table names
+      expect(result.some((r) => r.tableName === 'a')).toBe(true);
+      expect(result.some((r) => r.tableName === 'b')).toBe(true);
+      expect(result.some((r) => r.tableName === 'c')).toBe(true);
+    });
+  });
+
+  describe('whitespace variations', () => {
+    it('should handle excessive whitespace around AS', () => {
+      const result = parseTableReferences('SELECT * FROM users     AS      u');
+      expect(result).toEqual([{ tableName: 'users', alias: 'u' }]);
+    });
+
+    it('should handle carriage return characters', () => {
+      const result = parseTableReferences('SELECT *\r\nFROM users\r\n');
+      expect(result).toEqual([{ tableName: 'users', alias: null }]);
+    });
+
+    it('should handle mixed tabs, spaces, and newlines', () => {
+      const result = parseTableReferences(
+        'SELECT *\n\t\t  FROM  \t users   \n\t  u'
+      );
+      expect(result).toEqual([{ tableName: 'users', alias: 'u' }]);
+    });
+  });
+
+  describe('special table name patterns', () => {
+    it('should handle table name with all underscores', () => {
+      const result = parseTableReferences('SELECT * FROM ___');
+      expect(result).toEqual([{ tableName: '___', alias: null }]);
+    });
+
+    it('should handle table name that is just a number prefix', () => {
+      const result = parseTableReferences('SELECT * FROM t1');
+      expect(result).toEqual([{ tableName: 't1', alias: null }]);
+    });
+
+    it('should handle table name ending with numbers', () => {
+      const result = parseTableReferences('SELECT * FROM users_2024');
+      expect(result).toEqual([{ tableName: 'users_2024', alias: null }]);
+    });
+
+    it('should handle mixed case table and alias', () => {
+      const result = parseTableReferences('SELECT * FROM MyUsersTable AS mUT');
+      expect(result).toEqual([{ tableName: 'MyUsersTable', alias: 'mUT' }]);
+    });
+  });
+
+  describe('multiple FROM keywords', () => {
+    it('should parse all tables when FROM appears in subquery', () => {
+      const sql = 'SELECT * FROM main WHERE id IN (SELECT id FROM sub)';
+      const result = parseTableReferences(sql);
+      expect(result).toHaveLength(2);
+      expect(result).toContainEqual({ tableName: 'main', alias: null });
+      expect(result).toContainEqual({ tableName: 'sub', alias: null });
+    });
+
+    it('should handle DELETE FROM correctly', () => {
+      const result = parseTableReferences(
+        'DELETE FROM obsolete_data WHERE date < 2020'
+      );
+      expect(result).toEqual([{ tableName: 'obsolete_data', alias: null }]);
+    });
+  });
+
+  describe('edge cases with SQL keywords as potential aliases', () => {
+    it('should filter all known keywords that might appear as aliases', () => {
+      // Testing that none of the filtered keywords are returned as aliases
+      const keywords = [
+        'ON',
+        'WHERE',
+        'AND',
+        'OR',
+        'LEFT',
+        'RIGHT',
+        'INNER',
+        'OUTER',
+        'CROSS',
+        'JOIN',
+        'ORDER',
+        'GROUP',
+        'HAVING',
+        'LIMIT',
+        'UNION',
+        'SET',
+        'VALUES',
+      ];
+
+      for (const keyword of keywords) {
+        const result = parseTableReferences(`SELECT * FROM users ${keyword}`);
+        if (result.length > 0) {
+          expect(result[0].alias).toBeNull();
+        }
+      }
+    });
+  });
+
+  describe('no table references', () => {
+    it('should return empty for VALUES clause', () => {
+      const result = parseTableReferences(
+        "INSERT INTO users (name) VALUES ('test')"
+      );
+      expect(result).toEqual([]);
+    });
+
+    it('should return empty for expression-only SELECT', () => {
+      const result = parseTableReferences('SELECT 1 + 1, 2 * 3');
+      expect(result).toEqual([]);
+    });
+
+    it('should return empty for PRAGMA statement', () => {
+      const result = parseTableReferences('PRAGMA table_info(users)');
+      expect(result).toEqual([]);
     });
   });
 });
