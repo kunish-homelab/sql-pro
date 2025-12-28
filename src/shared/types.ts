@@ -347,6 +347,68 @@ export interface RemoveConnectionResponse {
   error?: string;
 }
 
+// ============ Query History Types ============
+
+export interface QueryHistoryEntry {
+  /** Unique identifier for the history entry */
+  id: string;
+  /** Database file path (used to scope history per database) */
+  dbPath: string;
+  /** Full SQL query text */
+  queryText: string;
+  /** When the query was executed (ISO string) */
+  executedAt: string;
+  /** Query execution duration in milliseconds */
+  durationMs: number;
+  /** Whether the query execution was successful */
+  success: boolean;
+  /** Error message if execution failed */
+  error?: string;
+}
+
+export interface GetQueryHistoryRequest {
+  /** Database file path to get history for */
+  dbPath: string;
+}
+
+export interface GetQueryHistoryResponse {
+  success: boolean;
+  history?: QueryHistoryEntry[];
+  error?: string;
+}
+
+export interface SaveQueryHistoryRequest {
+  /** The history entry to save */
+  entry: QueryHistoryEntry;
+}
+
+export interface SaveQueryHistoryResponse {
+  success: boolean;
+  error?: string;
+}
+
+export interface DeleteQueryHistoryRequest {
+  /** Database file path */
+  dbPath: string;
+  /** ID of the history entry to delete */
+  entryId: string;
+}
+
+export interface DeleteQueryHistoryResponse {
+  success: boolean;
+  error?: string;
+}
+
+export interface ClearQueryHistoryRequest {
+  /** Database file path to clear history for */
+  dbPath: string;
+}
+
+export interface ClearQueryHistoryResponse {
+  success: boolean;
+  error?: string;
+}
+
 // ============ IPC Channel Names ============
 
 export const IPC_CHANNELS = {
@@ -381,6 +443,12 @@ export const IPC_CHANNELS = {
   // Connection profile operations
   CONNECTION_UPDATE: 'connection:update',
   CONNECTION_REMOVE: 'connection:remove',
+
+  // Query history operations
+  HISTORY_GET: 'history:get',
+  HISTORY_SAVE: 'history:save',
+  HISTORY_DELETE: 'history:delete',
+  HISTORY_CLEAR: 'history:clear',
 
   // Menu actions (main -> renderer)
   MENU_ACTION: 'menu:action',
