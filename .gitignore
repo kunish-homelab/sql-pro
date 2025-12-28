@@ -33,5 +33,6 @@ coverage
 
 # Auto Claude data directory
 .auto-claude/
+.claude_settings.json
 .auto-claude-status
 .worktrees
