@@ -1,4 +1,6 @@
+import type { QueryHistoryEntry } from '../../../shared/types';
 import type { QueryResult } from '@/types/database';
+import { sqlPro } from '@/lib/api';
 import { create } from 'zustand';
 
 interface QueryState {
@@ -9,13 +11,10 @@ interface QueryState {
   isExecuting: boolean;
   executionTime: number | null;
 
-  // Query history
-  history: Array<{
-    query: string;
-    executedAt: Date;
-    success: boolean;
-    rowsAffected?: number;
-  }>;
+  // Query history (persisted per database)
+  history: QueryHistoryEntry[];
+  isLoadingHistory: boolean;
+  currentDbPath: string | null;
 
   // Actions
   setCurrentQuery: (query: string) => void;
@@ -23,12 +22,16 @@ interface QueryState {
   setError: (error: string | null) => void;
   setIsExecuting: (isExecuting: boolean) => void;
   setExecutionTime: (time: number | null) => void;
+  loadHistory: (dbPath: string) => Promise<void>;
   addToHistory: (
+    dbPath: string,
     query: string,
     success: boolean,
-    rowsAffected?: number
-  ) => void;
-  clearHistory: () => void;
+    durationMs: number,
+    errorMessage?: string
+  ) => Promise<void>;
+  deleteHistoryItem: (dbPath: string, entryId: string) => Promise<void>;
+  clearHistory: (dbPath: string) => Promise<void>;
   reset: () => void;
 }
 
@@ -40,7 +43,14 @@ const initialState = {
   error: null,
   isExecuting: false,
   executionTime: null,
-  history: [],
+  history: [] as QueryHistoryEntry[],
+  isLoadingHistory: false,
+  currentDbPath: null,
+};
+
+// Generate a unique ID for history entries
+const generateId = (): string => {
+  return `${Date.now()}-${Math.random().toString(36).substring(2, 9)}`;
 };
 
 export const useQueryStore = create<QueryState>((set) => ({
@@ -56,20 +66,75 @@ export const useQueryStore = create<QueryState>((set) => ({
 
   setExecutionTime: (executionTime) => set({ executionTime }),
 
-  addToHistory: (query, success, rowsAffected) =>
-    set((state) => ({
-      history: [
-        {
-          query,
-          executedAt: new Date(),
-          success,
-          rowsAffected,
-        },
-        ...state.history.slice(0, MAX_HISTORY_LENGTH - 1),
-      ],
-    })),
+  loadHistory: async (dbPath: string) => {
+    set({ isLoadingHistory: true, currentDbPath: dbPath });
+    try {
+      const response = await sqlPro.history.get({ dbPath });
+      if (response.success && response.history) {
+        set({ history: response.history, isLoadingHistory: false });
+      } else {
+        set({ history: [], isLoadingHistory: false });
+      }
+    } catch {
+      set({ history: [], isLoadingHistory: false });
+    }
+  },
 
-  clearHistory: () => set({ history: [] }),
+  addToHistory: async (dbPath, query, success, durationMs, errorMessage) => {
+    const entry: QueryHistoryEntry = {
+      id: generateId(),
+      dbPath,
+      queryText: query,
+      executedAt: new Date().toISOString(),
+      durationMs,
+      success,
+      error: errorMessage,
+    };
+
+    // Optimistically update the UI
+    set((state) => ({
+      history: [entry, ...state.history.slice(0, MAX_HISTORY_LENGTH - 1)],
+    }));
+
+    // Persist to storage in background (fire-and-forget)
+    sqlPro.history.save({ entry }).catch(() => {
+      // Silent failure - history is already in memory
+    });
+  },
+
+  deleteHistoryItem: async (dbPath: string, entryId: string) => {
+    // Optimistically update the UI
+    set((state) => ({
+      history: state.history.filter((entry) => entry.id !== entryId),
+    }));
+
+    // Persist deletion to storage
+    try {
+      await sqlPro.history.delete({ dbPath, entryId });
+    } catch {
+      // If deletion fails, reload history to restore state
+      const response = await sqlPro.history.get({ dbPath });
+      if (response.success && response.history) {
+        set({ history: response.history });
+      }
+    }
+  },
+
+  clearHistory: async (dbPath: string) => {
+    // Optimistically clear the UI
+    set({ history: [] });
+
+    // Persist to storage
+    try {
+      await sqlPro.history.clear({ dbPath });
+    } catch {
+      // If clearing fails, reload history to restore state
+      const response = await sqlPro.history.get({ dbPath });
+      if (response.success && response.history) {
+        set({ history: response.history });
+      }
+    }
+  },
 
   reset: () => set(initialState),
 }));

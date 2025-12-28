@@ -23,9 +23,17 @@ export function QueryEditor() {
     setIsExecuting,
     setExecutionTime,
     addToHistory,
+    loadHistory,
   } = useQueryStore();
 
   const [showHistory, setShowHistory] = useState(false);
+
+  // Load history when connection changes
+  useEffect(() => {
+    if (connection?.path) {
+      loadHistory(connection.path);
+    }
+  }, [connection?.path, loadHistory]);
 
   // Keyboard shortcut for history toggle
   useEffect(() => {
@@ -61,15 +69,26 @@ export function QueryEditor() {
           lastInsertRowId: result.lastInsertRowId,
         });
         setExecutionTime(result.executionTime || 0);
-        addToHistory(currentQuery.trim(), true, result.rowsAffected);
+        addToHistory(
+          connection.path,
+          currentQuery.trim(),
+          true,
+          result.executionTime || 0
+        );
       } else {
         setError(result.error || 'Query failed');
-        addToHistory(currentQuery.trim(), false);
+        addToHistory(
+          connection.path,
+          currentQuery.trim(),
+          false,
+          0,
+          result.error
+        );
       }
     } catch (err) {
       const errorMessage = err instanceof Error ? err.message : 'Unknown error';
       setError(errorMessage);
-      addToHistory(currentQuery.trim(), false);
+      addToHistory(connection.path, currentQuery.trim(), false, 0, errorMessage);
     } finally {
       setIsExecuting(false);
     }
@@ -206,8 +225,8 @@ export function QueryEditor() {
                 ) : (
                   history.map((item) => (
                     <button
-                      key={item.executedAt.getTime()}
-                      onClick={() => handleHistorySelect(item.query)}
+                      key={item.id}
+                      onClick={() => handleHistorySelect(item.queryText)}
                       className={cn(
                         'hover:bg-accent w-full rounded-md px-3 py-2 text-left text-sm transition-colors',
                         !item.success && 'border-destructive border-l-2'
@@ -216,7 +235,7 @@ export function QueryEditor() {
                       <div className="flex items-center gap-2">
                         {item.success ? (
                           <span className="text-xs text-green-600">
-                            {item.rowsAffected} rows
+                            {item.durationMs}ms
                           </span>
                         ) : (
                           <span className="text-destructive text-xs">
@@ -228,7 +247,7 @@ export function QueryEditor() {
                         </span>
                       </div>
                       <p className="mt-1 truncate font-mono text-xs">
-                        {item.query}
+                        {item.queryText}
                       </p>
                     </button>
                   ))
