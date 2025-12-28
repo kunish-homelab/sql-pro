@@ -3,9 +3,11 @@ import { useVirtualizer } from '@tanstack/react-virtual';
 import { ArrowDown, ArrowUp, Key, Trash2 } from 'lucide-react';
 import { useCallback, useEffect, useMemo, useRef, useState } from 'react';
 import { useResizableColumns } from '@/hooks/useResizableColumns';
+import { getColumnTypeCategory } from '@/lib/filter-utils';
 import { cn } from '@/lib/utils';
 import { useChangesStore } from '@/stores';
 import { ColumnResizeHandle } from './ColumnResizeHandle';
+import { TypeBadge } from './data-table/TypeBadge';
 import { EditableCell } from './EditableCell';
 
 interface EditableDataGridProps {
@@ -437,32 +439,49 @@ export function EditableDataGrid({
       <div style={{ minWidth: totalWidth }}>
         {/* Header */}
         <div className="bg-muted/50 sticky top-0 z-10 flex border-b backdrop-blur-sm">
-          {columns.map((col, idx) => (
-            <div
-              key={col.name}
-              className="relative flex items-center gap-1 border-r px-3 py-2"
-              style={{ width: columnWidths[idx], minWidth: columnWidths[idx] }}
-            >
-              <button
-                onClick={() => onSort(col.name)}
-                className="hover:text-foreground flex flex-1 items-center gap-1 text-left text-sm font-medium"
+          {columns.map((col, idx) => {
+            const typeCategory = getColumnTypeCategory(col);
+
+            return (
+              <div
+                key={col.name}
+                className="relative flex flex-col gap-0.5 border-r px-3 py-2"
+                style={{
+                  width: columnWidths[idx],
+                  minWidth: columnWidths[idx],
+                }}
               >
-                {col.isPrimaryKey && <Key className="h-3 w-3 text-amber-500" />}
-                <span className="truncate">{col.name}</span>
-                {sort?.column === col.name &&
-                  (sort.direction === 'asc' ? (
-                    <ArrowUp className="h-3 w-3 shrink-0" />
-                  ) : (
-                    <ArrowDown className="h-3 w-3 shrink-0" />
-                  ))}
-              </button>
-              <ColumnResizeHandle
-                onMouseDown={(e) => handleResizeStart(idx, e)}
-                onDoubleClick={() => handleResizeDoubleClick(idx)}
-                isResizing={resizingColumn === idx}
-              />
-            </div>
-          ))}
+                <button
+                  onClick={() => onSort(col.name)}
+                  className="hover:text-foreground flex flex-1 items-center gap-1 text-left text-sm font-medium"
+                >
+                  {col.isPrimaryKey && (
+                    <Key className="h-3 w-3 text-amber-500" />
+                  )}
+                  <span className="truncate">{col.name}</span>
+                  {sort?.column === col.name &&
+                    (sort.direction === 'asc' ? (
+                      <ArrowUp className="h-3 w-3 shrink-0" />
+                    ) : (
+                      <ArrowDown className="h-3 w-3 shrink-0" />
+                    ))}
+                </button>
+
+                {/* Type badge */}
+                <TypeBadge
+                  type={col.type}
+                  typeCategory={typeCategory}
+                  className="self-start"
+                />
+
+                <ColumnResizeHandle
+                  onMouseDown={(e) => handleResizeStart(idx, e)}
+                  onDoubleClick={() => handleResizeDoubleClick(idx)}
+                  isResizing={resizingColumn === idx}
+                />
+              </div>
+            );
+          })}
           {/* Actions header */}
           <div
             className="flex items-center justify-center px-2 py-2"

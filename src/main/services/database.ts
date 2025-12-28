@@ -3,6 +3,8 @@ import type {
   ForeignKeyInfo,
   IndexInfo,
   PendingChangeInfo,
+  QueryPlanNode,
+  QueryPlanStats,
   SchemaInfo,
   TableInfo,
   TriggerInfo,
@@ -844,6 +846,119 @@ class DatabaseService {
       }
     }
     this.connections.clear();
+  }
+
+  analyzeQueryPlan(
+    connectionId: string,
+    query: string
+  ):
+    | { success: true; plan: QueryPlanNode[]; stats: QueryPlanStats }
+    | { success: false; error: string } {
+    const conn = this.connections.get(connectionId);
+    if (!conn) {
+      return { success: false, error: 'Connection not found' };
+    }
+
+    try {
+      // Get EXPLAIN QUERY PLAN output
+      const planQuery = `EXPLAIN QUERY PLAN ${query}`;
+      const planResult = conn.db.prepare(planQuery).all() as Array<{
+        id: number;
+        parent: number;
+        notused: number;
+        detail: string;
+      }>;
+
+      const plan: QueryPlanNode[] = planResult.map((row) => ({
+        id: row.id,
+        parent: row.parent,
+        notUsed: row.notused,
+        detail: row.detail,
+      }));
+
+      // Execute the actual query to get execution time and row count
+      const startTime = performance.now();
+      const trimmedQuery = query.trim().toLowerCase();
+
+      let rowsReturned = 0;
+      let rowsExamined = 0;
+
+      // Only execute SELECT queries to get actual stats
+      if (trimmedQuery.startsWith('select')) {
+        try {
+          const rows = conn.db.prepare(query).all() as unknown[];
+          rowsReturned = rows.length;
+          rowsExamined = rows.length; // For SELECT, examined = returned
+        } catch {
+          // If query fails, we still have the plan
+        }
+      }
+
+      const executionTime = performance.now() - startTime;
+
+      // Extract tables and indexes from plan details
+      const tablesAccessed: string[] = [];
+      const indexesUsed: string[] = [];
+
+      for (const node of plan) {
+        const detail = node.detail.toUpperCase();
+
+        // Extract table names from SCAN TABLE or SEARCH TABLE patterns
+        const tableMatch = node.detail.match(
+          /(?:SCAN|SEARCH)\s+TABLE\s+(\w+)/i
+        );
+        if (tableMatch && !tablesAccessed.includes(tableMatch[1])) {
+          tablesAccessed.push(tableMatch[1]);
+        }
+
+        // Extract index names from USING INDEX patterns
+        const indexMatch = node.detail.match(
+          /USING\s+(?:INDEX|COVERING INDEX)\s+(\w+)/i
+        );
+        if (indexMatch && !indexesUsed.includes(indexMatch[1])) {
+          indexesUsed.push(indexMatch[1]);
+        }
+
+        // Also check for PRIMARY KEY usage
+        if (detail.includes('USING INTEGER PRIMARY KEY')) {
+          const pkTable = tableMatch ? `${tableMatch[1]}_pk` : 'primary_key';
+          if (!indexesUsed.includes(pkTable)) {
+            indexesUsed.push(pkTable);
+          }
+        }
+      }
+
+      // Estimate rows examined based on plan operations
+      // Full table scans examine all rows, indexed searches examine fewer
+      if (rowsExamined === 0) {
+        for (const node of plan) {
+          if (node.detail.toUpperCase().includes('SCAN TABLE')) {
+            // Full table scan - estimate based on table name if we can get row count
+            rowsExamined += 1000; // Default estimate
+          } else if (node.detail.toUpperCase().includes('SEARCH TABLE')) {
+            rowsExamined += 10; // Indexed access typically examines fewer rows
+          }
+        }
+      }
+
+      const stats: QueryPlanStats = {
+        executionTime,
+        rowsExamined,
+        rowsReturned,
+        indexesUsed,
+        tablesAccessed,
+      };
+
+      return { success: true, plan, stats };
+    } catch (error) {
+      return {
+        success: false,
+        error:
+          error instanceof Error
+            ? error.message
+            : 'Failed to analyze query plan',
+      };
+    }
   }
 }
 

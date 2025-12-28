@@ -1,4 +1,6 @@
 import type {
+  AnalyzeQueryPlanRequest,
+  AnalyzeQueryPlanResponse,
   ApplyChangesRequest,
   ApplyChangesResponse,
   ClearQueryHistoryRequest,
@@ -739,6 +741,22 @@ export const mockSqlProAPI = {
       return {
         success: true,
         appliedCount: 1,
+      };
+    },
+    analyzeQueryPlan: async (
+      _request: AnalyzeQueryPlanRequest
+    ): Promise<AnalyzeQueryPlanResponse> => {
+      await delay(200);
+      return {
+        success: true,
+        plan: [{ id: 2, parent: 0, notUsed: 0, detail: 'SCAN TABLE users' }],
+        stats: {
+          executionTime: 1.5,
+          rowsExamined: 100,
+          rowsReturned: 10,
+          indexesUsed: [],
+          tablesAccessed: ['users'],
+        },
       };
     },
   },

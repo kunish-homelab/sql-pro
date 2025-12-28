@@ -409,6 +409,44 @@ export interface ClearQueryHistoryResponse {
   error?: string;
 }
 
+// ============ Query Plan Analysis Types ============
+
+export interface QueryPlanNode {
+  /** Node identifier from EXPLAIN QUERY PLAN */
+  id: number;
+  /** Parent node ID (0 for root nodes) */
+  parent: number;
+  /** Reserved field from SQLite */
+  notUsed: number;
+  /** Operation description (e.g., "SCAN TABLE users", "SEARCH TABLE users USING INDEX") */
+  detail: string;
+}
+
+export interface QueryPlanStats {
+  /** Query execution time in milliseconds */
+  executionTime: number;
+  /** Estimated or actual rows examined */
+  rowsExamined: number;
+  /** Number of rows returned */
+  rowsReturned: number;
+  /** List of indexes used in the query */
+  indexesUsed: string[];
+  /** List of tables accessed */
+  tablesAccessed: string[];
+}
+
+export interface AnalyzeQueryPlanRequest {
+  connectionId: string;
+  query: string;
+}
+
+export interface AnalyzeQueryPlanResponse {
+  success: boolean;
+  plan?: QueryPlanNode[];
+  stats?: QueryPlanStats;
+  error?: string;
+}
+
 // ============ IPC Channel Names ============
 
 export const IPC_CHANNELS = {
@@ -420,6 +458,7 @@ export const IPC_CHANNELS = {
   DB_EXECUTE_QUERY: 'db:executeQuery',
   DB_VALIDATE_CHANGES: 'db:validateChanges',
   DB_APPLY_CHANGES: 'db:applyChanges',
+  DB_ANALYZE_PLAN: 'db:analyzeQueryPlan',
 
   // Dialogs
   DIALOG_OPEN_FILE: 'dialog:openFile',

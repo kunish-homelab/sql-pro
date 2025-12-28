@@ -1,4 +1,5 @@
 import type {
+  AnalyzeQueryPlanRequest,
   ApplyChangesRequest,
   ClearQueryHistoryRequest,
   CloseDatabaseRequest,
@@ -415,6 +416,17 @@ export function setupIpcHandlers(): void {
       return databaseService.applyChanges(
         request.connectionId,
         request.changes
+      );
+    }
+  );
+
+  // Database: Analyze Query Plan
+  ipcMain.handle(
+    IPC_CHANNELS.DB_ANALYZE_PLAN,
+    async (_event, request: AnalyzeQueryPlanRequest) => {
+      return databaseService.analyzeQueryPlan(
+        request.connectionId,
+        request.query
       );
     }
   );

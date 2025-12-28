@@ -8,6 +8,7 @@ import { memo, useRef, useState } from 'react';
 import { getColumnTypeCategory } from '@/lib/filter-utils';
 import { cn } from '@/lib/utils';
 import { ColumnFilterPopover } from './ColumnFilterPopover';
+import { TypeBadge } from './TypeBadge';
 
 interface HeaderCellProps {
   header: Header<TableRowData, unknown>;
@@ -89,35 +90,50 @@ const HeaderCell = memo(
     return (
       <div
         className={cn(
-          'group border-border relative flex h-9 items-center border-r last:border-r-0',
+          'group border-border relative flex items-center border-r last:border-r-0',
           'bg-muted/30 select-none',
-          canSort && 'hover:bg-muted/50 cursor-pointer'
+          canSort && 'hover:bg-muted/50 cursor-pointer',
+          columnSchema ? 'min-h-14' : 'h-9'
         )}
         style={{ width: `var(--col-${header.column.id}-size)` }}
         onClick={handleClick}
       >
         {/* Column content */}
-        <div className="flex min-w-0 flex-1 items-center gap-1.5 px-2">
-          {/* Primary key indicator */}
-          {isPrimaryKey && <Key className="h-3 w-3 shrink-0 text-amber-500" />}
+        <div className="flex min-w-0 flex-1 flex-col gap-0.5 px-2 py-1">
+          {/* Column name row */}
+          <div className="flex min-w-0 items-center gap-1.5">
+            {/* Primary key indicator */}
+            {isPrimaryKey && (
+              <Key className="h-3 w-3 shrink-0 text-amber-500" />
+            )}
 
-          {/* Grouping indicator */}
-          {isGrouped && <Layers className="text-primary h-3 w-3 shrink-0" />}
+            {/* Grouping indicator */}
+            {isGrouped && <Layers className="text-primary h-3 w-3 shrink-0" />}
 
-          {/* Column name */}
-          <span className="truncate text-sm font-medium">
-            {flexRender(header.column.columnDef.header, header.getContext())}
-          </span>
-
-          {/* Sort indicator */}
-          {sortDirection && (
-            <span className="shrink-0">
-              {sortDirection === 'asc' ? (
-                <ArrowUp className="h-3 w-3" />
-              ) : (
-                <ArrowDown className="h-3 w-3" />
-              )}
+            {/* Column name */}
+            <span className="truncate text-sm font-medium">
+              {flexRender(header.column.columnDef.header, header.getContext())}
             </span>
+
+            {/* Sort indicator */}
+            {sortDirection && (
+              <span className="shrink-0">
+                {sortDirection === 'asc' ? (
+                  <ArrowUp className="h-3 w-3" />
+                ) : (
+                  <ArrowDown className="h-3 w-3" />
+                )}
+              </span>
+            )}
+          </div>
+
+          {/* Type badge row */}
+          {columnSchema && (
+            <TypeBadge
+              type={columnSchema.type}
+              typeCategory={columnTypeCategory}
+              className="self-start"
+            />
           )}
         </div>
 

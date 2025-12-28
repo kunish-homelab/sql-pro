@@ -1,12 +1,14 @@
 import {
   AlertCircle,
   Clock,
+  Code,
   History,
   Loader2,
   Play,
   Search,
   Trash2,
   X,
+  Zap,
 } from 'lucide-react';
 import { useCallback, useEffect, useMemo, useRef, useState } from 'react';
 import { createPortal } from 'react-dom';
@@ -22,9 +24,13 @@ import {
 import { Input } from '@/components/ui/input';
 import { ScrollArea } from '@/components/ui/scroll-area';
 import { sqlPro } from '@/lib/api';
+import { generateSuggestions } from '@/lib/query-plan-analyzer';
 import { cn } from '@/lib/utils';
-import { useConnectionStore, useQueryStore } from '@/stores';
+import { useConnectionStore, useQueryStore, useQueryTabsStore } from '@/stores';
+import { QueryOptimizerPanel } from './data-tools/QueryOptimizerPanel';
 import { MonacoSqlEditor } from './MonacoSqlEditor';
+import { QueryTabBar } from './query-editor/QueryTabBar';
+import { QueryTemplatesPicker } from './query-editor/QueryTemplatesPicker';
 import { QueryResults } from './QueryResults';
 
 /**
@@ -59,10 +65,38 @@ export function QueryEditor() {
     clearHistory,
   } = useQueryStore();
 
+  // Multi-tab state
+  const {
+    activeTabId,
+    setDbPath,
+    getActiveTab,
+    updateTabQuery,
+    updateTabResults,
+    updateTabError,
+    setTabExecuting,
+  } = useQueryTabsStore();
+
   const [showHistory, setShowHistory] = useState(false);
   const [historySearch, setHistorySearch] = useState('');
   const [showClearConfirm, setShowClearConfirm] = useState(false);
+  const [showTemplates, setShowTemplates] = useState(false);
+  const [showOptimizer, setShowOptimizer] = useState(false);
   const containerRef = useRef<HTMLDivElement>(null);
+
+  // Get active tab state
+  const activeTab = getActiveTab();
+  const tabQuery = activeTab?.query ?? currentQuery;
+  const tabResults = activeTab?.results ?? results;
+  const tabError = activeTab?.error ?? error;
+  const tabIsExecuting = activeTab?.isExecuting ?? isExecuting;
+  const tabExecutionTime = activeTab?.executionTime ?? executionTime;
+
+  // Initialize tabs when database changes
+  useEffect(() => {
+    if (connection?.path) {
+      setDbPath(connection.path);
+    }
+  }, [connection?.path, setDbPath]);
 
   // Filter history based on search term (case-insensitive)
   const filteredHistory = useMemo(() => {
@@ -96,67 +130,83 @@ export function QueryEditor() {
   }, []);
 
   const handleExecute = useCallback(async () => {
-    if (!connection || !currentQuery.trim()) return;
+    if (!connection || !tabQuery.trim() || !activeTabId) return;
 
+    setTabExecuting(activeTabId, true);
     setIsExecuting(true);
     setError(null);
     setResults(null);
+    updateTabError(activeTabId, null);
 
     try {
       const result = await sqlPro.db.executeQuery({
         connectionId: connection.id,
-        query: currentQuery.trim(),
+        query: tabQuery.trim(),
       });
 
       if (result.success) {
-        setResults({
+        const queryResult = {
           columns: result.columns || [],
           rows: result.rows || [],
           rowsAffected: result.rowsAffected || 0,
           lastInsertRowId: result.lastInsertRowId,
-        });
+        };
+        setResults(queryResult);
         setExecutionTime(result.executionTime || 0);
+        updateTabResults(activeTabId, queryResult, result.executionTime || 0);
         addToHistory(
           connection.path,
-          currentQuery.trim(),
+          tabQuery.trim(),
           true,
           result.executionTime || 0
         );
       } else {
         setError(result.error || 'Query failed');
-        addToHistory(
-          connection.path,
-          currentQuery.trim(),
-          false,
-          0,
-          result.error
-        );
+        updateTabError(activeTabId, result.error || 'Query failed');
+        addToHistory(connection.path, tabQuery.trim(), false, 0, result.error);
       }
     } catch (err) {
       const errorMessage = err instanceof Error ? err.message : 'Unknown error';
       setError(errorMessage);
-      addToHistory(
-        connection.path,
-        currentQuery.trim(),
-        false,
-        0,
-        errorMessage
-      );
+      updateTabError(activeTabId, errorMessage);
+      addToHistory(connection.path, tabQuery.trim(), false, 0, errorMessage);
     } finally {
+      setTabExecuting(activeTabId, false);
       setIsExecuting(false);
     }
   }, [
     connection,
-    currentQuery,
+    tabQuery,
+    activeTabId,
+    setTabExecuting,
     setIsExecuting,
     setError,
     setResults,
+    updateTabError,
     setExecutionTime,
+    updateTabResults,
     addToHistory,
   ]);
 
+  const handleQueryChange = useCallback(
+    (query: string) => {
+      setCurrentQuery(query);
+      if (activeTabId) {
+        updateTabQuery(activeTabId, query);
+      }
+    },
+    [activeTabId, setCurrentQuery, updateTabQuery]
+  );
+
+  const handleTemplateSelect = useCallback(
+    (query: string) => {
+      handleQueryChange(query);
+    },
+    [handleQueryChange]
+  );
+
   const handleHistorySelect = (query: string) => {
-    setCurrentQuery(query);
+    handleQueryChange(query);
     setShowHistory(false);
   };
 
@@ -174,8 +224,37 @@ export function QueryEditor() {
     }
   };
 
+  const handleAnalyze = useCallback(
+    async (query: string) => {
+      if (!connection) {
+        throw new Error('No database connection');
+      }
+
+      const result = await sqlPro.db.analyzeQueryPlan({
+        connectionId: connection.id,
+        query: query.trim(),
+      });
+
+      if (!result.success || !result.plan || !result.stats) {
+        throw new Error(result.error || 'Failed to analyze query');
+      }
+
+      const suggestions = generateSuggestions(result.plan, result.stats);
+
+      return {
+        plan: result.plan,
+        stats: result.stats,
+        suggestions,
+      };
+    },
+    [connection]
+  );
+
   return (
     <div ref={containerRef} className="relative flex h-full flex-col">
+      {/* Tab Bar */}
+      <QueryTabBar />
+
       {/* Editor Header */}
       <div className="flex items-center justify-between border-b px-4 py-2">
         <div className="flex items-center gap-2">
@@ -185,6 +264,15 @@ export function QueryEditor() {
           </span>
         </div>
         <div className="flex items-center gap-2">
+          <Button
+            variant="ghost"
+            size="sm"
+            onClick={() => setShowTemplates(true)}
+            className="gap-1"
+          >
+            <Code className="h-4 w-4" />
+            Templates
+          </Button>
           <Button
             variant="ghost"
             size="sm"
@@ -198,12 +286,23 @@ export function QueryEditor() {
             </kbd>
           </Button>
           <Button
+            variant="ghost"
+            size="sm"
+            onClick={() => setShowOptimizer(true)}
+            disabled={!tabQuery.trim()}
+            className="gap-1"
+            title="Analyze query execution plan"
+          >
+            <Zap className="h-4 w-4" />
+            Analyze
+          </Button>
+          <Button
             size="sm"
             onClick={handleExecute}
-            disabled={isExecuting || !currentQuery.trim()}
+            disabled={tabIsExecuting || !tabQuery.trim()}
             className="gap-1"
           >
-            {isExecuting ? (
+            {tabIsExecuting ? (
               <Loader2 className="h-4 w-4 animate-spin" />
             ) : (
               <Play className="h-4 w-4" />
@@ -218,8 +317,8 @@ export function QueryEditor() {
         <div className="flex flex-1 flex-col">
           <div className="shrink-0 border-b">
             <MonacoSqlEditor
-              value={currentQuery}
-              onChange={setCurrentQuery}
+              value={tabQuery}
+              onChange={handleQueryChange}
               onExecute={handleExecute}
               schema={schema}
             />
@@ -227,38 +326,40 @@ export function QueryEditor() {
 
           {/* Results Area */}
           <div className="flex-1 overflow-hidden">
-            {isExecuting ? (
+            {tabIsExecuting ? (
               <div className="flex h-full items-center justify-center">
                 <Loader2 className="text-muted-foreground h-8 w-8 animate-spin" />
               </div>
-            ) : error ? (
+            ) : tabError ? (
               <div className="flex h-full items-center justify-center p-4">
                 <div className="border-destructive/50 bg-destructive/10 flex max-w-md items-start gap-3 rounded-lg border p-4">
                   <AlertCircle className="text-destructive h-5 w-5 shrink-0" />
                   <div>
                     <p className="text-destructive font-medium">Query Error</p>
-                    <p className="text-destructive/80 mt-1 text-sm">{error}</p>
+                    <p className="text-destructive/80 mt-1 text-sm">
+                      {tabError}
+                    </p>
                   </div>
                 </div>
               </div>
-            ) : results ? (
+            ) : tabResults ? (
               <div className="flex h-full flex-col">
                 {/* Results Header */}
                 <div className="text-muted-foreground flex items-center gap-4 border-b px-4 py-2 text-sm">
-                  <span>{results.rowsAffected} rows</span>
-                  {executionTime !== null && (
+                  <span>{tabResults.rowsAffected} rows</span>
+                  {tabExecutionTime !== null && (
                     <span className="flex items-center gap-1">
                       <Clock className="h-3 w-3" />
-                      {executionTime.toFixed(2)}ms
+                      {tabExecutionTime.toFixed(2)}ms
                     </span>
                   )}
-                  {results.lastInsertRowId !== undefined && (
-                    <span>Last Insert ID: {results.lastInsertRowId}</span>
+                  {tabResults.lastInsertRowId !== undefined && (
+                    <span>Last Insert ID: {tabResults.lastInsertRowId}</span>
                   )}
                 </div>
                 {/* Results Table */}
                 <div className="flex-1 overflow-hidden">
-                  <QueryResults results={results} />
+                  <QueryResults results={tabResults} />
                 </div>
               </div>
             ) : (
@@ -390,6 +491,21 @@ export function QueryEditor() {
           </DialogFooter>
         </DialogContent>
       </Dialog>
+
+      {/* Query Templates Picker */}
+      <QueryTemplatesPicker
+        open={showTemplates}
+        onOpenChange={setShowTemplates}
+        onSelect={handleTemplateSelect}
+      />
+
+      {/* Query Optimizer Panel */}
+      <QueryOptimizerPanel
+        open={showOptimizer}
+        onOpenChange={setShowOptimizer}
+        query={tabQuery}
+        onAnalyze={handleAnalyze}
+      />
     </div>
   );
 }

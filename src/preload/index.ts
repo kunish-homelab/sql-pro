@@ -1,4 +1,6 @@
 import type {
+  AnalyzeQueryPlanRequest,
+  AnalyzeQueryPlanResponse,
   ApplyChangesRequest,
   ApplyChangesResponse,
   ClearQueryHistoryRequest,
@@ -77,6 +79,10 @@ const sqlProAPI = {
       request: ApplyChangesRequest
     ): Promise<ApplyChangesResponse> =>
       ipcRenderer.invoke(IPC_CHANNELS.DB_APPLY_CHANGES, request),
+    analyzeQueryPlan: (
+      request: AnalyzeQueryPlanRequest
+    ): Promise<AnalyzeQueryPlanResponse> =>
+      ipcRenderer.invoke(IPC_CHANNELS.DB_ANALYZE_PLAN, request),
   },
 
   // Dialog operations
