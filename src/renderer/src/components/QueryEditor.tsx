@@ -25,6 +25,7 @@ export function QueryEditor() {
     setExecutionTime,
     addToHistory,
     loadHistory,
+    deleteHistoryItem,
   } = useQueryStore();
 
   const [showHistory, setShowHistory] = useState(false);
@@ -118,6 +119,13 @@ export function QueryEditor() {
   const handleHistorySelect = (query: string) => {
     setCurrentQuery(query);
     setShowHistory(false);
+  };
+
+  const handleHistoryDelete = (e: React.MouseEvent, entryId: string) => {
+    e.stopPropagation();
+    if (connection?.path) {
+      deleteHistoryItem(connection.path, entryId);
+    }
   };
 
   return (
@@ -250,32 +258,44 @@ export function QueryEditor() {
                   </p>
                 ) : (
                   filteredHistory.map((item) => (
-                    <button
+                    <div
                       key={item.id}
-                      onClick={() => handleHistorySelect(item.queryText)}
                       className={cn(
-                        'hover:bg-accent w-full rounded-md px-3 py-2 text-left text-sm transition-colors',
+                        'hover:bg-accent group relative w-full rounded-md px-3 py-2 text-left text-sm transition-colors',
                         !item.success && 'border-destructive border-l-2'
                       )}
                     >
-                      <div className="flex items-center gap-2">
-                        {item.success ? (
-                          <span className="text-xs text-green-600">
-                            {item.durationMs}ms
+                      <button
+                        onClick={() => handleHistorySelect(item.queryText)}
+                        className="w-full text-left"
+                      >
+                        <div className="flex items-center gap-2 pr-6">
+                          {item.success ? (
+                            <span className="text-xs text-green-600">
+                              {item.durationMs}ms
+                            </span>
+                          ) : (
+                            <span className="text-destructive text-xs">
+                              Failed
+                            </span>
+                          )}
+                          <span className="text-muted-foreground text-xs">
+                            {new Date(item.executedAt).toLocaleTimeString()}
                           </span>
-                        ) : (
-                          <span className="text-destructive text-xs">
-                            Failed
-                          </span>
-                        )}
-                        <span className="text-muted-foreground text-xs">
-                          {new Date(item.executedAt).toLocaleTimeString()}
-                        </span>
-                      </div>
-                      <p className="mt-1 truncate font-mono text-xs">
-                        {item.queryText}
-                      </p>
-                    </button>
+                        </div>
+                        <p className="mt-1 truncate pr-6 font-mono text-xs">
+                          {item.queryText}
+                        </p>
+                      </button>
+                      <Button
+                        variant="ghost"
+                        size="icon"
+                        className="absolute right-1 top-1/2 h-6 w-6 -translate-y-1/2 opacity-0 transition-opacity group-hover:opacity-100"
+                        onClick={(e) => handleHistoryDelete(e, item.id)}
+                      >
+                        <X className="h-3 w-3" />
+                      </Button>
+                    </div>
                   ))
                 )}
               </div>
