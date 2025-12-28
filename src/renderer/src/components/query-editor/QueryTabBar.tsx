@@ -1,5 +1,5 @@
 import type { QueryTab } from '@/stores';
-import { Copy, FileCode, Plus, X } from 'lucide-react';
+import { Columns2, Copy, FileCode, Plus, Rows2, X } from 'lucide-react';
 import { memo, useCallback, useRef, useState } from 'react';
 import { Button } from '@/components/ui/button';
 import {
@@ -9,6 +9,12 @@ import {
   ContextMenuSeparator,
   ContextMenuTrigger,
 } from '@/components/ui/context-menu';
+import {
+  DropdownMenu,
+  DropdownMenuContent,
+  DropdownMenuItem,
+  DropdownMenuTrigger,
+} from '@/components/ui/dropdown-menu';
 import {
   Tooltip,
   TooltipContent,
@@ -166,11 +172,28 @@ export const QueryTabBar = memo(({ className }: QueryTabBarProps) => {
     closeOtherTabs,
     setActiveTab,
     duplicateTab,
+    splitPane,
+    closeSplit,
+    isSplit,
   } = useQueryTabsStore();
 
   const handleCreateTab = useCallback(() => {
     createTab();
   }, [createTab]);
+
+  const handleSplitHorizontal = useCallback(() => {
+    splitPane('horizontal');
+  }, [splitPane]);
+
+  const handleSplitVertical = useCallback(() => {
+    splitPane('vertical');
+  }, [splitPane]);
+
+  const handleCloseSplit = useCallback(() => {
+    closeSplit();
+  }, [closeSplit]);
+
+  const isSplitView = isSplit();
 
   return (
     <div
@@ -192,23 +215,77 @@ export const QueryTabBar = memo(({ className }: QueryTabBarProps) => {
           />
         ))}
       </div>
-      <TooltipProvider delayDuration={300}>
-        <Tooltip>
-          <TooltipTrigger asChild>
-            <Button
-              variant="ghost"
-              size="icon"
-              className="h-8 w-8 shrink-0"
-              onClick={handleCreateTab}
-            >
-              <Plus className="h-4 w-4" />
-            </Button>
-          </TooltipTrigger>
-          <TooltipContent side="bottom" className="text-xs">
-            New query tab
-          </TooltipContent>
-        </Tooltip>
-      </TooltipProvider>
+      <div className="flex items-center border-l">
+        <TooltipProvider delayDuration={300}>
+          <Tooltip>
+            <TooltipTrigger asChild>
+              <Button
+                variant="ghost"
+                size="icon"
+                className="h-8 w-8 shrink-0"
+                onClick={handleCreateTab}
+              >
+                <Plus className="h-4 w-4" />
+              </Button>
+            </TooltipTrigger>
+            <TooltipContent side="bottom" className="text-xs">
+              New query tab
+            </TooltipContent>
+          </Tooltip>
+        </TooltipProvider>
+
+        {/* Split View Controls */}
+        {isSplitView ? (
+          <TooltipProvider delayDuration={300}>
+            <Tooltip>
+              <TooltipTrigger asChild>
+                <Button
+                  variant="ghost"
+                  size="icon"
+                  className="h-8 w-8 shrink-0"
+                  onClick={handleCloseSplit}
+                >
+                  <X className="h-4 w-4" />
+                </Button>
+              </TooltipTrigger>
+              <TooltipContent side="bottom" className="text-xs">
+                Close split view
+              </TooltipContent>
+            </Tooltip>
+          </TooltipProvider>
+        ) : (
+          <DropdownMenu>
+            <TooltipProvider delayDuration={300}>
+              <Tooltip>
+                <TooltipTrigger asChild>
+                  <DropdownMenuTrigger asChild>
+                    <Button
+                      variant="ghost"
+                      size="icon"
+                      className="h-8 w-8 shrink-0"
+                    >
+                      <Columns2 className="h-4 w-4" />
+                    </Button>
+                  </DropdownMenuTrigger>
+                </TooltipTrigger>
+                <TooltipContent side="bottom" className="text-xs">
+                  Split editor
+                </TooltipContent>
+              </Tooltip>
+            </TooltipProvider>
+            <DropdownMenuContent align="end">
+              <DropdownMenuItem onClick={handleSplitHorizontal}>
+                <Columns2 className="mr-2 h-4 w-4" />
+                Split Right
+              </DropdownMenuItem>
+              <DropdownMenuItem onClick={handleSplitVertical}>
+                <Rows2 className="mr-2 h-4 w-4" />
+                Split Down
+              </DropdownMenuItem>
+            </DropdownMenuContent>
+          </DropdownMenu>
+        )}
+      </div>
     </div>
   );
 });

@@ -10,7 +10,13 @@ import {
   X,
   Zap,
 } from 'lucide-react';
-import { useCallback, useEffect, useMemo, useRef, useState } from 'react';
+import React, {
+  useCallback,
+  useEffect,
+  useMemo,
+  useRef,
+  useState,
+} from 'react';
 import { createPortal } from 'react-dom';
 import { Button } from '@/components/ui/button';
 import {
@@ -22,6 +28,11 @@ import {
   DialogTitle,
 } from '@/components/ui/dialog';
 import { Input } from '@/components/ui/input';
+import {
+  ResizableHandle,
+  ResizablePanel,
+  ResizablePanelGroup,
+} from '@/components/ui/resizable';
 import { ScrollArea } from '@/components/ui/scroll-area';
 import { sqlPro } from '@/lib/api';
 import { generateSuggestions } from '@/lib/query-plan-analyzer';
@@ -29,6 +40,7 @@ import { cn } from '@/lib/utils';
 import { useConnectionStore, useQueryStore, useQueryTabsStore } from '@/stores';
 import { QueryOptimizerPanel } from './data-tools/QueryOptimizerPanel';
 import { MonacoSqlEditor } from './MonacoSqlEditor';
+import { QueryPane } from './query-editor/QueryPane';
 import { QueryTabBar } from './query-editor/QueryTabBar';
 import { QueryTemplatesPicker } from './query-editor/QueryTemplatesPicker';
 import { QueryResults } from './QueryResults';
@@ -74,6 +86,11 @@ export function QueryEditor() {
     updateTabResults,
     updateTabError,
     setTabExecuting,
+    splitLayout,
+    activePaneId,
+    setActivePaneId,
+    closeSplit,
+    isSplit,
   } = useQueryTabsStore();
 
   const [showHistory, setShowHistory] = useState(false);
@@ -82,6 +99,9 @@ export function QueryEditor() {
   const [showTemplates, setShowTemplates] = useState(false);
   const [showOptimizer, setShowOptimizer] = useState(false);
   const containerRef = useRef<HTMLDivElement>(null);
+
+  // Check if in split view mode
+  const isSplitView = isSplit();
 
   // Get active tab state
   const activeTab = getActiveTab();
@@ -313,62 +333,94 @@ export function QueryEditor() {
       </div>
 
       <div className="flex flex-1 overflow-hidden">
-        {/* Editor */}
-        <div className="flex flex-1 flex-col">
-          <div className="shrink-0 border-b">
-            <MonacoSqlEditor
-              value={tabQuery}
-              onChange={handleQueryChange}
-              onExecute={handleExecute}
-              schema={schema}
-            />
-          </div>
+        {/* Split View Mode */}
+        {isSplitView ? (
+          <ResizablePanelGroup
+            direction={splitLayout.direction as 'horizontal' | 'vertical'}
+            className="h-full"
+          >
+            {splitLayout.panes.map((pane, index) => (
+              <React.Fragment key={pane.id}>
+                {index > 0 && <ResizableHandle withHandle />}
+                <ResizablePanel defaultSize={50} minSize={20}>
+                  <QueryPane
+                    pane={pane}
+                    connectionId={connection?.id || ''}
+                    schema={schema}
+                    isActive={pane.id === activePaneId}
+                    onActivate={() => setActivePaneId(pane.id)}
+                    onClose={index > 0 ? closeSplit : undefined}
+                    showCloseButton={index > 0}
+                  />
+                </ResizablePanel>
+              </React.Fragment>
+            ))}
+          </ResizablePanelGroup>
+        ) : (
+          /* Single Pane Mode */
+          <>
+            {/* Editor */}
+            <div className="flex flex-1 flex-col">
+              <div className="shrink-0 border-b">
+                <MonacoSqlEditor
+                  value={tabQuery}
+                  onChange={handleQueryChange}
+                  onExecute={handleExecute}
+                  schema={schema}
+                />
+              </div>
 
-          {/* Results Area */}
-          <div className="flex-1 overflow-hidden">
-            {tabIsExecuting ? (
-              <div className="flex h-full items-center justify-center">
-                <Loader2 className="text-muted-foreground h-8 w-8 animate-spin" />
-              </div>
-            ) : tabError ? (
-              <div className="flex h-full items-center justify-center p-4">
-                <div className="border-destructive/50 bg-destructive/10 flex max-w-md items-start gap-3 rounded-lg border p-4">
-                  <AlertCircle className="text-destructive h-5 w-5 shrink-0" />
-                  <div>
-                    <p className="text-destructive font-medium">Query Error</p>
-                    <p className="text-destructive/80 mt-1 text-sm">
-                      {tabError}
-                    </p>
+              {/* Results Area */}
+              <div className="flex-1 overflow-hidden">
+                {tabIsExecuting ? (
+                  <div className="flex h-full items-center justify-center">
+                    <Loader2 className="text-muted-foreground h-8 w-8 animate-spin" />
                   </div>
-                </div>
+                ) : tabError ? (
+                  <div className="flex h-full items-center justify-center p-4">
+                    <div className="border-destructive/50 bg-destructive/10 flex max-w-md items-start gap-3 rounded-lg border p-4">
+                      <AlertCircle className="text-destructive h-5 w-5 shrink-0" />
+                      <div>
+                        <p className="text-destructive font-medium">
+                          Query Error
+                        </p>
+                        <p className="text-destructive/80 mt-1 text-sm">
+                          {tabError}
+                        </p>
+                      </div>
+                    </div>
+                  </div>
+                ) : tabResults ? (
+                  <div className="flex h-full flex-col">
+                    {/* Results Header */}
+                    <div className="text-muted-foreground flex items-center gap-4 border-b px-4 py-2 text-sm">
+                      <span>{tabResults.rowsAffected} rows</span>
+                      {tabExecutionTime !== null && (
+                        <span className="flex items-center gap-1">
+                          <Clock className="h-3 w-3" />
+                          {tabExecutionTime.toFixed(2)}ms
+                        </span>
+                      )}
+                      {tabResults.lastInsertRowId !== undefined && (
+                        <span>
+                          Last Insert ID: {tabResults.lastInsertRowId}
+                        </span>
+                      )}
+                    </div>
+                    {/* Results Table */}
+                    <div className="flex-1 overflow-hidden">
+                      <QueryResults results={tabResults} />
+                    </div>
+                  </div>
+                ) : (
+                  <div className="text-muted-foreground flex h-full items-center justify-center">
+                    <p>Execute a query to see results</p>
+                  </div>
+                )}
               </div>
-            ) : tabResults ? (
-              <div className="flex h-full flex-col">
-                {/* Results Header */}
-                <div className="text-muted-foreground flex items-center gap-4 border-b px-4 py-2 text-sm">
-                  <span>{tabResults.rowsAffected} rows</span>
-                  {tabExecutionTime !== null && (
-                    <span className="flex items-center gap-1">
-                      <Clock className="h-3 w-3" />
-                      {tabExecutionTime.toFixed(2)}ms
-                    </span>
-                  )}
-                  {tabResults.lastInsertRowId !== undefined && (
-                    <span>Last Insert ID: {tabResults.lastInsertRowId}</span>
-                  )}
-                </div>
-                {/* Results Table */}
-                <div className="flex-1 overflow-hidden">
-                  <QueryResults results={tabResults} />
-                </div>
-              </div>
-            ) : (
-              <div className="text-muted-foreground flex h-full items-center justify-center">
-                <p>Execute a query to see results</p>
-              </div>
-            )}
-          </div>
-        </div>
+            </div>
+          </>
+        )}
 
         {/* History Panel - rendered via Portal */}
         {showHistory &&

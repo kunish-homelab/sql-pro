@@ -15,10 +15,26 @@ export interface QueryTab {
   lastExecutedAt: number | null;
 }
 
+export type SplitDirection = 'horizontal' | 'vertical';
+
+export interface SplitPane {
+  id: string;
+  activeTabId: string | null;
+}
+
+export interface SplitLayout {
+  direction: SplitDirection | null;
+  panes: SplitPane[];
+}
+
 interface QueryTabsState {
   tabs: QueryTab[];
   activeTabId: string | null;
   dbPath: string | null;
+
+  // Split view state
+  splitLayout: SplitLayout;
+  activePaneId: string;
 
   // Actions
   setDbPath: (dbPath: string | null) => void;
@@ -40,6 +56,14 @@ interface QueryTabsState {
   reorderTabs: (fromIndex: number, toIndex: number) => void;
   getActiveTab: () => QueryTab | undefined;
   reset: () => void;
+
+  // Split view actions
+  splitPane: (direction: SplitDirection) => void;
+  closeSplit: () => void;
+  setActivePaneId: (paneId: string) => void;
+  setPaneActiveTab: (paneId: string, tabId: string) => void;
+  getPane: (paneId: string) => SplitPane | undefined;
+  isSplit: () => boolean;
 }
 
 const generateId = (): string => {
@@ -69,12 +93,25 @@ const getNextTabNumber = (tabs: QueryTab[]): number => {
   return numbers.length > 0 ? Math.max(...numbers) + 1 : 1;
 };
 
+const generatePaneId = (): string => {
+  return `pane-${Date.now()}-${Math.random().toString(36).substring(2, 9)}`;
+};
+
+const DEFAULT_PANE_ID = 'pane-main';
+
+const createDefaultSplitLayout = (): SplitLayout => ({
+  direction: null,
+  panes: [{ id: DEFAULT_PANE_ID, activeTabId: null }],
+});
+
 export const useQueryTabsStore = create<QueryTabsState>()(
   persist(
     (set, get) => ({
       tabs: [],
       activeTabId: null,
       dbPath: null,
+      splitLayout: createDefaultSplitLayout(),
+      activePaneId: DEFAULT_PANE_ID,
 
       setDbPath: (dbPath) => {
         const state = get();
@@ -85,6 +122,11 @@ export const useQueryTabsStore = create<QueryTabsState>()(
             dbPath,
             tabs: [defaultTab],
             activeTabId: defaultTab.id,
+            splitLayout: {
+              direction: null,
+              panes: [{ id: DEFAULT_PANE_ID, activeTabId: defaultTab.id }],
+            },
+            activePaneId: DEFAULT_PANE_ID,
           });
         }
       },
@@ -258,7 +300,96 @@ export const useQueryTabsStore = create<QueryTabsState>()(
           tabs: [defaultTab],
           activeTabId: defaultTab.id,
           dbPath: null,
+          splitLayout: {
+            direction: null,
+            panes: [{ id: DEFAULT_PANE_ID, activeTabId: defaultTab.id }],
+          },
+          activePaneId: DEFAULT_PANE_ID,
         });
+      },
+
+      // Split view actions
+      splitPane: (direction) => {
+        const state = get();
+        // Don't split if already split
+        if (state.splitLayout.direction !== null) return;
+
+        // Create a new tab for the second pane
+        const tabNumber = getNextTabNumber(state.tabs);
+        const newTab = createDefaultTab(`Query ${tabNumber}`);
+        const newPaneId = generatePaneId();
+
+        set({
+          tabs: [...state.tabs, newTab],
+          splitLayout: {
+            direction,
+            panes: [
+              {
+                id: state.splitLayout.panes[0].id,
+                activeTabId: state.activeTabId,
+              },
+              { id: newPaneId, activeTabId: newTab.id },
+            ],
+          },
+          activePaneId: newPaneId,
+          activeTabId: newTab.id,
+        });
+      },
+
+      closeSplit: () => {
+        const state = get();
+        if (state.splitLayout.direction === null) return;
+
+        // Keep only the active pane
+        const activePane = state.splitLayout.panes.find(
+          (p) => p.id === state.activePaneId
+        );
+        const activeTabId =
+          activePane?.activeTabId || state.tabs[0]?.id || null;
+
+        set({
+          splitLayout: {
+            direction: null,
+            panes: [{ id: DEFAULT_PANE_ID, activeTabId }],
+          },
+          activePaneId: DEFAULT_PANE_ID,
+          activeTabId,
+        });
+      },
+
+      setActivePaneId: (paneId) => {
+        const state = get();
+        const pane = state.splitLayout.panes.find((p) => p.id === paneId);
+        if (pane) {
+          set({
+            activePaneId: paneId,
+            activeTabId: pane.activeTabId,
+          });
+        }
+      },
+
+      setPaneActiveTab: (paneId, tabId) => {
+        const state = get();
+        set({
+          splitLayout: {
+            ...state.splitLayout,
+            panes: state.splitLayout.panes.map((pane) =>
+              pane.id === paneId ? { ...pane, activeTabId: tabId } : pane
+            ),
+          },
+          // If this is the active pane, also update the global activeTabId
+          ...(state.activePaneId === paneId ? { activeTabId: tabId } : {}),
+        });
+      },
+
+      getPane: (paneId) => {
+        const state = get();
+        return state.splitLayout.panes.find((p) => p.id === paneId);
+      },
+
+      isSplit: () => {
+        const state = get();
+        return state.splitLayout.direction !== null;
       },
     }),
     {
@@ -274,6 +405,8 @@ export const useQueryTabsStore = create<QueryTabsState>()(
         })),
         activeTabId: state.activeTabId,
         dbPath: state.dbPath,
+        splitLayout: state.splitLayout,
+        activePaneId: state.activePaneId,
       }),
     }
   )

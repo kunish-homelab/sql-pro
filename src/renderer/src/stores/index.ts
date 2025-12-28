@@ -10,7 +10,12 @@ export { useConnectionStore } from './connection-store';
 export { useDiagramStore } from './diagram-store';
 export { useQueryStore } from './query-store';
 export { useQueryTabsStore } from './query-tabs-store';
-export type { QueryTab } from './query-tabs-store';
+export type {
+  QueryTab,
+  SplitDirection,
+  SplitLayout,
+  SplitPane,
+} from './query-tabs-store';
 export {
   TEMPLATE_CATEGORIES,
   useQueryTemplatesStore,
