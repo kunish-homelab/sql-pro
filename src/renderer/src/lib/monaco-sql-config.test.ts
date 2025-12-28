@@ -652,4 +652,442 @@ describe('validateSql', () => {
       expect(errors).toEqual([]);
     });
   });
+
+  describe('additional keyword typos', () => {
+    it('should detect SLECT typo', () => {
+      const errors = validateSql('SLECT * FROM users');
+      expect(errors.length).toBeGreaterThan(0);
+      expect(errors.some((e) => e.message.includes('SELECT'))).toBe(true);
+    });
+
+    it('should detect SELET typo', () => {
+      const errors = validateSql('SELET * FROM users');
+      expect(errors.length).toBeGreaterThan(0);
+      expect(errors.some((e) => e.message.includes('SELECT'))).toBe(true);
+    });
+
+    it('should detect SELCT typo', () => {
+      const errors = validateSql('SELCT * FROM users');
+      expect(errors.length).toBeGreaterThan(0);
+      expect(errors.some((e) => e.message.includes('SELECT'))).toBe(true);
+    });
+
+    it('should detect FORM typo', () => {
+      const errors = validateSql('SELECT * FORM users');
+      expect(errors.length).toBeGreaterThan(0);
+      expect(errors.some((e) => e.message.includes('FROM'))).toBe(true);
+    });
+
+    it('should detect FRMO typo', () => {
+      const errors = validateSql('SELECT * FRMO users');
+      expect(errors.length).toBeGreaterThan(0);
+      expect(errors.some((e) => e.message.includes('FROM'))).toBe(true);
+    });
+
+    it('should detect WHRE typo', () => {
+      const errors = validateSql('SELECT * FROM users WHRE id = 1');
+      expect(errors.length).toBeGreaterThan(0);
+      expect(errors.some((e) => e.message.includes('WHERE'))).toBe(true);
+    });
+
+    it('should detect WEHRE typo', () => {
+      const errors = validateSql('SELECT * FROM users WEHRE id = 1');
+      expect(errors.length).toBeGreaterThan(0);
+      expect(errors.some((e) => e.message.includes('WHERE'))).toBe(true);
+    });
+
+    it('should detect GRUOP typo', () => {
+      const errors = validateSql('SELECT status FROM users GRUOP BY status');
+      expect(errors.length).toBeGreaterThan(0);
+      expect(errors.some((e) => e.message.includes('GROUP'))).toBe(true);
+    });
+
+    it('should detect GROPU typo', () => {
+      const errors = validateSql('SELECT status FROM users GROPU BY status');
+      expect(errors.length).toBeGreaterThan(0);
+      expect(errors.some((e) => e.message.includes('GROUP'))).toBe(true);
+    });
+
+    it('should detect ODER typo', () => {
+      const errors = validateSql('SELECT * FROM users ODER BY id');
+      expect(errors.length).toBeGreaterThan(0);
+      expect(errors.some((e) => e.message.includes('ORDER'))).toBe(true);
+    });
+
+    it('should detect ORDERY typo', () => {
+      const errors = validateSql('SELECT * FROM users ORDERY BY id');
+      expect(errors.length).toBeGreaterThan(0);
+      expect(errors.some((e) => e.message.includes('ORDER'))).toBe(true);
+    });
+
+    it('should detect JOIIN typo', () => {
+      const errors = validateSql(
+        'SELECT * FROM users JOIIN orders ON users.id = orders.user_id'
+      );
+      expect(errors.length).toBeGreaterThan(0);
+      expect(errors.some((e) => e.message.includes('JOIN'))).toBe(true);
+    });
+
+    it('should detect INSET typo', () => {
+      const errors = validateSql("INSET INTO users (name) VALUES ('test')");
+      expect(errors.length).toBeGreaterThan(0);
+      expect(errors.some((e) => e.message.includes('INSERT'))).toBe(true);
+    });
+
+    it('should detect UPADTE typo', () => {
+      const errors = validateSql("UPADTE users SET name = 'test'");
+      expect(errors.length).toBeGreaterThan(0);
+      expect(errors.some((e) => e.message.includes('UPDATE'))).toBe(true);
+    });
+
+    it('should detect DELEET typo', () => {
+      const errors = validateSql('DELEET FROM users WHERE id = 1');
+      expect(errors.length).toBeGreaterThan(0);
+      expect(errors.some((e) => e.message.includes('DELETE'))).toBe(true);
+    });
+
+    it('should detect CRAETE typo', () => {
+      const errors = validateSql('CRAETE TABLE test (id INTEGER)');
+      expect(errors.length).toBeGreaterThan(0);
+      expect(errors.some((e) => e.message.includes('CREATE'))).toBe(true);
+    });
+
+    it('should detect CRATE typo', () => {
+      const errors = validateSql('CRATE TABLE test (id INTEGER)');
+      expect(errors.length).toBeGreaterThan(0);
+      expect(errors.some((e) => e.message.includes('CREATE'))).toBe(true);
+    });
+
+    it('should detect TABL typo', () => {
+      const errors = validateSql('CREATE TABL test (id INTEGER)');
+      expect(errors.length).toBeGreaterThan(0);
+      expect(errors.some((e) => e.message.includes('TABLE'))).toBe(true);
+    });
+
+    it('should detect TABEL typo', () => {
+      const errors = validateSql('CREATE TABEL test (id INTEGER)');
+      expect(errors.length).toBeGreaterThan(0);
+      expect(errors.some((e) => e.message.includes('TABLE'))).toBe(true);
+    });
+
+    it('should detect VALUS typo', () => {
+      const errors = validateSql("INSERT INTO users (name) VALUS ('test')");
+      expect(errors.length).toBeGreaterThan(0);
+      expect(errors.some((e) => e.message.includes('VALUES'))).toBe(true);
+    });
+
+    it('should detect VLAUES typo', () => {
+      const errors = validateSql("INSERT INTO users (name) VLAUES ('test')");
+      expect(errors.length).toBeGreaterThan(0);
+      expect(errors.some((e) => e.message.includes('VALUES'))).toBe(true);
+    });
+
+    it('should detect LIMTI typo', () => {
+      const errors = validateSql('SELECT * FROM users LIMTI 10');
+      expect(errors.length).toBeGreaterThan(0);
+      expect(errors.some((e) => e.message.includes('LIMIT'))).toBe(true);
+    });
+
+    it('should detect LIMT typo', () => {
+      const errors = validateSql('SELECT * FROM users LIMT 10');
+      expect(errors.length).toBeGreaterThan(0);
+      expect(errors.some((e) => e.message.includes('LIMIT'))).toBe(true);
+    });
+
+    it('should detect OFSET typo', () => {
+      const errors = validateSql('SELECT * FROM users LIMIT 10 OFSET 5');
+      expect(errors.length).toBeGreaterThan(0);
+      expect(errors.some((e) => e.message.includes('OFFSET'))).toBe(true);
+    });
+
+    it('should detect HAVIGN typo', () => {
+      const errors = validateSql(
+        'SELECT status, COUNT(*) FROM users GROUP BY status HAVIGN COUNT(*) > 1'
+      );
+      expect(errors.length).toBeGreaterThan(0);
+      expect(errors.some((e) => e.message.includes('HAVING'))).toBe(true);
+    });
+
+    it('should detect HAIVNG typo', () => {
+      const errors = validateSql(
+        'SELECT status, COUNT(*) FROM users GROUP BY status HAIVNG COUNT(*) > 1'
+      );
+      expect(errors.length).toBeGreaterThan(0);
+      expect(errors.some((e) => e.message.includes('HAVING'))).toBe(true);
+    });
+
+    it('should detect DISINCT typo', () => {
+      const errors = validateSql('SELECT DISINCT name FROM users');
+      expect(errors.length).toBeGreaterThan(0);
+      expect(errors.some((e) => e.message.includes('DISTINCT'))).toBe(true);
+    });
+
+    it('should detect DISTINT typo', () => {
+      const errors = validateSql('SELECT DISTINT name FROM users');
+      expect(errors.length).toBeGreaterThan(0);
+      expect(errors.some((e) => e.message.includes('DISTINCT'))).toBe(true);
+    });
+  });
+
+  describe('severity levels', () => {
+    it('should report typos as warnings', () => {
+      const errors = validateSql('SELEC * FROM users');
+      expect(errors.length).toBeGreaterThan(0);
+      expect(errors.some((e) => e.severity === 'warning')).toBe(true);
+    });
+
+    it('should report unclosed parentheses as errors', () => {
+      const errors = validateSql('SELECT * FROM users WHERE (id = 1');
+      expect(errors.length).toBeGreaterThan(0);
+      expect(errors.some((e) => e.severity === 'error')).toBe(true);
+    });
+
+    it('should report unclosed quotes as errors', () => {
+      const errors = validateSql("SELECT * FROM users WHERE name = 'test");
+      expect(errors.length).toBeGreaterThan(0);
+      expect(errors.some((e) => e.severity === 'error')).toBe(true);
+    });
+
+    it('should report unexpected closing parenthesis as error', () => {
+      const errors = validateSql('SELECT * FROM users WHERE id = 1)');
+      expect(errors.length).toBeGreaterThan(0);
+      expect(errors.some((e) => e.severity === 'error')).toBe(true);
+    });
+
+    it('should report unclosed block comment as error', () => {
+      const errors = validateSql('SELECT * /* comment without close');
+      expect(errors.length).toBeGreaterThan(0);
+      expect(errors.some((e) => e.severity === 'error')).toBe(true);
+    });
+  });
+
+  describe('column position accuracy', () => {
+    it('should report correct column for typo at start of line', () => {
+      const errors = validateSql('SELEC * FROM users');
+      expect(errors.length).toBeGreaterThan(0);
+      const typoError = errors.find((e) => e.message.includes('SELECT'));
+      expect(typoError?.startColumn).toBe(1);
+      expect(typoError?.endColumn).toBe(6); // 'SELEC' is 5 characters, end is exclusive
+    });
+
+    it('should report correct column for typo in middle of line', () => {
+      const errors = validateSql('SELECT * FRON users');
+      expect(errors.length).toBeGreaterThan(0);
+      const typoError = errors.find((e) => e.message.includes('FROM'));
+      expect(typoError?.startColumn).toBe(10);
+      expect(typoError?.endColumn).toBe(14); // 'FRON' is 4 characters
+    });
+
+    it('should report correct column for unclosed parenthesis', () => {
+      const errors = validateSql('SELECT * FROM users WHERE (id = 1');
+      expect(errors.length).toBeGreaterThan(0);
+      const parenError = errors.find((e) =>
+        e.message.toLowerCase().includes('parenthesis')
+      );
+      expect(parenError?.startColumn).toBe(27); // Position of '('
+    });
+
+    it('should report correct column for unclosed quote', () => {
+      const errors = validateSql("SELECT * FROM users WHERE name = 'test");
+      expect(errors.length).toBeGreaterThan(0);
+      const quoteError = errors.find((e) =>
+        e.message.toLowerCase().includes('quote')
+      );
+      expect(quoteError?.startColumn).toBe(34); // Position of opening quote
+    });
+  });
+
+  describe('typos inside strings and comments', () => {
+    // Note: The current implementation has a limitation where typos inside
+    // single-quoted strings and double-quoted identifiers are still detected.
+    // This is because the typo detection uses a simple regex approach after
+    // only removing line comments. These tests document the actual behavior.
+
+    it('should detect typos even inside single-quoted strings (current limitation)', () => {
+      const errors = validateSql("SELECT * FROM users WHERE name = 'SELEC'");
+      // Current implementation detects typos inside strings
+      expect(errors.length).toBeGreaterThan(0);
+      expect(errors.some((e) => e.message.includes('SELECT'))).toBe(true);
+    });
+
+    it('should detect typos even inside double-quoted identifiers (current limitation)', () => {
+      const errors = validateSql('SELECT * FROM users WHERE "FRON" = 1');
+      // Current implementation detects typos inside double-quoted identifiers
+      expect(errors.length).toBeGreaterThan(0);
+      expect(errors.some((e) => e.message.includes('FROM'))).toBe(true);
+    });
+
+    it('should not detect typos inside line comments', () => {
+      const errors = validateSql('SELECT * FROM users -- SELEC typo here');
+      expect(errors).toEqual([]);
+    });
+
+    it('should detect typos inside block comments (current limitation)', () => {
+      // Current implementation does not filter out block comments for typo detection
+      const errors = validateSql('SELECT * FROM users /* FRON is a typo */');
+      expect(errors.length).toBeGreaterThan(0);
+      expect(errors.some((e) => e.message.includes('FROM'))).toBe(true);
+    });
+  });
+
+  describe('edge cases with quotes', () => {
+    it('should handle string with escaped quote followed by unescaped quote', () => {
+      const errors = validateSql("SELECT * FROM users WHERE name = 'O''Brien'");
+      expect(errors).toEqual([]);
+    });
+
+    it('should handle multiple strings in same query', () => {
+      const errors = validateSql(
+        "SELECT * FROM users WHERE name = 'John' AND city = 'NYC'"
+      );
+      expect(errors).toEqual([]);
+    });
+
+    it('should handle mixed single and double quotes', () => {
+      const errors = validateSql(
+        'SELECT * FROM users WHERE name = \'John\' AND "column" = 1'
+      );
+      expect(errors).toEqual([]);
+    });
+
+    it('should detect unclosed quote after closed quote', () => {
+      const errors = validateSql(
+        "SELECT * FROM users WHERE name = 'John' AND city = 'NYC"
+      );
+      expect(errors.length).toBeGreaterThan(0);
+      expect(
+        errors.some((e) => e.message.toLowerCase().includes('unclosed'))
+      ).toBe(true);
+    });
+
+    it('should handle empty strings', () => {
+      const errors = validateSql("SELECT * FROM users WHERE name = ''");
+      expect(errors).toEqual([]);
+    });
+
+    it('should handle string with only escaped quote', () => {
+      const errors = validateSql("SELECT * FROM users WHERE val = ''''");
+      expect(errors).toEqual([]);
+    });
+  });
+
+  describe('edge cases with parentheses', () => {
+    it('should handle empty parentheses', () => {
+      const errors = validateSql('SELECT COUNT() FROM users');
+      expect(errors).toEqual([]);
+    });
+
+    it('should handle parentheses in function call', () => {
+      const errors = validateSql('SELECT COALESCE(name, email) FROM users');
+      expect(errors).toEqual([]);
+    });
+
+    it('should handle nested subqueries', () => {
+      const errors = validateSql(
+        'SELECT * FROM users WHERE id IN (SELECT user_id FROM orders WHERE total > (SELECT AVG(total) FROM orders))'
+      );
+      expect(errors).toEqual([]);
+    });
+
+    it('should handle parentheses inside single-quoted strings', () => {
+      const errors = validateSql(
+        "SELECT * FROM users WHERE name = '(unclosed'"
+      );
+      expect(errors).toEqual([]);
+    });
+
+    it('should handle parentheses inside double-quoted identifiers', () => {
+      const errors = validateSql('SELECT * FROM users WHERE "(col)" = 1');
+      expect(errors).toEqual([]);
+    });
+
+    it('should report all unclosed parentheses', () => {
+      const errors = validateSql('SELECT * FROM users WHERE ((id = 1');
+      const parenErrors = errors.filter((e) =>
+        e.message.toLowerCase().includes('parenthesis')
+      );
+      expect(parenErrors.length).toBe(2);
+    });
+  });
+
+  describe('multi-line validation', () => {
+    it('should handle query split across multiple lines', () => {
+      const sql = `SELECT *
+FROM users
+WHERE id = 1`;
+      expect(validateSql(sql)).toEqual([]);
+    });
+
+    it('should report error on correct line for multi-line query', () => {
+      const sql = `SELECT *
+FROM users
+WHERE name = 'unclosed`;
+      const errors = validateSql(sql);
+      expect(errors.length).toBeGreaterThan(0);
+      expect(errors[0].startLineNumber).toBe(3);
+    });
+
+    it('should handle comment at end of line in multi-line query', () => {
+      const sql = `SELECT * -- get all columns
+FROM users -- from users table
+WHERE id = 1`;
+      expect(validateSql(sql)).toEqual([]);
+    });
+
+    it('should handle block comment spanning multiple lines', () => {
+      const sql = `SELECT * /* This is
+a multi-line
+comment */ FROM users`;
+      expect(validateSql(sql)).toEqual([]);
+    });
+
+    it('should detect unclosed block comment in multi-line query', () => {
+      const sql = `SELECT *
+/* This comment
+is never closed
+FROM users`;
+      const errors = validateSql(sql);
+      expect(errors.length).toBeGreaterThan(0);
+      expect(
+        errors.some((e) => e.message.toLowerCase().includes('comment'))
+      ).toBe(true);
+    });
+  });
+
+  describe('lowercase and mixed case typos', () => {
+    it('should detect lowercase typos', () => {
+      const errors = validateSql('selec * from users');
+      expect(errors.length).toBeGreaterThan(0);
+      expect(errors.some((e) => e.message.includes('SELECT'))).toBe(true);
+    });
+
+    it('should detect mixed case typos', () => {
+      const errors = validateSql('SeLec * FrOm users');
+      expect(errors.length).toBeGreaterThan(0);
+      expect(errors.some((e) => e.message.includes('SELECT'))).toBe(true);
+    });
+  });
+
+  describe('special SQL patterns', () => {
+    it('should validate CASE expressions correctly', () => {
+      const sql = `SELECT CASE WHEN status = 1 THEN 'active' ELSE 'inactive' END FROM users`;
+      expect(validateSql(sql)).toEqual([]);
+    });
+
+    it('should validate UNION queries', () => {
+      const sql = 'SELECT id FROM users UNION SELECT id FROM admins';
+      expect(validateSql(sql)).toEqual([]);
+    });
+
+    it('should validate INSERT with multiple rows', () => {
+      const sql = "INSERT INTO users (name) VALUES ('John'), ('Jane'), ('Bob')";
+      expect(validateSql(sql)).toEqual([]);
+    });
+
+    it('should validate CREATE TABLE with constraints', () => {
+      const sql =
+        'CREATE TABLE users (id INTEGER PRIMARY KEY, name TEXT NOT NULL, email TEXT UNIQUE)';
+      expect(validateSql(sql)).toEqual([]);
+    });
+  });
 });
