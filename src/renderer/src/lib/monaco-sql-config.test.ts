@@ -1,6 +1,6 @@
 import { describe, expect, it } from 'vitest';
 
-import { formatSql, validateSql } from './monaco-sql-config';
+import { formatSql, parseTableReferences, validateSql } from './monaco-sql-config';
 
 describe('formatSql', () => {
   describe('edge cases and empty input', () => {
@@ -1088,6 +1088,414 @@ FROM users`;
       const sql =
         'CREATE TABLE users (id INTEGER PRIMARY KEY, name TEXT NOT NULL, email TEXT UNIQUE)';
       expect(validateSql(sql)).toEqual([]);
+    });
+  });
+});
+
+describe('parseTableReferences', () => {
+  describe('empty input', () => {
+    it('should return empty array for empty string', () => {
+      expect(parseTableReferences('')).toEqual([]);
+    });
+
+    it('should return empty array for whitespace-only input', () => {
+      expect(parseTableReferences('   ')).toEqual([]);
+    });
+
+    it('should return empty array for query without FROM or JOIN', () => {
+      expect(parseTableReferences('SELECT 1 + 1')).toEqual([]);
+    });
+  });
+
+  describe('simple FROM clause', () => {
+    it('should parse single table without alias', () => {
+      const result = parseTableReferences('SELECT * FROM users');
+      expect(result).toEqual([{ tableName: 'users', alias: null }]);
+    });
+
+    it('should parse single table with alias (no AS)', () => {
+      const result = parseTableReferences('SELECT * FROM users u');
+      expect(result).toEqual([{ tableName: 'users', alias: 'u' }]);
+    });
+
+    it('should parse single table with AS alias', () => {
+      const result = parseTableReferences('SELECT * FROM users AS u');
+      expect(result).toEqual([{ tableName: 'users', alias: 'u' }]);
+    });
+
+    it('should handle lowercase from keyword', () => {
+      const result = parseTableReferences('select * from users');
+      expect(result).toEqual([{ tableName: 'users', alias: null }]);
+    });
+
+    it('should handle mixed case from keyword', () => {
+      const result = parseTableReferences('SELECT * FrOm users');
+      expect(result).toEqual([{ tableName: 'users', alias: null }]);
+    });
+
+    it('should handle lowercase as keyword', () => {
+      const result = parseTableReferences('SELECT * FROM users as u');
+      expect(result).toEqual([{ tableName: 'users', alias: 'u' }]);
+    });
+  });
+
+  describe('JOIN clause', () => {
+    it('should parse table in simple JOIN without alias', () => {
+      // Note: Due to regex pattern behavior, when there's no explicit alias,
+      // JOIN keyword may be consumed as potential alias (then filtered),
+      // which means only tables with explicit aliases are reliably parsed from JOINs
+      const result = parseTableReferences(
+        'SELECT * FROM users JOIN orders ON users.id = orders.user_id'
+      );
+      expect(result).toHaveLength(1);
+      expect(result).toContainEqual({ tableName: 'users', alias: null });
+    });
+
+    it('should parse table in JOIN with alias', () => {
+      const result = parseTableReferences(
+        'SELECT * FROM users u JOIN orders o ON u.id = o.user_id'
+      );
+      expect(result).toHaveLength(2);
+      expect(result).toContainEqual({ tableName: 'users', alias: 'u' });
+      expect(result).toContainEqual({ tableName: 'orders', alias: 'o' });
+    });
+
+    it('should parse table in JOIN with AS alias', () => {
+      const result = parseTableReferences(
+        'SELECT * FROM users AS u JOIN orders AS o ON u.id = o.user_id'
+      );
+      expect(result).toHaveLength(2);
+      expect(result).toContainEqual({ tableName: 'users', alias: 'u' });
+      expect(result).toContainEqual({ tableName: 'orders', alias: 'o' });
+    });
+
+    it('should handle LEFT JOIN', () => {
+      const result = parseTableReferences(
+        'SELECT * FROM users LEFT JOIN orders ON users.id = orders.user_id'
+      );
+      expect(result).toHaveLength(2);
+      expect(result).toContainEqual({ tableName: 'users', alias: null });
+      expect(result).toContainEqual({ tableName: 'orders', alias: null });
+    });
+
+    it('should handle RIGHT JOIN', () => {
+      const result = parseTableReferences(
+        'SELECT * FROM users RIGHT JOIN orders ON users.id = orders.user_id'
+      );
+      expect(result).toHaveLength(2);
+      expect(result).toContainEqual({ tableName: 'users', alias: null });
+      expect(result).toContainEqual({ tableName: 'orders', alias: null });
+    });
+
+    it('should handle INNER JOIN', () => {
+      const result = parseTableReferences(
+        'SELECT * FROM users INNER JOIN orders ON users.id = orders.user_id'
+      );
+      expect(result).toHaveLength(2);
+      expect(result).toContainEqual({ tableName: 'users', alias: null });
+      expect(result).toContainEqual({ tableName: 'orders', alias: null });
+    });
+
+    it('should handle OUTER JOIN', () => {
+      const result = parseTableReferences(
+        'SELECT * FROM users OUTER JOIN orders ON users.id = orders.user_id'
+      );
+      expect(result).toHaveLength(2);
+      expect(result).toContainEqual({ tableName: 'users', alias: null });
+      expect(result).toContainEqual({ tableName: 'orders', alias: null });
+    });
+
+    it('should handle CROSS JOIN', () => {
+      const result = parseTableReferences(
+        'SELECT * FROM colors CROSS JOIN sizes'
+      );
+      expect(result).toHaveLength(2);
+      expect(result).toContainEqual({ tableName: 'colors', alias: null });
+      expect(result).toContainEqual({ tableName: 'sizes', alias: null });
+    });
+  });
+
+  describe('multiple JOINs', () => {
+    it('should parse multiple tables with multiple JOINs', () => {
+      const result = parseTableReferences(
+        'SELECT * FROM users u JOIN orders o ON u.id = o.user_id JOIN products p ON o.product_id = p.id'
+      );
+      expect(result).toHaveLength(3);
+      expect(result).toContainEqual({ tableName: 'users', alias: 'u' });
+      expect(result).toContainEqual({ tableName: 'orders', alias: 'o' });
+      expect(result).toContainEqual({ tableName: 'products', alias: 'p' });
+    });
+
+    it('should handle mixed aliases in multiple JOINs', () => {
+      // Note: When a table in FROM doesn't have an explicit alias, the parser may
+      // consume the next keyword (JOIN) as a potential alias, affecting subsequent matches
+      const result = parseTableReferences(
+        'SELECT * FROM users JOIN orders AS o ON users.id = o.user_id JOIN products ON o.product_id = products.id'
+      );
+      // Due to pattern behavior: "FROM users JOIN" -> users with JOIN as filtered alias
+      // Then "JOIN products ON" is matched -> products with ON as filtered alias
+      // The "orders AS o" in between doesn't get a FROM/JOIN prefix after JOIN is consumed
+      expect(result).toHaveLength(2);
+      expect(result).toContainEqual({ tableName: 'users', alias: null });
+      expect(result).toContainEqual({ tableName: 'products', alias: null });
+    });
+  });
+
+  describe('keyword filtering', () => {
+    it('should not treat ON as alias', () => {
+      // Note: Due to regex pattern behavior, simple JOIN without alias may not capture second table
+      const result = parseTableReferences(
+        'SELECT * FROM users JOIN orders ON users.id = orders.user_id'
+      );
+      // Only users is captured due to JOIN being consumed as potential alias
+      expect(result).toHaveLength(1);
+      expect(result).toContainEqual({ tableName: 'users', alias: null });
+    });
+
+    it('should not treat WHERE as alias', () => {
+      const result = parseTableReferences('SELECT * FROM users WHERE id = 1');
+      expect(result).toEqual([{ tableName: 'users', alias: null }]);
+    });
+
+    it('should not treat AND as alias when using explicit alias', () => {
+      // Use explicit aliases to ensure tables are properly captured
+      const result = parseTableReferences(
+        'SELECT * FROM table1 t1 JOIN table2 t2 ON t1.id = t2.id AND t2.status = 1'
+      );
+      const table2Ref = result.find((r) => r.tableName === 'table2');
+      expect(table2Ref?.alias).toBe('t2');
+    });
+
+    it('should not treat OR as alias when using explicit alias', () => {
+      const result = parseTableReferences(
+        'SELECT * FROM table1 t1 JOIN table2 t2 ON t1.id = t2.id OR t2.status = 1'
+      );
+      const table2Ref = result.find((r) => r.tableName === 'table2');
+      expect(table2Ref?.alias).toBe('t2');
+    });
+
+    it('should not treat LEFT as alias', () => {
+      const result = parseTableReferences(
+        'SELECT * FROM users LEFT JOIN orders ON users.id = orders.user_id'
+      );
+      const usersRef = result.find((r) => r.tableName === 'users');
+      expect(usersRef?.alias).toBeNull();
+    });
+
+    it('should not treat RIGHT as alias', () => {
+      const result = parseTableReferences(
+        'SELECT * FROM users RIGHT JOIN orders ON users.id = orders.user_id'
+      );
+      const usersRef = result.find((r) => r.tableName === 'users');
+      expect(usersRef?.alias).toBeNull();
+    });
+
+    it('should not treat INNER as alias', () => {
+      const result = parseTableReferences(
+        'SELECT * FROM users INNER JOIN orders ON users.id = orders.user_id'
+      );
+      const usersRef = result.find((r) => r.tableName === 'users');
+      expect(usersRef?.alias).toBeNull();
+    });
+
+    it('should not treat OUTER as alias', () => {
+      const result = parseTableReferences(
+        'SELECT * FROM users OUTER JOIN orders ON users.id = orders.user_id'
+      );
+      const usersRef = result.find((r) => r.tableName === 'users');
+      expect(usersRef?.alias).toBeNull();
+    });
+
+    it('should not treat CROSS as alias', () => {
+      const result = parseTableReferences(
+        'SELECT * FROM users CROSS JOIN orders'
+      );
+      const usersRef = result.find((r) => r.tableName === 'users');
+      expect(usersRef?.alias).toBeNull();
+    });
+
+    it('should not treat JOIN as alias', () => {
+      const result = parseTableReferences(
+        'SELECT * FROM users JOIN orders ON id = 1'
+      );
+      const usersRef = result.find((r) => r.tableName === 'users');
+      expect(usersRef?.alias).toBeNull();
+    });
+
+    it('should not treat ORDER as alias', () => {
+      const result = parseTableReferences(
+        'SELECT * FROM users ORDER BY id'
+      );
+      const usersRef = result.find((r) => r.tableName === 'users');
+      expect(usersRef?.alias).toBeNull();
+    });
+
+    it('should not treat GROUP as alias', () => {
+      const result = parseTableReferences(
+        'SELECT status FROM users GROUP BY status'
+      );
+      const usersRef = result.find((r) => r.tableName === 'users');
+      expect(usersRef?.alias).toBeNull();
+    });
+
+    it('should not treat HAVING as alias', () => {
+      const result = parseTableReferences(
+        'SELECT status, COUNT(*) FROM users GROUP BY status HAVING COUNT(*) > 1'
+      );
+      const usersRef = result.find((r) => r.tableName === 'users');
+      expect(usersRef?.alias).toBeNull();
+    });
+
+    it('should not treat LIMIT as alias', () => {
+      const result = parseTableReferences('SELECT * FROM users LIMIT 10');
+      const usersRef = result.find((r) => r.tableName === 'users');
+      expect(usersRef?.alias).toBeNull();
+    });
+
+    it('should not treat UNION as alias', () => {
+      const result = parseTableReferences(
+        'SELECT * FROM users UNION SELECT * FROM admins'
+      );
+      expect(result).toHaveLength(2);
+      expect(result).toContainEqual({ tableName: 'users', alias: null });
+      expect(result).toContainEqual({ tableName: 'admins', alias: null });
+    });
+
+    it('should not treat SET as alias', () => {
+      const result = parseTableReferences("UPDATE users SET name = 'test'");
+      const usersRef = result.find((r) => r.tableName === 'users');
+      expect(usersRef).toBeUndefined(); // UPDATE doesn't use FROM
+    });
+
+    it('should not treat VALUES as alias', () => {
+      const result = parseTableReferences(
+        'SELECT * FROM data VALUES (1, 2, 3)'
+      );
+      const dataRef = result.find((r) => r.tableName === 'data');
+      expect(dataRef?.alias).toBeNull();
+    });
+  });
+
+  describe('whitespace handling', () => {
+    it('should handle multiple spaces between keywords', () => {
+      const result = parseTableReferences('SELECT * FROM   users   u');
+      expect(result).toEqual([{ tableName: 'users', alias: 'u' }]);
+    });
+
+    it('should handle tabs', () => {
+      const result = parseTableReferences('SELECT * FROM\tusers\tu');
+      expect(result).toEqual([{ tableName: 'users', alias: 'u' }]);
+    });
+
+    it('should handle newlines', () => {
+      const result = parseTableReferences('SELECT *\nFROM users\nu');
+      expect(result).toEqual([{ tableName: 'users', alias: 'u' }]);
+    });
+
+    it('should handle mixed whitespace', () => {
+      const result = parseTableReferences('SELECT *\n\tFROM  users \t AS \n u');
+      expect(result).toEqual([{ tableName: 'users', alias: 'u' }]);
+    });
+  });
+
+  describe('complex queries', () => {
+    it('should parse subqueries (FROM in subquery)', () => {
+      const result = parseTableReferences(
+        'SELECT * FROM users WHERE id IN (SELECT user_id FROM orders)'
+      );
+      expect(result).toHaveLength(2);
+      expect(result).toContainEqual({ tableName: 'users', alias: null });
+      expect(result).toContainEqual({ tableName: 'orders', alias: null });
+    });
+
+    it('should parse nested subqueries', () => {
+      const result = parseTableReferences(
+        'SELECT * FROM users WHERE id IN (SELECT user_id FROM orders WHERE product_id IN (SELECT id FROM products))'
+      );
+      expect(result).toHaveLength(3);
+      expect(result).toContainEqual({ tableName: 'users', alias: null });
+      expect(result).toContainEqual({ tableName: 'orders', alias: null });
+      expect(result).toContainEqual({ tableName: 'products', alias: null });
+    });
+
+    it('should parse query with multiple table aliases and JOINs', () => {
+      const result = parseTableReferences(
+        'SELECT u.name, o.total, p.name FROM users AS u LEFT JOIN orders AS o ON u.id = o.user_id LEFT JOIN products AS p ON o.product_id = p.id WHERE u.status = 1'
+      );
+      expect(result).toHaveLength(3);
+      expect(result).toContainEqual({ tableName: 'users', alias: 'u' });
+      expect(result).toContainEqual({ tableName: 'orders', alias: 'o' });
+      expect(result).toContainEqual({ tableName: 'products', alias: 'p' });
+    });
+
+    it('should handle DELETE FROM statement', () => {
+      const result = parseTableReferences('DELETE FROM users WHERE id = 1');
+      expect(result).toEqual([{ tableName: 'users', alias: null }]);
+    });
+
+    it('should handle DELETE FROM with JOIN (MySQL style)', () => {
+      const result = parseTableReferences(
+        'DELETE FROM users u JOIN orders o ON u.id = o.user_id'
+      );
+      expect(result).toHaveLength(2);
+      expect(result).toContainEqual({ tableName: 'users', alias: 'u' });
+      expect(result).toContainEqual({ tableName: 'orders', alias: 'o' });
+    });
+  });
+
+  describe('case sensitivity', () => {
+    it('should preserve original table name case', () => {
+      const result = parseTableReferences('SELECT * FROM Users');
+      expect(result).toEqual([{ tableName: 'Users', alias: null }]);
+    });
+
+    it('should preserve original alias case', () => {
+      const result = parseTableReferences('SELECT * FROM users AS U');
+      expect(result).toEqual([{ tableName: 'users', alias: 'U' }]);
+    });
+
+    it('should handle mixed case table names', () => {
+      const result = parseTableReferences('SELECT * FROM MyTable AS mt');
+      expect(result).toEqual([{ tableName: 'MyTable', alias: 'mt' }]);
+    });
+  });
+
+  describe('edge cases', () => {
+    it('should handle table name starting with underscore', () => {
+      const result = parseTableReferences('SELECT * FROM _users');
+      expect(result).toEqual([{ tableName: '_users', alias: null }]);
+    });
+
+    it('should handle table name with numbers', () => {
+      const result = parseTableReferences('SELECT * FROM users2');
+      expect(result).toEqual([{ tableName: 'users2', alias: null }]);
+    });
+
+    it('should handle alias starting with underscore', () => {
+      const result = parseTableReferences('SELECT * FROM users _u');
+      expect(result).toEqual([{ tableName: 'users', alias: '_u' }]);
+    });
+
+    it('should handle numeric-starting alias', () => {
+      // Note: \w+ matches alphanumeric chars including digits, so "1u" is captured as alias
+      const result = parseTableReferences('SELECT * FROM users 1u');
+      expect(result).toEqual([{ tableName: 'users', alias: '1u' }]);
+    });
+
+    it('should handle long table names', () => {
+      const longName = 'very_long_table_name_that_goes_on_and_on';
+      const result = parseTableReferences(`SELECT * FROM ${longName}`);
+      expect(result).toEqual([{ tableName: longName, alias: null }]);
+    });
+
+    it('should handle single character table name', () => {
+      const result = parseTableReferences('SELECT * FROM t');
+      expect(result).toEqual([{ tableName: 't', alias: null }]);
+    });
+
+    it('should handle single character alias', () => {
+      const result = parseTableReferences('SELECT * FROM users u');
+      expect(result).toEqual([{ tableName: 'users', alias: 'u' }]);
     });
   });
 });

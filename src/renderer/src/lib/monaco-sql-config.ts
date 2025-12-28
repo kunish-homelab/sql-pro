@@ -5,7 +5,7 @@ import type { DatabaseSchema, TableSchema } from '@/types/database';
  * Represents a table reference extracted from SQL query.
  * Maps alias (or table name if no alias) to the actual table name.
  */
-interface TableReference {
+export interface TableReferenceResult {
   tableName: string;
   alias: string | null;
 }
@@ -18,8 +18,8 @@ interface TableReference {
  * - FROM users AS u
  * - JOIN orders o ON ...
  */
-function parseTableReferences(sql: string): TableReference[] {
-  const references: TableReference[] = [];
+export function parseTableReferences(sql: string): TableReferenceResult[] {
+  const references: TableReferenceResult[] = [];
   const normalizedSql = sql.replace(/\s+/g, ' ').trim();
 
   // Match FROM table [AS] [alias] and JOIN table [AS] [alias]
