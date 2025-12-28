@@ -30,7 +30,9 @@ export function ActiveFilters({
 
   return (
     <div className="flex flex-wrap items-center gap-2 border-b px-4 py-2">
-      <span className="text-muted-foreground text-xs font-medium">Filters:</span>
+      <span className="text-muted-foreground text-xs font-medium">
+        Filters:
+      </span>
       {filters.map((filter) => {
         const label = generateCompactFilterLabel(
           filter.column,
@@ -40,12 +42,8 @@ export function ActiveFilters({
         );
 
         return (
-          <Badge
-            key={filter.id}
-            variant="secondary"
-            className="gap-1 pr-1"
-          >
-            <span className="max-w-[200px] truncate">{label}</span>
+          <Badge key={filter.id} variant="secondary" className="gap-1 pr-1">
+            <span className="max-w-50 truncate">{label}</span>
             <button
               type="button"
               className="hover:bg-muted ml-1 rounded-full p-0.5 transition-colors"

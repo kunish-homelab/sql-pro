@@ -1,7 +1,6 @@
 import type { DataTableRef, TableRowData } from './data-table';
-import type { PendingChange, SortState } from '@/types/database';
 import type { UIFilterState } from '@/lib/filter-utils';
-import { convertUIFiltersToAPIFilters } from '@/lib/filter-utils';
+import type { PendingChange, SortState } from '@/types/database';
 import {
   ChevronLeft,
   ChevronRight,
@@ -20,9 +19,10 @@ import { Input } from '@/components/ui/input';
 import { useClientSearch } from '@/hooks/useClientSearch';
 import { usePendingChanges } from '@/hooks/usePendingChanges';
 import { useTableData } from '@/hooks/useTableData';
+import { convertUIFiltersToAPIFilters } from '@/lib/filter-utils';
 import { useConnectionStore } from '@/stores';
-import { ActiveFilters } from './data-table/ActiveFilters';
 import { DataTable } from './data-table';
+import { ActiveFilters } from './data-table/ActiveFilters';
 import { DiffPreview } from './DiffPreview';
 
 export function TableView() {
@@ -105,11 +105,12 @@ export function TableView() {
   }, [rows, pendingChanges]);
 
   // Client-side search on displayed rows
-  const { filteredRows: searchFilteredRows, stats: searchStats } = useClientSearch({
-    rows: displayRows,
-    columns,
-    searchTerm,
-  });
+  const { filteredRows: searchFilteredRows, stats: searchStats } =
+    useClientSearch({
+      rows: displayRows,
+      columns,
+      searchTerm,
+    });
 
   // Build changes map for DataTable
   const changesMap = useMemo(() => {
@@ -133,7 +134,9 @@ export function TableView() {
   const handleFilterAdd = useCallback((filter: UIFilterState) => {
     setFilters((prevFilters) => {
       // Check if a filter already exists for this column
-      const existingIndex = prevFilters.findIndex((f) => f.column === filter.column);
+      const existingIndex = prevFilters.findIndex(
+        (f) => f.column === filter.column
+      );
       if (existingIndex >= 0) {
         // Update existing filter
         const newFilters = [...prevFilters];
@@ -148,7 +151,9 @@ export function TableView() {
 
   // Handle filter removal by column id
   const handleFilterRemove = useCallback((columnId: string) => {
-    setFilters((prevFilters) => prevFilters.filter((f) => f.column !== columnId));
+    setFilters((prevFilters) =>
+      prevFilters.filter((f) => f.column !== columnId)
+    );
     setPage(1); // Reset to first page on filter change
   }, []);
 
@@ -259,19 +264,19 @@ export function TableView() {
           <div className="flex items-center gap-2">
             {/* Search Input */}
             <div className="relative">
-              <Search className="text-muted-foreground absolute left-2.5 top-1/2 h-4 w-4 -translate-y-1/2" />
+              <Search className="text-muted-foreground absolute top-1/2 left-2.5 h-4 w-4 -translate-y-1/2" />
               <Input
                 type="text"
                 placeholder="Search in results..."
                 value={searchTerm}
                 onChange={(e) => setSearchTerm(e.target.value)}
-                className="h-8 w-56 pl-8 pr-8 text-sm"
+                className="h-8 w-56 pr-8 pl-8 text-sm"
               />
               {searchTerm && (
                 <button
                   type="button"
                   onClick={() => setSearchTerm('')}
-                  className="text-muted-foreground hover:text-foreground absolute right-2 top-1/2 -translate-y-1/2"
+                  className="text-muted-foreground hover:text-foreground absolute top-1/2 right-2 -translate-y-1/2"
                   title="Clear search"
                 >
                   <X className="h-4 w-4" />

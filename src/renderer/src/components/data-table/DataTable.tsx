@@ -1,11 +1,11 @@
 import type { TableRowData } from './hooks/useTableCore';
+import type { UIFilterState } from '@/lib/filter-utils';
 import type {
   AggregationType,
   ColumnSchema,
   PendingChange,
   SortState,
 } from '@/types/database';
-import type { UIFilterState } from '@/lib/filter-utils';
 import { Filter, SearchX } from 'lucide-react';
 import { useCallback, useEffect, useImperativeHandle, useRef } from 'react';
 import { Button } from '@/components/ui/button';
@@ -303,7 +303,11 @@ function EmptyState({
   onClearSearch?: () => void;
 }) {
   // Case 3: Client-side search produced no results (but there were rows before search)
-  if (hasActiveSearch && totalRowsBeforeClientSearch && totalRowsBeforeClientSearch > 0) {
+  if (
+    hasActiveSearch &&
+    totalRowsBeforeClientSearch &&
+    totalRowsBeforeClientSearch > 0
+  ) {
     return (
       <div className="text-muted-foreground flex h-32 flex-col items-center justify-center gap-3">
         <div className="flex items-center gap-2">

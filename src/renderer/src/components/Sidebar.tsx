@@ -102,6 +102,7 @@ export function Sidebar() {
   // Initialize expansion state for new schemas
   useEffect(() => {
     if (schema?.schemas) {
+      // eslint-disable-next-line react-hooks-extra/no-direct-set-state-in-use-effect -- Intentionally sync state with props
       setExpandedSchemas((prev) => {
         const next = { ...prev };
         for (const s of schema.schemas) {
@@ -111,6 +112,7 @@ export function Sidebar() {
         }
         return next;
       });
+      // eslint-disable-next-line react-hooks-extra/no-direct-set-state-in-use-effect -- Intentionally sync state with props
       setExpandedSections((prev) => {
         const next = { ...prev };
         for (const s of schema.schemas) {

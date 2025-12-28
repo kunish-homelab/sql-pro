@@ -1,16 +1,13 @@
 import type { Header, Table } from '@tanstack/react-table';
 import type { TableRowData } from './hooks/useTableCore';
+import type { ColumnTypeCategory, UIFilterState } from '@/lib/filter-utils';
 import type { ColumnSchema } from '@/types/database';
 import { flexRender } from '@tanstack/react-table';
 import { ArrowDown, ArrowUp, Filter, Key, Layers } from 'lucide-react';
 import { memo, useRef, useState } from 'react';
+import { getColumnTypeCategory } from '@/lib/filter-utils';
 import { cn } from '@/lib/utils';
 import { ColumnFilterPopover } from './ColumnFilterPopover';
-import {
-  type UIFilterState,
-  type ColumnTypeCategory,
-  getColumnTypeCategory,
-} from '@/lib/filter-utils';
 
 interface HeaderCellProps {
   header: Header<TableRowData, unknown>;

@@ -1,4 +1,11 @@
-import { useState, useEffect, useCallback } from 'react';
+import type {
+  ColumnTypeCategory,
+  FilterErrorField,
+  OperatorDefinition,
+  UIFilterState,
+  UIOperator,
+} from '@/lib/filter-utils';
+import { useCallback, useEffect, useState } from 'react';
 import { Button } from '@/components/ui/button';
 import { Input } from '@/components/ui/input';
 import {
@@ -14,14 +21,9 @@ import {
   SelectValue,
 } from '@/components/ui/select';
 import {
-  type UIOperator,
-  type ColumnTypeCategory,
-  type UIFilterState,
-  type OperatorDefinition,
-  type FilterErrorField,
+  generateFilterId,
   getOperatorsForColumnType,
   validateFilterValue,
-  generateFilterId,
 } from '@/lib/filter-utils';
 import { cn } from '@/lib/utils';
 
@@ -67,7 +69,9 @@ export function ColumnFilterPopover({
     existingFilter?.uiOperator || defaultOperator
   );
   const [value, setValue] = useState(existingFilter?.value || '');
-  const [secondValue, setSecondValue] = useState(existingFilter?.secondValue || '');
+  const [secondValue, setSecondValue] = useState(
+    existingFilter?.secondValue || ''
+  );
   const [error, setError] = useState<string | undefined>();
   const [errorField, setErrorField] = useState<FilterErrorField>(null);
 
@@ -78,6 +82,7 @@ export function ColumnFilterPopover({
 
   // Reset state when popover opens or existing filter changes
   useEffect(() => {
+    /* eslint-disable react-hooks-extra/no-direct-set-state-in-use-effect -- Intentionally sync state with props */
     if (existingFilter) {
       setSelectedOperator(existingFilter.uiOperator);
       setValue(existingFilter.value);
@@ -89,22 +94,26 @@ export function ColumnFilterPopover({
     }
     setError(undefined);
     setErrorField(null);
+    /* eslint-enable react-hooks-extra/no-direct-set-state-in-use-effect */
   }, [existingFilter, defaultOperator, open]);
 
   // Clear values when operator changes if the new operator doesn't require values
-  const handleOperatorChange = useCallback((newOperator: string) => {
-    setSelectedOperator(newOperator as UIOperator);
-    setError(undefined);
-    setErrorField(null);
+  const handleOperatorChange = useCallback(
+    (newOperator: string) => {
+      setSelectedOperator(newOperator as UIOperator);
+      setError(undefined);
+      setErrorField(null);
 
-    const newOpDef = operators.find((op) => op.value === newOperator);
-    if (!newOpDef?.requiresValue) {
-      setValue('');
-      setSecondValue('');
-    } else if (!newOpDef?.requiresSecondValue) {
-      setSecondValue('');
-    }
-  }, [operators]);
+      const newOpDef = operators.find((op) => op.value === newOperator);
+      if (!newOpDef?.requiresValue) {
+        setValue('');
+        setSecondValue('');
+      } else if (!newOpDef?.requiresSecondValue) {
+        setSecondValue('');
+      }
+    },
+    [operators]
+  );
 
   // Handle apply button click
   const handleApply = useCallback(() => {
@@ -129,7 +138,9 @@ export function ColumnFilterPopover({
       columnType,
       uiOperator: selectedOperator,
       value: value.trim(),
-      secondValue: currentOperator?.requiresSecondValue ? secondValue.trim() : undefined,
+      secondValue: currentOperator?.requiresSecondValue
+        ? secondValue.trim()
+        : undefined,
     };
 
     onApply(filter);
@@ -173,7 +184,8 @@ export function ColumnFilterPopover({
 
   // Determine which inputs should show error styling
   const hasValueError = errorField === 'value' || errorField === 'both';
-  const hasSecondValueError = errorField === 'secondValue' || errorField === 'both';
+  const hasSecondValueError =
+    errorField === 'secondValue' || errorField === 'both';
 
   return (
     <Popover open={open} onOpenChange={onOpenChange}>
@@ -192,7 +204,10 @@ export function ColumnFilterPopover({
           {/* Operator selector */}
           <div className="flex flex-col gap-1.5">
             <label className="text-muted-foreground text-xs">Operator</label>
-            <Select value={selectedOperator} onValueChange={handleOperatorChange}>
+            <Select
+              value={selectedOperator}
+              onValueChange={handleOperatorChange}
+            >
               <SelectTrigger className="h-9">
                 <SelectValue placeholder="Select operator" />
               </SelectTrigger>
@@ -216,7 +231,9 @@ export function ColumnFilterPopover({
                 className={cn('h-9', hasValueError && 'border-destructive')}
                 type={columnType === 'numeric' ? 'number' : 'text'}
                 placeholder={
-                  columnType === 'numeric' ? 'Enter number...' : 'Enter value...'
+                  columnType === 'numeric'
+                    ? 'Enter number...'
+                    : 'Enter value...'
                 }
                 value={value}
                 onChange={(e) => {
@@ -235,10 +252,15 @@ export function ColumnFilterPopover({
             <div className="flex flex-col gap-1.5">
               <label className="text-muted-foreground text-xs">To</label>
               <Input
-                className={cn('h-9', hasSecondValueError && 'border-destructive')}
+                className={cn(
+                  'h-9',
+                  hasSecondValueError && 'border-destructive'
+                )}
                 type={columnType === 'numeric' ? 'number' : 'text'}
                 placeholder={
-                  columnType === 'numeric' ? 'Enter number...' : 'Enter value...'
+                  columnType === 'numeric'
+                    ? 'Enter number...'
+                    : 'Enter value...'
                 }
                 value={secondValue}
                 onChange={(e) => {
@@ -252,9 +274,7 @@ export function ColumnFilterPopover({
           )}
 
           {/* Validation error */}
-          {error && (
-            <div className="text-destructive text-xs">{error}</div>
-          )}
+          {error && <div className="text-destructive text-xs">{error}</div>}
 
           {/* Action buttons */}
           <div className="flex items-center gap-2 pt-1">

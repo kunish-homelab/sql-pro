@@ -29,8 +29,13 @@ interface SchemaDetailsPanelProps {
 
 type SectionKey = 'columns' | 'indexes' | 'foreignKeys' | 'triggers' | 'sql';
 
-export function SchemaDetailsPanel({ table, onClose }: SchemaDetailsPanelProps) {
-  const [expandedSections, setExpandedSections] = useState<Record<SectionKey, boolean>>({
+export function SchemaDetailsPanel({
+  table,
+  onClose,
+}: SchemaDetailsPanelProps) {
+  const [expandedSections, setExpandedSections] = useState<
+    Record<SectionKey, boolean>
+  >({
     columns: true,
     indexes: true,
     foreignKeys: true,
@@ -96,7 +101,10 @@ export function SchemaDetailsPanel({ table, onClose }: SchemaDetailsPanelProps) 
             isExpanded={expandedSections.columns}
             onToggle={() => toggleSection('columns')}
           >
-            <ColumnsTable columns={table.columns} primaryKey={table.primaryKey} />
+            <ColumnsTable
+              columns={table.columns}
+              primaryKey={table.primaryKey}
+            />
           </Section>
 
           {/* Indexes Section */}
@@ -164,7 +172,14 @@ interface SectionProps {
   children: React.ReactNode;
 }
 
-function Section({ title, icon, count, isExpanded, onToggle, children }: SectionProps) {
+function Section({
+  title,
+  icon,
+  count,
+  isExpanded,
+  onToggle,
+  children,
+}: SectionProps) {
   return (
     <div className="bg-muted/30 rounded-lg border">
       <button
@@ -179,7 +194,9 @@ function Section({ title, icon, count, isExpanded, onToggle, children }: Section
         {icon}
         <span>{title}</span>
         {count !== undefined && (
-          <span className="text-muted-foreground ml-auto text-xs">({count})</span>
+          <span className="text-muted-foreground ml-auto text-xs">
+            ({count})
+          </span>
         )}
       </button>
       {isExpanded && <div className="border-t px-3 py-2">{children}</div>}
@@ -195,7 +212,9 @@ interface ColumnsTableProps {
 function ColumnsTable({ columns, primaryKey }: ColumnsTableProps) {
   if (columns.length === 0) {
     return (
-      <div className="text-muted-foreground py-2 text-sm">No columns defined</div>
+      <div className="text-muted-foreground py-2 text-sm">
+        No columns defined
+      </div>
     );
   }
 
@@ -204,16 +223,17 @@ function ColumnsTable({ columns, primaryKey }: ColumnsTableProps) {
       <table className="w-full text-sm">
         <thead>
           <tr className="text-muted-foreground border-b text-left">
-            <th className="pb-2 pr-4 font-medium">Name</th>
-            <th className="pb-2 pr-4 font-medium">Type</th>
-            <th className="pb-2 pr-4 font-medium">Nullable</th>
-            <th className="pb-2 pr-4 font-medium">Default</th>
+            <th className="pr-4 pb-2 font-medium">Name</th>
+            <th className="pr-4 pb-2 font-medium">Type</th>
+            <th className="pr-4 pb-2 font-medium">Nullable</th>
+            <th className="pr-4 pb-2 font-medium">Default</th>
             <th className="pb-2 font-medium">Key</th>
           </tr>
         </thead>
         <tbody>
           {columns.map((column) => {
-            const isPK = primaryKey.includes(column.name) || column.isPrimaryKey;
+            const isPK =
+              primaryKey.includes(column.name) || column.isPrimaryKey;
             return (
               <tr key={column.name} className="border-b last:border-0">
                 <td className="py-2 pr-4 font-mono text-xs">{column.name}</td>
@@ -226,7 +246,9 @@ function ColumnsTable({ columns, primaryKey }: ColumnsTableProps) {
                   <span
                     className={cn(
                       'text-xs',
-                      column.nullable ? 'text-muted-foreground' : 'text-amber-600'
+                      column.nullable
+                        ? 'text-muted-foreground'
+                        : 'text-amber-600'
                     )}
                   >
                     {column.nullable ? 'Yes' : 'No'}
@@ -234,7 +256,9 @@ function ColumnsTable({ columns, primaryKey }: ColumnsTableProps) {
                 </td>
                 <td className="py-2 pr-4">
                   {column.defaultValue !== null ? (
-                    <span className="font-mono text-xs">{column.defaultValue}</span>
+                    <span className="font-mono text-xs">
+                      {column.defaultValue}
+                    </span>
                   ) : (
                     <span className="text-muted-foreground text-xs">-</span>
                   )}
@@ -267,7 +291,7 @@ function IndexesList({ indexes }: IndexesListProps) {
           <div className="flex items-center gap-2">
             <span className="font-mono text-xs font-medium">{index.name}</span>
             {index.isUnique && (
-              <span className="bg-blue-100 text-blue-700 dark:bg-blue-950 dark:text-blue-300 rounded px-1.5 py-0.5 text-xs">
+              <span className="rounded bg-blue-100 px-1.5 py-0.5 text-xs text-blue-700 dark:bg-blue-950 dark:text-blue-300">
                 UNIQUE
               </span>
             )}
@@ -295,8 +319,11 @@ interface ForeignKeysListProps {
 function ForeignKeysList({ foreignKeys }: ForeignKeysListProps) {
   return (
     <div className="space-y-2">
-      {foreignKeys.map((fk, idx) => (
-        <div key={`${fk.column}-${fk.referencedTable}-${idx}`} className="bg-background rounded border p-2">
+      {foreignKeys.map((fk) => (
+        <div
+          key={`${fk.column}-${fk.referencedTable}-${fk.referencedColumn}`}
+          className="bg-background rounded border p-2"
+        >
           <div className="flex items-center gap-2 text-sm">
             <span className="font-mono text-xs">{fk.column}</span>
             <span className="text-muted-foreground">&rarr;</span>
@@ -332,11 +359,13 @@ function TriggersList({ triggers }: TriggersListProps) {
       {triggers.map((trigger) => (
         <div key={trigger.name} className="bg-background rounded border p-2">
           <div className="flex items-center gap-2">
-            <span className="font-mono text-xs font-medium">{trigger.name}</span>
-            <span className="bg-purple-100 text-purple-700 dark:bg-purple-950 dark:text-purple-300 rounded px-1.5 py-0.5 text-xs">
+            <span className="font-mono text-xs font-medium">
+              {trigger.name}
+            </span>
+            <span className="rounded bg-purple-100 px-1.5 py-0.5 text-xs text-purple-700 dark:bg-purple-950 dark:text-purple-300">
               {trigger.timing}
             </span>
-            <span className="bg-green-100 text-green-700 dark:bg-green-950 dark:text-green-300 rounded px-1.5 py-0.5 text-xs">
+            <span className="rounded bg-green-100 px-1.5 py-0.5 text-xs text-green-700 dark:bg-green-950 dark:text-green-300">
               {trigger.event}
             </span>
           </div>

@@ -52,6 +52,7 @@ export function SettingsDialog({ open, onOpenChange }: SettingsDialogProps) {
   // Fetch system fonts using Font Access API
   useEffect(() => {
     let cancelled = false;
+    let timeoutId: ReturnType<typeof setTimeout> | undefined;
 
     async function loadSystemFonts() {
       // Common monospace fallback fonts
@@ -76,9 +77,12 @@ export function SettingsDialog({ open, onOpenChange }: SettingsDialogProps) {
         // Check if Font Access API is available
         if ('queryLocalFonts' in window) {
           // Add a timeout to prevent hanging
-          const timeoutPromise = new Promise<never>((_, reject) =>
-            setTimeout(() => reject(new Error('Font query timeout')), 3000)
-          );
+          const timeoutPromise = new Promise<never>((_, reject) => {
+            timeoutId = setTimeout(
+              () => reject(new Error('Font query timeout')),
+              3000
+            );
+          });
 
           // Request permission and get fonts
           const fontsPromise = (
@@ -152,6 +156,9 @@ export function SettingsDialog({ open, onOpenChange }: SettingsDialogProps) {
 
     return () => {
       cancelled = true;
+      if (timeoutId) {
+        clearTimeout(timeoutId);
+      }
     };
   }, []);
 

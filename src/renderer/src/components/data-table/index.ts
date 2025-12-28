@@ -1,3 +1,8 @@
+// Filter components
+export { ActiveFilters, type ActiveFiltersProps } from './ActiveFilters';
+
+export { ColumnFilterPopover } from './ColumnFilterPopover';
+
 // Main component
 export {
   DataTable,
@@ -5,12 +10,7 @@ export {
   type DataTableRef,
   type TableRowData,
 } from './DataTable';
-
 export { GroupRow } from './GroupRow';
-
-// Filter components
-export { ActiveFilters, type ActiveFiltersProps } from './ActiveFilters';
-export { ColumnFilterPopover } from './ColumnFilterPopover';
 
 // Hooks
 export { useTableCore } from './hooks/useTableCore';

@@ -1,7 +1,7 @@
 import type { QueryHistoryEntry } from '../../../shared/types';
 import type { QueryResult } from '@/types/database';
-import { sqlPro } from '@/lib/api';
 import { create } from 'zustand';
+import { sqlPro } from '@/lib/api';
 
 interface QueryState {
   // Current query session

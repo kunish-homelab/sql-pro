@@ -60,4 +60,5 @@ function Button({
   );
 }
 
+// eslint-disable-next-line react-refresh/only-export-components -- buttonVariants is intentionally exported
 export { Button, buttonVariants };

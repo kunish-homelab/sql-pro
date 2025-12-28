@@ -1,4 +1,4 @@
-import type { FilterState, ColumnSchema } from '../types/database';
+import type { ColumnSchema, FilterState } from '../types/database';
 
 // ============================================================================
 // UI Operator Types
@@ -38,7 +38,12 @@ export type UIOperator = TextOperator | NumericOperator;
 /**
  * Column type categories for determining which operators to show
  */
-export type ColumnTypeCategory = 'text' | 'numeric' | 'date' | 'boolean' | 'unknown';
+export type ColumnTypeCategory =
+  | 'text'
+  | 'numeric'
+  | 'date'
+  | 'boolean'
+  | 'unknown';
 
 // ============================================================================
 // Operator Definitions
@@ -73,9 +78,22 @@ export const NUMERIC_OPERATORS: OperatorDefinition[] = [
   { value: 'not_equals', label: 'Not equals', requiresValue: true },
   { value: 'greater_than', label: 'Greater than', requiresValue: true },
   { value: 'less_than', label: 'Less than', requiresValue: true },
-  { value: 'greater_than_or_equal', label: 'Greater than or equal', requiresValue: true },
-  { value: 'less_than_or_equal', label: 'Less than or equal', requiresValue: true },
-  { value: 'between', label: 'Between', requiresValue: true, requiresSecondValue: true },
+  {
+    value: 'greater_than_or_equal',
+    label: 'Greater than or equal',
+    requiresValue: true,
+  },
+  {
+    value: 'less_than_or_equal',
+    label: 'Less than or equal',
+    requiresValue: true,
+  },
+  {
+    value: 'between',
+    label: 'Between',
+    requiresValue: true,
+    requiresSecondValue: true,
+  },
   { value: 'is_null', label: 'Is null', requiresValue: false },
   { value: 'is_not_null', label: 'Is not null', requiresValue: false },
 ];
@@ -114,10 +132,7 @@ const DATE_TYPE_PATTERNS = [
   /^time$/i,
 ];
 
-const BOOLEAN_TYPE_PATTERNS = [
-  /^bool$/i,
-  /^boolean$/i,
-];
+const BOOLEAN_TYPE_PATTERNS = [/^bool$/i, /^boolean$/i];
 
 const TEXT_TYPE_PATTERNS = [
   /^text/i,
@@ -132,7 +147,9 @@ const TEXT_TYPE_PATTERNS = [
 /**
  * Detect the column type category from SQLite column type string
  */
-export function detectColumnTypeCategory(columnType: string): ColumnTypeCategory {
+export function detectColumnTypeCategory(
+  columnType: string
+): ColumnTypeCategory {
   const type = columnType.trim();
 
   // Check for empty type - SQLite allows columns without explicit type
@@ -175,7 +192,9 @@ export function detectColumnTypeCategory(columnType: string): ColumnTypeCategory
 /**
  * Get column type category from ColumnSchema
  */
-export function getColumnTypeCategory(column: ColumnSchema): ColumnTypeCategory {
+export function getColumnTypeCategory(
+  column: ColumnSchema
+): ColumnTypeCategory {
   return detectColumnTypeCategory(column.type);
 }
 
@@ -295,7 +314,11 @@ export function createFiltersFromUIOperator(
   value: string,
   secondValue?: string
 ): FilterState[] {
-  const mappedFilters = mapOperatorToFilterState(uiOperator, value, secondValue);
+  const mappedFilters = mapOperatorToFilterState(
+    uiOperator,
+    value,
+    secondValue
+  );
   return mappedFilters.map((mapped) => ({
     column,
     operator: mapped.operator,
@@ -360,20 +383,23 @@ export function generateFilterLabel(
 
   // Truncate long values for display
   const maxValueLength = 20;
-  const displayValue = value.length > maxValueLength
-    ? `${value.substring(0, maxValueLength)}...`
-    : value;
+  const displayValue =
+    value.length > maxValueLength
+      ? `${value.substring(0, maxValueLength)}...`
+      : value;
 
   switch (uiOperator) {
     case 'is_null':
     case 'is_not_null':
       return `${columnName} ${symbol}`;
 
-    case 'between':
-      const displaySecond = secondValue && secondValue.length > maxValueLength
-        ? `${secondValue.substring(0, maxValueLength)}...`
-        : (secondValue || '');
+    case 'between': {
+      const displaySecond =
+        secondValue && secondValue.length > maxValueLength
+          ? `${secondValue.substring(0, maxValueLength)}...`
+          : secondValue || '';
       return `${columnName} ${displayValue} ${symbol} ${displaySecond}`;
+    }
 
     default:
       return `${columnName} ${symbol} ${displayValue}`;
@@ -459,17 +485,17 @@ export function validateFilterValue(
 
     // For numeric columns, validate both values are numbers and min < max
     if (columnTypeCategory === 'numeric') {
-      const numValue = parseFloat(value);
-      const numSecondValue = parseFloat(secondValue);
+      const numValue = Number.parseFloat(value);
+      const numSecondValue = Number.parseFloat(secondValue);
 
-      if (isNaN(numValue)) {
+      if (Number.isNaN(numValue)) {
         return {
           isValid: false,
           error: 'First value must be a valid number',
           errorField: 'value',
         };
       }
-      if (isNaN(numSecondValue)) {
+      if (Number.isNaN(numSecondValue)) {
         return {
           isValid: false,
           error: 'Second value must be a valid number',
@@ -498,8 +524,8 @@ export function validateFilterValue(
     ];
 
     if (numericOperators.includes(uiOperator)) {
-      const numValue = parseFloat(value);
-      if (isNaN(numValue)) {
+      const numValue = Number.parseFloat(value);
+      if (Number.isNaN(numValue)) {
         return {
           isValid: false,
           error: 'Value must be a valid number',
@@ -540,7 +566,9 @@ export function generateFilterId(): string {
 /**
  * Convert UIFilterState to FilterState array for API
  */
-export function convertUIFilterToAPIFilters(uiFilter: UIFilterState): FilterState[] {
+export function convertUIFilterToAPIFilters(
+  uiFilter: UIFilterState
+): FilterState[] {
   return createFiltersFromUIOperator(
     uiFilter.column,
     uiFilter.uiOperator,
@@ -552,6 +580,8 @@ export function convertUIFilterToAPIFilters(uiFilter: UIFilterState): FilterStat
 /**
  * Convert an array of UIFilterStates to FilterState array for API
  */
-export function convertUIFiltersToAPIFilters(uiFilters: UIFilterState[]): FilterState[] {
+export function convertUIFiltersToAPIFilters(
+  uiFilters: UIFilterState[]
+): FilterState[] {
   return uiFilters.flatMap(convertUIFilterToAPIFilters);
 }
