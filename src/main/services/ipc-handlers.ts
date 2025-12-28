@@ -1,9 +1,12 @@
 import type {
   ApplyChangesRequest,
+  ClearQueryHistoryRequest,
   CloseDatabaseRequest,
+  DeleteQueryHistoryRequest,
   ExecuteQueryRequest,
   ExportRequest,
   GetPasswordRequest,
+  GetQueryHistoryRequest,
   GetSchemaRequest,
   GetTableDataRequest,
   HasPasswordRequest,
@@ -14,6 +17,7 @@ import type {
   RemovePasswordRequest,
   SaveFileDialogRequest,
   SavePasswordRequest,
+  SaveQueryHistoryRequest,
   UpdateConnectionRequest,
   ValidateChangesRequest,
 } from '../../shared/types';
@@ -670,6 +674,56 @@ export function setupIpcHandlers(): void {
     IPC_CHANNELS.CONNECTION_REMOVE,
     async (_event, request: RemoveConnectionRequest) => {
       return removeConnection(request.path, request.removePassword);
+    }
+  );
+
+  // History: Get query history for a database
+  ipcMain.handle(
+    IPC_CHANNELS.HISTORY_GET,
+    async (_event, request: GetQueryHistoryRequest) => {
+      try {
+        const history = loadQueryHistory(request.dbPath);
+        return { success: true, history };
+      } catch (error) {
+        return {
+          success: false,
+          error:
+            error instanceof Error ? error.message : 'Failed to load history',
+        };
+      }
+    }
+  );
+
+  // History: Save a query history entry
+  ipcMain.handle(
+    IPC_CHANNELS.HISTORY_SAVE,
+    async (_event, request: SaveQueryHistoryRequest) => {
+      try {
+        saveQueryHistoryEntry(request.entry);
+        return { success: true };
+      } catch (error) {
+        return {
+          success: false,
+          error:
+            error instanceof Error ? error.message : 'Failed to save history',
+        };
+      }
+    }
+  );
+
+  // History: Delete a specific history entry
+  ipcMain.handle(
+    IPC_CHANNELS.HISTORY_DELETE,
+    async (_event, request: DeleteQueryHistoryRequest) => {
+      return deleteQueryHistoryEntry(request.dbPath, request.entryId);
+    }
+  );
+
+  // History: Clear all history for a database
+  ipcMain.handle(
+    IPC_CHANNELS.HISTORY_CLEAR,
+    async (_event, request: ClearQueryHistoryRequest) => {
+      return clearQueryHistory(request.dbPath);
     }
   );
 }
