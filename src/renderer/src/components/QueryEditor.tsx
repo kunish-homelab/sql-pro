@@ -26,6 +26,18 @@ import { useConnectionStore, useQueryStore } from '@/stores';
 import { MonacoSqlEditor } from './MonacoSqlEditor';
 import { QueryResults } from './QueryResults';
 
+/**
+ * Formats duration in milliseconds to a readable string
+ * @param ms - Duration in milliseconds
+ * @returns Formatted string like '234ms' or '1.2s'
+ */
+function formatDuration(ms: number): string {
+  if (ms < 1000) {
+    return `${Math.round(ms)}ms`;
+  }
+  return `${(ms / 1000).toFixed(1)}s`;
+}
+
 export function QueryEditor() {
   const { connection, schema } = useConnectionStore();
   const {
@@ -318,7 +330,7 @@ export function QueryEditor() {
                         <div className="flex items-center gap-2 pr-6">
                           {item.success ? (
                             <span className="text-xs text-green-600">
-                              {item.durationMs}ms
+                              {formatDuration(item.durationMs)}
                             </span>
                           ) : (
                             <span className="text-destructive text-xs">
