@@ -1,8 +1,12 @@
 import type {
   ApplyChangesRequest,
   ApplyChangesResponse,
+  ClearQueryHistoryRequest,
+  ClearQueryHistoryResponse,
   CloseDatabaseRequest,
   CloseDatabaseResponse,
+  DeleteQueryHistoryRequest,
+  DeleteQueryHistoryResponse,
   ExecuteQueryRequest,
   ExecuteQueryResponse,
   ExportRequest,
@@ -10,6 +14,8 @@ import type {
   GetPasswordRequest,
   GetPasswordResponse,
   GetPreferencesResponse,
+  GetQueryHistoryRequest,
+  GetQueryHistoryResponse,
   GetRecentConnectionsResponse,
   GetSchemaRequest,
   GetSchemaResponse,
@@ -31,6 +37,8 @@ import type {
   SaveFileDialogResponse,
   SavePasswordRequest,
   SavePasswordResponse,
+  SaveQueryHistoryRequest,
+  SaveQueryHistoryResponse,
   SetPreferencesRequest,
   SetPreferencesResponse,
   UpdateConnectionRequest,
@@ -130,6 +138,24 @@ const sqlProAPI = {
   // File utilities
   file: {
     getPathForFile: (file: File): string => webUtils.getPathForFile(file),
+  },
+
+  // Query history operations
+  history: {
+    get: (request: GetQueryHistoryRequest): Promise<GetQueryHistoryResponse> =>
+      ipcRenderer.invoke(IPC_CHANNELS.HISTORY_GET, request),
+    save: (
+      request: SaveQueryHistoryRequest
+    ): Promise<SaveQueryHistoryResponse> =>
+      ipcRenderer.invoke(IPC_CHANNELS.HISTORY_SAVE, request),
+    delete: (
+      request: DeleteQueryHistoryRequest
+    ): Promise<DeleteQueryHistoryResponse> =>
+      ipcRenderer.invoke(IPC_CHANNELS.HISTORY_DELETE, request),
+    clear: (
+      request: ClearQueryHistoryRequest
+    ): Promise<ClearQueryHistoryResponse> =>
+      ipcRenderer.invoke(IPC_CHANNELS.HISTORY_CLEAR, request),
   },
 
   // Menu action listener

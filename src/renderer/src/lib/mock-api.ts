@@ -1,8 +1,12 @@
 import type {
   ApplyChangesRequest,
   ApplyChangesResponse,
+  ClearQueryHistoryRequest,
+  ClearQueryHistoryResponse,
   CloseDatabaseRequest,
   CloseDatabaseResponse,
+  DeleteQueryHistoryRequest,
+  DeleteQueryHistoryResponse,
   ExecuteQueryRequest,
   ExecuteQueryResponse,
   ExportRequest,
@@ -10,6 +14,8 @@ import type {
   GetPasswordRequest,
   GetPasswordResponse,
   GetPreferencesResponse,
+  GetQueryHistoryRequest,
+  GetQueryHistoryResponse,
   GetRecentConnectionsResponse,
   GetSchemaRequest,
   GetSchemaResponse,
@@ -22,6 +28,7 @@ import type {
   OpenDatabaseResponse,
   OpenFileDialogRequest,
   OpenFileDialogResponse,
+  QueryHistoryEntry,
   RemoveConnectionRequest,
   RemoveConnectionResponse,
   RemovePasswordRequest,
@@ -30,6 +37,8 @@ import type {
   SaveFileDialogResponse,
   SavePasswordRequest,
   SavePasswordResponse,
+  SaveQueryHistoryRequest,
+  SaveQueryHistoryResponse,
   SetPreferencesRequest,
   SetPreferencesResponse,
   TableInfo,
@@ -841,6 +850,56 @@ export const mockSqlProAPI = {
 
   file: {
     getPathForFile: (file: File): string => file.name,
+  },
+
+  history: {
+    get: async (
+      _request: GetQueryHistoryRequest
+    ): Promise<GetQueryHistoryResponse> => {
+      // Return mock history entries for testing
+      const mockHistory: QueryHistoryEntry[] = [
+        {
+          id: 'mock-history-1',
+          dbPath: '/Users/demo/databases/shop.db',
+          queryText: 'SELECT * FROM users LIMIT 10',
+          executedAt: new Date(Date.now() - 3600000).toISOString(), // 1 hour ago
+          durationMs: 45,
+          success: true,
+        },
+        {
+          id: 'mock-history-2',
+          dbPath: '/Users/demo/databases/shop.db',
+          queryText: 'SELECT COUNT(*) FROM orders WHERE status = "pending"',
+          executedAt: new Date(Date.now() - 7200000).toISOString(), // 2 hours ago
+          durationMs: 12,
+          success: true,
+        },
+        {
+          id: 'mock-history-3',
+          dbPath: '/Users/demo/databases/shop.db',
+          queryText: 'UPDATE users SET is_active = 1 WHERE id = 5',
+          executedAt: new Date(Date.now() - 86400000).toISOString(), // 1 day ago
+          durationMs: 8,
+          success: true,
+        },
+      ];
+      return { success: true, history: mockHistory };
+    },
+    save: async (
+      _request: SaveQueryHistoryRequest
+    ): Promise<SaveQueryHistoryResponse> => {
+      return { success: true };
+    },
+    delete: async (
+      _request: DeleteQueryHistoryRequest
+    ): Promise<DeleteQueryHistoryResponse> => {
+      return { success: true };
+    },
+    clear: async (
+      _request: ClearQueryHistoryRequest
+    ): Promise<ClearQueryHistoryResponse> => {
+      return { success: true };
+    },
   },
 };
 
