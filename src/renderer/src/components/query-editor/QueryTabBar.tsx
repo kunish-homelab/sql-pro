@@ -100,7 +100,7 @@ const TabItem = memo(
             role="tab"
             aria-selected={isActive}
             className={cn(
-              'group relative flex h-8 max-w-[180px] min-w-[100px] cursor-pointer items-center gap-1 border-r px-2 text-sm transition-colors',
+              'group relative flex h-8 max-w-45 min-w-25 cursor-pointer items-center gap-1 border-r px-2 text-sm transition-colors',
               isActive
                 ? 'bg-background text-foreground'
                 : 'bg-muted/50 text-muted-foreground hover:bg-muted hover:text-foreground'
