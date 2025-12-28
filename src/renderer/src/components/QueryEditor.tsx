@@ -1,6 +1,23 @@
-import { AlertCircle, Clock, History, Loader2, Play, Search, X } from 'lucide-react';
+import {
+  AlertCircle,
+  Clock,
+  History,
+  Loader2,
+  Play,
+  Search,
+  Trash2,
+  X,
+} from 'lucide-react';
 import { useCallback, useEffect, useMemo, useState } from 'react';
 import { Button } from '@/components/ui/button';
+import {
+  Dialog,
+  DialogContent,
+  DialogDescription,
+  DialogFooter,
+  DialogHeader,
+  DialogTitle,
+} from '@/components/ui/dialog';
 import { Input } from '@/components/ui/input';
 import { ScrollArea } from '@/components/ui/scroll-area';
 import { sqlPro } from '@/lib/api';
@@ -26,10 +43,12 @@ export function QueryEditor() {
     addToHistory,
     loadHistory,
     deleteHistoryItem,
+    clearHistory,
   } = useQueryStore();
 
   const [showHistory, setShowHistory] = useState(false);
   const [historySearch, setHistorySearch] = useState('');
+  const [showClearConfirm, setShowClearConfirm] = useState(false);
 
   // Filter history based on search term (case-insensitive)
   const filteredHistory = useMemo(() => {
@@ -102,7 +121,13 @@ export function QueryEditor() {
     } catch (err) {
       const errorMessage = err instanceof Error ? err.message : 'Unknown error';
       setError(errorMessage);
-      addToHistory(connection.path, currentQuery.trim(), false, 0, errorMessage);
+      addToHistory(
+        connection.path,
+        currentQuery.trim(),
+        false,
+        0,
+        errorMessage
+      );
     } finally {
       setIsExecuting(false);
     }
@@ -125,6 +150,13 @@ export function QueryEditor() {
     e.stopPropagation();
     if (connection?.path) {
       deleteHistoryItem(connection.path, entryId);
+    }
+  };
+
+  const handleClearAllHistory = () => {
+    if (connection?.path) {
+      clearHistory(connection.path);
+      setShowClearConfirm(false);
     }
   };
 
@@ -228,19 +260,31 @@ export function QueryEditor() {
           <div className="w-80 border-l">
             <div className="flex items-center justify-between border-b px-4 py-2">
               <h3 className="font-medium">Query History</h3>
-              <Button
-                variant="ghost"
-                size="icon"
-                className="h-8 w-8"
-                onClick={() => setShowHistory(false)}
-              >
-                <X className="h-4 w-4" />
-              </Button>
+              <div className="flex items-center gap-1">
+                <Button
+                  variant="ghost"
+                  size="icon"
+                  className="h-8 w-8"
+                  onClick={() => setShowClearConfirm(true)}
+                  disabled={history.length === 0}
+                  title="Clear all history"
+                >
+                  <Trash2 className="h-4 w-4" />
+                </Button>
+                <Button
+                  variant="ghost"
+                  size="icon"
+                  className="h-8 w-8"
+                  onClick={() => setShowHistory(false)}
+                >
+                  <X className="h-4 w-4" />
+                </Button>
+              </div>
             </div>
             {/* Search Input */}
             <div className="border-b px-3 py-2">
               <div className="relative">
-                <Search className="text-muted-foreground absolute left-2.5 top-1/2 h-4 w-4 -translate-y-1/2" />
+                <Search className="text-muted-foreground absolute top-1/2 left-2.5 h-4 w-4 -translate-y-1/2" />
                 <Input
                   type="text"
                   placeholder="Search history..."
@@ -254,7 +298,9 @@ export function QueryEditor() {
               <div className="space-y-1 p-2">
                 {filteredHistory.length === 0 ? (
                   <p className="text-muted-foreground py-8 text-center text-sm">
-                    {historySearch.trim() ? 'No matching queries' : 'No queries yet'}
+                    {historySearch.trim()
+                      ? 'No matching queries'
+                      : 'No queries yet'}
                   </p>
                 ) : (
                   filteredHistory.map((item) => (
@@ -290,7 +336,7 @@ export function QueryEditor() {
                       <Button
                         variant="ghost"
                         size="icon"
-                        className="absolute right-1 top-1/2 h-6 w-6 -translate-y-1/2 opacity-0 transition-opacity group-hover:opacity-100"
+                        className="absolute top-1/2 right-1 h-6 w-6 -translate-y-1/2 opacity-0 transition-opacity group-hover:opacity-100"
                         onClick={(e) => handleHistoryDelete(e, item.id)}
                       >
                         <X className="h-3 w-3" />
@@ -303,6 +349,30 @@ export function QueryEditor() {
           </div>
         )}
       </div>
+
+      {/* Clear All Confirmation Dialog */}
+      <Dialog open={showClearConfirm} onOpenChange={setShowClearConfirm}>
+        <DialogContent>
+          <DialogHeader>
+            <DialogTitle>Clear Query History</DialogTitle>
+            <DialogDescription>
+              Are you sure you want to clear all query history for this
+              database? This action cannot be undone.
+            </DialogDescription>
+          </DialogHeader>
+          <DialogFooter>
+            <Button
+              variant="outline"
+              onClick={() => setShowClearConfirm(false)}
+            >
+              Cancel
+            </Button>
+            <Button variant="destructive" onClick={handleClearAllHistory}>
+              Clear All
+            </Button>
+          </DialogFooter>
+        </DialogContent>
+      </Dialog>
     </div>
   );
 }
