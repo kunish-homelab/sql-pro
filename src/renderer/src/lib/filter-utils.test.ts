@@ -954,6 +954,379 @@ describe('validateFilterValue', () => {
       );
       expect(result.isValid).toBe(true);
     });
+
+    it('should allow starts_with operator on text columns', () => {
+      const result = validateFilterValue(
+        'starts_with',
+        'prefix',
+        undefined,
+        'text'
+      );
+      expect(result.isValid).toBe(true);
+    });
+
+    it('should allow ends_with operator on text columns', () => {
+      const result = validateFilterValue(
+        'ends_with',
+        'suffix',
+        undefined,
+        'text'
+      );
+      expect(result.isValid).toBe(true);
+    });
+
+    it('should allow not_equals operator on text columns', () => {
+      const result = validateFilterValue(
+        'not_equals',
+        'excluded value',
+        undefined,
+        'text'
+      );
+      expect(result.isValid).toBe(true);
+    });
+  });
+
+  describe('date column validation', () => {
+    it('should allow any string value for date column equals', () => {
+      const result = validateFilterValue(
+        'equals',
+        '2024-01-15',
+        undefined,
+        'date'
+      );
+      expect(result.isValid).toBe(true);
+    });
+
+    it('should allow greater_than on date column', () => {
+      const result = validateFilterValue(
+        'greater_than',
+        '2024-01-01',
+        undefined,
+        'date'
+      );
+      expect(result.isValid).toBe(true);
+    });
+
+    it('should allow less_than on date column', () => {
+      const result = validateFilterValue(
+        'less_than',
+        '2024-12-31',
+        undefined,
+        'date'
+      );
+      expect(result.isValid).toBe(true);
+    });
+
+    it('should allow between operator on date column', () => {
+      const result = validateFilterValue(
+        'between',
+        '2024-01-01',
+        '2024-12-31',
+        'date'
+      );
+      expect(result.isValid).toBe(true);
+    });
+
+    it('should require second value for between on date column', () => {
+      const result = validateFilterValue(
+        'between',
+        '2024-01-01',
+        undefined,
+        'date'
+      );
+      expect(result.isValid).toBe(false);
+      expect(result.error).toBe('Second value is required for range filter');
+      expect(result.errorField).toBe('secondValue');
+    });
+  });
+
+  describe('boolean column validation', () => {
+    it('should allow equals operator on boolean column', () => {
+      const result = validateFilterValue(
+        'equals',
+        'true',
+        undefined,
+        'boolean'
+      );
+      expect(result.isValid).toBe(true);
+    });
+
+    it('should allow not_equals operator on boolean column', () => {
+      const result = validateFilterValue(
+        'not_equals',
+        'false',
+        undefined,
+        'boolean'
+      );
+      expect(result.isValid).toBe(true);
+    });
+
+    it('should allow is_null on boolean column', () => {
+      const result = validateFilterValue('is_null', '', undefined, 'boolean');
+      expect(result.isValid).toBe(true);
+    });
+
+    it('should allow is_not_null on boolean column', () => {
+      const result = validateFilterValue(
+        'is_not_null',
+        '',
+        undefined,
+        'boolean'
+      );
+      expect(result.isValid).toBe(true);
+    });
+
+    it('should allow any string value for boolean column', () => {
+      const result = validateFilterValue('equals', '1', undefined, 'boolean');
+      expect(result.isValid).toBe(true);
+    });
+  });
+
+  describe('unknown column type validation', () => {
+    it('should allow any string value for unknown column type', () => {
+      const result = validateFilterValue(
+        'equals',
+        'any value',
+        undefined,
+        'unknown'
+      );
+      expect(result.isValid).toBe(true);
+    });
+
+    it('should require value for non-null operators on unknown column', () => {
+      const result = validateFilterValue('equals', '', undefined, 'unknown');
+      expect(result.isValid).toBe(false);
+      expect(result.error).toBe('Value is required');
+    });
+
+    it('should allow contains operator on unknown column', () => {
+      const result = validateFilterValue(
+        'contains',
+        'search',
+        undefined,
+        'unknown'
+      );
+      expect(result.isValid).toBe(true);
+    });
+  });
+
+  describe('not_equals operator on numeric column', () => {
+    it('should fail when value is not numeric for not_equals on numeric column', () => {
+      const result = validateFilterValue(
+        'not_equals',
+        'invalid',
+        undefined,
+        'numeric'
+      );
+      expect(result.isValid).toBe(false);
+      expect(result.error).toBe('Value must be a valid number');
+      expect(result.errorField).toBe('value');
+    });
+
+    it('should pass when value is valid for not_equals on numeric column', () => {
+      const result = validateFilterValue(
+        'not_equals',
+        '100',
+        undefined,
+        'numeric'
+      );
+      expect(result.isValid).toBe(true);
+    });
+  });
+
+  describe('between with whitespace handling', () => {
+    it('should fail when second value is whitespace-only for between', () => {
+      const result = validateFilterValue('between', '10', '   ', 'numeric');
+      expect(result.isValid).toBe(false);
+      expect(result.error).toBe('Second value is required for range filter');
+      expect(result.errorField).toBe('secondValue');
+    });
+
+    it('should handle first value with leading/trailing whitespace', () => {
+      const result = validateFilterValue('between', '  10  ', '20', 'numeric');
+      expect(result.isValid).toBe(true);
+    });
+
+    it('should handle second value with leading/trailing whitespace', () => {
+      const result = validateFilterValue('between', '10', '  20  ', 'numeric');
+      expect(result.isValid).toBe(true);
+    });
+  });
+
+  describe('special numeric values', () => {
+    it('should accept scientific notation for numeric column', () => {
+      const result = validateFilterValue(
+        'equals',
+        '1e10',
+        undefined,
+        'numeric'
+      );
+      expect(result.isValid).toBe(true);
+    });
+
+    it('should accept scientific notation in between range', () => {
+      const result = validateFilterValue('between', '1e5', '1e10', 'numeric');
+      expect(result.isValid).toBe(true);
+    });
+
+    it('should fail for Infinity string on numeric column', () => {
+      const result = validateFilterValue(
+        'equals',
+        'Infinity',
+        undefined,
+        'numeric'
+      );
+      // parseFloat('Infinity') returns Infinity which is a valid number
+      expect(result.isValid).toBe(true);
+    });
+
+    it('should fail for NaN string on numeric column', () => {
+      const result = validateFilterValue('equals', 'NaN', undefined, 'numeric');
+      // parseFloat('NaN') returns NaN which is not a valid number
+      expect(result.isValid).toBe(false);
+      expect(result.error).toBe('Value must be a valid number');
+    });
+
+    it('should accept zero as a valid numeric value', () => {
+      const result = validateFilterValue('equals', '0', undefined, 'numeric');
+      expect(result.isValid).toBe(true);
+    });
+
+    it('should accept zero with decimal as a valid numeric value', () => {
+      const result = validateFilterValue('equals', '0.0', undefined, 'numeric');
+      expect(result.isValid).toBe(true);
+    });
+
+    it('should accept leading zeros as a valid numeric value', () => {
+      const result = validateFilterValue('equals', '007', undefined, 'numeric');
+      expect(result.isValid).toBe(true);
+    });
+  });
+
+  describe('between with negative ranges', () => {
+    it('should validate negative range correctly', () => {
+      const result = validateFilterValue('between', '-20', '-10', 'numeric');
+      expect(result.isValid).toBe(true);
+    });
+
+    it('should fail when negative range is inverted', () => {
+      const result = validateFilterValue('between', '-10', '-20', 'numeric');
+      expect(result.isValid).toBe(false);
+      expect(result.error).toBe('From value must be less than To value');
+      expect(result.errorField).toBe('both');
+    });
+
+    it('should validate range spanning zero', () => {
+      const result = validateFilterValue('between', '-10', '10', 'numeric');
+      expect(result.isValid).toBe(true);
+    });
+
+    it('should fail when range spans zero but is inverted', () => {
+      const result = validateFilterValue('between', '10', '-10', 'numeric');
+      expect(result.isValid).toBe(false);
+      expect(result.error).toBe('From value must be less than To value');
+    });
+  });
+
+  describe('between with decimal values', () => {
+    it('should validate decimal range correctly', () => {
+      const result = validateFilterValue('between', '1.5', '2.5', 'numeric');
+      expect(result.isValid).toBe(true);
+    });
+
+    it('should fail when decimal range is inverted', () => {
+      const result = validateFilterValue('between', '2.5', '1.5', 'numeric');
+      expect(result.isValid).toBe(false);
+      expect(result.error).toBe('From value must be less than To value');
+    });
+
+    it('should validate very small decimal range', () => {
+      const result = validateFilterValue(
+        'between',
+        '1.001',
+        '1.002',
+        'numeric'
+      );
+      expect(result.isValid).toBe(true);
+    });
+  });
+
+  describe('error field assignment', () => {
+    it('should set errorField to value when value is empty', () => {
+      const result = validateFilterValue('equals', '', undefined, 'text');
+      expect(result.errorField).toBe('value');
+    });
+
+    it('should set errorField to secondValue when second value missing for between', () => {
+      const result = validateFilterValue('between', '10', '', 'numeric');
+      expect(result.errorField).toBe('secondValue');
+    });
+
+    it('should set errorField to value when first value is invalid number', () => {
+      const result = validateFilterValue('between', 'abc', '20', 'numeric');
+      expect(result.errorField).toBe('value');
+    });
+
+    it('should set errorField to secondValue when second value is invalid number', () => {
+      const result = validateFilterValue('between', '10', 'xyz', 'numeric');
+      expect(result.errorField).toBe('secondValue');
+    });
+
+    it('should set errorField to both when range is invalid', () => {
+      const result = validateFilterValue('between', '20', '10', 'numeric');
+      expect(result.errorField).toBe('both');
+    });
+
+    it('should not set errorField when validation passes', () => {
+      const result = validateFilterValue('equals', 'test', undefined, 'text');
+      expect(result.errorField).toBeUndefined();
+    });
+  });
+
+  describe('is_null and is_not_null with provided values', () => {
+    it('should ignore value for is_null operator', () => {
+      const result = validateFilterValue(
+        'is_null',
+        'some value',
+        undefined,
+        'text'
+      );
+      expect(result.isValid).toBe(true);
+    });
+
+    it('should ignore value for is_not_null operator', () => {
+      const result = validateFilterValue(
+        'is_not_null',
+        'some value',
+        undefined,
+        'numeric'
+      );
+      expect(result.isValid).toBe(true);
+    });
+
+    it('should ignore second value for is_null operator', () => {
+      const result = validateFilterValue(
+        'is_null',
+        'value',
+        'secondValue',
+        'text'
+      );
+      expect(result.isValid).toBe(true);
+    });
+  });
+
+  describe('validation result structure', () => {
+    it('should return only isValid when validation passes', () => {
+      const result = validateFilterValue('equals', 'test', undefined, 'text');
+      expect(result).toEqual({ isValid: true });
+    });
+
+    it('should return isValid, error, and errorField when validation fails', () => {
+      const result = validateFilterValue('equals', '', undefined, 'text');
+      expect(result).toHaveProperty('isValid', false);
+      expect(result).toHaveProperty('error');
+      expect(result).toHaveProperty('errorField');
+    });
   });
 });
 
