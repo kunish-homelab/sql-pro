@@ -30,3 +30,7 @@ coverage
 # Misc
 *.bak
 *.tmp
+
+.auto-claude/
+.claude_settings.json
+.claude-flow/
