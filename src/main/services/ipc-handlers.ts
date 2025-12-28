@@ -198,9 +198,10 @@ export function deleteQueryHistoryEntry(
 /**
  * Clears all query history for a specific database
  */
-export function clearQueryHistory(
-  dbPath: string
-): { success: boolean; error?: string } {
+export function clearQueryHistory(dbPath: string): {
+  success: boolean;
+  error?: string;
+} {
   try {
     const allHistory = loadAllQueryHistory();
 

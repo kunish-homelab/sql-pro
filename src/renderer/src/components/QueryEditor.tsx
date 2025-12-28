@@ -8,7 +8,8 @@ import {
   Trash2,
   X,
 } from 'lucide-react';
-import { useCallback, useEffect, useMemo, useState } from 'react';
+import { useCallback, useEffect, useMemo, useRef, useState } from 'react';
+import { createPortal } from 'react-dom';
 import { Button } from '@/components/ui/button';
 import {
   Dialog,
@@ -61,6 +62,7 @@ export function QueryEditor() {
   const [showHistory, setShowHistory] = useState(false);
   const [historySearch, setHistorySearch] = useState('');
   const [showClearConfirm, setShowClearConfirm] = useState(false);
+  const containerRef = useRef<HTMLDivElement>(null);
 
   // Filter history based on search term (case-insensitive)
   const filteredHistory = useMemo(() => {
@@ -173,7 +175,7 @@ export function QueryEditor() {
   };
 
   return (
-    <div className="flex h-full flex-col">
+    <div ref={containerRef} className="relative flex h-full flex-col">
       {/* Editor Header */}
       <div className="flex items-center justify-between border-b px-4 py-2">
         <div className="flex items-center gap-2">
@@ -267,99 +269,102 @@ export function QueryEditor() {
           </div>
         </div>
 
-        {/* History Panel */}
-        {showHistory && (
-          <div className="w-80 border-l">
-            <div className="flex items-center justify-between border-b px-4 py-2">
-              <h3 className="font-medium">Query History</h3>
-              <div className="flex items-center gap-1">
-                <Button
-                  variant="ghost"
-                  size="icon"
-                  className="h-8 w-8"
-                  onClick={() => setShowClearConfirm(true)}
-                  disabled={history.length === 0}
-                  title="Clear all history"
-                >
-                  <Trash2 className="h-4 w-4" />
-                </Button>
-                <Button
-                  variant="ghost"
-                  size="icon"
-                  className="h-8 w-8"
-                  onClick={() => setShowHistory(false)}
-                >
-                  <X className="h-4 w-4" />
-                </Button>
+        {/* History Panel - rendered via Portal */}
+        {showHistory &&
+          containerRef.current &&
+          createPortal(
+            <div className="bg-background absolute top-0 right-0 bottom-0 flex w-96 flex-col border-l">
+              <div className="flex shrink-0 items-center justify-between border-b px-4 py-2">
+                <h3 className="font-medium">Query History</h3>
+                <div className="flex items-center gap-1">
+                  <Button
+                    variant="ghost"
+                    size="icon"
+                    className="h-8 w-8"
+                    onClick={() => setShowClearConfirm(true)}
+                    disabled={history.length === 0}
+                    title="Clear all history"
+                  >
+                    <Trash2 className="h-4 w-4" />
+                  </Button>
+                  <Button
+                    variant="ghost"
+                    size="icon"
+                    className="h-8 w-8"
+                    onClick={() => setShowHistory(false)}
+                  >
+                    <X className="h-4 w-4" />
+                  </Button>
+                </div>
               </div>
-            </div>
-            {/* Search Input */}
-            <div className="border-b px-3 py-2">
-              <div className="relative">
-                <Search className="text-muted-foreground absolute top-1/2 left-2.5 h-4 w-4 -translate-y-1/2" />
-                <Input
-                  type="text"
-                  placeholder="Search history..."
-                  value={historySearch}
-                  onChange={(e) => setHistorySearch(e.target.value)}
-                  className="h-8 pl-8 text-sm"
-                />
+              {/* Search Input */}
+              <div className="shrink-0 border-b px-3 py-2">
+                <div className="relative">
+                  <Search className="text-muted-foreground absolute top-1/2 left-2.5 h-4 w-4 -translate-y-1/2" />
+                  <Input
+                    type="text"
+                    placeholder="Search history..."
+                    value={historySearch}
+                    onChange={(e) => setHistorySearch(e.target.value)}
+                    className="h-8 pl-8 text-sm"
+                  />
+                </div>
               </div>
-            </div>
-            <ScrollArea className="h-full">
-              <div className="space-y-1 p-2">
-                {filteredHistory.length === 0 ? (
-                  <p className="text-muted-foreground py-8 text-center text-sm">
-                    {historySearch.trim()
-                      ? 'No matching queries'
-                      : 'No queries yet'}
-                  </p>
-                ) : (
-                  filteredHistory.map((item) => (
-                    <div
-                      key={item.id}
-                      className={cn(
-                        'hover:bg-accent group relative w-full rounded-md px-3 py-2 text-left text-sm transition-colors',
-                        !item.success && 'border-destructive border-l-2'
-                      )}
-                    >
-                      <button
-                        onClick={() => handleHistorySelect(item.queryText)}
-                        className="w-full text-left"
+              <ScrollArea className="min-h-0 flex-1">
+                <div className="space-y-1 p-2">
+                  {filteredHistory.length === 0 ? (
+                    <p className="text-muted-foreground py-8 text-center text-sm">
+                      {historySearch.trim()
+                        ? 'No matching queries'
+                        : 'No queries yet'}
+                    </p>
+                  ) : (
+                    filteredHistory.map((item) => (
+                      <div
+                        key={item.id}
+                        className={cn(
+                          'hover:bg-accent group relative w-full rounded-md px-3 py-2 text-left text-sm transition-colors',
+                          !item.success && 'border-destructive border-l-2'
+                        )}
                       >
-                        <div className="flex items-center gap-2 pr-6">
-                          {item.success ? (
-                            <span className="text-xs text-green-600">
-                              {formatDuration(item.durationMs)}
+                        <button
+                          onClick={() => handleHistorySelect(item.queryText)}
+                          className="w-full text-left"
+                        >
+                          <div className="flex items-center gap-2 pr-6">
+                            {item.success ? (
+                              <span className="text-xs text-green-600">
+                                {formatDuration(item.durationMs)}
+                              </span>
+                            ) : (
+                              <span className="text-destructive text-xs">
+                                Failed
+                              </span>
+                            )}
+                            <span className="text-muted-foreground text-xs">
+                              {new Date(item.executedAt).toLocaleTimeString()}
                             </span>
-                          ) : (
-                            <span className="text-destructive text-xs">
-                              Failed
-                            </span>
-                          )}
-                          <span className="text-muted-foreground text-xs">
-                            {new Date(item.executedAt).toLocaleTimeString()}
-                          </span>
-                        </div>
-                        <p className="mt-1 truncate pr-6 font-mono text-xs">
-                          {item.queryText}
-                        </p>
-                      </button>
-                      <Button
-                        variant="ghost"
-                        size="icon"
-                        className="absolute top-1/2 right-1 h-6 w-6 -translate-y-1/2 opacity-0 transition-opacity group-hover:opacity-100"
-                        onClick={(e) => handleHistoryDelete(e, item.id)}
-                      >
-                        <X className="h-3 w-3" />
-                      </Button>
-                    </div>
-                  ))
-                )}
-              </div>
-            </ScrollArea>
-          </div>
-        )}
+                          </div>
+                          <p className="mt-1 line-clamp-3 pr-6 font-mono text-xs break-all">
+                            {item.queryText}
+                          </p>
+                        </button>
+                        <Button
+                          variant="ghost"
+                          size="icon"
+                          className="absolute top-1/2 right-1 h-6 w-6 -translate-y-1/2 opacity-0 transition-opacity group-hover:opacity-100"
+                          onClick={(e) => handleHistoryDelete(e, item.id)}
+                        >
+                          <X className="h-3 w-3" />
+                        </Button>
+                      </div>
+                    ))
+                  )}
+                </div>
+              </ScrollArea>
+            </div>,
+            containerRef.current
+          )}
       </div>
 
       {/* Clear All Confirmation Dialog */}

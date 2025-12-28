@@ -2,10 +2,10 @@ import type { ColumnInfo } from '../../../shared/types';
 import { useMemo } from 'react';
 
 /**
- * Row data type with required __rowId property
+ * Row data type with optional __rowId property
  */
 export interface SearchableRow {
-  __rowId: string | number;
+  __rowId?: string | number;
   [key: string]: unknown;
 }
 

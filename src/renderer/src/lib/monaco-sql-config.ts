@@ -456,11 +456,9 @@ export function formatSql(sql: string): string {
   const tokens = tokenizeSql(sql);
   const result: string[] = [];
   let indentLevel = 0;
-  const __currentLineLength = 0;
   const indent = '  '; // 2 spaces
   let parenDepth = 0;
   let isFirstToken = true;
-  const __prevToken: SqlToken | null = null;
   let prevNonWhitespaceToken: SqlToken | null = null;
 
   /**
@@ -531,7 +529,6 @@ export function formatSql(sql: string): string {
     }
     result.push('\n');
     result.push(indent.repeat(indentLevel));
-    _currentLineLength = indentLevel * indent.length;
   }
 
   function addSpace(): void {
@@ -542,7 +539,6 @@ export function formatSql(sql: string): string {
       !/^\s+$/.test(result[result.length - 1] || '')
     ) {
       result.push(' ');
-      _currentLineLength++;
     }
   }
 
@@ -552,7 +548,6 @@ export function formatSql(sql: string): string {
 
     // Skip whitespace - we control spacing ourselves
     if (token.type === 'whitespace') {
-      _prevToken = token;
       i++;
       continue;
     }
@@ -563,11 +558,11 @@ export function formatSql(sql: string): string {
         addSpace();
       }
       result.push(token.value);
-      _currentLineLength += token.value.length;
+
       if (token.value.startsWith('--')) {
         addNewLine();
       }
-      _prevToken = token;
+
       prevNonWhitespaceToken = token;
       i++;
       isFirstToken = false;
@@ -598,11 +593,10 @@ export function formatSql(sql: string): string {
         }
 
         result.push(upperKeyword);
-        _currentLineLength += upperKeyword.length;
 
         // Skip the tokens that make up the compound keyword
         i += compound.length;
-        _prevToken = token;
+
         prevNonWhitespaceToken = token;
         isFirstToken = false;
         continue;
@@ -626,8 +620,7 @@ export function formatSql(sql: string): string {
       }
 
       result.push(upperKeyword);
-      _currentLineLength += upperKeyword.length;
-      _prevToken = token;
+
       prevNonWhitespaceToken = token;
       i++;
       isFirstToken = false;
@@ -675,17 +668,14 @@ export function formatSql(sql: string): string {
           addSpace();
         }
         result.push('(');
-        _currentLineLength++;
       } else if (token.value === ')') {
         parenDepth = Math.max(0, parenDepth - 1);
         result.push(')');
-        _currentLineLength++;
       } else if (token.value === ',') {
         result.push(',');
-        _currentLineLength++;
       } else if (token.value === ';') {
         result.push(';');
-        _currentLineLength++;
+
         // Add newline after semicolon for multi-statement queries
         if (i < tokens.length - 1) {
           addNewLine();
@@ -694,15 +684,13 @@ export function formatSql(sql: string): string {
       } else if (token.value === '.') {
         // No space around dots (table.column)
         result.push('.');
-        _currentLineLength++;
       } else {
         if (!isFirstToken) {
           addSpace();
         }
         result.push(token.value);
-        _currentLineLength += token.value.length;
       }
-      _prevToken = token;
+
       prevNonWhitespaceToken = token;
       i++;
       isFirstToken = false;
@@ -713,9 +701,9 @@ export function formatSql(sql: string): string {
     if (token.type === 'operator') {
       addSpace();
       result.push(token.value);
-      _currentLineLength += token.value.length;
+
       addSpace();
-      _prevToken = token;
+
       prevNonWhitespaceToken = token;
       i++;
       isFirstToken = false;
@@ -733,8 +721,7 @@ export function formatSql(sql: string): string {
       addSpace();
     }
     result.push(token.value);
-    _currentLineLength += token.value.length;
-    _prevToken = token;
+
     prevNonWhitespaceToken = token;
     i++;
     isFirstToken = false;

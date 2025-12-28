@@ -1,4 +1,4 @@
-import antfu from '@antfu/eslint-config'
+import antfu from '@antfu/eslint-config';
 
 export default antfu({
   // Enable React support
@@ -15,4 +15,4 @@ export default antfu({
 
   // Ignore patterns
   ignores: ['out/**', 'dist/**', 'node_modules/**', 'specs/**', '**/*.md'],
-})
+});

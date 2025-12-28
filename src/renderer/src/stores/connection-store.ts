@@ -52,7 +52,8 @@ export const useConnectionStore = create<ConnectionState>((set) => ({
   setConnection: (connection) => set({ connection, error: null }),
   setSchema: (schema) => set({ schema }),
   setSelectedTable: (selectedTable) => set({ selectedTable }),
-  setSelectedSchemaObject: (selectedSchemaObject) => set({ selectedSchemaObject }),
+  setSelectedSchemaObject: (selectedSchemaObject) =>
+    set({ selectedSchemaObject }),
   setRecentConnections: (recentConnections) => set({ recentConnections }),
   setIsConnecting: (isConnecting) => set({ isConnecting }),
   setIsLoadingSchema: (isLoadingSchema) => set({ isLoadingSchema }),
