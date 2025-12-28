@@ -100,9 +100,66 @@ pnpm build        # Build for production
 pnpm lint         # Run ESLint
 pnpm typecheck    # Run TypeScript type checking
 pnpm format       # Format code with Prettier
+pnpm test         # Run tests in watch mode
+pnpm test:run     # Run tests once (CI mode)
+pnpm test:coverage # Run tests with coverage report
+pnpm test:ui      # Open Vitest UI for interactive testing
 pnpm build:icons  # Generate app icons from SVG
 pnpm screenshots  # Capture screenshots for documentation
 ```
+
+### Testing
+
+The project uses [Vitest](https://vitest.dev/) for unit testing with comprehensive coverage of core functionality.
+
+#### Running Tests
+
+```bash
+# Run tests in watch mode (recommended during development)
+pnpm test
+
+# Run tests once (for CI or quick verification)
+pnpm test:run
+
+# Run tests with coverage report
+pnpm test:coverage
+
+# Open interactive Vitest UI
+pnpm test:ui
+```
+
+#### Test Coverage
+
+Tests cover the following areas with 80%+ coverage targets:
+
+| Area             | Files                                 | Coverage           |
+| ---------------- | ------------------------------------- | ------------------ |
+| Utilities        | `lib/utils.ts`, `lib/filter-utils.ts` | 99%+               |
+| SQL Logic        | `lib/monaco-sql-config.ts`            | Comprehensive      |
+| State Management | `stores/*.ts`                         | All actions tested |
+
+#### Test Structure
+
+```
+src/renderer/src/
+├── lib/
+│   ├── utils.test.ts           # Utility function tests
+│   ├── filter-utils.test.ts    # Filter logic tests
+│   └── monaco-sql-config.test.ts # SQL parsing/formatting tests
+└── stores/
+    ├── theme-store.test.ts     # Theme store tests
+    ├── connection-store.test.ts # Connection store tests
+    ├── query-store.test.ts     # Query store tests
+    └── settings-store.test.ts  # Settings store tests
+```
+
+#### Continuous Integration
+
+Tests run automatically on every pull request via GitHub Actions. The CI pipeline includes:
+
+- ESLint linting
+- TypeScript type checking
+- Unit tests with coverage reporting
 
 ### Screenshot Capture
 
