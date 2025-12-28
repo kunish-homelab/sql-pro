@@ -184,3 +184,27 @@ textarea,
     linear-gradient(to right, var(--grid-color) 1px, transparent 1px);
   background-size: 24px 24px;
 }
+
+/* React Flow theme customization */
+.react-flow {
+  --xy-background-color-default: var(--background);
+  --xy-background-pattern-color-default: var(--grid-color);
+  --xy-node-background-color-default: var(--card);
+  --xy-node-border-color-default: var(--border);
+  --xy-node-color-default: var(--card-foreground);
+  --xy-edge-stroke-default: var(--muted-foreground);
+  --xy-edge-stroke-width-default: 1.5;
+  --xy-handle-background-color-default: var(--primary);
+  --xy-handle-border-color-default: var(--border);
+  --xy-minimap-background-color-default: var(--background);
+  --xy-minimap-mask-background-color-default: var(--muted);
+  --xy-controls-button-background-color-default: var(--card);
+  --xy-controls-button-border-color-default: var(--border);
+  --xy-controls-button-color-default: var(--foreground);
+}
+
+.react-flow.dark {
+  --xy-background-color-default: var(--background);
+  --xy-node-background-color-default: var(--card);
+  --xy-controls-button-background-color-default: var(--card);
+}

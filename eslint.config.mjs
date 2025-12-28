@@ -14,5 +14,12 @@ export default antfu({
   stylistic: false,
 
   // Ignore patterns
-  ignores: ['out/**', 'dist/**', 'node_modules/**', 'specs/**', '**/*.md'],
+  ignores: [
+    'out/**',
+    'dist/**',
+    'node_modules/**',
+    'specs/**',
+    '.claude/**',
+    '**/*.md',
+  ],
 });

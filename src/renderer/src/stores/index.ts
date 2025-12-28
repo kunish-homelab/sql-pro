@@ -7,6 +7,7 @@ export {
 } from './command-palette-store';
 export type { Command } from './command-palette-store';
 export { useConnectionStore } from './connection-store';
+export { useDiagramStore } from './diagram-store';
 export { useQueryStore } from './query-store';
 export {
   MONOSPACE_FONTS,

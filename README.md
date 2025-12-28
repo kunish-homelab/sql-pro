@@ -23,6 +23,9 @@
 - 📊 **Diff Preview** - Review changes before applying them to the database
 - 🎨 **Dark/Light Theme** - Automatic theme switching based on system preferences
 - 🔐 **Secure Password Storage** - Store database passwords securely using system keychain
+- 🎯 **ER Diagram** - Interactive entity-relationship diagram with drag-and-drop
+- 📜 **Query History** - Persistent query history with search and rerun capabilities
+- 🔎 **Advanced Filtering** - Powerful client-side filtering and search across data
 
 ## 📸 Screenshots
 
@@ -215,6 +218,17 @@ sql-pro/
 └── electron-builder.yml
 ```
 
+## 🗺️ Roadmap
+
+See our [detailed roadmap](docs/ROADMAP.md) for planned features and development timeline.
+
+**Current Focus (Q1 2025):**
+
+- Enhanced query experience with optimizer
+- Multi-tab query editor
+- Plugin system and extension API
+- Advanced data import/export
+
 ## 🤝 Contributing
 
 Contributions are welcome! Please feel free to submit a Pull Request.
@@ -224,6 +238,8 @@ Contributions are welcome! Please feel free to submit a Pull Request.
 3. Commit your changes (`git commit -m 'feat: add amazing feature'`)
 4. Push to the branch (`git push origin feature/amazing-feature`)
 5. Open a Pull Request
+
+Check our [roadmap](docs/ROADMAP.md) for feature priorities and development plans.
 
 ## 📄 License
 

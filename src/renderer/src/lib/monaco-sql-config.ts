@@ -8,6 +8,80 @@ import type { DatabaseSchema, TableSchema } from '@/types/database';
 export interface TableReferenceResult {
   tableName: string;
   alias: string | null;
+  schema?: string;
+}
+
+/**
+ * SQL context types for context-aware completions.
+ * Determines what kind of suggestions are most appropriate.
+ */
+type SqlContext =
+  | 'SELECT_COLUMNS' // After SELECT, before FROM
+  | 'FROM_TABLE' // After FROM, expect table names
+  | 'JOIN_TABLE' // After JOIN keyword
+  | 'JOIN_CONDITION' // After ON in JOIN
+  | 'WHERE_CONDITION' // In WHERE clause
+  | 'ORDER_BY' // After ORDER BY
+  | 'GROUP_BY' // After GROUP BY
+  | 'HAVING' // In HAVING clause
+  | 'INSERT_TABLE' // After INSERT INTO
+  | 'INSERT_COLUMNS' // Inside INSERT (columns)
+  | 'INSERT_VALUES' // After VALUES
+  | 'UPDATE_TABLE' // After UPDATE
+  | 'UPDATE_SET' // In SET clause
+  | 'DELETE_TABLE' // After DELETE FROM
+  | 'CREATE_TABLE' // In CREATE TABLE
+  | 'FUNCTION_ARGS' // Inside function parentheses
+  | 'SUBQUERY' // Inside a subquery
+  | 'GENERAL'; // Default/unknown context
+
+/**
+ * Result of analyzing the SQL context at cursor position.
+ */
+interface SqlContextResult {
+  context: SqlContext;
+  /** Tables referenced in the current query */
+  tableRefs: TableReference[];
+  /** If cursor is after a dot, the prefix before the dot */
+  dotPrefix: string | null;
+  /** The word being typed (for filtering) */
+  currentWord: string;
+  /** Depth of parentheses at cursor position */
+  parenDepth: number;
+  /** Whether we're inside a string literal */
+  inString: boolean;
+  /** Whether we're inside a comment */
+  inComment: boolean;
+  /** Previous meaningful token before cursor */
+  previousToken: string | null;
+  /** The current clause we're in (SELECT, FROM, WHERE, etc.) */
+  currentClause: string | null;
+}
+
+/**
+ * SQL function definition for autocomplete with documentation.
+ */
+interface SqlFunction {
+  name: string;
+  signature: string;
+  description: string;
+  category:
+    | 'aggregate'
+    | 'string'
+    | 'numeric'
+    | 'datetime'
+    | 'conditional'
+    | 'sqlite';
+}
+
+/**
+ * SQL snippet definition for common patterns.
+ */
+interface SqlSnippet {
+  label: string;
+  insertText: string;
+  description: string;
+  category: string;
 }
 
 /**
@@ -59,22 +133,6 @@ export function parseTableReferences(sql: string): TableReferenceResult[] {
   }
 
   return references;
-}
-
-/**
- * Gets the text before the cursor, checking for dot notation (table. or alias.)
- * Returns the prefix before the dot if found.
- */
-function getDotPrefix(
-  model: Monaco.editor.ITextModel,
-  position: Monaco.Position
-): string | null {
-  const lineContent = model.getLineContent(position.lineNumber);
-  const textBeforeCursor = lineContent.substring(0, position.column - 1);
-
-  // Check for pattern: identifier. (cursor right after the dot)
-  const dotMatch = textBeforeCursor.match(/(\w+)\.\s*$/);
-  return dotMatch ? dotMatch[1] : null;
 }
 
 /**
@@ -258,6 +316,710 @@ const SQL_KEYWORDS = [
   'SAVEPOINT',
   'RELEASE',
 ];
+
+/**
+ * SQL functions catalog with signatures and documentation.
+ * Used for intelligent function completion.
+ */
+const SQL_FUNCTIONS: SqlFunction[] = [
+  // Aggregate Functions
+  {
+    name: 'COUNT',
+    signature: 'COUNT(expression)',
+    description: 'Returns the number of rows',
+    category: 'aggregate',
+  },
+  {
+    name: 'SUM',
+    signature: 'SUM(expression)',
+    description: 'Returns the sum of values',
+    category: 'aggregate',
+  },
+  {
+    name: 'AVG',
+    signature: 'AVG(expression)',
+    description: 'Returns the average value',
+    category: 'aggregate',
+  },
+  {
+    name: 'MIN',
+    signature: 'MIN(expression)',
+    description: 'Returns the minimum value',
+    category: 'aggregate',
+  },
+  {
+    name: 'MAX',
+    signature: 'MAX(expression)',
+    description: 'Returns the maximum value',
+    category: 'aggregate',
+  },
+  {
+    name: 'GROUP_CONCAT',
+    signature: 'GROUP_CONCAT(expression, separator)',
+    description: 'Concatenates values from a group',
+    category: 'aggregate',
+  },
+  {
+    name: 'TOTAL',
+    signature: 'TOTAL(expression)',
+    description: 'Returns the sum as a floating point',
+    category: 'aggregate',
+  },
+
+  // String Functions
+  {
+    name: 'LENGTH',
+    signature: 'LENGTH(string)',
+    description: 'Returns the length of a string',
+    category: 'string',
+  },
+  {
+    name: 'UPPER',
+    signature: 'UPPER(string)',
+    description: 'Converts string to uppercase',
+    category: 'string',
+  },
+  {
+    name: 'LOWER',
+    signature: 'LOWER(string)',
+    description: 'Converts string to lowercase',
+    category: 'string',
+  },
+  {
+    name: 'SUBSTR',
+    signature: 'SUBSTR(string, start, length)',
+    description: 'Extracts a substring',
+    category: 'string',
+  },
+  {
+    name: 'TRIM',
+    signature: 'TRIM(string)',
+    description: 'Removes leading and trailing whitespace',
+    category: 'string',
+  },
+  {
+    name: 'LTRIM',
+    signature: 'LTRIM(string)',
+    description: 'Removes leading whitespace',
+    category: 'string',
+  },
+  {
+    name: 'RTRIM',
+    signature: 'RTRIM(string)',
+    description: 'Removes trailing whitespace',
+    category: 'string',
+  },
+  {
+    name: 'REPLACE',
+    signature: 'REPLACE(string, from, to)',
+    description: 'Replaces occurrences of a substring',
+    category: 'string',
+  },
+  {
+    name: 'INSTR',
+    signature: 'INSTR(string, substring)',
+    description: 'Returns position of substring',
+    category: 'string',
+  },
+  {
+    name: 'PRINTF',
+    signature: 'PRINTF(format, ...args)',
+    description: 'Formats a string using printf-style format',
+    category: 'string',
+  },
+  {
+    name: 'CHAR',
+    signature: 'CHAR(code, ...)',
+    description: 'Returns character from Unicode code point',
+    category: 'string',
+  },
+  {
+    name: 'UNICODE',
+    signature: 'UNICODE(string)',
+    description: 'Returns Unicode code point of first character',
+    category: 'string',
+  },
+  {
+    name: 'HEX',
+    signature: 'HEX(value)',
+    description: 'Returns hexadecimal representation',
+    category: 'string',
+  },
+  {
+    name: 'QUOTE',
+    signature: 'QUOTE(value)',
+    description: 'Returns SQL literal representation',
+    category: 'string',
+  },
+  {
+    name: 'ZEROBLOB',
+    signature: 'ZEROBLOB(n)',
+    description: 'Returns a blob of N zero bytes',
+    category: 'string',
+  },
+
+  // Numeric Functions
+  {
+    name: 'ABS',
+    signature: 'ABS(number)',
+    description: 'Returns absolute value',
+    category: 'numeric',
+  },
+  {
+    name: 'ROUND',
+    signature: 'ROUND(number, digits)',
+    description: 'Rounds to specified decimal places',
+    category: 'numeric',
+  },
+  {
+    name: 'RANDOM',
+    signature: 'RANDOM()',
+    description: 'Returns a random integer',
+    category: 'numeric',
+  },
+  {
+    name: 'MAX',
+    signature: 'MAX(a, b, ...)',
+    description: 'Returns the maximum value',
+    category: 'numeric',
+  },
+  {
+    name: 'MIN',
+    signature: 'MIN(a, b, ...)',
+    description: 'Returns the minimum value',
+    category: 'numeric',
+  },
+
+  // Date/Time Functions
+  {
+    name: 'DATE',
+    signature: 'DATE(timestring, modifier, ...)',
+    description: 'Returns date in YYYY-MM-DD format',
+    category: 'datetime',
+  },
+  {
+    name: 'TIME',
+    signature: 'TIME(timestring, modifier, ...)',
+    description: 'Returns time in HH:MM:SS format',
+    category: 'datetime',
+  },
+  {
+    name: 'DATETIME',
+    signature: 'DATETIME(timestring, modifier, ...)',
+    description: 'Returns datetime in YYYY-MM-DD HH:MM:SS format',
+    category: 'datetime',
+  },
+  {
+    name: 'JULIANDAY',
+    signature: 'JULIANDAY(timestring, modifier, ...)',
+    description: 'Returns Julian day number',
+    category: 'datetime',
+  },
+  {
+    name: 'UNIXEPOCH',
+    signature: 'UNIXEPOCH(timestring, modifier, ...)',
+    description: 'Returns Unix timestamp',
+    category: 'datetime',
+  },
+  {
+    name: 'STRFTIME',
+    signature: 'STRFTIME(format, timestring, modifier, ...)',
+    description: 'Returns formatted date/time string',
+    category: 'datetime',
+  },
+
+  // Conditional Functions
+  {
+    name: 'COALESCE',
+    signature: 'COALESCE(value1, value2, ...)',
+    description: 'Returns first non-NULL value',
+    category: 'conditional',
+  },
+  {
+    name: 'NULLIF',
+    signature: 'NULLIF(value1, value2)',
+    description: 'Returns NULL if values are equal',
+    category: 'conditional',
+  },
+  {
+    name: 'IFNULL',
+    signature: 'IFNULL(value, default)',
+    description: 'Returns default if value is NULL',
+    category: 'conditional',
+  },
+  {
+    name: 'IIF',
+    signature: 'IIF(condition, true_value, false_value)',
+    description: 'Inline if-then-else',
+    category: 'conditional',
+  },
+  {
+    name: 'TYPEOF',
+    signature: 'TYPEOF(value)',
+    description: 'Returns the data type of value',
+    category: 'conditional',
+  },
+
+  // SQLite Specific
+  {
+    name: 'GLOB',
+    signature: 'GLOB(pattern, string)',
+    description: 'Pattern matching with glob syntax',
+    category: 'sqlite',
+  },
+  {
+    name: 'LIKE',
+    signature: 'LIKE(pattern, string, escape)',
+    description: 'Pattern matching with LIKE syntax',
+    category: 'sqlite',
+  },
+  {
+    name: 'LIKELIHOOD',
+    signature: 'LIKELIHOOD(value, probability)',
+    description: 'Provides hint about probability',
+    category: 'sqlite',
+  },
+  {
+    name: 'LIKELY',
+    signature: 'LIKELY(value)',
+    description: 'Hints that value is probably true',
+    category: 'sqlite',
+  },
+  {
+    name: 'UNLIKELY',
+    signature: 'UNLIKELY(value)',
+    description: 'Hints that value is probably false',
+    category: 'sqlite',
+  },
+  {
+    name: 'LAST_INSERT_ROWID',
+    signature: 'LAST_INSERT_ROWID()',
+    description: 'Returns last inserted rowid',
+    category: 'sqlite',
+  },
+  {
+    name: 'CHANGES',
+    signature: 'CHANGES()',
+    description: 'Returns number of rows changed',
+    category: 'sqlite',
+  },
+  {
+    name: 'TOTAL_CHANGES',
+    signature: 'TOTAL_CHANGES()',
+    description: 'Returns total rows changed since connection',
+    category: 'sqlite',
+  },
+  {
+    name: 'SQLITE_VERSION',
+    signature: 'SQLITE_VERSION()',
+    description: 'Returns SQLite version string',
+    category: 'sqlite',
+  },
+];
+
+/**
+ * SQL snippets for common query patterns.
+ * Note: The ${n:placeholder} syntax is Monaco Editor snippet syntax, not template literals.
+ */
+/* eslint-disable no-template-curly-in-string */
+const SQL_SNIPPETS: SqlSnippet[] = [
+  {
+    label: 'SELECT * FROM',
+    insertText: 'SELECT * FROM ${1:table_name}',
+    description: 'Select all columns from a table',
+    category: 'query',
+  },
+  {
+    label: 'SELECT columns FROM',
+    insertText: 'SELECT ${1:column1}, ${2:column2}\nFROM ${3:table_name}',
+    description: 'Select specific columns from a table',
+    category: 'query',
+  },
+  {
+    label: 'SELECT with WHERE',
+    insertText: 'SELECT ${1:*}\nFROM ${2:table_name}\nWHERE ${3:condition}',
+    description: 'Select with a WHERE condition',
+    category: 'query',
+  },
+  {
+    label: 'SELECT with JOIN',
+    insertText:
+      'SELECT ${1:t1.*}, ${2:t2.*}\nFROM ${3:table1} t1\nJOIN ${4:table2} t2 ON t1.${5:id} = t2.${6:foreign_id}',
+    description: 'Select with table join',
+    category: 'query',
+  },
+  {
+    label: 'SELECT with GROUP BY',
+    insertText:
+      'SELECT ${1:column}, COUNT(*) as count\nFROM ${2:table_name}\nGROUP BY ${1:column}',
+    description: 'Select with grouping and count',
+    category: 'query',
+  },
+  {
+    label: 'INSERT INTO',
+    insertText:
+      'INSERT INTO ${1:table_name} (${2:column1}, ${3:column2})\nVALUES (${4:value1}, ${5:value2})',
+    description: 'Insert a new row',
+    category: 'dml',
+  },
+  {
+    label: 'UPDATE SET',
+    insertText:
+      'UPDATE ${1:table_name}\nSET ${2:column} = ${3:value}\nWHERE ${4:condition}',
+    description: 'Update existing rows',
+    category: 'dml',
+  },
+  {
+    label: 'DELETE FROM',
+    insertText: 'DELETE FROM ${1:table_name}\nWHERE ${2:condition}',
+    description: 'Delete rows from a table',
+    category: 'dml',
+  },
+  {
+    label: 'CREATE TABLE',
+    insertText:
+      'CREATE TABLE ${1:table_name} (\n  ${2:id} INTEGER PRIMARY KEY,\n  ${3:column} ${4:TEXT}\n)',
+    description: 'Create a new table',
+    category: 'ddl',
+  },
+  {
+    label: 'CREATE INDEX',
+    insertText: 'CREATE INDEX ${1:idx_name} ON ${2:table_name} (${3:column})',
+    description: 'Create an index on a column',
+    category: 'ddl',
+  },
+  {
+    label: 'CASE WHEN',
+    insertText:
+      'CASE\n  WHEN ${1:condition} THEN ${2:result}\n  ELSE ${3:default}\nEND',
+    description: 'Conditional expression',
+    category: 'expression',
+  },
+  {
+    label: 'EXISTS subquery',
+    insertText:
+      'EXISTS (\n  SELECT 1 FROM ${1:table_name}\n  WHERE ${2:condition}\n)',
+    description: 'Check if subquery returns rows',
+    category: 'expression',
+  },
+  {
+    label: 'COALESCE',
+    insertText: 'COALESCE(${1:value}, ${2:default})',
+    description: 'Return first non-NULL value',
+    category: 'expression',
+  },
+];
+/* eslint-enable no-template-curly-in-string */
+
+/**
+ * Keywords that should be suggested after specific contexts.
+ */
+const CONTEXT_KEYWORDS: Record<SqlContext, string[]> = {
+  SELECT_COLUMNS: [
+    'DISTINCT',
+    'COUNT',
+    'SUM',
+    'AVG',
+    'MIN',
+    'MAX',
+    'CASE',
+    'COALESCE',
+    'AS',
+    '*',
+  ],
+  FROM_TABLE: ['AS'],
+  JOIN_TABLE: ['ON', 'AS'],
+  JOIN_CONDITION: ['AND', 'OR', 'ON'],
+  WHERE_CONDITION: [
+    'AND',
+    'OR',
+    'NOT',
+    'IN',
+    'LIKE',
+    'BETWEEN',
+    'IS NULL',
+    'IS NOT NULL',
+    'EXISTS',
+    'CASE',
+  ],
+  ORDER_BY: ['ASC', 'DESC', 'NULLS FIRST', 'NULLS LAST'],
+  GROUP_BY: ['HAVING'],
+  HAVING: ['AND', 'OR', 'COUNT', 'SUM', 'AVG', 'MIN', 'MAX'],
+  INSERT_TABLE: [],
+  INSERT_COLUMNS: [],
+  INSERT_VALUES: ['NULL', 'DEFAULT'],
+  UPDATE_TABLE: ['SET'],
+  UPDATE_SET: ['WHERE'],
+  DELETE_TABLE: ['WHERE'],
+  CREATE_TABLE: [
+    'PRIMARY KEY',
+    'NOT NULL',
+    'UNIQUE',
+    'DEFAULT',
+    'CHECK',
+    'REFERENCES',
+    'FOREIGN KEY',
+  ],
+  FUNCTION_ARGS: [],
+  SUBQUERY: ['SELECT'],
+  GENERAL: [
+    'SELECT',
+    'INSERT INTO',
+    'UPDATE',
+    'DELETE FROM',
+    'CREATE TABLE',
+    'DROP TABLE',
+    'ALTER TABLE',
+    'PRAGMA',
+    'EXPLAIN',
+    'BEGIN',
+    'COMMIT',
+    'ROLLBACK',
+  ],
+};
+
+/**
+ * Analyzes the SQL text up to the cursor position to determine context.
+ */
+function analyzeSqlContext(
+  model: Monaco.editor.ITextModel,
+  position: Monaco.Position
+): SqlContextResult {
+  const fullText = model.getValue();
+  const offset = model.getOffsetAt(position);
+  const textBeforeCursor = fullText.substring(0, offset);
+
+  // Get current word being typed
+  const word = model.getWordUntilPosition(position);
+  const currentWord = word.word.toUpperCase();
+
+  // Check for dot prefix (table.column pattern)
+  const lineContent = model.getLineContent(position.lineNumber);
+  const textBeforeOnLine = lineContent.substring(0, position.column - 1);
+  const dotMatch = textBeforeOnLine.match(/(\w+)\.\s*$/);
+  const dotPrefix = dotMatch ? dotMatch[1] : null;
+
+  // Parse state
+  let inString = false;
+  let stringChar = '';
+  let inComment = false;
+  let inBlockComment = false;
+  let parenDepth = 0;
+
+  // Token tracking
+  const tokens: string[] = [];
+  let currentToken = '';
+
+  for (let i = 0; i < textBeforeCursor.length; i++) {
+    const char = textBeforeCursor[i];
+    const nextChar = textBeforeCursor[i + 1];
+
+    // Handle block comment start
+    if (!inString && !inComment && char === '/' && nextChar === '*') {
+      inBlockComment = true;
+      i++;
+      continue;
+    }
+
+    // Handle block comment end
+    if (inBlockComment && char === '*' && nextChar === '/') {
+      inBlockComment = false;
+      i++;
+      continue;
+    }
+
+    if (inBlockComment) continue;
+
+    // Handle line comment
+    if (!inString && char === '-' && nextChar === '-') {
+      inComment = true;
+      continue;
+    }
+
+    if (inComment && char === '\n') {
+      inComment = false;
+      continue;
+    }
+
+    if (inComment) continue;
+
+    // Handle strings
+    if ((char === "'" || char === '"') && !inString) {
+      inString = true;
+      stringChar = char;
+      continue;
+    }
+
+    if (inString && char === stringChar) {
+      if (nextChar === stringChar) {
+        i++; // Skip escaped quote
+        continue;
+      }
+      inString = false;
+      continue;
+    }
+
+    if (inString) continue;
+
+    // Track parentheses
+    if (char === '(') parenDepth++;
+    if (char === ')') parenDepth = Math.max(0, parenDepth - 1);
+
+    // Build tokens
+    if (/\s/.test(char) || /[(),;.=<>!]/.test(char)) {
+      if (currentToken) {
+        tokens.push(currentToken.toUpperCase());
+        currentToken = '';
+      }
+    } else {
+      currentToken += char;
+    }
+  }
+
+  if (currentToken) {
+    tokens.push(currentToken.toUpperCase());
+  }
+
+  // Determine context from tokens
+  const context = determineContext(tokens, parenDepth);
+  const previousToken = tokens.length > 0 ? tokens[tokens.length - 1] : null;
+  const currentClause = findCurrentClause(tokens);
+
+  // Parse table references
+  const tableRefs = parseTableReferences(fullText);
+
+  return {
+    context,
+    tableRefs,
+    dotPrefix,
+    currentWord,
+    parenDepth,
+    inString,
+    inComment: inComment || inBlockComment,
+    previousToken,
+    currentClause,
+  };
+}
+
+/**
+ * Determines the SQL context based on token history.
+ */
+function determineContext(tokens: string[], parenDepth: number): SqlContext {
+  if (tokens.length === 0) return 'GENERAL';
+
+  const lastToken = tokens[tokens.length - 1];
+  const lastTwoTokens = tokens.slice(-2).join(' ');
+
+  // Check for specific patterns from most specific to least
+
+  // Subquery detection
+  if (parenDepth > 0 && tokens.includes('(')) {
+    const lastParenIndex = tokens.lastIndexOf('(');
+    const tokensAfterParen = tokens.slice(lastParenIndex + 1);
+    if (tokensAfterParen.length === 0 || tokensAfterParen[0] === 'SELECT') {
+      return 'SUBQUERY';
+    }
+  }
+
+  // INSERT patterns
+  if (lastTwoTokens === 'INSERT INTO') return 'INSERT_TABLE';
+  if (lastToken === 'VALUES') return 'INSERT_VALUES';
+
+  // UPDATE patterns
+  if (lastToken === 'UPDATE') return 'UPDATE_TABLE';
+  if (lastToken === 'SET' && tokens.includes('UPDATE')) return 'UPDATE_SET';
+
+  // DELETE patterns
+  if (lastTwoTokens === 'DELETE FROM') return 'DELETE_TABLE';
+
+  // CREATE patterns
+  if (lastTwoTokens === 'CREATE TABLE') return 'CREATE_TABLE';
+
+  // JOIN patterns
+  if (
+    lastToken === 'JOIN' ||
+    lastTwoTokens === 'LEFT JOIN' ||
+    lastTwoTokens === 'RIGHT JOIN' ||
+    lastTwoTokens === 'INNER JOIN' ||
+    lastTwoTokens === 'OUTER JOIN' ||
+    lastTwoTokens === 'CROSS JOIN'
+  ) {
+    return 'JOIN_TABLE';
+  }
+
+  if (lastToken === 'ON') return 'JOIN_CONDITION';
+
+  // SELECT patterns
+  if (lastToken === 'SELECT' || lastToken === 'DISTINCT')
+    return 'SELECT_COLUMNS';
+
+  // FROM pattern
+  if (lastToken === 'FROM') return 'FROM_TABLE';
+
+  // WHERE pattern
+  if (
+    lastToken === 'WHERE' ||
+    (tokens.includes('WHERE') &&
+      !tokens.includes('ORDER') &&
+      !tokens.includes('GROUP'))
+  ) {
+    return 'WHERE_CONDITION';
+  }
+
+  // ORDER BY pattern
+  if (
+    lastTwoTokens === 'ORDER BY' ||
+    (lastToken === 'BY' && tokens.includes('ORDER'))
+  ) {
+    return 'ORDER_BY';
+  }
+
+  // GROUP BY pattern
+  if (lastTwoTokens === 'GROUP BY') return 'GROUP_BY';
+
+  // HAVING pattern
+  if (lastToken === 'HAVING') return 'HAVING';
+
+  // Check if we're in a SELECT clause (after SELECT, before FROM)
+  if (tokens.includes('SELECT') && !tokens.includes('FROM')) {
+    return 'SELECT_COLUMNS';
+  }
+
+  // Check if we're after FROM but before WHERE
+  if (tokens.includes('FROM') && !tokens.includes('WHERE')) {
+    return 'FROM_TABLE';
+  }
+
+  return 'GENERAL';
+}
+
+/**
+ * Finds the current clause we're in based on token history.
+ */
+function findCurrentClause(tokens: string[]): string | null {
+  const clauses = [
+    'SELECT',
+    'FROM',
+    'WHERE',
+    'ORDER',
+    'GROUP',
+    'HAVING',
+    'LIMIT',
+    'INSERT',
+    'UPDATE',
+    'DELETE',
+    'SET',
+    'VALUES',
+  ];
+
+  for (let i = tokens.length - 1; i >= 0; i--) {
+    if (clauses.includes(tokens[i])) {
+      return tokens[i];
+    }
+  }
+
+  return null;
+}
 
 /**
  * Set of valid SQL keywords for quick lookup.
@@ -1723,15 +2485,18 @@ export function createSqlValidator(monaco: typeof Monaco): {
  *
  * Context-aware features:
  * - After typing "table." or "alias.", only suggests columns from that table
- * - After FROM/JOIN, suggests table names
+ * - After FROM/JOIN, suggests table names with higher priority
  * - In WHERE/SELECT with tables in scope, prioritizes in-scope columns
+ * - Suggests appropriate keywords based on SQL context (SELECT, FROM, WHERE, etc.)
+ * - Provides SQL functions with signatures and documentation
+ * - Includes code snippets for common SQL patterns
  */
 export function createSqlCompletionProvider(
   monaco: typeof Monaco,
   schema: DatabaseSchema | null
 ): Monaco.languages.CompletionItemProvider {
   return {
-    triggerCharacters: ['.'], // Trigger on dot for table.column
+    triggerCharacters: ['.', ' '], // Trigger on dot and space
     provideCompletionItems: (model, position) => {
       const word = model.getWordUntilPosition(position);
       const range = {
@@ -1741,122 +2506,393 @@ export function createSqlCompletionProvider(
         endColumn: word.endColumn,
       };
 
+      // Analyze SQL context
+      const ctx = analyzeSqlContext(model, position);
+
+      // Don't provide suggestions inside strings or comments
+      if (ctx.inString || ctx.inComment) {
+        return { suggestions: [] };
+      }
+
       const suggestions: Monaco.languages.CompletionItem[] = [];
-      const fullText = model.getValue();
-      const tableRefs = parseTableReferences(fullText);
-      const dotPrefix = getDotPrefix(model, position);
 
       // Case 1: Typing after "table." or "alias." - only show that table's columns
-      if (dotPrefix && schema) {
+      if (ctx.dotPrefix && schema) {
         const targetTable = resolveTableFromPrefix(
-          dotPrefix,
-          tableRefs,
+          ctx.dotPrefix,
+          ctx.tableRefs,
           schema
         );
         if (targetTable) {
-          targetTable.columns.forEach((column) => {
-            suggestions.push({
-              label: column.name,
-              kind: monaco.languages.CompletionItemKind.Field,
-              detail: column.type,
-              documentation: `${column.nullable ? 'NULL' : 'NOT NULL'}${column.isPrimaryKey ? ' PRIMARY KEY' : ''}`,
-              insertText: column.name,
-              filterText: column.name.toLowerCase(),
-              range,
-              sortText: `0_${column.name}`, // Highest priority
-            });
-          });
+          addTableColumnSuggestions(
+            monaco,
+            suggestions,
+            targetTable,
+            range,
+            true
+          );
           return { suggestions };
         }
       }
 
-      // Case 2: Normal suggestions with context awareness
+      // Case 2: Context-aware suggestions
+      const contextKeywords = CONTEXT_KEYWORDS[ctx.context] || [];
 
-      // SQL Keywords (always available)
-      SQL_KEYWORDS.forEach((keyword) => {
+      // Add context-specific keywords with highest priority
+      contextKeywords.forEach((keyword, index) => {
         suggestions.push({
           label: keyword,
           kind: monaco.languages.CompletionItemKind.Keyword,
           insertText: keyword,
           filterText: keyword.toLowerCase(),
           range,
-          sortText: `2_${keyword}`,
+          sortText: `00_${String(index).padStart(3, '0')}_${keyword}`,
+          detail: 'keyword',
         });
       });
 
-      if (schema) {
-        const tablesInScope = getTablesInScope(tableRefs, schema);
-        const inScopeTableNames = new Set(
-          tablesInScope.map((t) => t.name.toLowerCase())
-        );
+      // Add SQL functions in appropriate contexts
+      if (shouldSuggestFunctions(ctx.context)) {
+        addFunctionSuggestions(monaco, suggestions, range, ctx.context);
+      }
 
-        // Table names
-        schema.tables.forEach((table) => {
-          suggestions.push({
-            label: table.name,
-            kind: monaco.languages.CompletionItemKind.Class,
-            detail: `Table (${table.columns.length} columns)`,
-            documentation: `Columns: ${table.columns.map((c) => c.name).join(', ')}`,
-            insertText: table.name,
-            filterText: table.name.toLowerCase(),
-            range,
-            sortText: `3_${table.name}`,
-          });
-        });
+      // Add table names in FROM/JOIN contexts
+      if (schema && shouldSuggestTables(ctx.context)) {
+        addTableSuggestions(monaco, suggestions, schema, range, ctx.context);
+      }
 
-        // Column suggestions - prioritize in-scope tables (context-aware)
-        schema.tables.forEach((table) => {
-          const isInScope = inScopeTableNames.has(table.name.toLowerCase());
-          const priority = isInScope ? '0_' : '4_'; // In-scope columns at the very top
+      // Add column suggestions based on context
+      if (schema && shouldSuggestColumns(ctx.context)) {
+        addColumnSuggestions(monaco, suggestions, schema, range, ctx);
+      }
 
-          table.columns.forEach((column) => {
-            // Unqualified column name (prioritized for in-scope tables)
-            suggestions.push({
-              label: column.name,
-              kind: monaco.languages.CompletionItemKind.Field,
-              detail: `${table.name}.${column.type}`,
-              documentation: `From table: ${table.name}${isInScope ? ' (in scope)' : ''}`,
-              insertText: column.name,
-              filterText: column.name.toLowerCase(),
-              range,
-              sortText: priority + column.name,
-            });
+      // Add general SQL keywords
+      addKeywordSuggestions(monaco, suggestions, range, ctx);
 
-            // Qualified column name (table.column)
-            const qualifiedName = `${table.name}.${column.name}`;
-            suggestions.push({
-              label: qualifiedName,
-              kind: monaco.languages.CompletionItemKind.Field,
-              detail: column.type,
-              documentation: `${column.nullable ? 'NULL' : 'NOT NULL'}${column.isPrimaryKey ? ' PRIMARY KEY' : ''}`,
-              insertText: qualifiedName,
-              filterText: qualifiedName.toLowerCase(),
-              range,
-              sortText: priority + qualifiedName,
-            });
-          });
-        });
-
-        // View names
-        schema.views.forEach((view) => {
-          suggestions.push({
-            label: view.name,
-            kind: monaco.languages.CompletionItemKind.Interface,
-            detail: 'View',
-            documentation: view.sql
-              ? `SQL: ${view.sql.substring(0, 100)}...`
-              : undefined,
-            insertText: view.name,
-            filterText: view.name.toLowerCase(),
-            range,
-            sortText: `3_${view.name}`,
-          });
-        });
+      // Add snippets in GENERAL context or at start of line
+      if (ctx.context === 'GENERAL' || ctx.previousToken === null) {
+        addSnippetSuggestions(monaco, suggestions, range);
       }
 
       return { suggestions };
     },
   };
+}
+
+/**
+ * Determines if functions should be suggested in the current context.
+ */
+function shouldSuggestFunctions(context: SqlContext): boolean {
+  return [
+    'SELECT_COLUMNS',
+    'WHERE_CONDITION',
+    'HAVING',
+    'ORDER_BY',
+    'UPDATE_SET',
+    'INSERT_VALUES',
+    'GENERAL',
+  ].includes(context);
+}
+
+/**
+ * Determines if table names should be suggested in the current context.
+ */
+function shouldSuggestTables(context: SqlContext): boolean {
+  return [
+    'FROM_TABLE',
+    'JOIN_TABLE',
+    'INSERT_TABLE',
+    'UPDATE_TABLE',
+    'DELETE_TABLE',
+    'GENERAL',
+  ].includes(context);
+}
+
+/**
+ * Determines if column names should be suggested in the current context.
+ */
+function shouldSuggestColumns(context: SqlContext): boolean {
+  return [
+    'SELECT_COLUMNS',
+    'WHERE_CONDITION',
+    'JOIN_CONDITION',
+    'ORDER_BY',
+    'GROUP_BY',
+    'HAVING',
+    'UPDATE_SET',
+    'GENERAL',
+  ].includes(context);
+}
+
+/**
+ * Adds function suggestions with documentation.
+ */
+function addFunctionSuggestions(
+  monaco: typeof Monaco,
+  suggestions: Monaco.languages.CompletionItem[],
+  range: Monaco.IRange,
+  context: SqlContext
+): void {
+  // Prioritize aggregate functions in GROUP BY/HAVING context
+  const isAggregateContext =
+    context === 'HAVING' || context === 'SELECT_COLUMNS';
+
+  SQL_FUNCTIONS.forEach((func) => {
+    const isAggregate = func.category === 'aggregate';
+    const priority = isAggregateContext && isAggregate ? '01' : '05';
+
+    suggestions.push({
+      label: func.name,
+      kind: monaco.languages.CompletionItemKind.Function,
+      insertText: `${func.name}($1)`,
+      insertTextRules:
+        monaco.languages.CompletionItemInsertTextRule.InsertAsSnippet,
+      detail: func.signature,
+      documentation: {
+        value: `**${func.name}**\n\n\`\`\`sql\n${func.signature}\n\`\`\`\n\n${func.description}\n\n*Category: ${func.category}*`,
+      },
+      filterText: func.name.toLowerCase(),
+      range,
+      sortText: `${priority}_${func.name}`,
+    });
+  });
+}
+
+/**
+ * Adds table name suggestions with metadata.
+ */
+function addTableSuggestions(
+  monaco: typeof Monaco,
+  suggestions: Monaco.languages.CompletionItem[],
+  schema: DatabaseSchema,
+  range: Monaco.IRange,
+  context: SqlContext
+): void {
+  const isTableContext = [
+    'FROM_TABLE',
+    'JOIN_TABLE',
+    'INSERT_TABLE',
+    'UPDATE_TABLE',
+    'DELETE_TABLE',
+  ].includes(context);
+  const priority = isTableContext ? '01' : '03';
+
+  schema.tables.forEach((table) => {
+    const columnList = table.columns.map((c) => c.name).join(', ');
+    const pkColumns = table.columns
+      .filter((c) => c.isPrimaryKey)
+      .map((c) => c.name);
+
+    suggestions.push({
+      label: table.name,
+      kind: monaco.languages.CompletionItemKind.Class,
+      insertText: table.name,
+      detail: `Table (${table.columns.length} columns)`,
+      documentation: {
+        value: [
+          `**${table.name}**`,
+          '',
+          `*Schema:* ${table.schema}`,
+          '',
+          `**Columns:** ${columnList}`,
+          '',
+          pkColumns.length > 0
+            ? `**Primary Key:** ${pkColumns.join(', ')}`
+            : '',
+          '',
+          table.rowCount !== undefined ? `*Row count:* ~${table.rowCount}` : '',
+        ]
+          .filter(Boolean)
+          .join('\n'),
+      },
+      filterText: table.name.toLowerCase(),
+      range,
+      sortText: `${priority}_${table.name}`,
+    });
+  });
+
+  // Add views
+  schema.views.forEach((view) => {
+    suggestions.push({
+      label: view.name,
+      kind: monaco.languages.CompletionItemKind.Interface,
+      insertText: view.name,
+      detail: 'View',
+      documentation: {
+        value: [
+          `**${view.name}** (View)`,
+          '',
+          `*Schema:* ${view.schema}`,
+          '',
+          view.sql
+            ? `\`\`\`sql\n${view.sql.substring(0, 200)}${view.sql.length > 200 ? '...' : ''}\n\`\`\``
+            : '',
+        ]
+          .filter(Boolean)
+          .join('\n'),
+      },
+      filterText: view.name.toLowerCase(),
+      range,
+      sortText: `${priority}_${view.name}`,
+    });
+  });
+}
+
+/**
+ * Adds column suggestions based on context and scope.
+ */
+function addColumnSuggestions(
+  monaco: typeof Monaco,
+  suggestions: Monaco.languages.CompletionItem[],
+  schema: DatabaseSchema,
+  range: Monaco.IRange,
+  ctx: SqlContextResult
+): void {
+  const tablesInScope = getTablesInScope(ctx.tableRefs, schema);
+  const inScopeTableNames = new Set(
+    tablesInScope.map((t) => t.name.toLowerCase())
+  );
+  const hasTablesInScope = tablesInScope.length > 0;
+
+  // If we have tables in scope, prioritize their columns
+  if (hasTablesInScope) {
+    tablesInScope.forEach((table) => {
+      addTableColumnSuggestions(monaco, suggestions, table, range, false, '01');
+    });
+  }
+
+  // Add all table columns (lower priority if we have in-scope tables)
+  schema.tables.forEach((table) => {
+    const isInScope = inScopeTableNames.has(table.name.toLowerCase());
+    if (!isInScope) {
+      addTableColumnSuggestions(monaco, suggestions, table, range, false, '04');
+    }
+  });
+}
+
+/**
+ * Adds column suggestions for a specific table.
+ */
+function addTableColumnSuggestions(
+  monaco: typeof Monaco,
+  suggestions: Monaco.languages.CompletionItem[],
+  table: TableSchema,
+  range: Monaco.IRange,
+  unqualifiedOnly: boolean,
+  priority: string = '01'
+): void {
+  table.columns.forEach((column, index) => {
+    const typeInfo = column.type.toUpperCase();
+    const nullableInfo = column.nullable ? 'NULL' : 'NOT NULL';
+    const pkInfo = column.isPrimaryKey ? ' PRIMARY KEY' : '';
+    const defaultInfo =
+      column.defaultValue !== null ? ` DEFAULT ${column.defaultValue}` : '';
+
+    // Unqualified column name
+    suggestions.push({
+      label: column.name,
+      kind: monaco.languages.CompletionItemKind.Field,
+      insertText: column.name,
+      detail: `${table.name}.${typeInfo}`,
+      documentation: {
+        value: [
+          `**${column.name}**`,
+          '',
+          `*Table:* ${table.name}`,
+          `*Type:* ${typeInfo}`,
+          `*Constraints:* ${nullableInfo}${pkInfo}${defaultInfo}`,
+        ].join('\n'),
+      },
+      filterText: column.name.toLowerCase(),
+      range,
+      sortText: `${priority}_${String(index).padStart(3, '0')}_${column.name}`,
+    });
+
+    // Qualified column name (table.column) - skip if unqualifiedOnly
+    if (!unqualifiedOnly) {
+      const qualifiedName = `${table.name}.${column.name}`;
+      suggestions.push({
+        label: qualifiedName,
+        kind: monaco.languages.CompletionItemKind.Field,
+        insertText: qualifiedName,
+        detail: typeInfo,
+        documentation: {
+          value: [
+            `**${qualifiedName}**`,
+            '',
+            `*Type:* ${typeInfo}`,
+            `*Constraints:* ${nullableInfo}${pkInfo}${defaultInfo}`,
+          ].join('\n'),
+        },
+        filterText: qualifiedName.toLowerCase(),
+        range,
+        sortText: `${priority}_${String(index).padStart(3, '0')}_${qualifiedName}`,
+      });
+    }
+  });
+}
+
+/**
+ * Adds SQL keyword suggestions based on context.
+ */
+function addKeywordSuggestions(
+  monaco: typeof Monaco,
+  suggestions: Monaco.languages.CompletionItem[],
+  range: Monaco.IRange,
+  _ctx: SqlContextResult
+): void {
+  // Get context-specific keywords that haven't been added yet
+  const addedLabels = new Set(
+    suggestions.map((s) =>
+      typeof s.label === 'string' ? s.label : s.label.label
+    )
+  );
+
+  SQL_KEYWORDS.forEach((keyword) => {
+    if (!addedLabels.has(keyword)) {
+      suggestions.push({
+        label: keyword,
+        kind: monaco.languages.CompletionItemKind.Keyword,
+        insertText: keyword,
+        filterText: keyword.toLowerCase(),
+        range,
+        sortText: `06_${keyword}`,
+      });
+    }
+  });
+}
+
+/**
+ * Adds SQL snippet suggestions.
+ */
+function addSnippetSuggestions(
+  monaco: typeof Monaco,
+  suggestions: Monaco.languages.CompletionItem[],
+  range: Monaco.IRange
+): void {
+  SQL_SNIPPETS.forEach((snippet) => {
+    suggestions.push({
+      label: snippet.label,
+      kind: monaco.languages.CompletionItemKind.Snippet,
+      insertText: snippet.insertText,
+      insertTextRules:
+        monaco.languages.CompletionItemInsertTextRule.InsertAsSnippet,
+      detail: `Snippet: ${snippet.category}`,
+      documentation: {
+        value: [
+          `**${snippet.label}**`,
+          '',
+          snippet.description,
+          '',
+          '```sql',
+          snippet.insertText.replace(/\$\{?\d+:?([^}]*)\}?/g, '$1'),
+          '```',
+        ].join('\n'),
+      },
+      range,
+      sortText: `07_${snippet.label}`,
+    });
+  });
 }
 
 /**

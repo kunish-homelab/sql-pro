@@ -1,5 +1,5 @@
 import * as Tabs from '@radix-ui/react-tabs';
-import { Code, Info, Table } from 'lucide-react';
+import { Code, GitFork, Info, Table } from 'lucide-react';
 import { useEffect, useState } from 'react';
 import { Button } from '@/components/ui/button';
 import {
@@ -10,6 +10,7 @@ import {
 import { cn } from '@/lib/utils';
 import { useChangesStore, useConnectionStore } from '@/stores';
 import { DiffPreview } from './DiffPreview';
+import { ERDiagram } from './er-diagram';
 import { QueryEditor } from './QueryEditor';
 import { ResizablePanel } from './ResizablePanel';
 import { SchemaDetailsPanel } from './SchemaDetailsPanel';
@@ -17,7 +18,7 @@ import { Sidebar } from './Sidebar';
 import { TableView } from './TableView';
 import { Toolbar } from './Toolbar';
 
-type TabValue = 'data' | 'query';
+type TabValue = 'data' | 'query' | 'diagram';
 
 export function DatabaseView() {
   const { selectedTable } = useConnectionStore();
@@ -50,6 +51,10 @@ export function DatabaseView() {
             setActiveTab('query');
             break;
           case '3':
+            e.preventDefault();
+            setActiveTab('diagram');
+            break;
+          case '4':
             e.preventDefault();
             setShowDetailsPanel((prev) => !prev);
             break;
@@ -119,6 +124,22 @@ export function DatabaseView() {
                 ⌘2
               </kbd>
             </Tabs.Trigger>
+            <Tabs.Trigger
+              value="diagram"
+              data-tab="diagram"
+              className={cn(
+                'flex items-center gap-2 border-b-2 px-4 py-2 text-sm font-medium transition-colors',
+                activeTab === 'diagram'
+                  ? 'border-primary text-foreground'
+                  : 'text-muted-foreground hover:text-foreground border-transparent'
+              )}
+            >
+              <GitFork className="h-4 w-4" />
+              ER Diagram
+              <kbd className="bg-muted text-muted-foreground ml-1 hidden rounded px-1 py-0.5 font-mono text-[10px] sm:inline-block">
+                ⌘3
+              </kbd>
+            </Tabs.Trigger>
 
             {/* Schema Details Toggle */}
             <div className="ml-auto flex items-center px-2">
@@ -134,7 +155,7 @@ export function DatabaseView() {
                     <Info className="h-4 w-4" />
                     <span className="hidden sm:inline">Schema</span>
                     <kbd className="bg-muted text-muted-foreground hidden rounded px-1 py-0.5 font-mono text-[10px] sm:inline-block">
-                      ⌘3
+                      ⌘4
                     </kbd>
                   </Button>
                 </TooltipTrigger>
@@ -166,6 +187,13 @@ export function DatabaseView() {
             className="h-full min-h-0 flex-1 data-[state=inactive]:hidden"
           >
             <QueryEditor />
+          </Tabs.Content>
+
+          <Tabs.Content
+            value="diagram"
+            className="h-full min-h-0 flex-1 data-[state=inactive]:hidden"
+          >
+            <ERDiagram />
           </Tabs.Content>
         </Tabs.Root>
 
