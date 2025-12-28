@@ -403,28 +403,209 @@ describe('mapOperatorToFilterState', () => {
         { operator: 'lte', value: '' },
       ]);
     });
+
+    it('should handle undefined second value in between', () => {
+      const result = mapOperatorToFilterState('between', '5', undefined);
+      expect(result).toEqual([
+        { operator: 'gte', value: '5' },
+        { operator: 'lte', value: '' },
+      ]);
+    });
+  });
+
+  describe('default fallback', () => {
+    it('should fallback to eq operator for unknown operators', () => {
+      const result = mapOperatorToFilterState(
+        'unknown_operator' as UIOperator,
+        'test_value'
+      );
+      expect(result).toEqual([{ operator: 'eq', value: 'test_value' }]);
+    });
+  });
+
+  describe('edge cases', () => {
+    it('should handle empty value for equals operator', () => {
+      const result = mapOperatorToFilterState('equals', '');
+      expect(result).toEqual([{ operator: 'eq', value: '' }]);
+    });
+
+    it('should handle value with special characters', () => {
+      const result = mapOperatorToFilterState('contains', "test's value");
+      expect(result).toEqual([{ operator: 'like', value: "%test's value%" }]);
+    });
+
+    it('should handle value with percent sign for contains', () => {
+      const result = mapOperatorToFilterState('contains', '50%');
+      expect(result).toEqual([{ operator: 'like', value: '%50%%' }]);
+    });
+
+    it('should preserve whitespace in values', () => {
+      const result = mapOperatorToFilterState('equals', '  spaced  ');
+      expect(result).toEqual([{ operator: 'eq', value: '  spaced  ' }]);
+    });
   });
 });
 
 describe('createFiltersFromUIOperator', () => {
-  it('should create FilterState with column name for equals', () => {
-    const result = createFiltersFromUIOperator('age', 'equals', '25');
-    expect(result).toEqual([{ column: 'age', operator: 'eq', value: '25' }]);
+  describe('equality operators', () => {
+    it('should create FilterState with column name for equals', () => {
+      const result = createFiltersFromUIOperator('age', 'equals', '25');
+      expect(result).toEqual([{ column: 'age', operator: 'eq', value: '25' }]);
+    });
+
+    it('should create FilterState for not_equals', () => {
+      const result = createFiltersFromUIOperator(
+        'status',
+        'not_equals',
+        'active'
+      );
+      expect(result).toEqual([
+        { column: 'status', operator: 'neq', value: 'active' },
+      ]);
+    });
   });
 
-  it('should create two FilterStates for between', () => {
-    const result = createFiltersFromUIOperator('price', 'between', '10', '100');
-    expect(result).toEqual([
-      { column: 'price', operator: 'gte', value: '10' },
-      { column: 'price', operator: 'lte', value: '100' },
-    ]);
+  describe('text operators', () => {
+    it('should create FilterState with contains pattern', () => {
+      const result = createFiltersFromUIOperator('name', 'contains', 'john');
+      expect(result).toEqual([
+        { column: 'name', operator: 'like', value: '%john%' },
+      ]);
+    });
+
+    it('should create FilterState for starts_with', () => {
+      const result = createFiltersFromUIOperator(
+        'email',
+        'starts_with',
+        'admin'
+      );
+      expect(result).toEqual([
+        { column: 'email', operator: 'like', value: 'admin%' },
+      ]);
+    });
+
+    it('should create FilterState for ends_with', () => {
+      const result = createFiltersFromUIOperator('email', 'ends_with', '.com');
+      expect(result).toEqual([
+        { column: 'email', operator: 'like', value: '%.com' },
+      ]);
+    });
   });
 
-  it('should create FilterState with contains pattern', () => {
-    const result = createFiltersFromUIOperator('name', 'contains', 'john');
-    expect(result).toEqual([
-      { column: 'name', operator: 'like', value: '%john%' },
-    ]);
+  describe('null operators', () => {
+    it('should create FilterState for is_null', () => {
+      const result = createFiltersFromUIOperator('deleted_at', 'is_null', '');
+      expect(result).toEqual([
+        { column: 'deleted_at', operator: 'isnull', value: '' },
+      ]);
+    });
+
+    it('should create FilterState for is_not_null', () => {
+      const result = createFiltersFromUIOperator('email', 'is_not_null', '');
+      expect(result).toEqual([
+        { column: 'email', operator: 'notnull', value: '' },
+      ]);
+    });
+  });
+
+  describe('comparison operators', () => {
+    it('should create FilterState for greater_than', () => {
+      const result = createFiltersFromUIOperator(
+        'price',
+        'greater_than',
+        '100'
+      );
+      expect(result).toEqual([
+        { column: 'price', operator: 'gt', value: '100' },
+      ]);
+    });
+
+    it('should create FilterState for less_than', () => {
+      const result = createFiltersFromUIOperator('quantity', 'less_than', '10');
+      expect(result).toEqual([
+        { column: 'quantity', operator: 'lt', value: '10' },
+      ]);
+    });
+
+    it('should create FilterState for greater_than_or_equal', () => {
+      const result = createFiltersFromUIOperator(
+        'rating',
+        'greater_than_or_equal',
+        '4'
+      );
+      expect(result).toEqual([
+        { column: 'rating', operator: 'gte', value: '4' },
+      ]);
+    });
+
+    it('should create FilterState for less_than_or_equal', () => {
+      const result = createFiltersFromUIOperator(
+        'age',
+        'less_than_or_equal',
+        '65'
+      );
+      expect(result).toEqual([{ column: 'age', operator: 'lte', value: '65' }]);
+    });
+  });
+
+  describe('between operator', () => {
+    it('should create two FilterStates for between', () => {
+      const result = createFiltersFromUIOperator(
+        'price',
+        'between',
+        '10',
+        '100'
+      );
+      expect(result).toEqual([
+        { column: 'price', operator: 'gte', value: '10' },
+        { column: 'price', operator: 'lte', value: '100' },
+      ]);
+    });
+
+    it('should handle between with missing second value', () => {
+      const result = createFiltersFromUIOperator('age', 'between', '18');
+      expect(result).toEqual([
+        { column: 'age', operator: 'gte', value: '18' },
+        { column: 'age', operator: 'lte', value: '' },
+      ]);
+    });
+
+    it('should handle between with undefined second value', () => {
+      const result = createFiltersFromUIOperator(
+        'score',
+        'between',
+        '0',
+        undefined
+      );
+      expect(result).toEqual([
+        { column: 'score', operator: 'gte', value: '0' },
+        { column: 'score', operator: 'lte', value: '' },
+      ]);
+    });
+  });
+
+  describe('edge cases', () => {
+    it('should handle column names with special characters', () => {
+      const result = createFiltersFromUIOperator('user_name', 'equals', 'test');
+      expect(result).toEqual([
+        { column: 'user_name', operator: 'eq', value: 'test' },
+      ]);
+    });
+
+    it('should handle empty column name', () => {
+      const result = createFiltersFromUIOperator('', 'equals', 'value');
+      expect(result).toEqual([{ column: '', operator: 'eq', value: 'value' }]);
+    });
+
+    it('should preserve all filter properties from mapping', () => {
+      const result = createFiltersFromUIOperator('id', 'between', '1', '100');
+      expect(result).toHaveLength(2);
+      result.forEach((filter) => {
+        expect(filter).toHaveProperty('column');
+        expect(filter).toHaveProperty('operator');
+        expect(filter).toHaveProperty('value');
+      });
+    });
   });
 });
 
