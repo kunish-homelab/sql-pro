@@ -1,6 +1,7 @@
-import { AlertCircle, Clock, History, Loader2, Play, X } from 'lucide-react';
-import { useCallback, useEffect, useState } from 'react';
+import { AlertCircle, Clock, History, Loader2, Play, Search, X } from 'lucide-react';
+import { useCallback, useEffect, useMemo, useState } from 'react';
 import { Button } from '@/components/ui/button';
+import { Input } from '@/components/ui/input';
 import { ScrollArea } from '@/components/ui/scroll-area';
 import { sqlPro } from '@/lib/api';
 import { cn } from '@/lib/utils';
@@ -27,6 +28,18 @@ export function QueryEditor() {
   } = useQueryStore();
 
   const [showHistory, setShowHistory] = useState(false);
+  const [historySearch, setHistorySearch] = useState('');
+
+  // Filter history based on search term (case-insensitive)
+  const filteredHistory = useMemo(() => {
+    if (!historySearch.trim()) {
+      return history;
+    }
+    const searchLower = historySearch.toLowerCase();
+    return history.filter((item) =>
+      item.queryText.toLowerCase().includes(searchLower)
+    );
+  }, [history, historySearch]);
 
   // Load history when connection changes
   useEffect(() => {
@@ -216,14 +229,27 @@ export function QueryEditor() {
                 <X className="h-4 w-4" />
               </Button>
             </div>
+            {/* Search Input */}
+            <div className="border-b px-3 py-2">
+              <div className="relative">
+                <Search className="text-muted-foreground absolute left-2.5 top-1/2 h-4 w-4 -translate-y-1/2" />
+                <Input
+                  type="text"
+                  placeholder="Search history..."
+                  value={historySearch}
+                  onChange={(e) => setHistorySearch(e.target.value)}
+                  className="h-8 pl-8 text-sm"
+                />
+              </div>
+            </div>
             <ScrollArea className="h-full">
               <div className="space-y-1 p-2">
-                {history.length === 0 ? (
+                {filteredHistory.length === 0 ? (
                   <p className="text-muted-foreground py-8 text-center text-sm">
-                    No queries yet
+                    {historySearch.trim() ? 'No matching queries' : 'No queries yet'}
                   </p>
                 ) : (
-                  history.map((item) => (
+                  filteredHistory.map((item) => (
                     <button
                       key={item.id}
                       onClick={() => handleHistorySelect(item.queryText)}
