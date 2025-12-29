@@ -201,7 +201,8 @@ describe('getColumnTypeCategory', () => {
       name: 'id',
       type: 'INTEGER',
       nullable: false,
-      primaryKey: true,
+      defaultValue: null,
+      isPrimaryKey: true,
     };
     expect(getColumnTypeCategory(column)).toBe('numeric');
   });
@@ -211,7 +212,8 @@ describe('getColumnTypeCategory', () => {
       name: 'name',
       type: 'VARCHAR(255)',
       nullable: true,
-      primaryKey: false,
+      defaultValue: null,
+      isPrimaryKey: false,
     };
     expect(getColumnTypeCategory(column)).toBe('text');
   });
@@ -221,7 +223,8 @@ describe('getColumnTypeCategory', () => {
       name: 'created_at',
       type: 'DATETIME',
       nullable: true,
-      primaryKey: false,
+      defaultValue: null,
+      isPrimaryKey: false,
     };
     expect(getColumnTypeCategory(column)).toBe('date');
   });

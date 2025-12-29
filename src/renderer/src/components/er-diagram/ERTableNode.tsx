@@ -62,13 +62,14 @@ function ERTableNodeComponent({ data, selected }: ERTableNodeProps) {
               {/* PK/FK indicators */}
               <div className="flex w-8 shrink-0 items-center gap-0.5">
                 {isPK && (
-                  <Key className="h-3 w-3 text-amber-500" title="Primary Key" />
+                  <span title="Primary Key">
+                    <Key className="h-3 w-3 text-amber-500" />
+                  </span>
                 )}
                 {isFK && (
-                  <Link2
-                    className="h-3 w-3 text-blue-500"
-                    title="Foreign Key"
-                  />
+                  <span title="Foreign Key">
+                    <Link2 className="h-3 w-3 text-blue-500" />
+                  </span>
                 )}
               </div>
 

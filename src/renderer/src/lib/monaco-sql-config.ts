@@ -41,7 +41,7 @@ type SqlContext =
 interface SqlContextResult {
   context: SqlContext;
   /** Tables referenced in the current query */
-  tableRefs: TableReference[];
+  tableRefs: TableReferenceResult[];
   /** If cursor is after a dot, the prefix before the dot */
   dotPrefix: string | null;
   /** The word being typed (for filtering) */
@@ -140,7 +140,7 @@ export function parseTableReferences(sql: string): TableReferenceResult[] {
  */
 function resolveTableFromPrefix(
   prefix: string,
-  tableRefs: TableReference[],
+  tableRefs: TableReferenceResult[],
   schema: DatabaseSchema
 ): TableSchema | null {
   const lowerPrefix = prefix.toLowerCase();
@@ -166,7 +166,7 @@ function resolveTableFromPrefix(
  * Gets tables that are in scope (referenced in the current query).
  */
 function getTablesInScope(
-  tableRefs: TableReference[],
+  tableRefs: TableReferenceResult[],
   schema: DatabaseSchema
 ): TableSchema[] {
   const inScope: TableSchema[] = [];

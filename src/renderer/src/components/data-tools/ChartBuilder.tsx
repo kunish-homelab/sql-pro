@@ -186,18 +186,16 @@ export const ChartBuilder = memo(
 
     const columns = useMemo(() => {
       if (!results?.columns) return [];
-      return results.columns.map((col) => col.name);
+      return results.columns;
     }, [results?.columns]);
 
     // Auto-detect numeric columns for Y-axis
     const numericColumns = useMemo(() => {
       if (!results?.columns || !results?.rows?.length) return [];
-      return results.columns
-        .filter((col) => {
-          const firstValue = results.rows[0]?.[col.name];
-          return typeof firstValue === 'number';
-        })
-        .map((col) => col.name);
+      return results.columns.filter((col) => {
+        const firstValue = results.rows[0]?.[col];
+        return typeof firstValue === 'number';
+      });
     }, [results?.columns, results?.rows]);
 
     // Generate preview data based on config

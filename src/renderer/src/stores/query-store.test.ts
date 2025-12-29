@@ -9,11 +9,10 @@ function createMockQueryResult(
   return {
     columns: ['id', 'name'],
     rows: [
-      [1, 'Alice'],
-      [2, 'Bob'],
+      { id: 1, name: 'Alice' },
+      { id: 2, name: 'Bob' },
     ],
-    rowCount: 2,
-    affectedRows: 0,
+    rowsAffected: 0,
     ...overrides,
   };
 }
@@ -265,119 +264,131 @@ describe('query-store', () => {
   });
 
   describe('addToHistory', () => {
-    it('should add entry to history', () => {
+    const testDbPath = '/test/db.sqlite';
+
+    it('should add entry to history', async () => {
       const { addToHistory } = useQueryStore.getState();
 
-      addToHistory('SELECT * FROM users', true, 10);
+      await addToHistory(testDbPath, 'SELECT * FROM users', true, 100);
 
       const { history } = useQueryStore.getState();
       expect(history).toHaveLength(1);
-      expect(history[0].query).toBe('SELECT * FROM users');
+      expect(history[0].queryText).toBe('SELECT * FROM users');
       expect(history[0].success).toBe(true);
-      expect(history[0].rowsAffected).toBe(10);
-      expect(history[0].executedAt).toBeInstanceOf(Date);
+      expect(history[0].durationMs).toBe(100);
+      expect(history[0].executedAt).toBeDefined();
     });
 
-    it('should add failed query to history', () => {
+    it('should add failed query to history', async () => {
       const { addToHistory } = useQueryStore.getState();
 
-      addToHistory('INVALID QUERY', false);
+      await addToHistory(
+        testDbPath,
+        'INVALID QUERY',
+        false,
+        50,
+        'Syntax error'
+      );
 
       const { history } = useQueryStore.getState();
       expect(history[0].success).toBe(false);
-      expect(history[0].rowsAffected).toBeUndefined();
+      expect(history[0].error).toBe('Syntax error');
     });
 
-    it('should prepend new entries to history', () => {
+    it('should prepend new entries to history', async () => {
       const { addToHistory } = useQueryStore.getState();
 
-      addToHistory('Query 1', true);
-      addToHistory('Query 2', true);
-      addToHistory('Query 3', true);
+      await addToHistory(testDbPath, 'Query 1', true, 10);
+      await addToHistory(testDbPath, 'Query 2', true, 20);
+      await addToHistory(testDbPath, 'Query 3', true, 30);
 
       const { history } = useQueryStore.getState();
-      expect(history[0].query).toBe('Query 3');
-      expect(history[1].query).toBe('Query 2');
-      expect(history[2].query).toBe('Query 1');
+      expect(history[0].queryText).toBe('Query 3');
+      expect(history[1].queryText).toBe('Query 2');
+      expect(history[2].queryText).toBe('Query 1');
     });
 
-    it('should limit history to MAX_HISTORY_LENGTH (100)', () => {
+    it('should limit history to MAX_HISTORY_LENGTH (100)', async () => {
       const { addToHistory } = useQueryStore.getState();
 
       // Add 105 entries
       for (let i = 0; i < 105; i++) {
-        addToHistory(`Query ${i}`, true);
+        await addToHistory(testDbPath, `Query ${i}`, true, 10);
       }
 
       const { history } = useQueryStore.getState();
       expect(history).toHaveLength(100);
       // Most recent should be first
-      expect(history[0].query).toBe('Query 104');
+      expect(history[0].queryText).toBe('Query 104');
       // Oldest kept should be Query 5 (0-4 were pushed out)
-      expect(history[99].query).toBe('Query 5');
+      expect(history[99].queryText).toBe('Query 5');
     });
 
-    it('should maintain exactly 100 entries when at limit', () => {
+    it('should maintain exactly 100 entries when at limit', async () => {
       const { addToHistory } = useQueryStore.getState();
 
       // Add exactly 100 entries
       for (let i = 0; i < 100; i++) {
-        addToHistory(`Query ${i}`, true);
+        await addToHistory(testDbPath, `Query ${i}`, true, 10);
       }
       expect(useQueryStore.getState().history).toHaveLength(100);
 
       // Add one more
-      addToHistory('New Query', true);
+      await addToHistory(testDbPath, 'New Query', true, 10);
 
       const { history } = useQueryStore.getState();
       expect(history).toHaveLength(100);
-      expect(history[0].query).toBe('New Query');
+      expect(history[0].queryText).toBe('New Query');
     });
 
-    it('should handle optional rowsAffected parameter', () => {
+    it('should include durationMs in history entry', async () => {
       const { addToHistory } = useQueryStore.getState();
 
-      addToHistory('SELECT * FROM users', true);
+      await addToHistory(testDbPath, 'SELECT * FROM users', true, 150);
 
       const { history } = useQueryStore.getState();
-      expect(history[0].rowsAffected).toBeUndefined();
+      expect(history[0].durationMs).toBe(150);
     });
 
-    it('should handle zero rowsAffected', () => {
+    it('should handle zero durationMs', async () => {
       const { addToHistory } = useQueryStore.getState();
 
-      addToHistory('DELETE FROM empty_table', true, 0);
+      await addToHistory(testDbPath, 'DELETE FROM empty_table', true, 0);
 
       const { history } = useQueryStore.getState();
-      expect(history[0].rowsAffected).toBe(0);
+      expect(history[0].durationMs).toBe(0);
     });
   });
 
   describe('clearHistory', () => {
-    it('should clear all history entries', () => {
+    const testDbPath = '/test/db.sqlite';
+
+    it('should clear all history entries', async () => {
       const { addToHistory, clearHistory } = useQueryStore.getState();
 
-      addToHistory('Query 1', true);
-      addToHistory('Query 2', true);
-      addToHistory('Query 3', true);
+      await addToHistory(testDbPath, 'Query 1', true, 10);
+      await addToHistory(testDbPath, 'Query 2', true, 20);
+      await addToHistory(testDbPath, 'Query 3', true, 30);
 
       expect(useQueryStore.getState().history).toHaveLength(3);
 
-      clearHistory();
+      await clearHistory(testDbPath);
 
       expect(useQueryStore.getState().history).toHaveLength(0);
     });
 
-    it('should be safe to call on empty history', () => {
+    it('should be safe to call on empty history', async () => {
       const { clearHistory } = useQueryStore.getState();
 
-      expect(() => clearHistory()).not.toThrow();
+      await expect(clearHistory(testDbPath)).resolves.not.toThrow();
       expect(useQueryStore.getState().history).toHaveLength(0);
     });
   });
 
   describe('reset', () => {
-    it('should reset all state to initial values', () => {
+    const testDbPath = '/test/db.sqlite';
+
+    it('should reset all state to initial values', async () => {
       const {
         setCurrentQuery,
         setError,
@@ -392,7 +403,7 @@ describe('query-store', () => {
       setError('Some error');
       setIsExecuting(true);
       setExecutionTime(100);
-      addToHistory('Query 1', true);
+      await addToHistory(testDbPath, 'Query 1', true, 10);
 
       // Verify state is set
       let state = useQueryStore.getState();
@@ -476,7 +487,9 @@ describe('query-store', () => {
   });
 
   describe('typical query execution flow', () => {
-    it('should handle successful query execution flow', () => {
+    const testDbPath = '/test/db.sqlite';
+
+    it('should handle successful query execution flow', async () => {
       const {
         setCurrentQuery,
         setIsExecuting,
@@ -494,22 +507,22 @@ describe('query-store', () => {
       expect(useQueryStore.getState().isExecuting).toBe(true);
 
       // Query completes successfully
-      const result = createMockQueryResult({ rowCount: 5 });
+      const result = createMockQueryResult({ rowsAffected: 5 });
       setResults(result);
       setExecutionTime(50);
       setIsExecuting(false);
-      addToHistory('SELECT * FROM users', true, 5);
+      await addToHistory(testDbPath, 'SELECT * FROM users', true, 50);
 
       // Verify final state
       const state = useQueryStore.getState();
       expect(state.isExecuting).toBe(false);
-      expect(state.results?.rowCount).toBe(5);
+      expect(state.results?.rowsAffected).toBe(5);
       expect(state.executionTime).toBe(50);
       expect(state.error).toBeNull();
       expect(state.history).toHaveLength(1);
     });
 
-    it('should handle failed query execution flow', () => {
+    it('should handle failed query execution flow', async () => {
       const { setCurrentQuery, setIsExecuting, setError, addToHistory } =
         useQueryStore.getState();
 
@@ -522,7 +535,13 @@ describe('query-store', () => {
       // Query fails
       setError('Syntax error near INVALID');
       setIsExecuting(false);
-      addToHistory('INVALID QUERY', false);
+      await addToHistory(
+        testDbPath,
+        'INVALID QUERY',
+        false,
+        10,
+        'Syntax error near INVALID'
+      );
 
       // Verify final state
       const state = useQueryStore.getState();
@@ -567,12 +586,12 @@ describe('query-store', () => {
       const emptyResult = createMockQueryResult({
         columns: [],
         rows: [],
-        rowCount: 0,
+        rowsAffected: 0,
       });
       setResults(emptyResult);
 
       const { results } = useQueryStore.getState();
-      expect(results?.rowCount).toBe(0);
+      expect(results?.rowsAffected).toBe(0);
       expect(results?.rows).toEqual([]);
     });
   });

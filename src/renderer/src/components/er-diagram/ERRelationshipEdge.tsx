@@ -1,9 +1,9 @@
 import type { EdgeProps } from '@xyflow/react';
-import type { EREdgeData } from '@/types/er-diagram';
+import type { ERRelationshipEdge as ERRelationshipEdgeType } from '@/types/er-diagram';
 import { BaseEdge, EdgeLabelRenderer, getBezierPath } from '@xyflow/react';
 import { memo } from 'react';
 
-interface ERRelationshipEdgeProps extends EdgeProps<EREdgeData> {}
+type ERRelationshipEdgeProps = EdgeProps<ERRelationshipEdgeType>;
 
 /**
  * Renders cardinality markers (crow's foot notation)

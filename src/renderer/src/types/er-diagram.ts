@@ -6,6 +6,7 @@ export type Cardinality = '1:1' | '1:N' | 'N:1' | 'M:N';
 
 // Data for table nodes
 export interface ERTableNodeData {
+  [key: string]: unknown;
   tableName: string;
   schema: string;
   columns: ColumnSchema[];
@@ -17,6 +18,7 @@ export interface ERTableNodeData {
 
 // Data for relationship edges
 export interface EREdgeData {
+  [key: string]: unknown;
   sourceColumn: string;
   targetColumn: string;
   cardinality: Cardinality;
