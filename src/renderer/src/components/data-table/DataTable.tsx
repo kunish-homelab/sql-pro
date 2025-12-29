@@ -250,55 +250,53 @@ export const DataTable = function DataTable({
       onKeyDown={handleKeyDown}
       onFocus={handleContainerFocus}
     >
-      <div className="inline-block min-w-full">
-        <table
-          className="border-separate border-spacing-0"
-          style={{
-            ...columnSizeVars,
-            minWidth: table.getTotalSize(),
+      <table
+        className="w-max min-w-full border-separate border-spacing-0"
+        style={{
+          ...columnSizeVars,
+          minWidth: table.getTotalSize(),
+        }}
+      >
+        {/* Column group for width control - use CSS variables for dynamic sizing */}
+        <colgroup>
+          {table.getVisibleLeafColumns().map((column) => (
+            <col
+              key={column.id}
+              style={{
+                width: `calc(var(--col-${column.id}-size) * 1px)`,
+                minWidth: `calc(var(--col-${column.id}-size) * 1px)`,
+              }}
+            />
+          ))}
+        </colgroup>
+        {/* Fixed header */}
+        <TableHeader
+          table={table}
+          onToggleGrouping={toggleGrouping}
+          onResetColumnSize={resetColumnSize}
+          grouping={grouping}
+          sorting={sort}
+          columnSizingInfo={{
+            isResizingColumn: columnSizingInfo.isResizingColumn,
           }}
-        >
-          {/* Column group for width control - use CSS variables for dynamic sizing */}
-          <colgroup>
-            {table.getVisibleLeafColumns().map((column) => (
-              <col
-                key={column.id}
-                style={{
-                  width: `calc(var(--col-${column.id}-size) * 1px)`,
-                  minWidth: `calc(var(--col-${column.id}-size) * 1px)`,
-                }}
-              />
-            ))}
-          </colgroup>
-          {/* Fixed header */}
-          <TableHeader
-            table={table}
-            onToggleGrouping={toggleGrouping}
-            onResetColumnSize={resetColumnSize}
-            grouping={grouping}
-            sorting={sort}
-            columnSizingInfo={{
-              isResizingColumn: columnSizingInfo.isResizingColumn,
-            }}
-            filters={filters}
-            onFilterAdd={onFilterAdd}
-            onFilterRemove={onFilterRemove}
-          />
+          filters={filters}
+          onFilterAdd={onFilterAdd}
+          onFilterRemove={onFilterRemove}
+        />
 
-          {/* Table body */}
-          <TableBody
-            rows={rows}
-            editable={editable}
-            onCellClick={handleCellClick}
-            onCellDoubleClick={handleCellDoubleClick}
-            onCellSave={handleCellSave}
-            stopEditing={stopEditing}
-            isCellFocused={isCellFocused}
-            isCellEditing={isCellEditing}
-            changes={changes}
-          />
-        </table>
-      </div>
+        {/* Table body */}
+        <TableBody
+          rows={rows}
+          editable={editable}
+          onCellClick={handleCellClick}
+          onCellDoubleClick={handleCellDoubleClick}
+          onCellSave={handleCellSave}
+          stopEditing={stopEditing}
+          isCellFocused={isCellFocused}
+          isCellEditing={isCellEditing}
+          changes={changes}
+        />
+      </table>
 
       {/* Empty state */}
       {rows.length === 0 && (

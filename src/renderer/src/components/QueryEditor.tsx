@@ -394,7 +394,7 @@ export function QueryEditor() {
         </div>
       </div>
 
-      <div className="flex flex-1 overflow-hidden">
+      <div className="flex min-w-0 flex-1 overflow-hidden">
         {/* Split View Mode */}
         {isSplitView ? (
           <ResizablePanelGroup
@@ -422,7 +422,7 @@ export function QueryEditor() {
           /* Single Pane Mode */
           <>
             {/* Editor */}
-            <div className="flex flex-1 flex-col">
+            <div className="flex min-w-0 flex-1 flex-col">
               <div className="shrink-0 border-b">
                 <MonacoSqlEditor
                   value={tabQuery}
@@ -433,7 +433,7 @@ export function QueryEditor() {
               </div>
 
               {/* Results Area */}
-              <div className="flex-1 overflow-hidden">
+              <div className="min-w-0 flex-1 overflow-hidden">
                 {tabIsExecuting ? (
                   <div className="flex h-full items-center justify-center">
                     <Loader2 className="text-muted-foreground h-8 w-8 animate-spin" />
@@ -470,7 +470,7 @@ export function QueryEditor() {
                       )}
                     </div>
                     {/* Results Table */}
-                    <div className="h-0 flex-1 overflow-hidden">
+                    <div className="h-0 min-w-0 flex-1 overflow-hidden">
                       <QueryResults results={tabResults} />
                     </div>
                   </div>

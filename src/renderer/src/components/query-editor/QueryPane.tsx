@@ -126,7 +126,7 @@ export const QueryPane = memo(
     return (
       <div
         className={cn(
-          'flex h-full flex-col',
+          'flex h-full min-w-0 flex-col',
           isActive && 'ring-primary/50 ring-2 ring-inset'
         )}
         onClick={onActivate}
@@ -198,7 +198,7 @@ export const QueryPane = memo(
         </div>
 
         {/* Results Area */}
-        <div className="flex-1 overflow-hidden">
+        <div className="min-w-0 flex-1 overflow-hidden">
           {tab.isExecuting ? (
             <div className="flex h-full items-center justify-center">
               <Loader2 className="text-muted-foreground h-8 w-8 animate-spin" />
@@ -228,7 +228,7 @@ export const QueryPane = memo(
                 )}
               </div>
               {/* Results Table */}
-              <div className="h-0 flex-1 overflow-hidden">
+              <div className="h-0 min-w-0 flex-1 overflow-hidden">
                 <QueryResults results={tab.results} />
               </div>
             </div>

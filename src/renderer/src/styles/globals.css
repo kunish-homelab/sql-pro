@@ -208,3 +208,9 @@ textarea,
   --xy-node-background-color-default: var(--card);
   --xy-controls-button-background-color-default: var(--card);
 }
+
+/* Fix Radix ScrollArea horizontal scrolling issue */
+/* Radix adds display:table inline style to inner div which prevents horizontal scroll */
+[data-radix-scroll-area-viewport] > div {
+  display: block !important;
+}
