@@ -9,16 +9,13 @@ import {
   useNodesState,
 } from '@xyflow/react';
 import { useTheme } from 'next-themes';
-import { useCallback, useEffect, useMemo } from 'react';
+import { useCallback, useEffect, useMemo, useRef } from 'react';
 import { useConnectionStore } from '@/stores';
 import { useDiagramStore } from '@/stores/diagram-store';
 import { ERControls } from './ERControls';
 import { ERRelationshipEdge as ERRelationshipEdgeComponent } from './ERRelationshipEdge';
 import { ERTableNode as ERTableNodeComponent } from './ERTableNode';
-import {
-  applyAutoLayout,
-  applyStoredPositions,
-} from './utils/layout-algorithm';
+import { applyAutoLayout } from './utils/layout-algorithm';
 import { schemaToNodesAndEdges } from './utils/schema-to-diagram';
 import '@xyflow/react/dist/style.css';
 
@@ -35,44 +32,100 @@ export function ERDiagram() {
   const { schema, connection, setSelectedTable } = useConnectionStore();
   const { resolvedTheme } = useTheme();
   const {
-    getNodePositions,
+    nodePositionsMap,
     setNodePosition,
     setNodePositions,
-    getViewport,
+    viewportMap,
     setViewport,
     resetLayout,
   } = useDiagramStore();
 
   const dbPath = connection?.path || '';
+  const hasAppliedInitialLayout = useRef(false);
+
+  // Get stored positions for current database
+  const storedPositions = useMemo(() => {
+    return nodePositionsMap[dbPath] || {};
+  }, [nodePositionsMap, dbPath]);
+
+  // Get stored viewport for current database
+  const storedViewport = useMemo(() => {
+    return viewportMap[dbPath];
+  }, [viewportMap, dbPath]);
 
   // Convert schema to nodes and edges
-  const { initialNodes, initialEdges } = useMemo(() => {
+  const { rawNodes, rawEdges } = useMemo(() => {
     if (!schema) {
-      return { initialNodes: [], initialEdges: [] };
+      return { rawNodes: [], rawEdges: [] };
+    }
+    const { nodes, edges } = schemaToNodesAndEdges(schema);
+    return { rawNodes: nodes, rawEdges: edges };
+  }, [schema]);
+
+  // Apply layout to nodes
+  const layoutedNodes = useMemo(() => {
+    if (rawNodes.length === 0) {
+      return [];
     }
 
-    const { nodes, edges } = schemaToNodesAndEdges(schema);
-    const storedPositions = getNodePositions(dbPath);
+    const hasStoredPositions = Object.keys(storedPositions).length > 0;
 
-    // Apply stored positions or auto-layout
-    const positionedNodes =
-      Object.keys(storedPositions).length > 0
-        ? applyStoredPositions(nodes, edges, storedPositions)
-        : applyAutoLayout(nodes, edges);
+    // Check if all nodes have stored positions
+    const allNodesHavePositions =
+      hasStoredPositions &&
+      rawNodes.every((node) => {
+        const pos = storedPositions[node.id];
+        return pos && typeof pos.x === 'number' && typeof pos.y === 'number';
+      });
 
-    return { initialNodes: positionedNodes, initialEdges: edges };
-  }, [schema, dbPath, getNodePositions]);
+    if (allNodesHavePositions) {
+      // Use stored positions
+      return rawNodes.map((node) => ({
+        ...node,
+        position: storedPositions[node.id],
+      }));
+    }
+
+    // Apply auto-layout for all nodes
+    return applyAutoLayout(rawNodes, rawEdges, 'LR');
+  }, [rawNodes, rawEdges, storedPositions]);
 
   const [nodes, setNodes, onNodesChange] =
-    useNodesState<ERTableNode>(initialNodes);
+    useNodesState<ERTableNode>(layoutedNodes);
   const [edges, setEdges, onEdgesChange] =
-    useEdgesState<ERRelationshipEdge>(initialEdges);
+    useEdgesState<ERRelationshipEdge>(rawEdges);
 
-  // Update nodes when schema changes
+  // Update nodes when schema or layout changes
   useEffect(() => {
-    setNodes(initialNodes);
-    setEdges(initialEdges);
-  }, [initialNodes, initialEdges, setNodes, setEdges]);
+    if (layoutedNodes.length > 0) {
+      setNodes(layoutedNodes);
+      setEdges(rawEdges);
+
+      // Save positions if this is a fresh layout (no stored positions)
+      const hasStoredPositions = Object.keys(storedPositions).length > 0;
+      if (!hasStoredPositions && !hasAppliedInitialLayout.current) {
+        hasAppliedInitialLayout.current = true;
+        const newPositions: Record<string, { x: number; y: number }> = {};
+        layoutedNodes.forEach((node) => {
+          newPositions[node.id] = node.position;
+        });
+        setNodePositions(dbPath, newPositions);
+      }
+    }
+  }, [
+    layoutedNodes,
+    rawEdges,
+    setNodes,
+    setEdges,
+    storedPositions,
+    dbPath,
+    setNodePositions,
+  ]);
+
+  // Reset the initial layout flag when database changes
+  useEffect(() => {
+    hasAppliedInitialLayout.current = false;
+  }, [dbPath]);
 
   // Handle node position changes with persistence
   const handleNodesChange: OnNodesChange<ERTableNode> = useCallback(
@@ -109,16 +162,16 @@ export function ERDiagram() {
 
     const { nodes: freshNodes, edges: freshEdges } =
       schemaToNodesAndEdges(schema);
-    const layoutedNodes = applyAutoLayout(freshNodes, freshEdges);
+    const layoutedNewNodes = applyAutoLayout(freshNodes, freshEdges, 'LR');
 
     // Save new positions
     const newPositions: Record<string, { x: number; y: number }> = {};
-    layoutedNodes.forEach((node) => {
+    layoutedNewNodes.forEach((node) => {
       newPositions[node.id] = node.position;
     });
     setNodePositions(dbPath, newPositions);
 
-    setNodes(layoutedNodes);
+    setNodes(layoutedNewNodes);
     setEdges(freshEdges);
   }, [schema, dbPath, resetLayout, setNodePositions, setNodes, setEdges]);
 
@@ -136,7 +189,7 @@ export function ERDiagram() {
   );
 
   // Get initial viewport
-  const defaultViewport = getViewport(dbPath) || { x: 0, y: 0, zoom: 1 };
+  const defaultViewport = storedViewport || { x: 0, y: 0, zoom: 1 };
 
   if (!schema) {
     return (
@@ -167,7 +220,7 @@ export function ERDiagram() {
         edgeTypes={edgeTypes}
         colorMode={resolvedTheme as ColorMode}
         defaultViewport={defaultViewport}
-        fitView={!getViewport(dbPath)}
+        fitView={!storedViewport}
         fitViewOptions={{ padding: 0.2 }}
         minZoom={0.1}
         maxZoom={2}

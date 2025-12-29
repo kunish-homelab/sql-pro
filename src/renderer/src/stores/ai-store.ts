@@ -1,6 +1,5 @@
 import type { AIProvider, AISettings } from '../../../shared/types';
 import { create } from 'zustand';
-import { persist } from 'zustand/middleware';
 import { sqlPro } from '@/lib/api';
 import { DEFAULT_AI_BASE_URLS } from '../../../shared/types';
 
@@ -37,104 +36,91 @@ export const DEFAULT_MODELS: Record<AIProvider, string[]> = {
   ],
 };
 
-export const useAIStore = create<AIState>()(
-  persist(
-    (set, get) => ({
+export const useAIStore = create<AIState>((set, get) => ({
+  provider: 'openai',
+  apiKey: '',
+  model: 'gpt-4o',
+  baseUrl: '',
+  isConfigured: false,
+  isLoading: false,
+  isSaving: false,
+
+  loadSettings: async () => {
+    set({ isLoading: true });
+    try {
+      const result = await sqlPro.ai.getSettings();
+      if (result.success && result.settings) {
+        set({
+          provider: result.settings.provider,
+          apiKey: result.settings.apiKey,
+          model: result.settings.model,
+          baseUrl: result.settings.baseUrl || '',
+          isConfigured: Boolean(result.settings.apiKey),
+        });
+      }
+    } catch (error) {
+      console.error('Failed to load AI settings:', error);
+    } finally {
+      set({ isLoading: false });
+    }
+  },
+
+  saveSettings: async (settings) => {
+    const state = get();
+    const newSettings: AISettings = {
+      provider: settings.provider ?? state.provider,
+      apiKey: settings.apiKey ?? state.apiKey,
+      model: settings.model ?? state.model,
+      baseUrl: settings.baseUrl ?? state.baseUrl,
+    };
+
+    set({ isSaving: true });
+    try {
+      const result = await sqlPro.ai.saveSettings({
+        settings: newSettings,
+      });
+      if (result.success) {
+        set({
+          ...newSettings,
+          isConfigured: Boolean(newSettings.apiKey),
+        });
+        return true;
+      }
+      return false;
+    } catch (error) {
+      console.error('Failed to save AI settings:', error);
+      return false;
+    } finally {
+      set({ isSaving: false });
+    }
+  },
+
+  setProvider: (provider) => {
+    const models = DEFAULT_MODELS[provider];
+    set({
+      provider,
+      model: models[0], // Reset to default model for new provider
+      baseUrl: '', // Reset base URL when switching providers
+    });
+  },
+
+  setApiKey: (apiKey) => set({ apiKey }),
+
+  setModel: (model) => set({ model }),
+
+  setBaseUrl: (baseUrl) => set({ baseUrl }),
+
+  clearSettings: () =>
+    set({
       provider: 'openai',
       apiKey: '',
       model: 'gpt-4o',
       baseUrl: '',
       isConfigured: false,
-      isLoading: false,
-      isSaving: false,
-
-      loadSettings: async () => {
-        set({ isLoading: true });
-        try {
-          const result = await sqlPro.ai.getSettings();
-          if (result.success && result.settings) {
-            set({
-              provider: result.settings.provider,
-              apiKey: result.settings.apiKey,
-              model: result.settings.model,
-              baseUrl: result.settings.baseUrl || '',
-              isConfigured: Boolean(result.settings.apiKey),
-            });
-          }
-        } catch (error) {
-          console.error('Failed to load AI settings:', error);
-        } finally {
-          set({ isLoading: false });
-        }
-      },
-
-      saveSettings: async (settings) => {
-        const state = get();
-        const newSettings: AISettings = {
-          provider: settings.provider ?? state.provider,
-          apiKey: settings.apiKey ?? state.apiKey,
-          model: settings.model ?? state.model,
-          baseUrl: settings.baseUrl ?? state.baseUrl,
-        };
-
-        set({ isSaving: true });
-        try {
-          const result = await sqlPro.ai.saveSettings({
-            settings: newSettings,
-          });
-          if (result.success) {
-            set({
-              ...newSettings,
-              isConfigured: Boolean(newSettings.apiKey),
-            });
-            return true;
-          }
-          return false;
-        } catch (error) {
-          console.error('Failed to save AI settings:', error);
-          return false;
-        } finally {
-          set({ isSaving: false });
-        }
-      },
-
-      setProvider: (provider) => {
-        const models = DEFAULT_MODELS[provider];
-        set({
-          provider,
-          model: models[0], // Reset to default model for new provider
-          baseUrl: '', // Reset base URL when switching providers
-        });
-      },
-
-      setApiKey: (apiKey) => set({ apiKey }),
-
-      setModel: (model) => set({ model }),
-
-      setBaseUrl: (baseUrl) => set({ baseUrl }),
-
-      clearSettings: () =>
-        set({
-          provider: 'openai',
-          apiKey: '',
-          model: 'gpt-4o',
-          baseUrl: '',
-          isConfigured: false,
-        }),
-
-      getEffectiveBaseUrl: () => {
-        const state = get();
-        return state.baseUrl || DEFAULT_AI_BASE_URLS[state.provider];
-      },
     }),
-    {
-      name: 'sql-pro-ai-settings',
-      partialize: (state) => ({
-        provider: state.provider,
-        model: state.model,
-        baseUrl: state.baseUrl,
-        // Don't persist API key in localStorage for security
-      }),
-    }
-  )
-);
+
+  getEffectiveBaseUrl: () => {
+    const state = get();
+    return state.baseUrl || DEFAULT_AI_BASE_URLS[state.provider];
+  },
+}));

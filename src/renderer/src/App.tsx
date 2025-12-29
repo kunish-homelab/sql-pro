@@ -7,11 +7,17 @@ import { sqlPro } from '@/lib/api';
 import { initMockMode, isMockMode } from '@/lib/mock-api';
 import { queryClient } from '@/lib/query-client';
 import { router } from '@/routes';
-import { useConnectionStore } from '@/stores';
+import { useConnectionStore, useThemeStore } from '@/stores';
 
 function App(): React.JSX.Element {
   const { setRecentConnections, setConnection, setSchema } =
     useConnectionStore();
+  const { loadTheme } = useThemeStore();
+
+  // Load theme from main process on mount
+  useEffect(() => {
+    loadTheme();
+  }, [loadTheme]);
 
   // Load recent connections on mount
   useEffect(() => {

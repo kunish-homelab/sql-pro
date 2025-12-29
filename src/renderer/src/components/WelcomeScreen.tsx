@@ -169,6 +169,12 @@ export function WelcomeScreen() {
         }
         setIsLoadingSchema(false);
 
+        // Refresh recent connections list after successful connection
+        const connectionsResult = await sqlPro.app.getRecentConnections();
+        if (connectionsResult.success && connectionsResult.connections) {
+          setRecentConnections(connectionsResult.connections);
+        }
+
         // Clear pending state
         setPendingPath(null);
         setPendingSettings(null);

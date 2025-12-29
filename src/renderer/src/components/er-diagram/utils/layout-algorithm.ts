@@ -2,22 +2,104 @@ import type { ERRelationshipEdge, ERTableNode } from '@/types/er-diagram';
 import dagre from 'dagre';
 
 // Estimated dimensions for table nodes
-const NODE_WIDTH = 220;
-const COLUMN_HEIGHT = 24;
-const HEADER_HEIGHT = 40;
-const MIN_NODE_HEIGHT = 80;
+const NODE_WIDTH = 240;
+const COLUMN_HEIGHT = 26;
+const HEADER_HEIGHT = 44;
+const MIN_NODE_HEIGHT = 100;
+const PADDING = 20;
+
+// Layout spacing
+const NODE_SEPARATION = 60; // Horizontal space between nodes
+const RANK_SEPARATION = 80; // Space between ranks (levels)
+const MARGIN = 40; // Margin around the entire graph
 
 /**
  * Calculates the height of a table node based on column count
  */
 function calculateNodeHeight(node: ERTableNode): number {
   const columnsHeight = node.data.columns.length * COLUMN_HEIGHT;
-  return Math.max(MIN_NODE_HEIGHT, HEADER_HEIGHT + columnsHeight);
+  return Math.max(MIN_NODE_HEIGHT, HEADER_HEIGHT + columnsHeight + PADDING);
+}
+
+/**
+ * Grid layout for nodes without relationships
+ * Arranges nodes in a grid pattern, trying to balance width and height
+ */
+function applyGridLayout(nodes: ERTableNode[]): ERTableNode[] {
+  if (nodes.length === 0) return nodes;
+  if (nodes.length === 1) {
+    return [{ ...nodes[0], position: { x: MARGIN, y: MARGIN } }];
+  }
+
+  // Calculate optimal grid dimensions
+  // Prefer wider layouts (more columns than rows)
+  const aspectRatio = 1.5; // Prefer 1.5:1 width to height ratio
+  const cols = Math.ceil(Math.sqrt(nodes.length * aspectRatio));
+  const rows = Math.ceil(nodes.length / cols);
+
+  // Calculate max height in each row for proper spacing
+  const rowHeights: number[] = [];
+  for (let row = 0; row < rows; row++) {
+    let maxHeight = MIN_NODE_HEIGHT;
+    for (let col = 0; col < cols; col++) {
+      const idx = row * cols + col;
+      if (idx < nodes.length) {
+        maxHeight = Math.max(maxHeight, calculateNodeHeight(nodes[idx]));
+      }
+    }
+    rowHeights.push(maxHeight);
+  }
+
+  // Position nodes
+  const GAP_X = NODE_WIDTH + NODE_SEPARATION;
+  let currentY = MARGIN;
+
+  return nodes.map((node, index) => {
+    const col = index % cols;
+    const row = Math.floor(index / cols);
+
+    // Calculate Y position based on previous rows
+    if (col === 0 && row > 0) {
+      currentY += rowHeights[row - 1] + NODE_SEPARATION;
+    }
+
+    const y = row === 0 ? MARGIN : currentY;
+
+    return {
+      ...node,
+      position: {
+        x: MARGIN + col * GAP_X,
+        y,
+      },
+    };
+  });
+}
+
+/**
+ * Checks if nodes are mostly unconnected
+ * Returns true if less than 30% of nodes have relationships
+ */
+function isMostlyUnconnected(
+  nodes: ERTableNode[],
+  edges: ERRelationshipEdge[]
+): boolean {
+  if (nodes.length <= 1) return true;
+  if (edges.length === 0) return true;
+
+  // Count nodes that are part of at least one edge
+  const connectedNodes = new Set<string>();
+  edges.forEach((edge) => {
+    connectedNodes.add(edge.source);
+    connectedNodes.add(edge.target);
+  });
+
+  const connectionRatio = connectedNodes.size / nodes.length;
+  return connectionRatio < 0.3;
 }
 
 /**
  * Applies automatic layout to nodes using dagre library
- * Uses left-to-right direction for ER diagrams
+ * Falls back to grid layout when nodes are mostly unconnected
  */
 export function applyAutoLayout(
   nodes: ERTableNode[],
@@ -28,15 +110,26 @@ export function applyAutoLayout(
     return nodes;
   }
 
+  // For single node, just position it
+  if (nodes.length === 1) {
+    return [{ ...nodes[0], position: { x: MARGIN, y: MARGIN } }];
+  }
+
+  // Use grid layout if nodes are mostly unconnected
+  if (isMostlyUnconnected(nodes, edges)) {
+    return applyGridLayout(nodes);
+  }
+
   const g = new dagre.graphlib.Graph();
 
-  // Set graph options
+  // Set graph options with good spacing
   g.setGraph({
     rankdir: direction,
-    nodesep: 60, // Horizontal space between nodes
-    ranksep: 100, // Vertical space between ranks
-    marginx: 40,
-    marginy: 40,
+    nodesep: NODE_SEPARATION,
+    ranksep: RANK_SEPARATION,
+    marginx: MARGIN,
+    marginy: MARGIN,
+    ranker: 'network-simplex',
   });
 
   // Required for dagre
@@ -51,23 +144,38 @@ export function applyAutoLayout(
     });
   });
 
-  // Add edges
+  // Add edges - dagre uses these to determine layout
   edges.forEach((edge) => {
-    g.setEdge(edge.source, edge.target);
+    if (g.hasNode(edge.source) && g.hasNode(edge.target)) {
+      g.setEdge(edge.source, edge.target, {
+        weight: 1,
+        minlen: 1,
+      });
+    }
   });
 
   // Run the layout algorithm
-  dagre.layout(g);
+  try {
+    dagre.layout(g);
+  } catch (error) {
+    console.error('Dagre layout failed:', error);
+    return applyGridLayout(nodes);
+  }
 
   // Apply computed positions to nodes
   return nodes.map((node) => {
     const nodeWithPosition = g.node(node.id);
+
+    if (!nodeWithPosition) {
+      console.warn(`No position computed for node: ${node.id}`);
+      return node;
+    }
+
     const height = calculateNodeHeight(node);
 
     return {
       ...node,
       position: {
-        // dagre returns center position, convert to top-left
         x: nodeWithPosition.x - NODE_WIDTH / 2,
         y: nodeWithPosition.y - height / 2,
       },
@@ -88,10 +196,15 @@ export function applyStoredPositions(
 
   // Separate nodes with stored positions from those needing layout
   nodes.forEach((node) => {
-    if (storedPositions[node.id]) {
+    const stored = storedPositions[node.id];
+    if (
+      stored &&
+      typeof stored.x === 'number' &&
+      typeof stored.y === 'number'
+    ) {
       nodesWithStoredPositions.push({
         ...node,
-        position: storedPositions[node.id],
+        position: stored,
       });
     } else {
       nodesNeedingLayout.push(node);
@@ -109,22 +222,42 @@ export function applyStoredPositions(
   }
 
   // For nodes without positions, find a suitable position
-  // Place them to the right of existing nodes
-  const maxX =
-    Math.max(...nodesWithStoredPositions.map((n) => n.position.x)) +
-    NODE_WIDTH +
-    100;
-  let currentY = 0;
+  let maxX = -Infinity;
+  let minY = Infinity;
+
+  nodesWithStoredPositions.forEach((node) => {
+    maxX = Math.max(maxX, node.position.x + NODE_WIDTH);
+    minY = Math.min(minY, node.position.y);
+  });
+
+  const startX = maxX + RANK_SEPARATION;
+  let currentY = minY;
 
   const newlyPositionedNodes = nodesNeedingLayout.map((node) => {
     const height = calculateNodeHeight(node);
     const positioned = {
       ...node,
-      position: { x: maxX, y: currentY },
+      position: { x: startX, y: currentY },
     };
-    currentY += height + 40;
+    currentY += height + NODE_SEPARATION;
     return positioned;
   });
 
   return [...nodesWithStoredPositions, ...newlyPositionedNodes];
+}
+
+/**
+ * Re-layout all nodes, useful when user wants to reset the diagram
+ */
+export function forceAutoLayout(
+  nodes: ERTableNode[],
+  edges: ERRelationshipEdge[],
+  direction: 'LR' | 'TB' = 'LR'
+): ERTableNode[] {
+  const nodesWithoutPositions = nodes.map((node) => ({
+    ...node,
+    position: { x: 0, y: 0 },
+  }));
+
+  return applyAutoLayout(nodesWithoutPositions, edges, direction);
 }
