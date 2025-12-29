@@ -1,5 +1,40 @@
 # Changelog
 
+## [1.4.0](https://github.com/kunish-homelab/sql-pro/compare/v1.3.0...v1.4.0) (2025-12-29)
+
+
+### Features
+
+* add @radix-ui/react-label dependency and update related components ([ef50abc](https://github.com/kunish-homelab/sql-pro/commit/ef50abcd3e6c903e0ba367c05d6705ea8433f576))
+* add initial .auto-claude-status file and update .claude_settings.json ([88cd6c2](https://github.com/kunish-homelab/sql-pro/commit/88cd6c214124ca4f12ce5672bdd056daa5e8489b))
+* add platform-specific app icon handling and improve dock icon on macOS ([9fdbddf](https://github.com/kunish-homelab/sql-pro/commit/9fdbddf8bc9f6c9c60eabfd958eea9ba51afc5e5))
+* add schema support to various components and mock API ([c05ee5f](https://github.com/kunish-homelab/sql-pro/commit/c05ee5f6c16b7f190dad53b727fff0c089ee53f3))
+* ai-powered features ([b0e5236](https://github.com/kunish-homelab/sql-pro/commit/b0e5236063b2de64b7c31cc3e8ef5dc3a89d1bae))
+* ai-powered features ([7609f2a](https://github.com/kunish-homelab/sql-pro/commit/7609f2a544ce4f5e035c2e454e65fb86cf849649))
+* analyze ([98aabfa](https://github.com/kunish-homelab/sql-pro/commit/98aabfae9e4a183b123a7c33dc1079c77330067b))
+* docs ([c2d952f](https://github.com/kunish-homelab/sql-pro/commit/c2d952ff0ae90a7fbdf800b6b0824afaa26c7d72))
+* enhance font loading with fallback options and update connection settings handling ([e015d30](https://github.com/kunish-homelab/sql-pro/commit/e015d3053ac923357c08772240ff805e69bd18a5))
+* enhance schema handling in sidebar and table views ([bb06f29](https://github.com/kunish-homelab/sql-pro/commit/bb06f293b2dc99505236bc396f36b83bb9aea580))
+* enhance UI components with improved styling and layout adjustments ([1e78aa5](https://github.com/kunish-homelab/sql-pro/commit/1e78aa586e47ca82dba55432be9d6d0ef2fbc18e))
+* erdiagram ([82e5dd0](https://github.com/kunish-homelab/sql-pro/commit/82e5dd05410231cd3b9aa54224fcadb38e8b91ed))
+* **history:** add Clear All button with confirmation dialog ([398bed2](https://github.com/kunish-homelab/sql-pro/commit/398bed2fb4deb65e416c02fe349140d67cd8d475))
+* **history:** display execution duration with formatDuration helper ([338dcbc](https://github.com/kunish-homelab/sql-pro/commit/338dcbc9d974b64a53b89c6848d3ac32a42f7fd1))
+* split pane ([9d3ac11](https://github.com/kunish-homelab/sql-pro/commit/9d3ac11ab4eed5ec8b71d9db8e13c38954a201f7))
+* **ui:** add Popover component for filter dropdowns ([26dd959](https://github.com/kunish-homelab/sql-pro/commit/26dd959f6f6bf654d8e968e143046315212c8859))
+* **ui:** add Select component for filter operator dropdowns ([c5d0858](https://github.com/kunish-homelab/sql-pro/commit/c5d0858788b24bb7a3ad43dff1c60cc17d194c28))
+* update .gitignore to include .worktrees and adjust .claude-flow entry ([ad7d4f2](https://github.com/kunish-homelab/sql-pro/commit/ad7d4f2de7b949b15f0ed6b30ecb8def680eb17f))
+* update pnpm workspace configuration and enhance UI components ([01899b1](https://github.com/kunish-homelab/sql-pro/commit/01899b1afae9ecee04a0c260367b8722d9ab4cb1))
+* update TailwindCSS styles ([e22facd](https://github.com/kunish-homelab/sql-pro/commit/e22facd957d15c1fee6cc4e17bfb755dfd52d23f))
+* update UI components with grid background styles and improve layout ([5c26fc2](https://github.com/kunish-homelab/sql-pro/commit/5c26fc23bbf002548bc70ad7d290983a9af8c987))
+
+
+### Bug Fixes
+
+* add h-0 class to QueryResults container to fix scrolling ([b9a896b](https://github.com/kunish-homelab/sql-pro/commit/b9a896bdd54dfaf7dd428a8331004176e6158e4b))
+* add missing newline at end of .claude_settings.json ([f193466](https://github.com/kunish-homelab/sql-pro/commit/f1934662fdfe3c30de98a4de0acd20f54afba3c0))
+* **docs:** correct broken anchor link in shortcuts.md ([eb3032f](https://github.com/kunish-homelab/sql-pro/commit/eb3032f37f74cdcf5558a94b0bbcd56a0fb5569f))
+* improve layout and scrolling behavior ([ef14049](https://github.com/kunish-homelab/sql-pro/commit/ef14049f495a97c349997b280b2e86dfb25f08cd))
+
 ## [1.3.0](https://github.com/kunish-homelab/sql-pro/compare/v1.2.0...v1.3.0) (2025-12-27)
 
 ### Features
