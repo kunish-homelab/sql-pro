@@ -231,8 +231,8 @@ importers:
         specifier: ^0.1.1
         version: 0.1.1(@types/react@19.2.7)(csstype@3.2.3)(react@19.2.3)(solid-js@1.9.10)(vue@3.5.26(typescript@5.9.3))
       '@tanstack/react-query-devtools':
-        specifier: ^5.91.1
-        version: 5.91.1(@tanstack/react-query@5.90.14(react@19.2.3))(react@19.2.3)
+        specifier: ^5.91.2
+        version: 5.91.2(@tanstack/react-query@5.90.14(react@19.2.3))(react@19.2.3)
       '@tanstack/react-router-devtools':
         specifier: ^1.144.0
         version: 1.144.0(@tanstack/react-router@1.144.0(react-dom@19.2.3(react@19.2.3))(react@19.2.3))(@tanstack/router-core@1.144.0)(csstype@3.2.3)(react-dom@19.2.3(react@19.2.3))(react@19.2.3)(solid-js@1.9.10)
@@ -3308,10 +3308,10 @@ packages:
       '@tanstack/query-core': ^5.0.0
       typescript: '>=4.7'
 
-  '@tanstack/query-devtools@5.91.1':
+  '@tanstack/query-devtools@5.92.0':
     resolution:
       {
-        integrity: sha512-l8bxjk6BMsCaVQH6NzQEE/bEgFy1hAs5qbgXl0xhzezlaQbPk6Mgz9BqEg2vTLPOHD8N4k+w/gdgCbEzecGyNg==,
+        integrity: sha512-N8D27KH1vEpVacvZgJL27xC6yPFUy0Zkezn5gnB3L3gRCxlDeSuiya7fKge8Y91uMTnC8aSxBQhcK6ocY7alpQ==,
       }
 
   '@tanstack/react-ai-devtools@0.1.1':
@@ -3343,13 +3343,13 @@ packages:
       react: '>=16.8'
       react-dom: '>=16.8'
 
-  '@tanstack/react-query-devtools@5.91.1':
+  '@tanstack/react-query-devtools@5.91.2':
     resolution:
       {
-        integrity: sha512-tRnJYwEbH0kAOuToy8Ew7bJw1lX3AjkkgSlf/vzb+NpnqmHPdWM+lA2DSdGQSLi1SU0PDRrrCI1vnZnci96CsQ==,
+        integrity: sha512-ZJ1503ay5fFeEYFUdo7LMNFzZryi6B0Cacrgr2h1JRkvikK1khgIq6Nq2EcblqEdIlgB/r7XDW8f8DQ89RuUgg==,
       }
     peerDependencies:
-      '@tanstack/react-query': ^5.90.10
+      '@tanstack/react-query': ^5.90.14
       react: ^18 || ^19
 
   '@tanstack/react-query@5.90.14':
@@ -12447,7 +12447,7 @@ snapshots:
       '@tanstack/query-core': 5.90.14
       typescript: 5.9.3
 
-  '@tanstack/query-devtools@5.91.1': {}
+  '@tanstack/query-devtools@5.92.0': {}
 
   '@tanstack/react-ai-devtools@0.1.1(@types/react@19.2.7)(csstype@3.2.3)(react@19.2.3)(solid-js@1.9.10)(vue@3.5.26(typescript@5.9.3))':
     dependencies:
@@ -12481,9 +12481,9 @@ snapshots:
       - solid-js
       - utf-8-validate
 
-  '@tanstack/react-query-devtools@5.91.1(@tanstack/react-query@5.90.14(react@19.2.3))(react@19.2.3)':
+  '@tanstack/react-query-devtools@5.91.2(@tanstack/react-query@5.90.14(react@19.2.3))(react@19.2.3)':
     dependencies:
-      '@tanstack/query-devtools': 5.91.1
+      '@tanstack/query-devtools': 5.92.0
       '@tanstack/react-query': 5.90.14(react@19.2.3)
       react: 19.2.3
 
