@@ -228,7 +228,7 @@ export const QueryPane = memo(
                 )}
               </div>
               {/* Results Table */}
-              <div className="flex-1 overflow-hidden">
+              <div className="h-0 flex-1 overflow-hidden">
                 <QueryResults results={tab.results} />
               </div>
             </div>

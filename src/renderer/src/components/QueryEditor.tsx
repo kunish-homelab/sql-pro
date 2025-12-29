@@ -470,7 +470,7 @@ export function QueryEditor() {
                       )}
                     </div>
                     {/* Results Table */}
-                    <div className="flex-1 overflow-hidden">
+                    <div className="h-0 flex-1 overflow-hidden">
                       <QueryResults results={tabResults} />
                     </div>
                   </div>
