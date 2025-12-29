@@ -1,5 +1,12 @@
 # Changelog
 
+## [1.6.0](https://github.com/kunish-homelab/sql-pro/compare/v1.5.0...v1.6.0) (2025-12-29)
+
+
+### Features
+
+* update pnpm-workspace.yaml ([90bea2f](https://github.com/kunish-homelab/sql-pro/commit/90bea2fa4801c5fe78caf7ec21497eedc40111e6))
+
 ## [1.5.0](https://github.com/kunish-homelab/sql-pro/compare/v1.4.0...v1.5.0) (2025-12-29)
 
 
