@@ -394,8 +394,8 @@ export function Sidebar() {
       </div>
 
       {/* Schema Tree */}
-      <ScrollArea className="min-h-0 flex-1">
-        <div className="p-2">
+      <ScrollArea className="min-h-0 min-w-0 flex-1">
+        <div className="min-w-0 overflow-hidden p-2">
           {isLoadingSchema ? (
             <div className="text-muted-foreground flex items-center justify-center py-8 text-sm">
               Loading schema...
@@ -498,7 +498,7 @@ function SchemaSection({
   const triggersExpanded = expandedSections[triggersKey] !== false;
 
   return (
-    <div className="mb-2">
+    <div className="mb-2 min-w-0 overflow-hidden">
       {/* Schema Header (only shown when multiple schemas) */}
       {showSchemaHeader && (
         <button
@@ -533,7 +533,7 @@ function SchemaSection({
                 Tables ({schemaInfo.tables.length})
               </button>
               {tablesExpanded && (
-                <div className="mt-1 space-y-0.5">
+                <div className="mt-1 min-w-0 space-y-0.5 overflow-hidden">
                   {schemaInfo.tables.map((table, idx) => {
                     const itemIdx = getItemIndex(schemaInfo.name, 'table', idx);
                     return (
@@ -642,7 +642,7 @@ function TableItem({
     <button
       onClick={onClick}
       className={cn(
-        'flex w-full items-center gap-2 rounded px-2 py-1.5 text-sm transition-colors',
+        'flex w-full items-center gap-2 overflow-hidden rounded px-2 py-1.5 text-sm transition-colors',
         isSelected
           ? 'bg-accent text-accent-foreground'
           : 'hover:bg-accent/50 text-foreground',
@@ -654,9 +654,9 @@ function TableItem({
       ) : (
         <Table className="text-muted-foreground h-4 w-4 shrink-0" />
       )}
-      <span className="truncate">{table.name}</span>
+      <span className="min-w-0 flex-1 truncate text-left">{table.name}</span>
       {table.rowCount !== undefined && (
-        <span className="text-muted-foreground ml-auto text-xs">
+        <span className="text-muted-foreground shrink-0 text-xs tabular-nums">
           {table.rowCount.toLocaleString()}
         </span>
       )}

@@ -137,7 +137,7 @@ export const TableCell = memo(
         flexRender(cell.column.columnDef.aggregatedCell, cell.getContext()) ??
         (cell.renderValue() as ReactNode);
       return (
-        <td className="text-muted-foreground px-2 py-1 text-sm whitespace-nowrap">
+        <td className="text-muted-foreground border-border border-r border-b px-2 py-1 text-sm whitespace-nowrap">
           {renderedValue}
         </td>
       );
@@ -145,13 +145,13 @@ export const TableCell = memo(
 
     // For placeholder cells in grouped rows
     if (cell.getIsPlaceholder()) {
-      return <td />;
+      return <td className="border-border border-r border-b" />;
     }
 
     // Edit mode
     if (isEditing) {
       return (
-        <td className="relative p-0">
+        <td className="border-border relative border-r border-b p-0">
           <input
             ref={inputRef}
             type="text"
@@ -189,7 +189,7 @@ export const TableCell = memo(
         onClick={onClick}
         onDoubleClick={onEdit}
         className={cn(
-          'cursor-pointer px-2 py-1 whitespace-nowrap',
+          'border-border cursor-pointer border-r border-b px-2 py-1 whitespace-nowrap',
           isFocused && 'ring-ring ring-2 ring-inset',
           hasChange && 'bg-amber-500/20'
         )}

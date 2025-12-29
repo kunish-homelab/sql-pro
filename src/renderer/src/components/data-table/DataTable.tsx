@@ -238,7 +238,7 @@ export const DataTable = function DataTable({
     <ScrollArea
       viewportRef={containerRef}
       className={cn(
-        'bg-background outline-none',
+        'bg-background rounded-md outline-none',
         'focus-visible:ring-ring focus-visible:ring-2 focus-visible:ring-offset-2',
         className
       )}
@@ -252,7 +252,7 @@ export const DataTable = function DataTable({
     >
       <div className="inline-block min-w-full">
         <table
-          className="border-collapse"
+          className="border-separate border-spacing-0"
           style={{
             ...columnSizeVars,
             minWidth: table.getTotalSize(),

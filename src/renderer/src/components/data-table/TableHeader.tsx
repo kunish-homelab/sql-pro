@@ -107,8 +107,8 @@ const HeaderCell = memo(
     return (
       <th
         className={cn(
-          'group border-border relative border-r last:border-r-0',
-          'bg-muted/30 whitespace-nowrap select-none',
+          'group border-border sticky top-0 z-10 border-r border-b',
+          'bg-background whitespace-nowrap select-none',
           canSort && 'hover:bg-muted/50 cursor-pointer',
           columnSchema ? 'min-h-14' : 'h-9'
         )}
@@ -282,9 +282,9 @@ export const TableHeader = memo(
     );
 
     return (
-      <thead className="bg-background sticky top-0 z-10">
+      <thead>
         {table.getHeaderGroups().map((headerGroup) => (
-          <tr key={headerGroup.id} className="border-border border-b">
+          <tr key={headerGroup.id}>
             {headerGroup.headers.map((header) => (
               <HeaderCell
                 key={header.id}
