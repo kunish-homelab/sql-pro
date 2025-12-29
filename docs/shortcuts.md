@@ -281,4 +281,4 @@ SQL Pro attempts to prevent these defaults when focused, but if you experience c
 - [Get Started with SQL Pro](/getting-started/) - New user guide
 - [Query Editor Features](/features/query-editor) - Learn SQL editor shortcuts in context
 - [Data Editing Guide](/features/data-editing) - Master grid navigation shortcuts
-- [Settings Reference](/getting-started/installation#configuration) - Configure Vim mode and other options
+- [Vim Mode Configuration](/features/query-editor#vim-mode) - Configure Vim mode and other options
