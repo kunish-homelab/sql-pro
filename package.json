@@ -69,7 +69,7 @@
     "@tanstack/ai-openai": "^0.2.0",
     "@tanstack/ai-react": "^0.2.0",
     "@tanstack/db": "^0.5.16",
-    "@tanstack/query-core": "^5.90.12",
+    "@tanstack/query-core": "^5.90.14",
     "@tanstack/query-db-collection": "^1.0.12",
     "@tanstack/react-db": "^0.1.60",
     "@tanstack/react-devtools": "^0.9.0",
