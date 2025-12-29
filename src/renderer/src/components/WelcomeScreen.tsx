@@ -1,7 +1,6 @@
 import type { DragEvent } from 'react';
 import type { RecentConnection } from '../../../shared/types';
 import type { ConnectionSettings } from './ConnectionSettingsDialog';
-import * as DropdownMenu from '@radix-ui/react-dropdown-menu';
 import {
   AlertCircle,
   Clock,
@@ -19,6 +18,13 @@ import {
 } from 'lucide-react';
 import { useCallback, useEffect, useState } from 'react';
 import { Button } from '@/components/ui/button';
+import {
+  DropdownMenu,
+  DropdownMenuContent,
+  DropdownMenuItem,
+  DropdownMenuSeparator,
+  DropdownMenuTrigger,
+} from '@/components/ui/dropdown-menu';
 import {
   Tooltip,
   TooltipContent,
@@ -505,7 +511,7 @@ export function WelcomeScreen() {
                 <div key={conn.path} className="group flex items-center gap-2">
                   <Button
                     variant="ghost"
-                    className="flex-1 justify-start text-left"
+                    className="h-auto min-w-0 flex-1 justify-start px-2 py-2 text-left"
                     onClick={() =>
                       handleRecentClick(
                         conn.path,
@@ -515,54 +521,56 @@ export function WelcomeScreen() {
                     }
                     disabled={isConnecting}
                   >
-                    <Database className="text-muted-foreground mr-2 h-4 w-4" />
-                    <div className="flex-1 overflow-hidden">
-                      <div className="truncate text-sm">
-                        {conn.displayName || conn.filename}
+                    <Database className="text-muted-foreground mr-2 h-4 w-4 shrink-0" />
+                    <div className="min-w-0 flex-1">
+                      <div className="flex items-center gap-2">
+                        <span className="truncate text-sm font-medium">
+                          {conn.displayName || conn.filename}
+                        </span>
+                        <div className="flex shrink-0 items-center gap-1">
+                          {conn.readOnly && (
+                            <Tooltip>
+                              <TooltipTrigger asChild>
+                                <Eye className="text-muted-foreground h-3 w-3" />
+                              </TooltipTrigger>
+                              <TooltipContent>Read-only</TooltipContent>
+                            </Tooltip>
+                          )}
+                          <HasSavedPasswordIndicator path={conn.path} />
+                        </div>
                       </div>
-                      <div className="text-muted-foreground text-xs">
+                      <div className="text-muted-foreground truncate text-xs">
                         {conn.path}
                       </div>
                     </div>
-                    <div className="ml-2 flex items-center gap-1">
-                      {conn.readOnly && (
-                        <Tooltip>
-                          <TooltipTrigger asChild>
-                            <Eye className="text-muted-foreground h-3 w-3" />
-                          </TooltipTrigger>
-                          <TooltipContent>Read-only</TooltipContent>
-                        </Tooltip>
-                      )}
-                      <HasSavedPasswordIndicator path={conn.path} />
-                    </div>
                   </Button>
-                  <DropdownMenu.Root>
-                    <DropdownMenu.Trigger asChild>
+                  <DropdownMenu>
+                    <DropdownMenuTrigger asChild>
                       <Button
                         variant="ghost"
                         size="sm"
-                        className="text-muted-foreground opacity-0 group-hover:opacity-100"
+                        className="text-muted-foreground shrink-0 opacity-0 group-hover:opacity-100"
                       >
                         <MoreVertical className="h-4 w-4" />
                       </Button>
-                    </DropdownMenu.Trigger>
-                    <DropdownMenu.Content align="end">
-                      <DropdownMenu.Item
+                    </DropdownMenuTrigger>
+                    <DropdownMenuContent align="end" side="bottom">
+                      <DropdownMenuItem
                         onClick={() => handleEditConnection(conn)}
                       >
                         <Settings className="mr-2 h-4 w-4" />
                         <span>Edit</span>
-                      </DropdownMenu.Item>
-                      <DropdownMenu.Separator />
-                      <DropdownMenu.Item
+                      </DropdownMenuItem>
+                      <DropdownMenuSeparator />
+                      <DropdownMenuItem
                         onClick={() => handleRemoveConnection(conn)}
-                        className="text-destructive"
+                        className="text-destructive focus:text-destructive"
                       >
                         <Trash2 className="mr-2 h-4 w-4" />
                         <span>Remove</span>
-                      </DropdownMenu.Item>
-                    </DropdownMenu.Content>
-                  </DropdownMenu.Root>
+                      </DropdownMenuItem>
+                    </DropdownMenuContent>
+                  </DropdownMenu>
                 </div>
               ))}
             </div>

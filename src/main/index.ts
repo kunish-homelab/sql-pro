@@ -1,6 +1,6 @@
 import { join } from 'node:path';
 import process from 'node:process';
-import { app, BrowserWindow, shell } from 'electron';
+import { app, BrowserWindow, nativeImage, shell } from 'electron';
 import { cleanupIpcHandlers, setupIpcHandlers } from './services/ipc-handlers';
 import { createApplicationMenu } from './services/menu';
 
@@ -30,7 +30,26 @@ function watchWindowShortcuts(window: BrowserWindow): void {
   });
 }
 
+// Get the app icon path based on platform
+function getIconPath(): string {
+  const resourcesPath = is.dev
+    ? join(__dirname, '../../resources')
+    : join(process.resourcesPath, 'resources');
+
+  if (process.platform === 'win32') {
+    return join(resourcesPath, 'icon.ico');
+  } else if (process.platform === 'darwin') {
+    return join(resourcesPath, 'icon.icns');
+  } else {
+    return join(resourcesPath, 'icons/512x512.png');
+  }
+}
+
 function createWindow(): void {
+  // Create icon for the window
+  const iconPath = getIconPath();
+  const icon = nativeImage.createFromPath(iconPath);
+
   const mainWindow = new BrowserWindow({
     width: 1200,
     height: 800,
@@ -38,6 +57,7 @@ function createWindow(): void {
     minHeight: 600,
     show: false,
     autoHideMenuBar: true,
+    icon: icon.isEmpty() ? undefined : icon,
     titleBarStyle: 'hiddenInset',
     trafficLightPosition: { x: 15, y: 10 },
     webPreferences: {
@@ -62,8 +82,13 @@ function createWindow(): void {
   }
 }
 
+// Set app name for development mode
+if (is.dev) {
+  app.name = 'SQL Pro';
+}
+
 app.whenReady().then(() => {
-  setAppUserModelId('com.sql-pro');
+  setAppUserModelId('com.sqlpro.app');
 
   // Setup IPC handlers for database operations
   setupIpcHandlers();
