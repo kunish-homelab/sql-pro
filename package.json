@@ -1,6 +1,6 @@
 {
   "name": "sql-pro",
-  "version": "1.3.0",
+  "version": "1.4.0",
   "packageManager": "pnpm@10.26.2",
   "description": "Professional SQLite database manager with SQLCipher support and diff preview",
   "author": {
