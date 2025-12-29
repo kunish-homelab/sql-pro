@@ -2,20 +2,24 @@
 
 SQL Pro maintains a complete history of all executed queries for each database and provides reusable query templates to speed up your workflow. These features help you track your work, reuse past queries, and quickly insert common SQL patterns.
 
-![Query Editor with History panel](/screenshots/query-dark.png)
+<picture>
+  <source media="(prefers-color-scheme: dark)" srcset="/screenshots/query-dark.png">
+  <source media="(prefers-color-scheme: light)" srcset="/screenshots/query.png">
+  <img alt="SQL Pro Query Editor with History panel showing executed queries and execution times" src="/screenshots/query-dark.png">
+</picture>
 
 ## Key Features
 
-| Feature | Description |
-|---------|-------------|
-| **Persistent History** | Query history saved per database, persists across sessions |
-| **Search & Filter** | Find past queries with instant search |
-| **Status Indicators** | Visual feedback for successful and failed queries |
-| **Execution Time** | See how long each query took to execute |
-| **Click to Reuse** | Load any past query into the editor with one click |
-| **Built-in Templates** | 25+ pre-built templates for common SQL operations |
-| **Custom Templates** | Create and save your own reusable query templates |
-| **Template Categories** | Organize templates by type (SELECT, INSERT, UPDATE, etc.) |
+| Feature                 | Description                                                |
+| ----------------------- | ---------------------------------------------------------- |
+| **Persistent History**  | Query history saved per database, persists across sessions |
+| **Search & Filter**     | Find past queries with instant search                      |
+| **Status Indicators**   | Visual feedback for successful and failed queries          |
+| **Execution Time**      | See how long each query took to execute                    |
+| **Click to Reuse**      | Load any past query into the editor with one click         |
+| **Built-in Templates**  | 25+ pre-built templates for common SQL operations          |
+| **Custom Templates**    | Create and save your own reusable query templates          |
+| **Template Categories** | Organize templates by type (SELECT, INSERT, UPDATE, etc.)  |
 
 ## Query History
 
@@ -84,11 +88,12 @@ Use the search box to filter history entries:
 
 ::: tip Search Tips
 Search matches any text within the query, including:
+
 - Table names (`users`, `orders`)
 - SQL keywords (`SELECT`, `WHERE`)
 - Column names (`email`, `created_at`)
 - Values (`'active'`, `2024`)
-:::
+  :::
 
 ### Managing History
 
@@ -126,13 +131,13 @@ When you switch databases, SQL Pro automatically loads the history for that data
 
 Each history entry captures:
 
-| Field | Description |
-|-------|-------------|
-| `queryText` | The full SQL query text |
-| `executedAt` | Timestamp when the query ran |
-| `durationMs` | Execution time in milliseconds |
-| `success` | Whether the query succeeded or failed |
-| `error` | Error message (for failed queries) |
+| Field        | Description                           |
+| ------------ | ------------------------------------- |
+| `queryText`  | The full SQL query text               |
+| `executedAt` | Timestamp when the query ran          |
+| `durationMs` | Execution time in milliseconds        |
+| `success`    | Whether the query succeeded or failed |
+| `error`      | Error message (for failed queries)    |
 
 ## Query Templates
 
@@ -160,67 +165,67 @@ SQL Pro includes 25+ built-in templates organized by category:
 
 #### SELECT Templates
 
-| Template | Description |
-|----------|-------------|
-| Select All | `SELECT * FROM table_name;` |
-| Select Specific Columns | Select with WHERE clause |
-| Inner Join | Join two tables on a common column |
-| Left Join | Left join two tables |
-| Group By with Count | Group rows and count occurrences |
-| Subquery Example | SELECT with subquery in WHERE |
+| Template                | Description                        |
+| ----------------------- | ---------------------------------- |
+| Select All              | `SELECT * FROM table_name;`        |
+| Select Specific Columns | Select with WHERE clause           |
+| Inner Join              | Join two tables on a common column |
+| Left Join               | Left join two tables               |
+| Group By with Count     | Group rows and count occurrences   |
+| Subquery Example        | SELECT with subquery in WHERE      |
 
 #### INSERT Templates
 
-| Template | Description |
-|----------|-------------|
-| Insert Single Row | Insert one row with values |
+| Template             | Description                  |
+| -------------------- | ---------------------------- |
+| Insert Single Row    | Insert one row with values   |
 | Insert Multiple Rows | Insert multiple rows at once |
-| Insert from Select | Copy data from another table |
+| Insert from Select   | Copy data from another table |
 
 #### UPDATE Templates
 
-| Template | Description |
-|----------|-------------|
-| Update Single Column | Update one column with WHERE |
+| Template                | Description                     |
+| ----------------------- | ------------------------------- |
+| Update Single Column    | Update one column with WHERE    |
 | Update Multiple Columns | Update multiple columns at once |
 
 #### DELETE Templates
 
-| Template | Description |
-|----------|-------------|
-| Delete with Condition | Delete rows matching criteria |
-| Delete All Rows | Remove all data (use with caution!) |
+| Template              | Description                         |
+| --------------------- | ----------------------------------- |
+| Delete with Condition | Delete rows matching criteria       |
+| Delete All Rows       | Remove all data (use with caution!) |
 
 #### Schema Templates
 
-| Template | Description |
-|----------|-------------|
+| Template     | Description                      |
+| ------------ | -------------------------------- |
 | Create Table | Create table with common columns |
-| Create Index | Create an index on a column |
-| Add Column | ALTER TABLE to add column |
-| Drop Table | Delete a table safely |
+| Create Index | Create an index on a column      |
+| Add Column   | ALTER TABLE to add column        |
+| Drop Table   | Delete a table safely            |
 
 #### Analysis Templates
 
-| Template | Description |
-|----------|-------------|
-| Count Rows | Get total row count |
-| Distinct Values | Find unique values with counts |
-| Count NULL Values | Analyze NULL vs non-NULL |
-| Top N Records | Get top N by a column |
-| Date Range Query | Query within date range |
+| Template          | Description                    |
+| ----------------- | ------------------------------ |
+| Count Rows        | Get total row count            |
+| Distinct Values   | Find unique values with counts |
+| Count NULL Values | Analyze NULL vs non-NULL       |
+| Top N Records     | Get top N by a column          |
+| Date Range Query  | Query within date range        |
 
 #### Maintenance Templates
 
-| Template | Description |
-|----------|-------------|
-| Vacuum Database | Reclaim unused space |
-| Analyze Database | Update query optimizer stats |
-| Integrity Check | Check database integrity |
-| Table Info | Get column information |
-| List Foreign Keys | Show foreign key relationships |
-| List Indexes | Show all indexes for a table |
-| Explain Query Plan | Analyze query execution |
+| Template           | Description                    |
+| ------------------ | ------------------------------ |
+| Vacuum Database    | Reclaim unused space           |
+| Analyze Database   | Update query optimizer stats   |
+| Integrity Check    | Check database integrity       |
+| Table Info         | Get column information         |
+| List Foreign Keys  | Show foreign key relationships |
+| List Indexes       | Show all indexes for a table   |
+| Explain Query Plan | Analyze query execution        |
 
 ### Using Templates
 
@@ -237,17 +242,17 @@ To insert a template:
 
 Filter templates by category using the dropdown:
 
-| Category | Color | Description |
-|----------|-------|-------------|
-| All Templates | Gray | Show all templates |
-| SELECT | Blue | Read queries |
-| INSERT | Green | Add data |
-| UPDATE | Amber | Modify data |
-| DELETE | Red | Remove data |
-| Schema | Purple | Structure changes |
-| Analysis | Cyan | Data analysis |
-| Maintenance | Gray | Database maintenance |
-| Custom | Pink | Your templates |
+| Category      | Color  | Description          |
+| ------------- | ------ | -------------------- |
+| All Templates | Gray   | Show all templates   |
+| SELECT        | Blue   | Read queries         |
+| INSERT        | Green  | Add data             |
+| UPDATE        | Amber  | Modify data          |
+| DELETE        | Red    | Remove data          |
+| Schema        | Purple | Structure changes    |
+| Analysis      | Cyan   | Data analysis        |
+| Maintenance   | Gray   | Database maintenance |
+| Custom        | Pink   | Your templates       |
 
 ### Creating Custom Templates
 
@@ -319,10 +324,10 @@ Templates are stored:
 
 ## Keyboard Shortcuts
 
-| Action | macOS | Windows/Linux |
-|--------|-------|---------------|
-| Toggle History panel | <kbd>Cmd</kbd> + <kbd>H</kbd> | <kbd>Ctrl</kbd> + <kbd>H</kbd> |
-| Execute query | <kbd>Cmd</kbd> + <kbd>Enter</kbd> | <kbd>Ctrl</kbd> + <kbd>Enter</kbd> |
+| Action               | macOS                             | Windows/Linux                      |
+| -------------------- | --------------------------------- | ---------------------------------- |
+| Toggle History panel | <kbd>Cmd</kbd> + <kbd>H</kbd>     | <kbd>Ctrl</kbd> + <kbd>H</kbd>     |
+| Execute query        | <kbd>Cmd</kbd> + <kbd>Enter</kbd> | <kbd>Ctrl</kbd> + <kbd>Enter</kbd> |
 
 ## Tips and Best Practices
 
@@ -344,18 +349,21 @@ Templates are stored:
 ### Workflow Integration
 
 **For Data Exploration:**
+
 1. Use built-in SELECT templates to start exploring
 2. Modify and run queries
 3. Check history to see what you've tried
 4. Save useful queries as custom templates
 
 **For Data Entry:**
+
 1. Use INSERT templates as starting points
 2. Run successful inserts
 3. History keeps track of your insertions
 4. Create templates for repeated data entry patterns
 
 **For Maintenance:**
+
 1. Use maintenance templates for common operations
 2. Run VACUUM, ANALYZE, or integrity checks
 3. History records when maintenance was performed

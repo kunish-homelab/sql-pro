@@ -2,19 +2,23 @@
 
 The Schema Browser provides a comprehensive view of your database structure, allowing you to explore tables, views, triggers, and all their associated metadata. Combined with the sidebar navigation, it offers an intuitive way to understand and navigate your database schema.
 
-![Schema Browser showing database tables and schema details](/screenshots/schema-browser-dark.png)
+<picture>
+  <source media="(prefers-color-scheme: dark)" srcset="/screenshots/database-dark.png">
+  <source media="(prefers-color-scheme: light)" srcset="/screenshots/database.png">
+  <img alt="SQL Pro Schema Browser showing database tables in the sidebar and schema details panel" src="/screenshots/database-dark.png">
+</picture>
 
 ## Key Features
 
-| Feature | Description |
-|---------|-------------|
-| **Schema Tree** | Hierarchical view of all tables, views, and triggers in your database |
-| **Quick Search** | Filter tables and views instantly by name |
-| **Row Counts** | See the number of rows in each table at a glance |
-| **Schema Details Panel** | View columns, indexes, foreign keys, and triggers for any table |
-| **CREATE Statements** | Access the original SQL used to create tables and indexes |
-| **Multi-Schema Support** | Navigate databases with multiple schemas easily |
-| **Vim Navigation** | Full keyboard navigation with Vim keybindings |
+| Feature                  | Description                                                           |
+| ------------------------ | --------------------------------------------------------------------- |
+| **Schema Tree**          | Hierarchical view of all tables, views, and triggers in your database |
+| **Quick Search**         | Filter tables and views instantly by name                             |
+| **Row Counts**           | See the number of rows in each table at a glance                      |
+| **Schema Details Panel** | View columns, indexes, foreign keys, and triggers for any table       |
+| **CREATE Statements**    | Access the original SQL used to create tables and indexes             |
+| **Multi-Schema Support** | Navigate databases with multiple schemas easily                       |
+| **Vim Navigation**       | Full keyboard navigation with Vim keybindings                         |
 
 ## Sidebar Navigation
 
@@ -78,13 +82,13 @@ The Schema Details Panel contains collapsible sections for each type of metadata
 
 Displays all columns in the table with:
 
-| Property | Description |
-|----------|-------------|
-| **Name** | The column name |
-| **Type** | Data type (INTEGER, TEXT, REAL, BLOB, etc.) |
-| **Nullable** | Whether the column accepts NULL values |
-| **Default** | Default value if any is defined |
-| **Key** | Shows "PK" badge for primary key columns |
+| Property     | Description                                 |
+| ------------ | ------------------------------------------- |
+| **Name**     | The column name                             |
+| **Type**     | Data type (INTEGER, TEXT, REAL, BLOB, etc.) |
+| **Nullable** | Whether the column accepts NULL values      |
+| **Default**  | Default value if any is defined             |
+| **Key**      | Shows "PK" badge for primary key columns    |
 
 ```sql
 -- Example: Viewing columns helps understand table structure
@@ -185,16 +189,16 @@ With Vim mode enabled, you can navigate the schema tree entirely with the keyboa
 
 ### Navigation Commands
 
-| Key | Action |
-|-----|--------|
-| <kbd>j</kbd> | Move down to next item |
-| <kbd>k</kbd> | Move up to previous item |
-| <kbd>g</kbd><kbd>g</kbd> | Jump to first item |
-| <kbd>G</kbd> | Jump to last item |
-| <kbd>Enter</kbd> or <kbd>l</kbd> | Select focused item |
-| <kbd>Space</kbd> | Toggle expand/collapse section |
-| <kbd>/</kbd> | Focus search box |
-| <kbd>Esc</kbd> | Clear search and unfocus |
+| Key                              | Action                         |
+| -------------------------------- | ------------------------------ |
+| <kbd>j</kbd>                     | Move down to next item         |
+| <kbd>k</kbd>                     | Move up to previous item       |
+| <kbd>g</kbd><kbd>g</kbd>         | Jump to first item             |
+| <kbd>G</kbd>                     | Jump to last item              |
+| <kbd>Enter</kbd> or <kbd>l</kbd> | Select focused item            |
+| <kbd>Space</kbd>                 | Toggle expand/collapse section |
+| <kbd>/</kbd>                     | Focus search box               |
+| <kbd>Esc</kbd>                   | Clear search and unfocus       |
 
 ::: tip Enabling Vim Mode
 Enable App Vim Mode in Settings (<kbd>Cmd/Ctrl</kbd> + <kbd>,</kbd>) to use these keyboard shortcuts in the sidebar.
@@ -210,13 +214,13 @@ When using Vim navigation:
 
 ## Keyboard Shortcuts
 
-| Action | macOS | Windows/Linux |
-|--------|-------|---------------|
-| Toggle Schema Panel | <kbd>Cmd</kbd> + <kbd>4</kbd> | <kbd>Ctrl</kbd> + <kbd>4</kbd> |
-| Open Settings | <kbd>Cmd</kbd> + <kbd>,</kbd> | <kbd>Ctrl</kbd> + <kbd>,</kbd> |
-| Focus Search (Vim mode) | <kbd>/</kbd> | <kbd>/</kbd> |
-| Navigate Down (Vim mode) | <kbd>j</kbd> | <kbd>j</kbd> |
-| Navigate Up (Vim mode) | <kbd>k</kbd> | <kbd>k</kbd> |
+| Action                   | macOS                         | Windows/Linux                  |
+| ------------------------ | ----------------------------- | ------------------------------ |
+| Toggle Schema Panel      | <kbd>Cmd</kbd> + <kbd>4</kbd> | <kbd>Ctrl</kbd> + <kbd>4</kbd> |
+| Open Settings            | <kbd>Cmd</kbd> + <kbd>,</kbd> | <kbd>Ctrl</kbd> + <kbd>,</kbd> |
+| Focus Search (Vim mode)  | <kbd>/</kbd>                  | <kbd>/</kbd>                   |
+| Navigate Down (Vim mode) | <kbd>j</kbd>                  | <kbd>j</kbd>                   |
+| Navigate Up (Vim mode)   | <kbd>k</kbd>                  | <kbd>k</kbd>                   |
 
 ## Tips and Best Practices
 
@@ -244,12 +248,14 @@ When using Vim navigation:
 ### Common Workflows
 
 **Before writing a query:**
+
 1. Select the table you want to query
 2. Open Schema Details (<kbd>Cmd/Ctrl</kbd> + <kbd>4</kbd>)
 3. Review column names and types
 4. Check indexes for columns you'll filter on
 
 **Exploring relationships:**
+
 1. Select a table with foreign keys
 2. View the Foreign Keys section
 3. Click on referenced tables to explore the relationship chain

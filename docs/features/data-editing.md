@@ -2,20 +2,24 @@
 
 SQL Pro provides powerful inline data editing capabilities, allowing you to modify your database directly from the data grid. All changes are tracked with a visual diff preview, validated before applying, and can be undone at any time.
 
-![Data grid with inline editing](/screenshots/table-dark.png)
+<picture>
+  <source media="(prefers-color-scheme: dark)" srcset="/screenshots/table-dark.png">
+  <source media="(prefers-color-scheme: light)" srcset="/screenshots/table.png">
+  <img alt="SQL Pro data grid with inline editing capabilities showing cell values and edit controls" src="/screenshots/table-dark.png">
+</picture>
 
 ## Key Features
 
-| Feature | Description |
-|---------|-------------|
-| **Inline Editing** | Edit cell values directly by double-clicking |
-| **Diff Preview Panel** | Review all pending changes before applying |
-| **Insert Rows** | Add new rows with smart default values |
-| **Delete Rows** | Mark rows for deletion with visual strikethrough |
-| **Validation** | Automatic validation of changes against schema constraints |
-| **Undo Support** | Undo individual changes or all changes at once |
-| **Keyboard Navigation** | Navigate and edit using Tab, Enter, and arrow keys |
-| **Copy & Paste** | Standard clipboard operations for cell values |
+| Feature                 | Description                                                |
+| ----------------------- | ---------------------------------------------------------- |
+| **Inline Editing**      | Edit cell values directly by double-clicking               |
+| **Diff Preview Panel**  | Review all pending changes before applying                 |
+| **Insert Rows**         | Add new rows with smart default values                     |
+| **Delete Rows**         | Mark rows for deletion with visual strikethrough           |
+| **Validation**          | Automatic validation of changes against schema constraints |
+| **Undo Support**        | Undo individual changes or all changes at once             |
+| **Keyboard Navigation** | Navigate and edit using Tab, Enter, and arrow keys         |
+| **Copy & Paste**        | Standard clipboard operations for cell values              |
 
 ## Editing Cells
 
@@ -44,13 +48,13 @@ When editing, pressing **Tab** moves horizontally through columns, while **Enter
 
 When not actively editing a cell, use these keys to navigate:
 
-| Key | Action |
-|-----|--------|
-| <kbd>Arrow Keys</kbd> | Move focus between cells |
-| <kbd>Enter</kbd> | Start editing the focused cell |
-| <kbd>Tab</kbd> | Move to next cell and start editing |
+| Key                               | Action                                  |
+| --------------------------------- | --------------------------------------- |
+| <kbd>Arrow Keys</kbd>             | Move focus between cells                |
+| <kbd>Enter</kbd>                  | Start editing the focused cell          |
+| <kbd>Tab</kbd>                    | Move to next cell and start editing     |
 | <kbd>Shift</kbd> + <kbd>Tab</kbd> | Move to previous cell and start editing |
-| <kbd>Escape</kbd> | Cancel edit / Clear focus |
+| <kbd>Escape</kbd>                 | Cancel edit / Clear focus               |
 
 ## Adding New Rows
 
@@ -109,11 +113,11 @@ When you have unsaved changes, a button appears showing the count:
 
 Visual indicators in the data grid show which rows have pending changes:
 
-| Indicator | Meaning |
-|-----------|---------|
-| Green left border + "NEW" badge | Newly inserted row |
-| Yellow/amber cell background | Modified cell value |
-| Red strikethrough + faded row | Row marked for deletion |
+| Indicator                       | Meaning                 |
+| ------------------------------- | ----------------------- |
+| Green left border + "NEW" badge | Newly inserted row      |
+| Yellow/amber cell background    | Modified cell value     |
+| Red strikethrough + faded row   | Row marked for deletion |
 
 ## Diff Preview Panel
 
@@ -141,6 +145,7 @@ Each change item shows:
 - **Expand/collapse** - Click to see detailed field changes
 
 For updates, the diff shows:
+
 - **Old value** in red with strikethrough
 - **Arrow** (→) indicating the change direction
 - **New value** in green
@@ -167,6 +172,7 @@ When you're ready to commit your changes to the database:
 3. Click **Apply Changes**
 
 The application will:
+
 1. Validate all changes against schema constraints
 2. Execute changes in a transaction (all succeed or all fail)
 3. Refresh the data grid to show the updated data
@@ -221,15 +227,15 @@ To modify data shown in a view, edit the underlying base tables directly.
 
 ## Keyboard Shortcuts
 
-| Action | macOS | Windows/Linux |
-|--------|-------|---------------|
-| Undo last change | <kbd>Cmd</kbd> + <kbd>Z</kbd> | <kbd>Ctrl</kbd> + <kbd>Z</kbd> |
-| Copy cell value | <kbd>Cmd</kbd> + <kbd>C</kbd> | <kbd>Ctrl</kbd> + <kbd>C</kbd> |
-| Paste into cell | <kbd>Cmd</kbd> + <kbd>V</kbd> | <kbd>Ctrl</kbd> + <kbd>V</kbd> |
-| Save and move down | <kbd>Enter</kbd> | <kbd>Enter</kbd> |
-| Save and move right | <kbd>Tab</kbd> | <kbd>Tab</kbd> |
-| Cancel editing | <kbd>Esc</kbd> | <kbd>Esc</kbd> |
-| Navigate cells | <kbd>Arrow Keys</kbd> | <kbd>Arrow Keys</kbd> |
+| Action              | macOS                         | Windows/Linux                  |
+| ------------------- | ----------------------------- | ------------------------------ |
+| Undo last change    | <kbd>Cmd</kbd> + <kbd>Z</kbd> | <kbd>Ctrl</kbd> + <kbd>Z</kbd> |
+| Copy cell value     | <kbd>Cmd</kbd> + <kbd>C</kbd> | <kbd>Ctrl</kbd> + <kbd>C</kbd> |
+| Paste into cell     | <kbd>Cmd</kbd> + <kbd>V</kbd> | <kbd>Ctrl</kbd> + <kbd>V</kbd> |
+| Save and move down  | <kbd>Enter</kbd>              | <kbd>Enter</kbd>               |
+| Save and move right | <kbd>Tab</kbd>                | <kbd>Tab</kbd>                 |
+| Cancel editing      | <kbd>Esc</kbd>                | <kbd>Esc</kbd>                 |
+| Navigate cells      | <kbd>Arrow Keys</kbd>         | <kbd>Arrow Keys</kbd>          |
 
 ## Tips and Best Practices
 
@@ -256,18 +262,21 @@ To modify data shown in a view, edit the underlying base tables directly.
 ### Common Workflows
 
 **Bulk updates:**
+
 1. Filter to find the rows you want to update
 2. Edit each row with Tab navigation
 3. Review all changes in diff preview
 4. Apply when ready
 
 **Data correction:**
+
 1. Find the incorrect value
 2. Double-click to edit
 3. Enter the correct value
 4. Apply immediately
 
 **Adding related records:**
+
 1. Add the parent row first and apply
 2. Note the auto-generated ID
 3. Add child rows referencing that ID

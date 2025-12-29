@@ -2,33 +2,37 @@
 
 SQL Pro provides full support for SQLCipher encrypted databases, allowing you to work with password-protected SQLite files securely. The application auto-detects encrypted databases and prompts for passwords when needed.
 
-![SQL Pro Database View](/screenshots/database-dark.png)
+<picture>
+  <source media="(prefers-color-scheme: dark)" srcset="/screenshots/database-dark.png">
+  <source media="(prefers-color-scheme: light)" srcset="/screenshots/database.png">
+  <img alt="SQL Pro working with an encrypted SQLCipher database showing the main interface" src="/screenshots/database-dark.png">
+</picture>
 
 ## Key Features
 
-| Feature | Description |
-|---------|-------------|
-| **Auto-Detection** | Automatically detects encrypted databases by checking the SQLite header |
-| **Multiple Cipher Support** | Supports SQLCipher 1-4, ChaCha20, AES-256-CBC, RC4, and more |
+| Feature                     | Description                                                                                 |
+| --------------------------- | ------------------------------------------------------------------------------------------- |
+| **Auto-Detection**          | Automatically detects encrypted databases by checking the SQLite header                     |
+| **Multiple Cipher Support** | Supports SQLCipher 1-4, ChaCha20, AES-256-CBC, RC4, and more                                |
 | **Secure Password Storage** | Option to save passwords using system keychain (macOS Keychain, Windows Credential Manager) |
-| **Remember Password** | Optionally remember passwords for quick access to frequently used databases |
-| **Password Management** | Easily forget saved passwords when no longer needed |
-| **Seamless Workflow** | Once unlocked, work with encrypted databases exactly like regular databases |
+| **Remember Password**       | Optionally remember passwords for quick access to frequently used databases                 |
+| **Password Management**     | Easily forget saved passwords when no longer needed                                         |
+| **Seamless Workflow**       | Once unlocked, work with encrypted databases exactly like regular databases                 |
 
 ## Supported Encryption Formats
 
 SQL Pro supports a wide range of encryption formats to ensure compatibility with databases created by different applications:
 
-| Format | Description | Common Use |
-|--------|-------------|------------|
+| Format          | Description                        | Common Use                        |
+| --------------- | ---------------------------------- | --------------------------------- |
 | **SQLCipher 4** | Latest SQLCipher version (default) | Most modern encrypted SQLite apps |
-| **SQLCipher 3** | Legacy SQLCipher format | Older applications |
-| **SQLCipher 2** | Older legacy format | Legacy systems |
-| **SQLCipher 1** | Original SQLCipher format | Very old systems |
-| **ChaCha20** | Modern stream cipher | Signal, privacy-focused apps |
-| **AES-256-CBC** | AES encryption | Enterprise applications |
-| **AES-128-CBC** | wxSQLite3 format | wxWidgets-based apps |
-| **RC4** | Legacy cipher | Very old systems |
+| **SQLCipher 3** | Legacy SQLCipher format            | Older applications                |
+| **SQLCipher 2** | Older legacy format                | Legacy systems                    |
+| **SQLCipher 1** | Original SQLCipher format          | Very old systems                  |
+| **ChaCha20**    | Modern stream cipher               | Signal, privacy-focused apps      |
+| **AES-256-CBC** | AES encryption                     | Enterprise applications           |
+| **AES-128-CBC** | wxSQLite3 format                   | wxWidgets-based apps              |
+| **RC4**         | Legacy cipher                      | Very old systems                  |
 
 ::: tip Automatic Format Detection
 SQL Pro automatically tries different cipher configurations when opening an encrypted database. You don't need to know which encryption format was used—just provide the correct password.
@@ -87,11 +91,11 @@ SQL Pro can securely store database passwords using your operating system's secu
 
 ### How It Works
 
-| Platform | Storage Method |
-|----------|---------------|
-| **macOS** | macOS Keychain |
+| Platform    | Storage Method             |
+| ----------- | -------------------------- |
+| **macOS**   | macOS Keychain             |
 | **Windows** | Windows Credential Manager |
-| **Linux** | libsecret (GNOME Keyring) |
+| **Linux**   | libsecret (GNOME Keyring)  |
 
 When you check **Remember password**, the password is:
 
@@ -113,6 +117,7 @@ To save a password for future use:
 4. Click **Open**
 
 The next time you open this database, SQL Pro will:
+
 1. Detect the saved password
 2. Automatically attempt to open the database
 3. Only prompt for a password if the saved one fails
@@ -122,12 +127,14 @@ The next time you open this database, SQL Pro will:
 To remove a saved password:
 
 **Method 1: From Password Dialog**
+
 1. Open the encrypted database (it will auto-unlock if password is saved)
 2. Close and reopen the database to see the password dialog
 3. Click **Forget saved password**
 
 **Method 2: Database Won't Open**
 If a saved password no longer works:
+
 1. The password dialog will appear
 2. Click **Forget saved password** to clear the old password
 3. Enter the new/correct password
@@ -145,6 +152,7 @@ Secure password storage requires OS support. If unavailable:
 - You'll need to enter the password each time
 
 This can happen on:
+
 - Systems without a keychain/credential manager configured
 - Some Linux distributions without libsecret
 - Sandboxed environments
@@ -176,12 +184,12 @@ Once opened, encrypted databases support all SQL Pro features:
 
 Encrypted databases may have slightly different performance characteristics:
 
-| Operation | Impact |
-|-----------|--------|
-| Opening | Slightly slower (cipher initialization) |
-| Queries | Minimal impact (hardware-accelerated encryption) |
-| Large exports | Slightly slower (decryption overhead) |
-| Bulk inserts | Minimal impact |
+| Operation     | Impact                                           |
+| ------------- | ------------------------------------------------ |
+| Opening       | Slightly slower (cipher initialization)          |
+| Queries       | Minimal impact (hardware-accelerated encryption) |
+| Large exports | Slightly slower (decryption overhead)            |
+| Bulk inserts  | Minimal impact                                   |
 
 ::: tip Performance Tip
 SQLCipher uses AES-256 encryption which is hardware-accelerated on modern CPUs. You shouldn't notice significant performance differences for typical database operations.
@@ -246,6 +254,7 @@ This error appears when:
 3. **Corrupted database**: The file may be damaged
 
 **Solutions:**
+
 - Verify the password is correct
 - Try the password with different case
 - Check if the database opens with other tools (sqlcipher CLI)
@@ -256,6 +265,7 @@ This error appears when:
 This message appears when SQL Pro detects the file doesn't have a standard SQLite header.
 
 **Solutions:**
+
 - Enter the correct password
 - If the database isn't actually encrypted, it may be corrupted
 - Try opening with SQLite CLI to verify file integrity
@@ -269,15 +279,18 @@ If the "Remember password" checkbox is disabled or passwords aren't being saved:
 3. **Linux**: Ensure libsecret is installed and configured
 
 **macOS:**
+
 - Open Keychain Access
 - Check if "sql-pro" entries exist
 - Grant access if prompted
 
 **Windows:**
+
 - Open Credential Manager
 - Check for sql-pro entries
 
 **Linux:**
+
 ```bash
 # Install libsecret if needed
 sudo apt install libsecret-1-0
@@ -295,6 +308,7 @@ If a previously working saved password stops working:
 3. The database file was replaced
 
 **Solution:**
+
 1. Click **Forget saved password** in the dialog
 2. Enter the current correct password
 3. Optionally save the new password
@@ -341,11 +355,11 @@ When sharing encrypted databases:
 
 ## Keyboard Shortcuts
 
-| Action | macOS | Windows/Linux |
-|--------|-------|---------------|
-| Open database | <kbd>Cmd</kbd> + <kbd>O</kbd> | <kbd>Ctrl</kbd> + <kbd>O</kbd> |
-| Submit password | <kbd>Enter</kbd> | <kbd>Enter</kbd> |
-| Cancel dialog | <kbd>Esc</kbd> | <kbd>Esc</kbd> |
+| Action          | macOS                         | Windows/Linux                  |
+| --------------- | ----------------------------- | ------------------------------ |
+| Open database   | <kbd>Cmd</kbd> + <kbd>O</kbd> | <kbd>Ctrl</kbd> + <kbd>O</kbd> |
+| Submit password | <kbd>Enter</kbd>              | <kbd>Enter</kbd>               |
+| Cancel dialog   | <kbd>Esc</kbd>                | <kbd>Esc</kbd>                 |
 
 ## Technical Details
 

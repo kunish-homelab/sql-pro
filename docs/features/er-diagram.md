@@ -2,22 +2,26 @@
 
 The ER (Entity-Relationship) Diagram provides an interactive visual representation of your database schema, showing all tables, views, and their relationships. Built on React Flow, it offers a powerful way to explore and understand your database structure at a glance.
 
-![ER Diagram showing database tables and relationships](/screenshots/er-diagram-dark.png)
+<picture>
+  <source media="(prefers-color-scheme: dark)" srcset="/screenshots/database-dark.png">
+  <source media="(prefers-color-scheme: light)" srcset="/screenshots/database.png">
+  <img alt="SQL Pro ER Diagram showing database tables, columns, and foreign key relationships" src="/screenshots/database-dark.png">
+</picture>
 
 ## Key Features
 
-| Feature | Description |
-|---------|-------------|
-| **Interactive Canvas** | Pan, zoom, and navigate the diagram freely |
-| **Table Nodes** | Visual cards showing table structure with columns and types |
-| **Relationship Lines** | Bezier curves connecting foreign keys to referenced tables |
-| **Cardinality Indicators** | Clear 1:1, 1:N notation on relationships |
-| **Drag & Drop** | Rearrange tables to create your preferred layout |
-| **Auto Layout** | Automatic positioning using the dagre layout algorithm |
-| **Position Persistence** | Your custom layout is saved per database |
-| **Export Options** | Download diagrams as PNG or SVG images |
-| **Mini Map** | Overview navigation for large schemas |
-| **Theme Support** | Seamless light and dark mode integration |
+| Feature                    | Description                                                 |
+| -------------------------- | ----------------------------------------------------------- |
+| **Interactive Canvas**     | Pan, zoom, and navigate the diagram freely                  |
+| **Table Nodes**            | Visual cards showing table structure with columns and types |
+| **Relationship Lines**     | Bezier curves connecting foreign keys to referenced tables  |
+| **Cardinality Indicators** | Clear 1:1, 1:N notation on relationships                    |
+| **Drag & Drop**            | Rearrange tables to create your preferred layout            |
+| **Auto Layout**            | Automatic positioning using the dagre layout algorithm      |
+| **Position Persistence**   | Your custom layout is saved per database                    |
+| **Export Options**         | Download diagrams as PNG or SVG images                      |
+| **Mini Map**               | Overview navigation for large schemas                       |
+| **Theme Support**          | Seamless light and dark mode integration                    |
 
 ## Accessing the ER Diagram
 
@@ -44,11 +48,11 @@ Each table in your database is represented as a card showing:
 
 #### Column Indicators
 
-| Icon | Meaning |
-|------|---------|
-| 🔑 (Key icon, amber) | Primary Key column |
-| 🔗 (Link icon, blue) | Foreign Key column |
-| Underlined name | NOT NULL constraint |
+| Icon                 | Meaning             |
+| -------------------- | ------------------- |
+| 🔑 (Key icon, amber) | Primary Key column  |
+| 🔗 (Link icon, blue) | Foreign Key column  |
+| Underlined name      | NOT NULL constraint |
 
 ```
 ┌─────────────────────┐
@@ -73,12 +77,12 @@ Foreign key relationships are displayed as curved lines (Bezier curves) connecti
 
 Relationship cardinality is shown on each connection line:
 
-| Notation | Meaning |
-|----------|---------|
-| **1:1** | One-to-one relationship |
-| **1:N** | One-to-many relationship (most common) |
-| **N:1** | Many-to-one relationship |
-| **M:N** | Many-to-many relationship |
+| Notation | Meaning                                |
+| -------- | -------------------------------------- |
+| **1:1**  | One-to-one relationship                |
+| **1:N**  | One-to-many relationship (most common) |
+| **N:1**  | Many-to-one relationship               |
+| **M:N**  | Many-to-many relationship              |
 
 SQL Pro automatically detects cardinality based on your schema:
 
@@ -169,6 +173,7 @@ Click the **Export** dropdown to save your diagram:
 - File named `er-diagram-{timestamp}.svg`
 
 Both formats:
+
 - Use your current theme (light or dark background)
 - Exclude the mini map and controls
 - Capture the full diagram content
@@ -283,14 +288,14 @@ The ER Diagram handles large schemas efficiently:
 
 ## Keyboard Shortcuts
 
-| Action | macOS | Windows/Linux |
-|--------|-------|---------------|
-| Switch to Diagram tab | Click "Diagram" | Click "Diagram" |
-| Zoom in | <kbd>Scroll Up</kbd> / <kbd>⌘</kbd> + <kbd>+</kbd> | <kbd>Scroll Up</kbd> / <kbd>Ctrl</kbd> + <kbd>+</kbd> |
-| Zoom out | <kbd>Scroll Down</kbd> / <kbd>⌘</kbd> + <kbd>-</kbd> | <kbd>Scroll Down</kbd> / <kbd>Ctrl</kbd> + <kbd>-</kbd> |
-| Pan | <kbd>Click + Drag</kbd> | <kbd>Click + Drag</kbd> |
-| Select table | <kbd>Click</kbd> | <kbd>Click</kbd> |
-| Move table | <kbd>Drag</kbd> | <kbd>Drag</kbd> |
+| Action                | macOS                                                | Windows/Linux                                           |
+| --------------------- | ---------------------------------------------------- | ------------------------------------------------------- |
+| Switch to Diagram tab | Click "Diagram"                                      | Click "Diagram"                                         |
+| Zoom in               | <kbd>Scroll Up</kbd> / <kbd>⌘</kbd> + <kbd>+</kbd>   | <kbd>Scroll Up</kbd> / <kbd>Ctrl</kbd> + <kbd>+</kbd>   |
+| Zoom out              | <kbd>Scroll Down</kbd> / <kbd>⌘</kbd> + <kbd>-</kbd> | <kbd>Scroll Down</kbd> / <kbd>Ctrl</kbd> + <kbd>-</kbd> |
+| Pan                   | <kbd>Click + Drag</kbd>                              | <kbd>Click + Drag</kbd>                                 |
+| Select table          | <kbd>Click</kbd>                                     | <kbd>Click</kbd>                                        |
+| Move table            | <kbd>Drag</kbd>                                      | <kbd>Drag</kbd>                                         |
 
 ## Troubleshooting
 

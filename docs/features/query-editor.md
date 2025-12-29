@@ -2,22 +2,26 @@
 
 The SQL Query Editor is the heart of SQL Pro, providing a powerful environment for writing, executing, and managing SQL queries. Built on the Monaco editor (the same editor that powers VS Code), it offers professional-grade features for database developers.
 
-![SQL Query Editor showing a SELECT query with results](/screenshots/query-dark.png)
+<picture>
+  <source media="(prefers-color-scheme: dark)" srcset="/screenshots/query-dark.png">
+  <source media="(prefers-color-scheme: light)" srcset="/screenshots/query.png">
+  <img alt="SQL Pro Query Editor with Monaco-based code editing, syntax highlighting, and query results" src="/screenshots/query-dark.png">
+</picture>
 
 ## Key Features
 
-| Feature | Description |
-|---------|-------------|
-| **Monaco Editor** | Professional code editing with the same engine as VS Code |
+| Feature                      | Description                                                     |
+| ---------------------------- | --------------------------------------------------------------- |
+| **Monaco Editor**            | Professional code editing with the same engine as VS Code       |
 | **Intelligent Autocomplete** | Context-aware suggestions for tables, columns, and SQL keywords |
-| **Syntax Highlighting** | Color-coded SQL for improved readability |
-| **Vim Mode** | Full Vim keybindings for power users |
-| **Query History** | Searchable history of all executed queries |
-| **Query Templates** | Reusable templates for common operations |
-| **Query Optimizer** | Analyze execution plans and get optimization suggestions |
-| **AI Integration** | Natural language to SQL conversion and result analysis |
-| **Multi-Tab Support** | Work with multiple queries simultaneously |
-| **Split View** | Compare queries side-by-side |
+| **Syntax Highlighting**      | Color-coded SQL for improved readability                        |
+| **Vim Mode**                 | Full Vim keybindings for power users                            |
+| **Query History**            | Searchable history of all executed queries                      |
+| **Query Templates**          | Reusable templates for common operations                        |
+| **Query Optimizer**          | Analyze execution plans and get optimization suggestions        |
+| **AI Integration**           | Natural language to SQL conversion and result analysis          |
+| **Multi-Tab Support**        | Work with multiple queries simultaneously                       |
+| **Split View**               | Compare queries side-by-side                                    |
 
 ## Opening the Query Editor
 
@@ -82,6 +86,7 @@ Use the built-in find and replace functionality:
 - <kbd>Cmd/Ctrl</kbd> + <kbd>H</kbd> - Find and replace
 
 Features include:
+
 - Case-sensitive search
 - Regular expression support
 - Replace single or all occurrences
@@ -110,6 +115,7 @@ WHERE status = 'active';
 ```
 
 To execute a specific query:
+
 1. Place your cursor anywhere within the query you want to run
 2. Press <kbd>Cmd/Ctrl</kbd> + <kbd>Enter</kbd>
 
@@ -124,13 +130,19 @@ After execution, results appear below the editor with:
 - **Last Insert ID** - For INSERT queries, the ID of the inserted row
 - **Data grid** - Full results with sortable columns
 
-![Query results showing rows and execution time](/screenshots/query-dark.png)
+<picture>
+  <source media="(prefers-color-scheme: dark)" srcset="/screenshots/query-dark.png">
+  <source media="(prefers-color-scheme: light)" srcset="/screenshots/query.png">
+  <img alt="SQL Pro Query results panel showing row count, execution time, and data grid with query output" src="/screenshots/query-dark.png">
+</picture>
 
 ::: warning Large Result Sets
 For queries returning many rows, consider using `LIMIT` to control result size:
+
 ```sql
 SELECT * FROM large_table LIMIT 1000;
 ```
+
 :::
 
 ### Error Handling
@@ -150,11 +162,13 @@ Keep your SQL clean and readable with automatic formatting:
 - Press <kbd>Cmd/Ctrl</kbd> + <kbd>Shift</kbd> + <kbd>F</kbd> to format your SQL
 
 Before formatting:
+
 ```sql
 select u.name,u.email,count(o.id) as orders from users u left join orders o on u.id=o.user_id where u.status='active' group by u.id order by orders desc
 ```
 
 After formatting:
+
 ```sql
 SELECT
     u.name,
@@ -197,15 +211,15 @@ The Vim status bar appears at the bottom of the editor when Vim mode is enabled,
 
 ### Common Vim Commands
 
-| Command | Action |
-|---------|--------|
-| `i` | Enter insert mode |
-| `Esc` | Return to normal mode |
-| `dd` | Delete line |
-| `yy` | Copy line |
-| `p` | Paste |
-| `/` | Search forward |
-| `:w` | Execute query (mapped) |
+| Command | Action                 |
+| ------- | ---------------------- |
+| `i`     | Enter insert mode      |
+| `Esc`   | Return to normal mode  |
+| `dd`    | Delete line            |
+| `yy`    | Copy line              |
+| `p`     | Paste                  |
+| `/`     | Search forward         |
+| `:w`    | Execute query (mapped) |
 
 ## Query History
 
@@ -271,10 +285,11 @@ Analyze your queries for performance optimization.
 
 ::: tip Optimization Tips
 Common suggestions include:
+
 - Creating indexes on frequently filtered columns
 - Avoiding `SELECT *` when you only need specific columns
 - Using LIMIT for large result sets
-:::
+  :::
 
 ## AI Features
 
@@ -290,8 +305,10 @@ Convert plain English questions into SQL queries:
 4. Get a generated SQL query
 
 Example:
+
 - **Question**: "Show me all users who signed up this month"
 - **Generated SQL**:
+
 ```sql
 SELECT * FROM users
 WHERE created_at >= date('now', 'start of month');
@@ -342,6 +359,7 @@ Compare queries or results side-by-side:
 3. Work with two editors simultaneously
 
 The split view allows:
+
 - Horizontal or vertical layout
 - Resizable panes
 - Independent query execution
@@ -358,17 +376,17 @@ This lets you allocate more space to either the editor or results area.
 
 ## Keyboard Shortcuts
 
-| Action | macOS | Windows/Linux |
-|--------|-------|---------------|
-| Execute query | <kbd>Cmd</kbd> + <kbd>Enter</kbd> | <kbd>Ctrl</kbd> + <kbd>Enter</kbd> |
-| Format SQL | <kbd>Cmd</kbd> + <kbd>Shift</kbd> + <kbd>F</kbd> | <kbd>Ctrl</kbd> + <kbd>Shift</kbd> + <kbd>F</kbd> |
-| Toggle history | <kbd>Cmd</kbd> + <kbd>H</kbd> | <kbd>Ctrl</kbd> + <kbd>H</kbd> |
-| Find | <kbd>Cmd</kbd> + <kbd>F</kbd> | <kbd>Ctrl</kbd> + <kbd>F</kbd> |
-| Find and replace | <kbd>Cmd</kbd> + <kbd>H</kbd> | <kbd>Ctrl</kbd> + <kbd>H</kbd> |
-| Focus editor | <kbd>Cmd</kbd> + <kbd>E</kbd> | <kbd>Ctrl</kbd> + <kbd>E</kbd> |
-| Trigger autocomplete | <kbd>Ctrl</kbd> + <kbd>Space</kbd> | <kbd>Ctrl</kbd> + <kbd>Space</kbd> |
-| Undo | <kbd>Cmd</kbd> + <kbd>Z</kbd> | <kbd>Ctrl</kbd> + <kbd>Z</kbd> |
-| Redo | <kbd>Cmd</kbd> + <kbd>Shift</kbd> + <kbd>Z</kbd> | <kbd>Ctrl</kbd> + <kbd>Y</kbd> |
+| Action               | macOS                                            | Windows/Linux                                     |
+| -------------------- | ------------------------------------------------ | ------------------------------------------------- |
+| Execute query        | <kbd>Cmd</kbd> + <kbd>Enter</kbd>                | <kbd>Ctrl</kbd> + <kbd>Enter</kbd>                |
+| Format SQL           | <kbd>Cmd</kbd> + <kbd>Shift</kbd> + <kbd>F</kbd> | <kbd>Ctrl</kbd> + <kbd>Shift</kbd> + <kbd>F</kbd> |
+| Toggle history       | <kbd>Cmd</kbd> + <kbd>H</kbd>                    | <kbd>Ctrl</kbd> + <kbd>H</kbd>                    |
+| Find                 | <kbd>Cmd</kbd> + <kbd>F</kbd>                    | <kbd>Ctrl</kbd> + <kbd>F</kbd>                    |
+| Find and replace     | <kbd>Cmd</kbd> + <kbd>H</kbd>                    | <kbd>Ctrl</kbd> + <kbd>H</kbd>                    |
+| Focus editor         | <kbd>Cmd</kbd> + <kbd>E</kbd>                    | <kbd>Ctrl</kbd> + <kbd>E</kbd>                    |
+| Trigger autocomplete | <kbd>Ctrl</kbd> + <kbd>Space</kbd>               | <kbd>Ctrl</kbd> + <kbd>Space</kbd>                |
+| Undo                 | <kbd>Cmd</kbd> + <kbd>Z</kbd>                    | <kbd>Ctrl</kbd> + <kbd>Z</kbd>                    |
+| Redo                 | <kbd>Cmd</kbd> + <kbd>Shift</kbd> + <kbd>Z</kbd> | <kbd>Ctrl</kbd> + <kbd>Y</kbd>                    |
 
 See the complete [Keyboard Shortcuts](/shortcuts) reference for all available shortcuts.
 

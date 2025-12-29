@@ -12,7 +12,11 @@ After [installing SQL Pro](/getting-started/installation), launch the applicatio
 
 You'll see the welcome screen:
 
-![SQL Pro Welcome Screen - showing the main interface with Open Database button](/screenshots/welcome-dark.png)
+<picture>
+  <source media="(prefers-color-scheme: dark)" srcset="/screenshots/welcome-dark.png">
+  <source media="(prefers-color-scheme: light)" srcset="/screenshots/welcome.png">
+  <img alt="SQL Pro Welcome Screen - showing the main interface with Open Database button" src="/screenshots/welcome-dark.png">
+</picture>
 
 ## Opening a Database
 
@@ -28,9 +32,11 @@ SQL Pro supports both regular SQLite databases and encrypted SQLCipher databases
 
 ::: tip Creating a Test Database
 If you don't have a database to test with, you can create one. Open a terminal and run:
+
 ```bash
 sqlite3 test.db "CREATE TABLE users (id INTEGER PRIMARY KEY, name TEXT, email TEXT); INSERT INTO users (name, email) VALUES ('Alice', 'alice@example.com'), ('Bob', 'bob@example.com');"
 ```
+
 This creates a simple database with a `users` table.
 :::
 
@@ -54,22 +60,30 @@ SQL Pro uses your operating system's secure keychain (macOS Keychain, Windows Cr
 
 Once your database is open, you'll see the main workspace:
 
-![SQL Pro Database View - showing the schema browser, data grid, and query editor](/screenshots/database-dark.png)
+<picture>
+  <source media="(prefers-color-scheme: dark)" srcset="/screenshots/database-dark.png">
+  <source media="(prefers-color-scheme: light)" srcset="/screenshots/database.png">
+  <img alt="SQL Pro Database View - showing the schema browser, data grid, and query editor" src="/screenshots/database-dark.png">
+</picture>
 
 ### Main Areas
 
-| Area | Description |
-|------|-------------|
-| **Sidebar** | Browse tables, views, and indexes in your database |
-| **Data Grid** | View and edit data from the selected table |
-| **Query Editor** | Write and execute SQL queries |
-| **Status Bar** | Shows connection status and current operation |
+| Area             | Description                                        |
+| ---------------- | -------------------------------------------------- |
+| **Sidebar**      | Browse tables, views, and indexes in your database |
+| **Data Grid**    | View and edit data from the selected table         |
+| **Query Editor** | Write and execute SQL queries                      |
+| **Status Bar**   | Shows connection status and current operation      |
 
 ### Sidebar Navigation
 
 The sidebar shows your database schema organized by type:
 
-![Sidebar showing tables list](/screenshots/07-sidebar-tables-dark.png)
+<picture>
+  <source media="(prefers-color-scheme: dark)" srcset="/screenshots/07-sidebar-tables-dark.png">
+  <source media="(prefers-color-scheme: light)" srcset="/screenshots/07-sidebar-tables.png">
+  <img alt="SQL Pro sidebar showing tables list with row counts" src="/screenshots/07-sidebar-tables-dark.png">
+</picture>
 
 - **Tables** - All user tables in your database
 - **Views** - Saved SQL queries that act as virtual tables
@@ -81,7 +95,11 @@ Click any table name to view its data in the data grid.
 
 Click on a table in the sidebar to view its contents:
 
-![Table view showing data grid with rows and columns](/screenshots/table-dark.png)
+<picture>
+  <source media="(prefers-color-scheme: dark)" srcset="/screenshots/table-dark.png">
+  <source media="(prefers-color-scheme: light)" srcset="/screenshots/table.png">
+  <img alt="SQL Pro table view showing data grid with rows and columns for editing and browsing" src="/screenshots/table-dark.png">
+</picture>
 
 ### Data Grid Features
 
@@ -132,7 +150,11 @@ Execute your query in one of these ways:
 1. Click the **Run** button (▶️)
 2. Press <kbd>Cmd/Ctrl</kbd> + <kbd>Enter</kbd>
 
-![Query Editor showing a SELECT query with results](/screenshots/query-dark.png)
+<picture>
+  <source media="(prefers-color-scheme: dark)" srcset="/screenshots/query-dark.png">
+  <source media="(prefers-color-scheme: light)" srcset="/screenshots/query.png">
+  <img alt="SQL Pro Query Editor showing a SELECT query with syntax highlighting and results" src="/screenshots/query-dark.png">
+</picture>
 
 ### Reading Results
 
@@ -159,6 +181,7 @@ SELECT COUNT(*) as total_users FROM users;
 ```
 
 To execute a specific query:
+
 - Place your cursor anywhere in the query
 - Press <kbd>Cmd/Ctrl</kbd> + <kbd>Enter</kbd>
 
@@ -166,14 +189,14 @@ SQL Pro executes the query under your cursor.
 
 ## Quick Reference: Essential Shortcuts
 
-| Action | macOS | Windows/Linux |
-|--------|-------|---------------|
-| Open database | <kbd>Cmd</kbd> + <kbd>O</kbd> | <kbd>Ctrl</kbd> + <kbd>O</kbd> |
-| Execute query | <kbd>Cmd</kbd> + <kbd>Enter</kbd> | <kbd>Ctrl</kbd> + <kbd>Enter</kbd> |
-| Command palette | <kbd>Cmd</kbd> + <kbd>K</kbd> | <kbd>Ctrl</kbd> + <kbd>K</kbd> |
-| Focus query editor | <kbd>Cmd</kbd> + <kbd>E</kbd> | <kbd>Ctrl</kbd> + <kbd>E</kbd> |
-| Focus sidebar | <kbd>Cmd</kbd> + <kbd>1</kbd> | <kbd>Ctrl</kbd> + <kbd>1</kbd> |
-| Focus data grid | <kbd>Cmd</kbd> + <kbd>2</kbd> | <kbd>Ctrl</kbd> + <kbd>2</kbd> |
+| Action             | macOS                             | Windows/Linux                      |
+| ------------------ | --------------------------------- | ---------------------------------- |
+| Open database      | <kbd>Cmd</kbd> + <kbd>O</kbd>     | <kbd>Ctrl</kbd> + <kbd>O</kbd>     |
+| Execute query      | <kbd>Cmd</kbd> + <kbd>Enter</kbd> | <kbd>Ctrl</kbd> + <kbd>Enter</kbd> |
+| Command palette    | <kbd>Cmd</kbd> + <kbd>K</kbd>     | <kbd>Ctrl</kbd> + <kbd>K</kbd>     |
+| Focus query editor | <kbd>Cmd</kbd> + <kbd>E</kbd>     | <kbd>Ctrl</kbd> + <kbd>E</kbd>     |
+| Focus sidebar      | <kbd>Cmd</kbd> + <kbd>1</kbd>     | <kbd>Ctrl</kbd> + <kbd>1</kbd>     |
+| Focus data grid    | <kbd>Cmd</kbd> + <kbd>2</kbd>     | <kbd>Ctrl</kbd> + <kbd>2</kbd>     |
 
 See the complete [Keyboard Shortcuts](/shortcuts) reference for all available shortcuts.
 
@@ -192,6 +215,7 @@ SQL Pro remembers your recently opened databases. Access them from:
 **Symptoms**: Error message when opening a file
 
 **Solutions**:
+
 1. Verify the file is a valid SQLite database
 2. Check file permissions - you need read access
 3. Ensure the file isn't locked by another application
@@ -201,6 +225,7 @@ SQL Pro remembers your recently opened databases. Access them from:
 **Symptoms**: "Database is encrypted" or wrong password errors
 
 **Solutions**:
+
 1. Verify you're using the correct password
 2. Ensure the database was created with SQLCipher (not another encryption)
 3. Try the "Forget saved password" option if using stored credentials
