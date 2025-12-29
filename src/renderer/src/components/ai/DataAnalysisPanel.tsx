@@ -175,11 +175,12 @@ export const DataAnalysisPanel = memo(
                 {/* Insights List */}
                 <ScrollArea className="h-[300px]">
                   <div className="space-y-2 pr-4">
-                    {insights.map((insight, i) => {
+                    {insights.map((insight) => {
                       const Icon = INSIGHT_ICONS[insight.type];
+                      const insightKey = `${insight.type}-${insight.column || 'general'}-${insight.message.slice(0, 20)}`;
                       return (
                         <div
-                          key={i}
+                          key={insightKey}
                           className={cn(
                             'flex items-start gap-3 rounded-lg border p-3',
                             SEVERITY_STYLES[insight.severity]

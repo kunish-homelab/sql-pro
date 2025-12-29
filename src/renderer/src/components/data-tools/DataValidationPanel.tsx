@@ -372,8 +372,11 @@ export const DataValidationPanel = memo(
                     </div>
                   ) : (
                     <div className="space-y-2 pr-4">
-                      {constraints.map((constraint, i) => (
-                        <ConstraintCard key={i} constraint={constraint} />
+                      {constraints.map((constraint) => (
+                        <ConstraintCard
+                          key={constraint.name}
+                          constraint={constraint}
+                        />
                       ))}
                     </div>
                   )}
@@ -414,8 +417,11 @@ export const DataValidationPanel = memo(
                     </div>
                   ) : (
                     <div className="space-y-2 pr-4">
-                      {issues.map((issue, i) => (
-                        <IssueCard key={i} issue={issue} />
+                      {issues.map((issue) => (
+                        <IssueCard
+                          key={`${issue.column}-${issue.issue.slice(0, 30)}`}
+                          issue={issue}
+                        />
                       ))}
                     </div>
                   )}

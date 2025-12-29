@@ -280,8 +280,11 @@ const ColumnDetail = memo(({ column }: ColumnDetailProps) => {
         <div className="space-y-2">
           <h4 className="text-sm font-medium">Top Values</h4>
           <div className="space-y-1">
-            {column.topValues.map((item, i) => (
-              <div key={i} className="flex items-center gap-2">
+            {column.topValues.map((item) => (
+              <div
+                key={`${item.value}-${item.count}`}
+                className="flex items-center gap-2"
+              >
                 <div className="flex-1">
                   <div className="flex items-center justify-between">
                     <span className="truncate font-mono text-sm">

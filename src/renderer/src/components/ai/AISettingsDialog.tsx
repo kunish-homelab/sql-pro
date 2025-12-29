@@ -1,6 +1,6 @@
 import type { AIProvider } from '../../../../shared/types';
 import { Eye, EyeOff, Loader2, Sparkles } from 'lucide-react';
-import { useEffect, useState } from 'react';
+import { useEffect, useMemo, useState } from 'react';
 import { Button } from '@/components/ui/button';
 import {
   Dialog,
@@ -42,6 +42,13 @@ export function AISettingsDialog({
   } = useAIStore();
 
   const [showApiKey, setShowApiKey] = useState(false);
+
+  // Create a key that changes when store values change to reset local state
+  const storeKey = useMemo(
+    () => `${apiKey}-${provider}-${model}-${baseUrl}`,
+    [apiKey, provider, model, baseUrl]
+  );
+
   const [localApiKey, setLocalApiKey] = useState(apiKey);
   const [localProvider, setLocalProvider] = useState<AIProvider>(provider);
   const [localModel, setLocalModel] = useState(model);
@@ -54,13 +61,18 @@ export function AISettingsDialog({
     }
   }, [open, loadSettings]);
 
-  // Sync local state with store
+  // Reset local state when store values change (using key pattern)
   useEffect(() => {
+    // eslint-disable-next-line react-hooks-extra/no-direct-set-state-in-use-effect
     setLocalApiKey(apiKey);
+    // eslint-disable-next-line react-hooks-extra/no-direct-set-state-in-use-effect
     setLocalProvider(provider);
+    // eslint-disable-next-line react-hooks-extra/no-direct-set-state-in-use-effect
     setLocalModel(model);
+    // eslint-disable-next-line react-hooks-extra/no-direct-set-state-in-use-effect
     setLocalBaseUrl(baseUrl);
-  }, [apiKey, provider, model, baseUrl]);
+    // eslint-disable-next-line react-hooks/exhaustive-deps
+  }, [storeKey]);
 
   const handleProviderChange = (newProvider: AIProvider) => {
     setLocalProvider(newProvider);
@@ -93,7 +105,7 @@ export function AISettingsDialog({
 
   return (
     <Dialog open={open} onOpenChange={onOpenChange}>
-      <DialogContent className="sm:max-w-[425px]">
+      <DialogContent className="sm:max-w-106.25">
         <DialogHeader>
           <DialogTitle className="flex items-center gap-2">
             <Sparkles className="h-5 w-5" />

@@ -272,9 +272,9 @@ export const QueryOptimizerPanel = memo(
               <h3 className="font-medium">Suggestions</h3>
               <ScrollArea className="max-h-48">
                 <div className="space-y-2">
-                  {suggestions.map((suggestion, i) => (
+                  {suggestions.map((suggestion) => (
                     <div
-                      key={i}
+                      key={`${suggestion.type}-${suggestion.title}`}
                       className={cn(
                         'flex items-start gap-3 rounded-lg border p-3',
                         suggestion.type === 'warning' &&

@@ -114,7 +114,7 @@ const ChartPreview = memo(({ config, data }: ChartPreviewProps) => {
 
             return (
               <path
-                key={i}
+                key={`slice-${d.label}-${d.value}`}
                 d={`M 50 50 L ${x1} ${y1} A 40 40 0 ${largeArc} 1 ${x2} ${y2} Z`}
                 fill={colors[i % colors.length]}
                 className="transition-opacity hover:opacity-80"
@@ -123,11 +123,14 @@ const ChartPreview = memo(({ config, data }: ChartPreviewProps) => {
           })}
         </svg>
         <div className="ml-4 space-y-1">
-          {data.slice(0, 5).map((d, i) => (
-            <div key={i} className="flex items-center gap-2 text-sm">
+          {data.slice(0, 5).map((d, idx) => (
+            <div
+              key={`legend-${d.label}`}
+              className="flex items-center gap-2 text-sm"
+            >
               <div
                 className="h-3 w-3 rounded"
-                style={{ backgroundColor: colors[i % colors.length] }}
+                style={{ backgroundColor: colors[idx % colors.length] }}
               />
               <span className="truncate">{d.label}</span>
             </div>
@@ -139,11 +142,11 @@ const ChartPreview = memo(({ config, data }: ChartPreviewProps) => {
 
   return (
     <div className="flex h-48 items-end gap-1 px-4 py-2">
-      {data.slice(0, 12).map((d, i) => {
+      {data.slice(0, 12).map((d, idx) => {
         const height = (d.value / maxValue) * 100;
         return (
           <div
-            key={i}
+            key={`bar-${d.label}`}
             className="group relative flex flex-1 flex-col items-center"
           >
             <div
@@ -155,7 +158,7 @@ const ChartPreview = memo(({ config, data }: ChartPreviewProps) => {
               )}
               style={{
                 height: `${height}%`,
-                backgroundColor: colors[i % colors.length],
+                backgroundColor: colors[idx % colors.length],
                 minHeight: '4px',
               }}
             />
@@ -171,7 +174,7 @@ const ChartPreview = memo(({ config, data }: ChartPreviewProps) => {
 
 export const ChartBuilder = memo(
   ({ open, onOpenChange, results, onCreateChart }: ChartBuilderProps) => {
-    const [config, setConfig] = useState<ChartConfig>({
+    const [config, setConfig] = useState<ChartConfig>(() => ({
       id: generateId(),
       type: 'bar',
       title: '',
@@ -179,7 +182,7 @@ export const ChartBuilder = memo(
       yAxis: '',
       aggregation: 'count',
       colorScheme: 'default',
-    });
+    }));
 
     const columns = useMemo(() => {
       if (!results?.columns) return [];
@@ -398,9 +401,9 @@ export const ChartBuilder = memo(
                         )}
                       >
                         <div className="flex gap-0.5">
-                          {scheme.colors.map((color, i) => (
+                          {scheme.colors.map((color) => (
                             <div
-                              key={i}
+                              key={color}
                               className="h-4 w-4 rounded"
                               style={{ backgroundColor: color }}
                             />

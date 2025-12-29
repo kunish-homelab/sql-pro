@@ -436,8 +436,8 @@ export const BulkOperationsPanel = memo(
                     </p>
                     {importResult.errors.length > 0 && (
                       <ul className="mt-2 text-sm text-red-600">
-                        {importResult.errors.slice(0, 3).map((err, i) => (
-                          <li key={i}>{err}</li>
+                        {importResult.errors.slice(0, 3).map((err) => (
+                          <li key={`error-${err.slice(0, 50)}`}>{err}</li>
                         ))}
                       </ul>
                     )}
