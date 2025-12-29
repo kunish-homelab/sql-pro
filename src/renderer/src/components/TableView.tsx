@@ -231,9 +231,9 @@ export function TableView() {
   if (!selectedTable) return null;
 
   return (
-    <div className="flex h-full min-h-0 min-w-0">
+    <div className="flex h-full min-h-0 min-w-0 overflow-hidden">
       {/* Main Content */}
-      <div className="flex min-h-0 min-w-0 flex-1 flex-col">
+      <div className="flex min-h-0 min-w-0 flex-1 flex-col overflow-hidden">
         {/* Table Header */}
         <div className="flex items-center justify-between border-b px-4 py-2">
           <div className="flex items-center gap-2">
@@ -320,7 +320,7 @@ export function TableView() {
         />
 
         {/* Data Grid */}
-        <div className="min-h-0 min-w-0 flex-1">
+        <div className="min-h-0 min-w-0 flex-1 overflow-hidden">
           {isLoading ? (
             <div className="flex h-full items-center justify-center">
               <Loader2 className="text-muted-foreground h-8 w-8 animate-spin" />
@@ -361,7 +361,7 @@ export function TableView() {
         </div>
 
         {/* Pagination */}
-        <div className="flex items-center justify-between border-t px-4 py-2">
+        <div className="bg-background flex shrink-0 items-center justify-between border-t px-4 py-2">
           <div className="text-muted-foreground text-sm">
             Page {page} of {totalPages || 1}
           </div>

@@ -1,5 +1,6 @@
 import type {
   ColumnDef,
+  ColumnSizingInfoState,
   ColumnSizingState,
   ExpandedState,
   GroupingState,
@@ -38,14 +39,13 @@ interface UseTableCoreOptions {
   // Grouping
   grouping?: string[];
   onGroupingChange?: (grouping: string[]) => void;
-  // Column sizing
-  defaultColumnSize?: number;
-  minColumnSize?: number;
-  maxColumnSize?: number;
   // Aggregation config
   aggregations?: Record<string, AggregationType>;
   // Primary key for row identification
   primaryKeyColumn?: string;
+  // Column sizing
+  minColumnSize?: number;
+  maxColumnSize?: number;
 }
 
 // Aggregation functions
@@ -78,24 +78,6 @@ const aggregationFunctions = {
   },
 };
 
-// Calculate initial column width based on content
-function calculateColumnWidth(
-  col: ColumnSchema,
-  data: TableRowData[],
-  minWidth: number,
-  maxWidth: number
-): number {
-  const headerWidth = col.name.length * 9 + 60;
-  const contentWidth = data.slice(0, 100).reduce((max, row) => {
-    const value = row[col.name];
-    if (value === null) return Math.max(max, 50);
-    const strValue = String(value);
-    const charWidth = typeof value === 'number' ? 8 : 8;
-    return Math.max(max, strValue.length * charWidth + 32);
-  }, 0);
-  return Math.min(Math.max(headerWidth, contentWidth, minWidth), maxWidth);
-}
-
 export function useTableCore({
   columns: columnSchemas,
   data,
@@ -103,11 +85,10 @@ export function useTableCore({
   onSortChange,
   grouping: externalGrouping,
   onGroupingChange,
-  defaultColumnSize = 150,
-  minColumnSize = 50,
-  maxColumnSize = 800,
   aggregations = {},
   primaryKeyColumn,
+  minColumnSize = 50,
+  maxColumnSize = 800,
 }: UseTableCoreOptions) {
   // Internal grouping state if not controlled externally
   const [internalGrouping, setInternalGrouping] = useState<GroupingState>([]);
@@ -117,19 +98,19 @@ export function useTableCore({
   // Expanded state for groups
   const [expanded, setExpanded] = useState<ExpandedState>({});
 
-  // Column sizing state
-  const [columnSizing, setColumnSizing] = useState<ColumnSizingState>(() => {
-    const sizing: ColumnSizingState = {};
-    columnSchemas.forEach((col) => {
-      sizing[col.name] = calculateColumnWidth(
-        col,
-        data,
-        minColumnSize,
-        maxColumnSize
-      );
+  // Column sizing state - start empty to use auto layout
+  const [columnSizing, setColumnSizing] = useState<ColumnSizingState>({});
+
+  // Column sizing info state for tracking resize in progress
+  const [columnSizingInfo, setColumnSizingInfo] =
+    useState<ColumnSizingInfoState>({
+      startOffset: null,
+      startSize: null,
+      deltaOffset: null,
+      deltaPercentage: null,
+      isResizingColumn: false,
+      columnSizingStart: [],
     });
-    return sizing;
-  });
 
   // Convert external sort to TanStack sorting state
   const sorting = useMemo<SortingState>(() => {
@@ -167,7 +148,6 @@ export function useTableCore({
         id: col.name,
         accessorKey: col.name,
         header: col.name,
-        size: columnSizing[col.name] || defaultColumnSize,
         minSize: minColumnSize,
         maxSize: maxColumnSize,
         enableGrouping: true,
@@ -181,24 +161,23 @@ export function useTableCore({
         },
       } as ColumnDef<TableRowData>;
     });
-  }, [
-    columnSchemas,
-    aggregations,
-    columnSizing,
-    defaultColumnSize,
-    minColumnSize,
-    maxColumnSize,
-  ]);
+  }, [columnSchemas, aggregations, minColumnSize, maxColumnSize]);
 
   // Create table instance
   const table = useReactTable({
     data,
     columns,
+    defaultColumn: {
+      size: 150,
+      minSize: minColumnSize,
+      maxSize: maxColumnSize,
+    },
     state: {
       grouping,
       expanded,
       sorting,
       columnSizing,
+      columnSizingInfo,
     },
     onGroupingChange: (updater) => {
       const newGrouping =
@@ -208,6 +187,7 @@ export function useTableCore({
     onExpandedChange: setExpanded,
     onSortingChange: handleSortingChange,
     onColumnSizingChange: setColumnSizing,
+    onColumnSizingInfoChange: setColumnSizingInfo,
     getCoreRowModel: getCoreRowModel(),
     getGroupedRowModel: getGroupedRowModel(),
     getExpandedRowModel: getExpandedRowModel(),
@@ -226,38 +206,6 @@ export function useTableCore({
     },
   });
 
-  // Generate CSS variables for column sizing (performance optimization)
-  const tableColumnSizing = table.getState().columnSizing;
-  const columnSizeVars = useMemo(() => {
-    const headers = table.getFlatHeaders();
-    const vars: Record<string, string> = {};
-    headers.forEach((header) => {
-      vars[`--col-${header.id}-size`] = `${header.getSize()}px`;
-    });
-    return vars;
-    // eslint-disable-next-line react-hooks/exhaustive-deps
-  }, [table, tableColumnSizing]);
-
-  // Reset column size to auto-calculated value
-  const resetColumnSize = useCallback(
-    (columnId: string) => {
-      const col = columnSchemas.find((c) => c.name === columnId);
-      if (col) {
-        const optimalWidth = calculateColumnWidth(
-          col,
-          data,
-          minColumnSize,
-          maxColumnSize
-        );
-        setColumnSizing((prev) => ({
-          ...prev,
-          [columnId]: optimalWidth,
-        }));
-      }
-    },
-    [columnSchemas, data, minColumnSize, maxColumnSize]
-  );
-
   // Toggle grouping for a column
   const toggleGrouping = useCallback(
     (columnId: string) => {
@@ -269,13 +217,22 @@ export function useTableCore({
     [grouping, setGrouping]
   );
 
+  // Reset column size to auto (remove from sizing state)
+  const resetColumnSize = useCallback((columnId: string) => {
+    setColumnSizing((prev) => {
+      const next = { ...prev };
+      delete next[columnId];
+      return next;
+    });
+  }, []);
+
   return {
     table,
-    columnSizeVars,
-    resetColumnSize,
     toggleGrouping,
     grouping,
     expanded,
     flexRender,
+    columnSizing,
+    resetColumnSize,
   };
 }

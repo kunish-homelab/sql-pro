@@ -12,9 +12,13 @@ import { TypeBadge } from './TypeBadge';
 
 interface HeaderCellProps {
   header: Header<TableRowData, unknown>;
-  onResetColumnSize?: (columnId: string) => void;
   onToggleGrouping?: (columnId: string) => void;
+  onResetColumnSize?: (columnId: string) => void;
   isGrouped: boolean;
+  /** Current sort direction for this column */
+  sortDirection: 'asc' | 'desc' | false;
+  /** Current column size */
+  columnSize: number;
   /** Existing filter for this column (if any) */
   existingFilter?: UIFilterState;
   /** Callback when a filter is applied */
@@ -26,29 +30,24 @@ interface HeaderCellProps {
 const HeaderCell = memo(
   ({
     header,
-    onResetColumnSize,
     onToggleGrouping,
+    onResetColumnSize,
     isGrouped,
+    sortDirection,
     existingFilter,
     onFilterAdd,
     onFilterRemove,
   }: HeaderCellProps) => {
-    // Track clicks for double-click detection on resize handle
-    const lastClickTimeRef = useRef<number>(0);
     // State for filter popover
     const [filterPopoverOpen, setFilterPopoverOpen] = useState(false);
+    // Track if resize handle was recently interacted with to prevent sort
+    const resizeHandleClickedRef = useRef<boolean>(false);
 
     if (header.isPlaceholder) {
-      return (
-        <div
-          className="h-9"
-          style={{ width: `var(--col-${header.column.id}-size)` }}
-        />
-      );
+      return <th className="h-9" />;
     }
 
     const canSort = header.column.getCanSort();
-    const sortDirection = header.column.getIsSorted();
     const canGroup = header.column.getCanGroup?.() ?? true;
     const isResizing = header.column.getIsResizing();
 
@@ -58,8 +57,26 @@ const HeaderCell = memo(
     const isPrimaryKey = columnMeta?.isPrimaryKey ?? false;
 
     const handleClick = () => {
+      // Skip sorting if resize handle was just clicked
+      if (resizeHandleClickedRef.current) {
+        resizeHandleClickedRef.current = false;
+        return;
+      }
       if (canSort) {
-        header.column.toggleSorting();
+        // Get current sort state
+        const currentSort = header.column.getIsSorted();
+
+        // Cycle: none -> asc -> desc -> none
+        if (currentSort === false) {
+          // Not sorted, go to ascending
+          header.column.toggleSorting(false, false); // asc, not multi-sort
+        } else if (currentSort === 'asc') {
+          // Ascending, go to descending
+          header.column.toggleSorting(true, false); // desc, not multi-sort
+        } else {
+          // Descending, clear sort
+          header.column.clearSorting();
+        }
       }
     };
 
@@ -88,141 +105,153 @@ const HeaderCell = memo(
     const hasActiveFilter = Boolean(existingFilter);
 
     return (
-      <div
+      <th
         className={cn(
-          'group border-border relative flex items-center border-r last:border-r-0',
-          'bg-muted/30 select-none',
+          'group border-border relative border-r last:border-r-0',
+          'bg-muted/30 whitespace-nowrap select-none',
           canSort && 'hover:bg-muted/50 cursor-pointer',
           columnSchema ? 'min-h-14' : 'h-9'
         )}
-        style={{ width: `var(--col-${header.column.id}-size)` }}
+        style={{
+          width: header.getSize(),
+        }}
         onClick={handleClick}
       >
-        {/* Column content */}
-        <div className="flex min-w-0 flex-1 flex-col gap-0.5 px-2 py-1">
-          {/* Column name row */}
-          <div className="flex min-w-0 items-center gap-1.5">
-            {/* Primary key indicator */}
-            {isPrimaryKey && (
-              <Key className="h-3 w-3 shrink-0 text-amber-500" />
-            )}
+        <div className="flex items-center px-2 py-1">
+          {/* Column content */}
+          <div className="flex min-w-0 flex-1 flex-col gap-0.5">
+            {/* Column name row */}
+            <div className="flex min-w-0 items-center gap-1.5">
+              {/* Primary key indicator */}
+              {isPrimaryKey && (
+                <Key className="h-3 w-3 shrink-0 text-amber-500" />
+              )}
 
-            {/* Grouping indicator */}
-            {isGrouped && <Layers className="text-primary h-3 w-3 shrink-0" />}
+              {/* Grouping indicator */}
+              {isGrouped && (
+                <Layers className="text-primary h-3 w-3 shrink-0" />
+              )}
 
-            {/* Column name */}
-            <span className="truncate text-sm font-medium">
-              {flexRender(header.column.columnDef.header, header.getContext())}
-            </span>
-
-            {/* Sort indicator */}
-            {sortDirection && (
-              <span className="shrink-0">
-                {sortDirection === 'asc' ? (
-                  <ArrowUp className="h-3 w-3" />
-                ) : (
-                  <ArrowDown className="h-3 w-3" />
+              {/* Column name */}
+              <span className="truncate text-sm font-medium">
+                {flexRender(
+                  header.column.columnDef.header,
+                  header.getContext()
                 )}
               </span>
+
+              {/* Sort indicator */}
+              {sortDirection && (
+                <span className="shrink-0">
+                  {sortDirection === 'asc' ? (
+                    <ArrowUp className="h-3 w-3" />
+                  ) : (
+                    <ArrowDown className="h-3 w-3" />
+                  )}
+                </span>
+              )}
+            </div>
+
+            {/* Type badge row */}
+            {columnSchema && (
+              <TypeBadge
+                type={columnSchema.type}
+                typeCategory={columnTypeCategory}
+                className="self-start"
+              />
             )}
           </div>
 
-          {/* Type badge row */}
-          {columnSchema && (
-            <TypeBadge
-              type={columnSchema.type}
-              typeCategory={columnTypeCategory}
-              className="self-start"
-            />
-          )}
-        </div>
-
-        {/* Group toggle button (visible on hover) */}
-        {canGroup && onToggleGrouping && (
-          <button
-            className={cn(
-              'mr-1 flex h-5 w-5 items-center justify-center rounded opacity-0',
-              'transition-opacity group-hover:opacity-100',
-              'hover:bg-accent',
-              isGrouped && 'text-primary opacity-100'
-            )}
-            onClick={handleGroupClick}
-            title={isGrouped ? 'Remove grouping' : 'Group by this column'}
-          >
-            <Layers className="h-3 w-3" />
-          </button>
-        )}
-
-        {/* Filter button with popover (visible on hover or when filter active) */}
-        {onFilterAdd && (
-          <ColumnFilterPopover
-            columnName={header.column.id}
-            columnType={columnTypeCategory}
-            existingFilter={existingFilter}
-            onApply={handleFilterApply}
-            onClear={handleFilterClear}
-            open={filterPopoverOpen}
-            onOpenChange={setFilterPopoverOpen}
-          >
+          {/* Group toggle button (visible on hover) */}
+          {canGroup && onToggleGrouping && (
             <button
               className={cn(
                 'mr-1 flex h-5 w-5 items-center justify-center rounded opacity-0',
                 'transition-opacity group-hover:opacity-100',
                 'hover:bg-accent',
-                hasActiveFilter && 'text-primary opacity-100'
+                isGrouped && 'text-primary opacity-100'
               )}
-              onClick={(e) => {
-                e.stopPropagation();
-                setFilterPopoverOpen(true);
-              }}
-              title={hasActiveFilter ? 'Edit filter' : 'Filter this column'}
+              onClick={handleGroupClick}
+              title={isGrouped ? 'Remove grouping' : 'Group by this column'}
             >
-              <Filter className="h-3 w-3" />
+              <Layers className="h-3 w-3" />
             </button>
-          </ColumnFilterPopover>
-        )}
+          )}
 
-        {/* Resize handle */}
+          {/* Filter button with popover (visible on hover or when filter active) */}
+          {onFilterAdd && (
+            <ColumnFilterPopover
+              columnName={header.column.id}
+              columnType={columnTypeCategory}
+              existingFilter={existingFilter}
+              onApply={handleFilterApply}
+              onClear={handleFilterClear}
+              open={filterPopoverOpen}
+              onOpenChange={setFilterPopoverOpen}
+            >
+              <button
+                className={cn(
+                  'flex h-5 w-5 items-center justify-center rounded opacity-0',
+                  'transition-opacity group-hover:opacity-100',
+                  'hover:bg-accent',
+                  hasActiveFilter && 'text-primary opacity-100'
+                )}
+                onClick={(e) => {
+                  e.stopPropagation();
+                  setFilterPopoverOpen(true);
+                }}
+                title={hasActiveFilter ? 'Edit filter' : 'Filter this column'}
+              >
+                <Filter className="h-3 w-3" />
+              </button>
+            </ColumnFilterPopover>
+          )}
+        </div>
+
+        {/* Resize handle - placed directly under th for proper absolute positioning */}
         {header.column.getCanResize() && (
           <div
             className={cn(
-              'absolute top-0 right-0 z-20 h-full w-1 cursor-col-resize',
-              'hover:bg-primary/50 active:bg-primary',
+              'absolute top-0 right-0 z-20 h-full w-1 cursor-col-resize select-none',
+              'hover:bg-primary/50 active:bg-primary/70',
               'transition-colors duration-75',
-              isResizing && 'bg-primary'
+              isResizing && 'bg-primary/70'
             )}
-            onMouseDown={(e) => {
-              e.stopPropagation(); // Prevent sorting on click
-
-              const now = Date.now();
-              const timeSinceLastClick = now - lastClickTimeRef.current;
-              lastClickTimeRef.current = now;
-
-              // Detect double-click (within 300ms)
-              if (timeSinceLastClick < 300) {
-                e.preventDefault();
-                onResetColumnSize?.(header.column.id);
-                return;
-              }
-
-              // Otherwise, start resize
-              header.getResizeHandler()(e);
+            style={{
+              touchAction: 'none',
             }}
-            onClick={(e) => e.stopPropagation()} // Prevent sorting on click
-            onTouchStart={header.getResizeHandler()}
-            title="Drag to resize, double-click to auto-fit"
+            onMouseDown={(e) => {
+              resizeHandleClickedRef.current = true;
+              header.getResizeHandler()(e.nativeEvent);
+            }}
+            onTouchStart={(e) => {
+              resizeHandleClickedRef.current = true;
+              header.getResizeHandler()(e.nativeEvent);
+            }}
+            onDoubleClick={(e) => {
+              e.stopPropagation();
+              onResetColumnSize?.(header.column.id);
+            }}
+            onClick={(e) => {
+              e.stopPropagation();
+            }}
+            title="Drag to resize, double-click to reset"
           />
         )}
-      </div>
+      </th>
     );
   }
 );
 
 interface TableHeaderProps {
   table: Table<TableRowData>;
-  onResetColumnSize?: (columnId: string) => void;
   onToggleGrouping?: (columnId: string) => void;
+  onResetColumnSize?: (columnId: string) => void;
   grouping?: string[];
+  /** Sorting state - used to trigger re-render when sorting changes */
+  sorting?: { column: string; direction: 'asc' | 'desc' } | null;
+  /** Column sizing info - used to trigger re-render during resize */
+  columnSizingInfo?: { isResizingColumn: string | false };
   /** Active filters indexed by column name */
   filters?: UIFilterState[];
   /** Callback when a filter is applied */
@@ -234,9 +263,11 @@ interface TableHeaderProps {
 export const TableHeader = memo(
   ({
     table,
-    onResetColumnSize,
     onToggleGrouping,
+    onResetColumnSize,
     grouping = [],
+    sorting: _sorting, // Used to trigger re-render when sorting changes
+    columnSizingInfo: _columnSizingInfo, // Used to trigger re-render during resize
     filters = [],
     onFilterAdd,
     onFilterRemove,
@@ -251,24 +282,26 @@ export const TableHeader = memo(
     );
 
     return (
-      <div className="bg-background sticky top-0 z-10">
+      <thead className="bg-background sticky top-0 z-10">
         {table.getHeaderGroups().map((headerGroup) => (
-          <div key={headerGroup.id} className="border-border flex border-b">
+          <tr key={headerGroup.id} className="border-border border-b">
             {headerGroup.headers.map((header) => (
               <HeaderCell
                 key={header.id}
                 header={header}
-                onResetColumnSize={onResetColumnSize}
                 onToggleGrouping={onToggleGrouping}
+                onResetColumnSize={onResetColumnSize}
                 isGrouped={grouping.includes(header.column.id)}
+                sortDirection={header.column.getIsSorted()}
+                columnSize={header.getSize()}
                 existingFilter={filtersByColumn[header.column.id]}
                 onFilterAdd={onFilterAdd}
                 onFilterRemove={onFilterRemove}
               />
             ))}
-          </div>
+          </tr>
         ))}
-      </div>
+      </thead>
     );
   }
 );

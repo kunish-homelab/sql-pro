@@ -394,7 +394,7 @@ export function Sidebar() {
       </div>
 
       {/* Schema Tree */}
-      <ScrollArea className="flex-1">
+      <ScrollArea className="min-h-0 flex-1">
         <div className="p-2">
           {isLoadingSchema ? (
             <div className="text-muted-foreground flex items-center justify-center py-8 text-sm">

@@ -7,13 +7,19 @@ import type {
   SortState,
 } from '@/types/database';
 import { Filter, SearchX } from 'lucide-react';
-import { useCallback, useEffect, useImperativeHandle, useRef } from 'react';
+import {
+  useCallback,
+  useEffect,
+  useImperativeHandle,
+  useMemo,
+  useRef,
+} from 'react';
 import { Button } from '@/components/ui/button';
+import { ScrollArea } from '@/components/ui/scroll-area';
 import { cn } from '@/lib/utils';
 import { useTableFont } from '@/stores';
 import { useTableCore } from './hooks/useTableCore';
 import { useTableEditing } from './hooks/useTableEditing';
-import { useVirtualRows } from './hooks/useVirtualRows';
 import { TableBody } from './TableBody';
 import { TableHeader } from './TableHeader';
 
@@ -48,10 +54,6 @@ export interface DataTableProps {
   // Layout
   className?: string;
   primaryKeyColumn?: string;
-
-  // Row heights
-  dataRowHeight?: number;
-  groupRowHeight?: number;
 
   // Auto-focus new row
   newRowId?: string | number | null;
@@ -91,8 +93,6 @@ export const DataTable = function DataTable({
   changes,
   className,
   primaryKeyColumn,
-  dataRowHeight = 36,
-  groupRowHeight = 44,
   newRowId,
   onNewRowFocused,
   filters,
@@ -108,25 +108,33 @@ export const DataTable = function DataTable({
   const tableFont = useTableFont();
 
   // Initialize TanStack Table
-  const { table, columnSizeVars, resetColumnSize, toggleGrouping, grouping } =
-    useTableCore({
-      columns,
-      data,
-      sort,
-      onSortChange,
-      grouping: externalGrouping,
-      onGroupingChange,
-      aggregations,
-      primaryKeyColumn,
-    });
-
-  // Initialize virtualization
-  const { virtualRows, totalHeight, rows } = useVirtualRows({
-    table,
-    containerRef,
-    dataRowHeight,
-    groupRowHeight,
+  const { table, toggleGrouping, grouping, resetColumnSize } = useTableCore({
+    columns,
+    data,
+    sort,
+    onSortChange,
+    grouping: externalGrouping,
+    onGroupingChange,
+    aggregations,
+    primaryKeyColumn,
   });
+
+  // Calculate column size CSS variables for performance
+  // This recalculates when columnSizing or columnSizingInfo changes
+  const columnSizing = table.getState().columnSizing;
+  const columnSizingInfo = table.getState().columnSizingInfo;
+  const columnSizeVars = useMemo(() => {
+    const headers = table.getFlatHeaders();
+    const colSizes: Record<string, number> = {};
+    for (const header of headers) {
+      colSizes[`--col-${header.id}-size`] = header.getSize();
+    }
+    return colSizes;
+    // eslint-disable-next-line react-hooks/exhaustive-deps
+  }, [columnSizing, columnSizingInfo, table]);
+
+  // Get rows from table
+  const { rows } = table.getRowModel();
 
   // Initialize editing
   const {
@@ -204,10 +212,10 @@ export const DataTable = function DataTable({
   // Expose imperative methods
   useImperativeHandle(ref, () => ({
     scrollToRow: (rowIndex: number) => {
-      containerRef.current?.scrollTo({
-        top: rowIndex * dataRowHeight,
-        behavior: 'smooth',
-      });
+      const row = containerRef.current?.querySelector(
+        `[data-row-index="${rowIndex}"]`
+      );
+      row?.scrollIntoView({ behavior: 'smooth', block: 'center' });
     },
     focus: () => {
       containerRef.current?.focus();
@@ -227,15 +235,14 @@ export const DataTable = function DataTable({
   }, [focusedCell, rows, table, handleCellClick]);
 
   return (
-    <div
-      ref={containerRef}
+    <ScrollArea
+      viewportRef={containerRef}
       className={cn(
-        'bg-background relative flex flex-col overflow-auto outline-none',
+        'bg-background outline-none',
         'focus-visible:ring-ring focus-visible:ring-2 focus-visible:ring-offset-2',
         className
       )}
       style={{
-        ...(columnSizeVars as React.CSSProperties),
         fontFamily: tableFont.family || undefined,
         fontSize: tableFont.size ? `${tableFont.size}px` : undefined,
       }}
@@ -243,31 +250,55 @@ export const DataTable = function DataTable({
       onKeyDown={handleKeyDown}
       onFocus={handleContainerFocus}
     >
-      {/* Fixed header */}
-      <TableHeader
-        table={table}
-        onResetColumnSize={resetColumnSize}
-        onToggleGrouping={toggleGrouping}
-        grouping={grouping}
-        filters={filters}
-        onFilterAdd={onFilterAdd}
-        onFilterRemove={onFilterRemove}
-      />
+      <div className="inline-block min-w-full">
+        <table
+          className="border-collapse"
+          style={{
+            ...columnSizeVars,
+            minWidth: table.getTotalSize(),
+          }}
+        >
+          {/* Column group for width control - use CSS variables for dynamic sizing */}
+          <colgroup>
+            {table.getVisibleLeafColumns().map((column) => (
+              <col
+                key={column.id}
+                style={{
+                  width: `calc(var(--col-${column.id}-size) * 1px)`,
+                  minWidth: `calc(var(--col-${column.id}-size) * 1px)`,
+                }}
+              />
+            ))}
+          </colgroup>
+          {/* Fixed header */}
+          <TableHeader
+            table={table}
+            onToggleGrouping={toggleGrouping}
+            onResetColumnSize={resetColumnSize}
+            grouping={grouping}
+            sorting={sort}
+            columnSizingInfo={{
+              isResizingColumn: columnSizingInfo.isResizingColumn,
+            }}
+            filters={filters}
+            onFilterAdd={onFilterAdd}
+            onFilterRemove={onFilterRemove}
+          />
 
-      {/* Virtualized body */}
-      <TableBody
-        virtualRows={virtualRows}
-        rows={rows}
-        totalHeight={totalHeight}
-        editable={editable}
-        onCellClick={handleCellClick}
-        onCellDoubleClick={handleCellDoubleClick}
-        onCellSave={handleCellSave}
-        stopEditing={stopEditing}
-        isCellFocused={isCellFocused}
-        isCellEditing={isCellEditing}
-        changes={changes}
-      />
+          {/* Table body */}
+          <TableBody
+            rows={rows}
+            editable={editable}
+            onCellClick={handleCellClick}
+            onCellDoubleClick={handleCellDoubleClick}
+            onCellSave={handleCellSave}
+            stopEditing={stopEditing}
+            isCellFocused={isCellFocused}
+            isCellEditing={isCellEditing}
+            changes={changes}
+          />
+        </table>
+      </div>
 
       {/* Empty state */}
       {rows.length === 0 && (
@@ -279,7 +310,7 @@ export const DataTable = function DataTable({
           onClearSearch={onClearSearch}
         />
       )}
-    </div>
+    </ScrollArea>
   );
 };
 

@@ -137,32 +137,21 @@ export const TableCell = memo(
         flexRender(cell.column.columnDef.aggregatedCell, cell.getContext()) ??
         (cell.renderValue() as ReactNode);
       return (
-        <div
-          className="text-muted-foreground flex h-full items-center px-2 text-sm"
-          style={{ width: `var(--col-${cell.column.id}-size)` }}
-        >
+        <td className="text-muted-foreground px-2 py-1 text-sm whitespace-nowrap">
           {renderedValue}
-        </div>
+        </td>
       );
     }
 
     // For placeholder cells in grouped rows
     if (cell.getIsPlaceholder()) {
-      return (
-        <div
-          className="h-full"
-          style={{ width: `var(--col-${cell.column.id}-size)` }}
-        />
-      );
+      return <td />;
     }
 
     // Edit mode
     if (isEditing) {
       return (
-        <div
-          className="relative flex h-full items-center"
-          style={{ width: `var(--col-${cell.column.id}-size)` }}
-        >
+        <td className="relative p-0">
           <input
             ref={inputRef}
             type="text"
@@ -176,7 +165,7 @@ export const TableCell = memo(
             onBlur={handleSave}
             onKeyDown={handleKeyDown}
             className={cn(
-              'bg-background h-full w-full px-2 text-sm ring-2 outline-none ring-inset',
+              'bg-background h-full w-full px-2 py-1 text-sm ring-2 outline-none ring-inset',
               validationError ? 'ring-destructive' : 'ring-ring'
             )}
             aria-invalid={!!validationError}
@@ -190,21 +179,20 @@ export const TableCell = memo(
               {validationError}
             </div>
           )}
-        </div>
+        </td>
       );
     }
 
     // Display mode
     return (
-      <div
+      <td
         onClick={onClick}
         onDoubleClick={onEdit}
         className={cn(
-          'flex h-full cursor-pointer items-center overflow-hidden px-2',
+          'cursor-pointer px-2 py-1 whitespace-nowrap',
           isFocused && 'ring-ring ring-2 ring-inset',
           hasChange && 'bg-amber-500/20'
         )}
-        style={{ width: `var(--col-${cell.column.id}-size)` }}
         title={
           hasChange && oldValue !== undefined
             ? `Original: ${oldValue}`
@@ -212,7 +200,7 @@ export const TableCell = memo(
         }
       >
         <CellDisplay value={value} type={columnType} />
-      </div>
+      </td>
     );
   }
 );

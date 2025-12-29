@@ -1,5 +1,4 @@
 import type { Row } from '@tanstack/react-table';
-import type { VirtualItem } from '@tanstack/react-virtual';
 import type { TableRowData } from './hooks/useTableCore';
 import type { PendingChange } from '@/types/database';
 import { memo } from 'react';
@@ -9,7 +8,7 @@ import { TableCell } from './TableCell';
 
 interface DataRowProps {
   row: Row<TableRowData>;
-  virtualRow: VirtualItem;
+  rowIndex: number;
   isDeleted: boolean;
   isNewRow: boolean;
   change?: PendingChange;
@@ -25,7 +24,7 @@ interface DataRowProps {
 const DataRow = memo(
   ({
     row,
-    virtualRow,
+    rowIndex,
     isDeleted,
     isNewRow,
     change,
@@ -37,21 +36,18 @@ const DataRow = memo(
     isCellFocused,
     isCellEditing,
   }: DataRowProps) => {
-    const isEven = virtualRow.index % 2 === 0;
+    const isEven = rowIndex % 2 === 0;
 
     return (
-      <div
+      <tr
         className={cn(
-          'border-border absolute top-0 left-0 flex w-full items-center border-b',
+          'border-border border-b',
           isEven ? 'bg-background' : 'bg-muted/20',
           isDeleted && 'bg-destructive/10 line-through opacity-50',
           isNewRow && 'bg-green-500/10'
         )}
-        style={{
-          height: `${virtualRow.size}px`,
-          transform: `translateY(${virtualRow.start}px)`,
-        }}
         data-row-id={row.id}
+        data-row-index={rowIndex}
       >
         {row.getVisibleCells().map((cell) => {
           const columnId = cell.column.id;
@@ -93,15 +89,13 @@ const DataRow = memo(
             />
           );
         })}
-      </div>
+      </tr>
     );
   }
 );
 
 interface TableBodyProps {
-  virtualRows: VirtualItem[];
   rows: Row<TableRowData>[];
-  totalHeight: number;
   // Editing props
   editable?: boolean;
   onCellClick?: (rowId: string, columnId: string) => void;
@@ -116,9 +110,7 @@ interface TableBodyProps {
 
 export const TableBody = memo(
   ({
-    virtualRows,
     rows,
-    totalHeight,
     editable = false,
     onCellClick,
     onCellDoubleClick,
@@ -129,11 +121,8 @@ export const TableBody = memo(
     changes,
   }: TableBodyProps) => {
     return (
-      <div className="relative" style={{ height: `${totalHeight}px` }}>
-        {virtualRows.map((virtualRow) => {
-          const row = rows[virtualRow.index];
-          if (!row) return null;
-
+      <tbody>
+        {rows.map((row, index) => {
           const isGroupRow = row.getIsGrouped?.() ?? false;
           const rowData = row.original as TableRowData;
           const rowId = rowData.__rowId ?? row.id;
@@ -144,27 +133,14 @@ export const TableBody = memo(
           const change = changes?.get(rowId);
 
           if (isGroupRow) {
-            return (
-              <GroupRow
-                key={row.id}
-                row={row}
-                style={{
-                  position: 'absolute',
-                  top: 0,
-                  left: 0,
-                  width: '100%',
-                  height: `${virtualRow.size}px`,
-                  transform: `translateY(${virtualRow.start}px)`,
-                }}
-              />
-            );
+            return <GroupRow key={row.id} row={row} />;
           }
 
           return (
             <DataRow
               key={row.id}
               row={row}
-              virtualRow={virtualRow}
+              rowIndex={index}
               isDeleted={isDeleted}
               isNewRow={isNewRow}
               change={change}
@@ -178,7 +154,7 @@ export const TableBody = memo(
             />
           );
         })}
-      </div>
+      </tbody>
     );
   }
 );
