@@ -1,5 +1,17 @@
 # Changelog
 
+## [1.5.0](https://github.com/kunish-homelab/sql-pro/compare/v1.4.0...v1.5.0) (2025-12-29)
+
+
+### Features
+
+* ER Diagram auto layout ([88ada1b](https://github.com/kunish-homelab/sql-pro/commit/88ada1be8def5f5c00451b2bb56f6a56a06d1552))
+
+
+### Bug Fixes
+
+* command palette ([1867efa](https://github.com/kunish-homelab/sql-pro/commit/1867efab4fcfa02f530b5119c0c970efa2b9957d))
+
 ## [1.4.0](https://github.com/kunish-homelab/sql-pro/compare/v1.3.0...v1.4.0) (2025-12-29)
 
 
