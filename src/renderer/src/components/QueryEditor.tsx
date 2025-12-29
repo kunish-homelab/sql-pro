@@ -360,6 +360,7 @@ export function QueryEditor() {
             size="sm"
             onClick={() => setShowHistory(!showHistory)}
             className="gap-1"
+            data-action="toggle-history"
           >
             <History className="h-4 w-4" />
             History
@@ -383,6 +384,7 @@ export function QueryEditor() {
             onClick={handleExecute}
             disabled={tabIsExecuting || !tabQuery.trim()}
             className="gap-1"
+            data-action="execute-query"
           >
             {tabIsExecuting ? (
               <Loader2 className="h-4 w-4 animate-spin" />

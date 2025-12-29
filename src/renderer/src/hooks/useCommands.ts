@@ -166,9 +166,10 @@ export function useCommands() {
         category: 'view',
         keywords: ['history', 'query', 'recent'],
         action: () => {
-          document
-            .querySelector<HTMLButtonElement>('button:has(.lucide-history)')
-            ?.click();
+          const button = document.querySelector<HTMLButtonElement>(
+            'button[data-action="toggle-history"]'
+          );
+          button?.click();
         },
       },
 
@@ -207,9 +208,10 @@ export function useCommands() {
         category: 'actions',
         keywords: ['execute', 'run', 'query', 'sql'],
         action: () => {
-          document
-            .querySelector<HTMLButtonElement>('button:has(.lucide-play)')
-            ?.click();
+          const button = document.querySelector<HTMLButtonElement>(
+            'button[data-action="execute-query"]'
+          );
+          button?.click();
         },
         disabled: () => !connectionStoreRef.current.connection,
       },
@@ -257,9 +259,22 @@ export function useCommands() {
         category: 'actions',
         keywords: ['open', 'database', 'file', 'connect'],
         action: () => {
-          document
-            .querySelector<HTMLButtonElement>('button:has(.lucide-folder-open)')
-            ?.click();
+          // Try to find and click the button immediately
+          const openButton = document.querySelector<HTMLButtonElement>(
+            'button[data-action="open-database"]'
+          );
+          if (openButton) {
+            openButton.click();
+          } else {
+            // Button not found, navigate to home and retry
+            navigate({ to: '/' });
+            setTimeout(() => {
+              const btn = document.querySelector<HTMLButtonElement>(
+                'button[data-action="open-database"]'
+              );
+              btn?.click();
+            }, 100);
+          }
         },
         disabled: () => !!connectionStoreRef.current.connection,
       },
@@ -273,9 +288,10 @@ export function useCommands() {
         category: 'settings',
         keywords: ['settings', 'preferences', 'options', 'config'],
         action: () => {
-          document
-            .querySelector<HTMLButtonElement>('button:has(.lucide-settings)')
-            ?.click();
+          const button = document.querySelector<HTMLButtonElement>(
+            'button[data-action="open-settings"]'
+          );
+          button?.click();
         },
       },
       {

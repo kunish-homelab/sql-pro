@@ -496,6 +496,7 @@ export function WelcomeScreen() {
             size="lg"
             onClick={handleOpenDatabase}
             disabled={isConnecting}
+            data-action="open-database"
           >
             <FolderOpen className="mr-2 h-4 w-4" />
             {isConnecting ? 'Opening...' : 'Open Database'}

@@ -29,9 +29,9 @@ export function useMenuActions() {
 
       switch (action) {
         case 'open-database': {
-          // Trigger file picker
+          // Try to find the button by data-action attribute
           const openButton = document.querySelector<HTMLButtonElement>(
-            'button:has(.lucide-folder-open)'
+            'button[data-action="open-database"]'
           );
           if (openButton) {
             openButton.click();
@@ -99,9 +99,15 @@ export function useMenuActions() {
         }
 
         case 'open-settings': {
-          document
-            .querySelector<HTMLButtonElement>('button:has(.lucide-settings)')
-            ?.click();
+          // Try data-action first, then fallback to icon selector
+          const settingsButton =
+            document.querySelector<HTMLButtonElement>(
+              'button[data-action="open-settings"]'
+            ) ||
+            document.querySelector<HTMLButtonElement>(
+              'button[aria-label="Settings"]'
+            );
+          settingsButton?.click();
           break;
         }
 
@@ -125,16 +131,27 @@ export function useMenuActions() {
         }
 
         case 'execute-query': {
-          document
-            .querySelector<HTMLButtonElement>('button:has(.lucide-play)')
-            ?.click();
+          // Try data-action first, then fallback
+          const executeButton =
+            document.querySelector<HTMLButtonElement>(
+              'button[data-action="execute-query"]'
+            ) ||
+            document.querySelector<HTMLButtonElement>(
+              'button[aria-label="Execute"]'
+            );
+          executeButton?.click();
           break;
         }
 
         case 'toggle-history': {
-          document
-            .querySelector<HTMLButtonElement>('button:has(.lucide-history)')
-            ?.click();
+          const historyButton =
+            document.querySelector<HTMLButtonElement>(
+              'button[data-action="toggle-history"]'
+            ) ||
+            document.querySelector<HTMLButtonElement>(
+              'button[aria-label="History"]'
+            );
+          historyButton?.click();
           break;
         }
       }
