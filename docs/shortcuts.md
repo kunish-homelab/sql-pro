@@ -227,7 +227,7 @@ The following table lists all commands available in the Command Palette, organiz
 Currently, keyboard shortcuts cannot be customized. This is a planned feature for a future release.
 
 ::: info Feature Request
-If you have specific shortcut customization needs, please open an issue on our [GitHub repository](https://github.com/nicepkg/sql-pro).
+If you have specific shortcut customization needs, please open an issue on our [GitHub repository](https://github.com/kunish-homelab/sql-pro).
 :::
 
 ## Tips for Keyboard-Driven Workflow

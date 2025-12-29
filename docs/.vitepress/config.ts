@@ -2,7 +2,8 @@ import { defineConfig } from 'vitepress';
 
 export default defineConfig({
   title: 'SQL Pro',
-  description: 'Professional SQLite database manager with SQLCipher support and diff preview',
+  description:
+    'Professional SQLite database manager with SQLCipher support and diff preview',
   base: '/sql-pro/',
 
   head: [
@@ -33,7 +34,10 @@ export default defineConfig({
           items: [
             { text: 'Overview', link: '/getting-started/' },
             { text: 'Installation', link: '/getting-started/installation' },
-            { text: 'First Connection', link: '/getting-started/first-connection' },
+            {
+              text: 'First Connection',
+              link: '/getting-started/first-connection',
+            },
           ],
         },
       ],
@@ -65,7 +69,7 @@ export default defineConfig({
     },
 
     socialLinks: [
-      { icon: 'github', link: 'https://github.com/nicepkg/sql-pro' },
+      { icon: 'github', link: 'https://github.com/kunish-homelab/sql-pro' },
     ],
 
     footer: {
@@ -74,7 +78,7 @@ export default defineConfig({
     },
 
     editLink: {
-      pattern: 'https://github.com/nicepkg/sql-pro/edit/main/docs/:path',
+      pattern: 'https://github.com/kunish-homelab/sql-pro/edit/main/docs/:path',
       text: 'Edit this page on GitHub',
     },
   },

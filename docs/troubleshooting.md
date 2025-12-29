@@ -712,7 +712,7 @@ xattr -cr /Applications/SQL\ Pro.app
 
 If you can't resolve an issue using this guide:
 
-1. **Search existing issues** on [GitHub Issues](https://github.com/nicepkg/sql-pro/issues)
+1. **Search existing issues** on [GitHub Issues](https://github.com/kunish-homelab/sql-pro/issues)
 2. **Create a new issue** with:
    - SQL Pro version
    - Operating system and version
@@ -738,4 +738,4 @@ When reporting issues, never share actual database content or passwords. Use dum
 - [Getting Started Guide](/getting-started/) - Setup and first connection
 - [Feature Documentation](/features/) - Learn about all features
 - [Keyboard Shortcuts](/shortcuts) - Complete shortcuts reference
-- [GitHub Issues](https://github.com/nicepkg/sql-pro/issues) - Report bugs and request features
+- [GitHub Issues](https://github.com/kunish-homelab/sql-pro/issues) - Report bugs and request features
