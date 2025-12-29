@@ -12,6 +12,7 @@
   <a href="https://github.com/kunish-homelab/sql-pro/releases"><img src="https://img.shields.io/github/v/release/kunish-homelab/sql-pro" alt="Release"></a>
   <a href="https://github.com/kunish-homelab/sql-pro/blob/main/LICENSE"><img src="https://img.shields.io/github/license/kunish-homelab/sql-pro" alt="License"></a>
   <a href="https://github.com/kunish-homelab/sql-pro/actions"><img src="https://img.shields.io/github/actions/workflow/status/kunish-homelab/sql-pro/release.yml" alt="Build Status"></a>
+  <a href="https://kunish-homelab.github.io/sql-pro/"><img src="https://img.shields.io/badge/Documentation:-docs-blue" alt="Documentation"></a>
 </p>
 
 ## ✨ Features
