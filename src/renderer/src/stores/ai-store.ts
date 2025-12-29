@@ -2,12 +2,14 @@ import type { AIProvider, AISettings } from '../../../shared/types';
 import { create } from 'zustand';
 import { persist } from 'zustand/middleware';
 import { sqlPro } from '@/lib/api';
+import { DEFAULT_AI_BASE_URLS } from '../../../shared/types';
 
 interface AIState {
   // Settings
   provider: AIProvider;
   apiKey: string;
   model: string;
+  baseUrl: string;
   isConfigured: boolean;
 
   // Loading states
@@ -20,7 +22,9 @@ interface AIState {
   setProvider: (provider: AIProvider) => void;
   setApiKey: (apiKey: string) => void;
   setModel: (model: string) => void;
+  setBaseUrl: (baseUrl: string) => void;
   clearSettings: () => void;
+  getEffectiveBaseUrl: () => string;
 }
 
 // Default models for each provider
@@ -39,6 +43,7 @@ export const useAIStore = create<AIState>()(
       provider: 'openai',
       apiKey: '',
       model: 'gpt-4o',
+      baseUrl: '',
       isConfigured: false,
       isLoading: false,
       isSaving: false,
@@ -52,6 +57,7 @@ export const useAIStore = create<AIState>()(
               provider: result.settings.provider,
               apiKey: result.settings.apiKey,
               model: result.settings.model,
+              baseUrl: result.settings.baseUrl || '',
               isConfigured: Boolean(result.settings.apiKey),
             });
           }
@@ -68,6 +74,7 @@ export const useAIStore = create<AIState>()(
           provider: settings.provider ?? state.provider,
           apiKey: settings.apiKey ?? state.apiKey,
           model: settings.model ?? state.model,
+          baseUrl: settings.baseUrl ?? state.baseUrl,
         };
 
         set({ isSaving: true });
@@ -96,6 +103,7 @@ export const useAIStore = create<AIState>()(
         set({
           provider,
           model: models[0], // Reset to default model for new provider
+          baseUrl: '', // Reset base URL when switching providers
         });
       },
 
@@ -103,19 +111,28 @@ export const useAIStore = create<AIState>()(
 
       setModel: (model) => set({ model }),
 
+      setBaseUrl: (baseUrl) => set({ baseUrl }),
+
       clearSettings: () =>
         set({
           provider: 'openai',
           apiKey: '',
           model: 'gpt-4o',
+          baseUrl: '',
           isConfigured: false,
         }),
+
+      getEffectiveBaseUrl: () => {
+        const state = get();
+        return state.baseUrl || DEFAULT_AI_BASE_URLS[state.provider];
+      },
     }),
     {
       name: 'sql-pro-ai-settings',
       partialize: (state) => ({
         provider: state.provider,
         model: state.model,
+        baseUrl: state.baseUrl,
         // Don't persist API key in localStorage for security
       }),
     }

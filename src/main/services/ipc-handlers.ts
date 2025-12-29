@@ -1,4 +1,6 @@
 import type {
+  AIFetchAnthropicRequest,
+  AIFetchOpenAIRequest,
   AISettings,
   AnalyzeQueryPlanRequest,
   ApplyChangesRequest,
@@ -26,7 +28,9 @@ import type {
 } from '../../shared/types';
 import fs from 'node:fs';
 import path from 'node:path';
+import Anthropic from '@anthropic-ai/sdk';
 import { app, dialog, ipcMain } from 'electron';
+import OpenAI from 'openai';
 import { IPC_CHANNELS } from '../../shared/types';
 import { databaseService } from './database';
 import { passwordStorageService } from './password-storage';
@@ -795,6 +799,90 @@ export function setupIpcHandlers(): void {
             error instanceof Error
               ? error.message
               : 'Failed to save AI settings',
+        };
+      }
+    }
+  );
+
+  // AI: Fetch from Anthropic-compatible API using official SDK (bypasses CORS)
+  ipcMain.handle(
+    IPC_CHANNELS.AI_FETCH_ANTHROPIC,
+    async (_event, request: AIFetchAnthropicRequest) => {
+      try {
+        // Create Anthropic client with custom baseURL if provided
+        const client = new Anthropic({
+          apiKey: request.apiKey,
+          baseURL: request.baseUrl,
+        });
+
+        // Use official SDK to make the request
+        const response = await client.messages.create({
+          model: request.model,
+          max_tokens: request.maxTokens || 1024,
+          system: request.system,
+          messages: request.messages.map((m) => ({
+            role: m.role as 'user' | 'assistant',
+            content: m.content,
+          })),
+        });
+
+        // Extract text content from response
+        const textBlock = response.content.find(
+          (block) => block.type === 'text'
+        );
+        const content =
+          textBlock && 'text' in textBlock ? textBlock.text.trim() : null;
+
+        if (!content) {
+          return { success: false, error: 'No content in response' };
+        }
+
+        return { success: true, content };
+      } catch (error) {
+        return {
+          success: false,
+          error:
+            error instanceof Error ? error.message : 'Failed to fetch from AI',
+        };
+      }
+    }
+  );
+
+  // AI: Fetch from OpenAI-compatible API using official SDK (bypasses CORS)
+  ipcMain.handle(
+    IPC_CHANNELS.AI_FETCH_OPENAI,
+    async (_event, request: AIFetchOpenAIRequest) => {
+      try {
+        // Create OpenAI client with custom baseURL if provided
+        const client = new OpenAI({
+          apiKey: request.apiKey,
+          baseURL: request.baseUrl,
+        });
+
+        // Use official SDK to make the request
+        const response = await client.chat.completions.create({
+          model: request.model,
+          messages: request.messages.map((m) => ({
+            role: m.role as 'user' | 'assistant' | 'system',
+            content: m.content,
+          })),
+          ...(request.responseFormat && {
+            response_format: request.responseFormat as { type: 'json_object' },
+          }),
+        });
+
+        const content = response.choices[0]?.message?.content?.trim() || null;
+
+        if (!content) {
+          return { success: false, error: 'No content in response' };
+        }
+
+        return { success: true, content };
+      } catch (error) {
+        return {
+          success: false,
+          error:
+            error instanceof Error ? error.message : 'Failed to fetch from AI',
         };
       }
     }

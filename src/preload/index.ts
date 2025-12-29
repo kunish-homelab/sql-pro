@@ -1,4 +1,8 @@
 import type {
+  AIFetchAnthropicRequest,
+  AIFetchAnthropicResponse,
+  AIFetchOpenAIRequest,
+  AIFetchOpenAIResponse,
   AnalyzeQueryPlanRequest,
   AnalyzeQueryPlanResponse,
   ApplyChangesRequest,
@@ -185,6 +189,14 @@ const sqlProAPI = {
       request: SaveAISettingsRequest
     ): Promise<SaveAISettingsResponse> =>
       ipcRenderer.invoke(IPC_CHANNELS.AI_SAVE_SETTINGS, request),
+    fetchAnthropic: (
+      request: AIFetchAnthropicRequest
+    ): Promise<AIFetchAnthropicResponse> =>
+      ipcRenderer.invoke(IPC_CHANNELS.AI_FETCH_ANTHROPIC, request),
+    fetchOpenAI: (
+      request: AIFetchOpenAIRequest
+    ): Promise<AIFetchOpenAIResponse> =>
+      ipcRenderer.invoke(IPC_CHANNELS.AI_FETCH_OPENAI, request),
   },
 };
 

@@ -10,6 +10,9 @@ overrides:
 importers:
   .:
     dependencies:
+      '@anthropic-ai/sdk':
+        specifier: ^0.71.2
+        version: 0.71.2(zod@4.2.1)
       '@electron-toolkit/preload':
         specifier: ^3.0.2
         version: 3.0.2(electron@39.2.7)
@@ -100,15 +103,6 @@ importers:
       '@radix-ui/react-tooltip':
         specifier: ^1.2.8
         version: 1.2.8(@types/react-dom@19.2.3(@types/react@19.2.7))(@types/react@19.2.7)(react-dom@19.2.3(react@19.2.3))(react@19.2.3)
-      '@tanstack/ai':
-        specifier: ^0.2.0
-        version: 0.2.0
-      '@tanstack/ai-anthropic':
-        specifier: ^0.2.0
-        version: 0.2.0(@tanstack/ai@0.2.0)(zod@4.2.1)
-      '@tanstack/ai-openai':
-        specifier: ^0.2.0
-        version: 0.2.0(@tanstack/ai@0.2.0)(ws@8.18.3)(zod@4.2.1)
       '@tanstack/ai-react':
         specifier: ^0.2.0
         version: 0.2.0(@tanstack/ai@0.2.0)(@types/react@19.2.7)(react@19.2.3)
@@ -181,6 +175,9 @@ importers:
       next-themes:
         specifier: ^0.4.6
         version: 0.4.6(react-dom@19.2.3(react@19.2.3))(react@19.2.3)
+      openai:
+        specifier: ^6.15.0
+        version: 6.15.0(ws@8.18.3)(zod@4.2.1)
       react-day-picker:
         specifier: ^9.13.0
         version: 9.13.0(react@19.2.3)
@@ -230,6 +227,9 @@ importers:
       '@tailwindcss/vite':
         specifier: ^4.1.18
         version: 4.1.18(rolldown-vite@7.3.0(@types/node@25.0.3)(esbuild@0.27.2)(jiti@2.6.1)(tsx@4.21.0)(yaml@2.8.2))
+      '@tanstack/react-ai-devtools':
+        specifier: ^0.1.1
+        version: 0.1.1(@types/react@19.2.7)(csstype@3.2.3)(react@19.2.3)(solid-js@1.9.10)
       '@tanstack/react-query-devtools':
         specifier: ^5.91.1
         version: 5.91.1(@tanstack/react-query@5.90.12(react@19.2.3))(react@19.2.3)
@@ -2896,29 +2896,17 @@ packages:
     peerDependencies:
       vite: ^5.2.0 || ^6 || ^7
 
-  '@tanstack/ai-anthropic@0.2.0':
-    resolution:
-      {
-        integrity: sha512-52uwfHGmclhFQx+xOlaNnqLUfh1O1arcAIPlenzFp8infqgG9wVPwtDfvGRlr8zUkYlEKlXsZSpUxRbT21RYuA==,
-      }
-    peerDependencies:
-      '@tanstack/ai': ^0.2.0
-      zod: ^4.0.0
-
   '@tanstack/ai-client@0.2.0':
     resolution:
       {
         integrity: sha512-0XzSBVFEkgdJRAuHM0lT1U0RyuqCaJxxuxurw7tg9ouXt3MzgLtULvw9c7E6YdklurJb9Wt+UqBpeu7/4CbMIQ==,
       }
 
-  '@tanstack/ai-openai@0.2.0':
+  '@tanstack/ai-devtools-core@0.1.1':
     resolution:
       {
-        integrity: sha512-xxDbG2+nqdOXCj4QGiA3y2zxY2DfUw+Hzb7jjUvpWKUiu02atIKFIrmH8ccdjNq1O4K2dh8J9nSK7RP84tSkpQ==,
+        integrity: sha512-xzYNTPivnDtllwgUckQ82aKbwG78BDrk5GmYGA1LrWp2jvd2GNseTSB5fFobxi87z4rpS9aTRTQsFwAYo/W4Bw==,
       }
-    peerDependencies:
-      '@tanstack/ai': ^0.2.0
-      zod: ^4.0.0
 
   '@tanstack/ai-react@0.2.0':
     resolution:
@@ -2983,6 +2971,27 @@ packages:
     peerDependencies:
       solid-js: '>=1.9.7'
 
+  '@tanstack/devtools-utils@0.0.8':
+    resolution:
+      {
+        integrity: sha512-cWoohW9OswidFclwopYRsW0FR3jOoC5iMy0pUHm/31uAnlTb3ViFoZ1VqMf7vZESYdDeee8OjaICS1YbKksDxg==,
+      }
+    engines: { node: '>=18' }
+    peerDependencies:
+      '@types/react': '>=19.0.0'
+      react: '>=19.0.0'
+      solid-js: '>=1.9.7'
+      vue: '>=3.2.0'
+    peerDependenciesMeta:
+      '@types/react':
+        optional: true
+      react:
+        optional: true
+      solid-js:
+        optional: true
+      vue:
+        optional: true
+
   '@tanstack/devtools@0.10.1':
     resolution:
       {
@@ -3026,6 +3035,15 @@ packages:
       {
         integrity: sha512-l8bxjk6BMsCaVQH6NzQEE/bEgFy1hAs5qbgXl0xhzezlaQbPk6Mgz9BqEg2vTLPOHD8N4k+w/gdgCbEzecGyNg==,
       }
+
+  '@tanstack/react-ai-devtools@0.1.1':
+    resolution:
+      {
+        integrity: sha512-YDg2QvW8bf8IOqsT5+u5aSkODixbGJDugO4OSb4t8jBFIPJ7eUJ8Ihuiq7QFwC4s7HppxKHVgZ/6HcaEsR1IOw==,
+      }
+    peerDependencies:
+      '@types/react': ^17.0.0 || ^18.0.0 || ^19.0.0
+      react: ^17.0.0 || ^18.0.0 || ^19.0.0
 
   '@tanstack/react-db@0.1.60':
     resolution:
@@ -11378,23 +11396,22 @@ snapshots:
       tailwindcss: 4.1.18
       vite: rolldown-vite@7.3.0(@types/node@25.0.3)(esbuild@0.27.2)(jiti@2.6.1)(tsx@4.21.0)(yaml@2.8.2)
 
-  '@tanstack/ai-anthropic@0.2.0(@tanstack/ai@0.2.0)(zod@4.2.1)':
-    dependencies:
-      '@anthropic-ai/sdk': 0.71.2(zod@4.2.1)
-      '@tanstack/ai': 0.2.0
-      zod: 4.2.1
-
   '@tanstack/ai-client@0.2.0':
     dependencies:
       '@tanstack/ai': 0.2.0
 
-  '@tanstack/ai-openai@0.2.0(@tanstack/ai@0.2.0)(ws@8.18.3)(zod@4.2.1)':
+  '@tanstack/ai-devtools-core@0.1.1(@types/react@19.2.7)(csstype@3.2.3)(react@19.2.3)':
     dependencies:
       '@tanstack/ai': 0.2.0
-      openai: 6.15.0(ws@8.18.3)(zod@4.2.1)
-      zod: 4.2.1
+      '@tanstack/devtools-ui': 0.4.4(csstype@3.2.3)(solid-js@1.9.10)
+      '@tanstack/devtools-utils': 0.0.8(@types/react@19.2.7)(csstype@3.2.3)(react@19.2.3)(solid-js@1.9.10)
+      goober: 2.1.18(csstype@3.2.3)
+      solid-js: 1.9.10
     transitivePeerDependencies:
-      - ws
+      - '@types/react'
+      - csstype
+      - react
+      - vue
 
   '@tanstack/ai-react@0.2.0(@tanstack/ai@0.2.0)(@types/react@19.2.7)(react@19.2.3)':
     dependencies:
@@ -11442,6 +11459,16 @@ snapshots:
     transitivePeerDependencies:
       - csstype
 
+  '@tanstack/devtools-utils@0.0.8(@types/react@19.2.7)(csstype@3.2.3)(react@19.2.3)(solid-js@1.9.10)':
+    dependencies:
+      '@tanstack/devtools-ui': 0.4.4(csstype@3.2.3)(solid-js@1.9.10)
+    optionalDependencies:
+      '@types/react': 19.2.7
+      react: 19.2.3
+      solid-js: 1.9.10
+    transitivePeerDependencies:
+      - csstype
+
   '@tanstack/devtools@0.10.1(csstype@3.2.3)(solid-js@1.9.10)':
     dependencies:
       '@solid-primitives/event-listener': 2.4.3(solid-js@1.9.10)
@@ -11472,6 +11499,17 @@ snapshots:
       typescript: 5.9.3
 
   '@tanstack/query-devtools@5.91.1': {}
+
+  '@tanstack/react-ai-devtools@0.1.1(@types/react@19.2.7)(csstype@3.2.3)(react@19.2.3)(solid-js@1.9.10)':
+    dependencies:
+      '@tanstack/ai-devtools-core': 0.1.1(@types/react@19.2.7)(csstype@3.2.3)(react@19.2.3)
+      '@tanstack/devtools-utils': 0.0.8(@types/react@19.2.7)(csstype@3.2.3)(react@19.2.3)(solid-js@1.9.10)
+      '@types/react': 19.2.7
+      react: 19.2.3
+    transitivePeerDependencies:
+      - csstype
+      - solid-js
+      - vue
 
   '@tanstack/react-db@0.1.60(react@19.2.3)(typescript@5.9.3)':
     dependencies:

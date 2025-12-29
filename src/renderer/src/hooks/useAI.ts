@@ -1,6 +1,11 @@
 import type { DataInsight, SchemaInfo } from '../../../shared/types';
+import Anthropic from '@anthropic-ai/sdk';
+import OpenAI from 'openai';
 import { useCallback, useState } from 'react';
 import { useAIStore } from '@/stores/ai-store';
+
+// Access the IPC API exposed by preload
+const sqlProAPI = window.sqlPro;
 
 // System prompts for different AI features
 const SYSTEM_PROMPTS = {
@@ -71,6 +76,69 @@ function formatSchemaForAI(schema: SchemaInfo[]): string {
     .join('\n\n');
 }
 
+// Create OpenAI client (only for official API)
+function createOpenAIClient(apiKey: string): OpenAI {
+  return new OpenAI({
+    apiKey,
+    dangerouslyAllowBrowser: true,
+  });
+}
+
+// Create Anthropic client (only for official API)
+function createAnthropicClient(apiKey: string): Anthropic {
+  return new Anthropic({
+    apiKey,
+    dangerouslyAllowBrowser: true,
+  });
+}
+
+// Fetch-based API call for custom endpoints via IPC (bypasses CORS)
+async function fetchOpenAICompatible(
+  baseUrl: string,
+  apiKey: string,
+  model: string,
+  messages: Array<{ role: string; content: string }>,
+  options?: { response_format?: { type: string } }
+): Promise<string | null> {
+  const response = await sqlProAPI.ai.fetchOpenAI({
+    baseUrl,
+    apiKey,
+    model,
+    messages,
+    responseFormat: options?.response_format,
+  });
+
+  if (!response.success) {
+    throw new Error(response.error || 'API error');
+  }
+
+  return response.content || null;
+}
+
+async function fetchAnthropicCompatible(
+  baseUrl: string,
+  apiKey: string,
+  model: string,
+  system: string,
+  messages: Array<{ role: string; content: string }>,
+  maxTokens: number = 1024
+): Promise<string | null> {
+  const response = await sqlProAPI.ai.fetchAnthropic({
+    baseUrl,
+    apiKey,
+    model,
+    system,
+    messages,
+    maxTokens,
+  });
+
+  if (!response.success) {
+    throw new Error(response.error || 'API error');
+  }
+
+  return response.content || null;
+}
+
 interface UseNLToSQLOptions {
   schema: SchemaInfo[];
   onSuccess?: (sql: string) => void;
@@ -78,7 +146,7 @@ interface UseNLToSQLOptions {
 }
 
 export function useNLToSQL({ schema, onSuccess, onError }: UseNLToSQLOptions) {
-  const { apiKey, provider, model, isConfigured } = useAIStore();
+  const { apiKey, provider, model, baseUrl, isConfigured } = useAIStore();
   const [generatedSQL, setGeneratedSQL] = useState<string>('');
   const [isGenerating, setIsGenerating] = useState(false);
   const [error, setError] = useState<string | null>(null);
@@ -99,64 +167,54 @@ export function useNLToSQL({ schema, onSuccess, onError }: UseNLToSQLOptions) {
 
       try {
         const schemaContext = formatSchemaForAI(schema);
+        const userContent = `Database Schema:\n${schemaContext}\n\nUser Request: ${prompt}`;
 
-        // Use fetch directly for streaming since we're in Electron
-        const response = await fetch(
-          provider === 'openai'
-            ? 'https://api.openai.com/v1/chat/completions'
-            : 'https://api.anthropic.com/v1/messages',
-          {
-            method: 'POST',
-            headers: {
-              'Content-Type': 'application/json',
-              ...(provider === 'openai'
-                ? { Authorization: `Bearer ${apiKey}` }
-                : {
-                    'x-api-key': apiKey,
-                    'anthropic-version': '2023-06-01',
-                    'anthropic-dangerous-direct-browser-access': 'true',
-                  }),
-            },
-            body: JSON.stringify(
-              provider === 'openai'
-                ? {
-                    model,
-                    messages: [
-                      { role: 'system', content: SYSTEM_PROMPTS.nlToSql },
-                      {
-                        role: 'user',
-                        content: `Database Schema:\n${schemaContext}\n\nUser Request: ${prompt}`,
-                      },
-                    ],
-                    stream: false,
-                  }
-                : {
-                    model,
-                    max_tokens: 1024,
-                    system: SYSTEM_PROMPTS.nlToSql,
-                    messages: [
-                      {
-                        role: 'user',
-                        content: `Database Schema:\n${schemaContext}\n\nUser Request: ${prompt}`,
-                      },
-                    ],
-                  }
-            ),
+        let sql: string | null = null;
+
+        // Use fetch for custom endpoints to avoid SDK's extra headers causing CORS issues
+        // Use SDK for official APIs for better type safety and features
+        if (provider === 'openai') {
+          if (baseUrl) {
+            sql = await fetchOpenAICompatible(baseUrl, apiKey, model, [
+              { role: 'system', content: SYSTEM_PROMPTS.nlToSql },
+              { role: 'user', content: userContent },
+            ]);
+          } else {
+            const client = createOpenAIClient(apiKey);
+            const response = await client.chat.completions.create({
+              model,
+              messages: [
+                { role: 'system', content: SYSTEM_PROMPTS.nlToSql },
+                { role: 'user', content: userContent },
+              ],
+            });
+            sql = response.choices[0]?.message?.content?.trim() || null;
           }
-        );
-
-        if (!response.ok) {
-          const errorData = await response.json().catch(() => ({}));
-          throw new Error(
-            errorData.error?.message || `API error: ${response.status}`
-          );
+        } else {
+          if (baseUrl) {
+            sql = await fetchAnthropicCompatible(
+              baseUrl,
+              apiKey,
+              model,
+              SYSTEM_PROMPTS.nlToSql,
+              [{ role: 'user', content: userContent }],
+              1024
+            );
+          } else {
+            const client = createAnthropicClient(apiKey);
+            const response = await client.messages.create({
+              model,
+              max_tokens: 1024,
+              system: SYSTEM_PROMPTS.nlToSql,
+              messages: [{ role: 'user', content: userContent }],
+            });
+            const textBlock = response.content.find(
+              (block) => block.type === 'text'
+            );
+            sql =
+              textBlock && 'text' in textBlock ? textBlock.text.trim() : null;
+          }
         }
-
-        const data = await response.json();
-        const sql =
-          provider === 'openai'
-            ? data.choices?.[0]?.message?.content?.trim()
-            : data.content?.[0]?.text?.trim();
 
         if (sql) {
           // Clean up the SQL (remove markdown code blocks if present)
@@ -181,7 +239,7 @@ export function useNLToSQL({ schema, onSuccess, onError }: UseNLToSQLOptions) {
         setIsGenerating(false);
       }
     },
-    [apiKey, provider, model, schema, isConfigured, onSuccess, onError]
+    [apiKey, provider, model, baseUrl, schema, isConfigured, onSuccess, onError]
   );
 
   return {
@@ -208,7 +266,7 @@ export function useQueryOptimizer({
   onSuccess,
   onError,
 }: UseQueryOptimizerOptions) {
-  const { apiKey, provider, model, isConfigured } = useAIStore();
+  const { apiKey, provider, model, baseUrl, isConfigured } = useAIStore();
   const [isOptimizing, setIsOptimizing] = useState(false);
   const [error, setError] = useState<string | null>(null);
   const [result, setResult] = useState<{
@@ -234,63 +292,71 @@ export function useQueryOptimizer({
       try {
         const schemaContext = formatSchemaForAI(schema);
         const planContext = queryPlan ? `\n\nQuery Plan:\n${queryPlan}` : '';
+        const userContent = `Database Schema:\n${schemaContext}${planContext}\n\nQuery to optimize:\n${query}`;
 
-        const response = await fetch(
-          provider === 'openai'
-            ? 'https://api.openai.com/v1/chat/completions'
-            : 'https://api.anthropic.com/v1/messages',
-          {
-            method: 'POST',
-            headers: {
-              'Content-Type': 'application/json',
-              ...(provider === 'openai'
-                ? { Authorization: `Bearer ${apiKey}` }
-                : {
-                    'x-api-key': apiKey,
-                    'anthropic-version': '2023-06-01',
-                    'anthropic-dangerous-direct-browser-access': 'true',
-                  }),
-            },
-            body: JSON.stringify(
-              provider === 'openai'
-                ? {
-                    model,
-                    messages: [
-                      { role: 'system', content: SYSTEM_PROMPTS.queryOptimize },
-                      {
-                        role: 'user',
-                        content: `Database Schema:\n${schemaContext}${planContext}\n\nQuery to optimize:\n${query}`,
-                      },
-                    ],
-                    response_format: { type: 'json_object' },
-                  }
-                : {
-                    model,
-                    max_tokens: 2048,
-                    system: SYSTEM_PROMPTS.queryOptimize,
-                    messages: [
-                      {
-                        role: 'user',
-                        content: `Database Schema:\n${schemaContext}${planContext}\n\nQuery to optimize:\n${query}\n\nRespond with a JSON object.`,
-                      },
-                    ],
-                  }
-            ),
+        let content: string | null = null;
+
+        // Use fetch for custom endpoints to avoid SDK's extra headers causing CORS issues
+        // Use SDK for official APIs for better type safety and features
+        if (provider === 'openai') {
+          if (baseUrl) {
+            content = await fetchOpenAICompatible(
+              baseUrl,
+              apiKey,
+              model,
+              [
+                { role: 'system', content: SYSTEM_PROMPTS.queryOptimize },
+                { role: 'user', content: userContent },
+              ],
+              { response_format: { type: 'json_object' } }
+            );
+          } else {
+            const client = createOpenAIClient(apiKey);
+            const response = await client.chat.completions.create({
+              model,
+              messages: [
+                { role: 'system', content: SYSTEM_PROMPTS.queryOptimize },
+                { role: 'user', content: userContent },
+              ],
+              response_format: { type: 'json_object' },
+            });
+            content = response.choices[0]?.message?.content || null;
           }
-        );
-
-        if (!response.ok) {
-          const errorData = await response.json().catch(() => ({}));
-          throw new Error(
-            errorData.error?.message || `API error: ${response.status}`
-          );
+        } else {
+          if (baseUrl) {
+            content = await fetchAnthropicCompatible(
+              baseUrl,
+              apiKey,
+              model,
+              SYSTEM_PROMPTS.queryOptimize,
+              [
+                {
+                  role: 'user',
+                  content: `${userContent}\n\nRespond with a JSON object.`,
+                },
+              ],
+              2048
+            );
+          } else {
+            const client = createAnthropicClient(apiKey);
+            const response = await client.messages.create({
+              model,
+              max_tokens: 2048,
+              system: SYSTEM_PROMPTS.queryOptimize,
+              messages: [
+                {
+                  role: 'user',
+                  content: `${userContent}\n\nRespond with a JSON object.`,
+                },
+              ],
+            });
+            const textBlock = response.content.find(
+              (block) => block.type === 'text'
+            );
+            content =
+              textBlock && 'text' in textBlock ? textBlock.text.trim() : null;
+          }
         }
-
-        const data = await response.json();
-        const content =
-          provider === 'openai'
-            ? data.choices?.[0]?.message?.content
-            : data.content?.[0]?.text;
 
         if (content) {
           const parsed = JSON.parse(content);
@@ -315,7 +381,7 @@ export function useQueryOptimizer({
         setIsOptimizing(false);
       }
     },
-    [apiKey, provider, model, schema, isConfigured, onSuccess, onError]
+    [apiKey, provider, model, baseUrl, schema, isConfigured, onSuccess, onError]
   );
 
   return {
@@ -336,7 +402,7 @@ export function useDataAnalysis({
   onSuccess,
   onError,
 }: UseDataAnalysisOptions = {}) {
-  const { apiKey, provider, model, isConfigured } = useAIStore();
+  const { apiKey, provider, model, baseUrl, isConfigured } = useAIStore();
   const [isAnalyzing, setIsAnalyzing] = useState(false);
   const [error, setError] = useState<string | null>(null);
   const [insights, setInsights] = useState<DataInsight[]>([]);
@@ -366,59 +432,69 @@ export function useDataAnalysis({
       try {
         const dataContext = `Columns: ${columns.map((c) => `${c.name} (${c.type})`).join(', ')}\n\nSample Data (${sampleRows.length} of ${rows.length} rows):\n${JSON.stringify(sampleRows.slice(0, 20), null, 2)}`;
 
-        const response = await fetch(
-          provider === 'openai'
-            ? 'https://api.openai.com/v1/chat/completions'
-            : 'https://api.anthropic.com/v1/messages',
-          {
-            method: 'POST',
-            headers: {
-              'Content-Type': 'application/json',
-              ...(provider === 'openai'
-                ? { Authorization: `Bearer ${apiKey}` }
-                : {
-                    'x-api-key': apiKey,
-                    'anthropic-version': '2023-06-01',
-                    'anthropic-dangerous-direct-browser-access': 'true',
-                  }),
-            },
-            body: JSON.stringify(
-              provider === 'openai'
-                ? {
-                    model,
-                    messages: [
-                      { role: 'system', content: SYSTEM_PROMPTS.dataAnalysis },
-                      { role: 'user', content: dataContext },
-                    ],
-                    response_format: { type: 'json_object' },
-                  }
-                : {
-                    model,
-                    max_tokens: 2048,
-                    system: SYSTEM_PROMPTS.dataAnalysis,
-                    messages: [
-                      {
-                        role: 'user',
-                        content: `${dataContext}\n\nRespond with a JSON object.`,
-                      },
-                    ],
-                  }
-            ),
+        let content: string | null = null;
+
+        // Use fetch for custom endpoints to avoid SDK's extra headers causing CORS issues
+        // Use SDK for official APIs for better type safety and features
+        if (provider === 'openai') {
+          if (baseUrl) {
+            content = await fetchOpenAICompatible(
+              baseUrl,
+              apiKey,
+              model,
+              [
+                { role: 'system', content: SYSTEM_PROMPTS.dataAnalysis },
+                { role: 'user', content: dataContext },
+              ],
+              { response_format: { type: 'json_object' } }
+            );
+          } else {
+            const client = createOpenAIClient(apiKey);
+            const response = await client.chat.completions.create({
+              model,
+              messages: [
+                { role: 'system', content: SYSTEM_PROMPTS.dataAnalysis },
+                { role: 'user', content: dataContext },
+              ],
+              response_format: { type: 'json_object' },
+            });
+            content = response.choices[0]?.message?.content || null;
           }
-        );
-
-        if (!response.ok) {
-          const errorData = await response.json().catch(() => ({}));
-          throw new Error(
-            errorData.error?.message || `API error: ${response.status}`
-          );
+        } else {
+          if (baseUrl) {
+            content = await fetchAnthropicCompatible(
+              baseUrl,
+              apiKey,
+              model,
+              SYSTEM_PROMPTS.dataAnalysis,
+              [
+                {
+                  role: 'user',
+                  content: `${dataContext}\n\nRespond with a JSON object.`,
+                },
+              ],
+              2048
+            );
+          } else {
+            const client = createAnthropicClient(apiKey);
+            const response = await client.messages.create({
+              model,
+              max_tokens: 2048,
+              system: SYSTEM_PROMPTS.dataAnalysis,
+              messages: [
+                {
+                  role: 'user',
+                  content: `${dataContext}\n\nRespond with a JSON object.`,
+                },
+              ],
+            });
+            const textBlock = response.content.find(
+              (block) => block.type === 'text'
+            );
+            content =
+              textBlock && 'text' in textBlock ? textBlock.text.trim() : null;
+          }
         }
-
-        const data = await response.json();
-        const content =
-          provider === 'openai'
-            ? data.choices?.[0]?.message?.content
-            : data.content?.[0]?.text;
 
         if (content) {
           const parsed = JSON.parse(content);
@@ -442,7 +518,7 @@ export function useDataAnalysis({
         setIsAnalyzing(false);
       }
     },
-    [apiKey, provider, model, isConfigured, onSuccess, onError]
+    [apiKey, provider, model, baseUrl, isConfigured, onSuccess, onError]
   );
 
   return {

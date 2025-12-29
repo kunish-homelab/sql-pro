@@ -1,4 +1,5 @@
 import type {
+  AISettings,
   AnalyzeQueryPlanRequest,
   AnalyzeQueryPlanResponse,
   ApplyChangesRequest,
@@ -13,6 +14,7 @@ import type {
   ExecuteQueryResponse,
   ExportRequest,
   ExportResponse,
+  GetAISettingsResponse,
   GetPasswordRequest,
   GetPasswordResponse,
   GetPreferencesResponse,
@@ -35,6 +37,8 @@ import type {
   RemoveConnectionResponse,
   RemovePasswordRequest,
   RemovePasswordResponse,
+  SaveAISettingsRequest,
+  SaveAISettingsResponse,
   SaveFileDialogRequest,
   SaveFileDialogResponse,
   SavePasswordRequest,
@@ -916,6 +920,24 @@ export const mockSqlProAPI = {
     clear: async (
       _request: ClearQueryHistoryRequest
     ): Promise<ClearQueryHistoryResponse> => {
+      return { success: true };
+    },
+  },
+
+  ai: {
+    getSettings: async (): Promise<GetAISettingsResponse> => {
+      // Return mock AI settings
+      const mockSettings: AISettings = {
+        provider: 'openai',
+        apiKey: '',
+        model: 'gpt-4o',
+        baseUrl: '',
+      };
+      return { success: true, settings: mockSettings };
+    },
+    saveSettings: async (
+      _request: SaveAISettingsRequest
+    ): Promise<SaveAISettingsResponse> => {
       return { success: true };
     },
   },

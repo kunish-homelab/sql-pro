@@ -34,6 +34,7 @@ export function AISettingsDialog({
     provider,
     apiKey,
     model,
+    baseUrl,
     isLoading,
     isSaving,
     loadSettings,
@@ -44,6 +45,7 @@ export function AISettingsDialog({
   const [localApiKey, setLocalApiKey] = useState(apiKey);
   const [localProvider, setLocalProvider] = useState<AIProvider>(provider);
   const [localModel, setLocalModel] = useState(model);
+  const [localBaseUrl, setLocalBaseUrl] = useState(baseUrl);
 
   // Load settings when dialog opens
   useEffect(() => {
@@ -57,12 +59,15 @@ export function AISettingsDialog({
     setLocalApiKey(apiKey);
     setLocalProvider(provider);
     setLocalModel(model);
-  }, [apiKey, provider, model]);
+    setLocalBaseUrl(baseUrl);
+  }, [apiKey, provider, model, baseUrl]);
 
   const handleProviderChange = (newProvider: AIProvider) => {
     setLocalProvider(newProvider);
     // Reset to first model of new provider
     setLocalModel(DEFAULT_MODELS[newProvider][0]);
+    // Reset base URL when switching providers
+    setLocalBaseUrl('');
   };
 
   const handleSave = async () => {
@@ -70,6 +75,7 @@ export function AISettingsDialog({
       provider: localProvider,
       apiKey: localApiKey,
       model: localModel,
+      baseUrl: localBaseUrl,
     });
     if (success) {
       onOpenChange(false);
@@ -81,6 +87,7 @@ export function AISettingsDialog({
     setLocalApiKey(apiKey);
     setLocalProvider(provider);
     setLocalModel(model);
+    setLocalBaseUrl(baseUrl);
     onOpenChange(false);
   };
 
@@ -154,6 +161,26 @@ export function AISettingsDialog({
               </div>
               <p className="text-muted-foreground text-xs">
                 Your API key is stored securely and never shared.
+              </p>
+            </div>
+
+            {/* Base URL Input */}
+            <div className="grid gap-2">
+              <Label htmlFor="baseUrl">Base URL (Optional)</Label>
+              <Input
+                id="baseUrl"
+                type="text"
+                value={localBaseUrl}
+                onChange={(e) => setLocalBaseUrl(e.target.value)}
+                placeholder={
+                  localProvider === 'openai'
+                    ? 'https://api.openai.com/v1'
+                    : 'https://api.anthropic.com'
+                }
+              />
+              <p className="text-muted-foreground text-xs">
+                Custom API base URL. Leave empty to use the official{' '}
+                {localProvider === 'openai' ? 'OpenAI' : 'Anthropic'} API.
               </p>
             </div>
 

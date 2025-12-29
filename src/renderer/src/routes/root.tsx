@@ -1,3 +1,4 @@
+import { aiDevtoolsPlugin } from '@tanstack/react-ai-devtools';
 import { TanStackDevtools } from '@tanstack/react-devtools';
 import { ReactQueryDevtoolsPanel } from '@tanstack/react-query-devtools';
 import { Outlet } from '@tanstack/react-router';
@@ -58,6 +59,7 @@ export function RootLayout() {
       {import.meta.env.DEV && !isMockMode() && (
         <TanStackDevtools
           plugins={[
+            aiDevtoolsPlugin(),
             {
               name: 'TanStack Query',
               render: <ReactQueryDevtoolsPanel />,

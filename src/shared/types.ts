@@ -495,6 +495,8 @@ export const IPC_CHANNELS = {
   // AI operations
   AI_GET_SETTINGS: 'ai:getSettings',
   AI_SAVE_SETTINGS: 'ai:saveSettings',
+  AI_FETCH_ANTHROPIC: 'ai:fetchAnthropic',
+  AI_FETCH_OPENAI: 'ai:fetchOpenAI',
 } as const;
 
 // Menu action types
@@ -513,10 +515,18 @@ export type MenuAction =
 
 export type AIProvider = 'openai' | 'anthropic';
 
+/** Default API endpoints for AI providers */
+export const DEFAULT_AI_BASE_URLS: Record<AIProvider, string> = {
+  openai: 'https://api.openai.com/v1',
+  anthropic: 'https://api.anthropic.com',
+};
+
 export interface AISettings {
   provider: AIProvider;
   apiKey: string;
   model: string;
+  /** Custom base URL for API calls (optional, uses default if empty) */
+  baseUrl?: string;
 }
 
 export interface SaveAISettingsRequest {
@@ -582,5 +592,35 @@ export interface AnalyzeDataResponse {
   success: boolean;
   insights?: DataInsight[];
   summary?: string;
+  error?: string;
+}
+
+// AI Fetch Request/Response types (for IPC-based API calls)
+export interface AIFetchAnthropicRequest {
+  baseUrl: string;
+  apiKey: string;
+  model: string;
+  system: string;
+  messages: Array<{ role: string; content: string }>;
+  maxTokens?: number;
+}
+
+export interface AIFetchAnthropicResponse {
+  success: boolean;
+  content?: string;
+  error?: string;
+}
+
+export interface AIFetchOpenAIRequest {
+  baseUrl: string;
+  apiKey: string;
+  model: string;
+  messages: Array<{ role: string; content: string }>;
+  responseFormat?: { type: string };
+}
+
+export interface AIFetchOpenAIResponse {
+  success: boolean;
+  content?: string;
   error?: string;
 }
