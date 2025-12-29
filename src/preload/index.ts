@@ -13,6 +13,7 @@ import type {
   ExecuteQueryResponse,
   ExportRequest,
   ExportResponse,
+  GetAISettingsResponse,
   GetPasswordRequest,
   GetPasswordResponse,
   GetPreferencesResponse,
@@ -35,6 +36,8 @@ import type {
   RemoveConnectionResponse,
   RemovePasswordRequest,
   RemovePasswordResponse,
+  SaveAISettingsRequest,
+  SaveAISettingsResponse,
   SaveFileDialogRequest,
   SaveFileDialogResponse,
   SavePasswordRequest,
@@ -172,6 +175,16 @@ const sqlProAPI = {
       ipcRenderer.on(IPC_CHANNELS.MENU_ACTION, handler);
       return () => ipcRenderer.off(IPC_CHANNELS.MENU_ACTION, handler);
     },
+  },
+
+  // AI operations
+  ai: {
+    getSettings: (): Promise<GetAISettingsResponse> =>
+      ipcRenderer.invoke(IPC_CHANNELS.AI_GET_SETTINGS),
+    saveSettings: (
+      request: SaveAISettingsRequest
+    ): Promise<SaveAISettingsResponse> =>
+      ipcRenderer.invoke(IPC_CHANNELS.AI_SAVE_SETTINGS, request),
   },
 };
 

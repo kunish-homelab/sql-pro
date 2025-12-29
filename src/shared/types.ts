@@ -491,6 +491,10 @@ export const IPC_CHANNELS = {
 
   // Menu actions (main -> renderer)
   MENU_ACTION: 'menu:action',
+
+  // AI operations
+  AI_GET_SETTINGS: 'ai:getSettings',
+  AI_SAVE_SETTINGS: 'ai:saveSettings',
 } as const;
 
 // Menu action types
@@ -504,3 +508,79 @@ export type MenuAction =
   | 'switch-to-query'
   | 'execute-query'
   | 'toggle-history';
+
+// ============ AI Types ============
+
+export type AIProvider = 'openai' | 'anthropic';
+
+export interface AISettings {
+  provider: AIProvider;
+  apiKey: string;
+  model: string;
+}
+
+export interface SaveAISettingsRequest {
+  settings: AISettings;
+}
+
+export interface SaveAISettingsResponse {
+  success: boolean;
+  error?: string;
+}
+
+export interface GetAISettingsResponse {
+  success: boolean;
+  settings?: AISettings;
+  error?: string;
+}
+
+export interface NLToSQLRequest {
+  prompt: string;
+  schema: SchemaInfo[];
+  context?: {
+    currentTable?: string;
+    recentQueries?: string[];
+  };
+}
+
+export interface NLToSQLResponse {
+  success: boolean;
+  sql?: string;
+  explanation?: string;
+  error?: string;
+}
+
+export interface OptimizeQueryRequest {
+  query: string;
+  schema: SchemaInfo[];
+  queryPlan?: QueryPlanNode[];
+}
+
+export interface OptimizeQueryResponse {
+  success: boolean;
+  optimizedQuery?: string;
+  suggestions?: string[];
+  explanation?: string;
+  error?: string;
+}
+
+export interface AnalyzeDataRequest {
+  columns: ColumnInfo[];
+  rows: Record<string, unknown>[];
+  analysisType: 'anomaly' | 'suggestions' | 'patterns';
+}
+
+export interface DataInsight {
+  type: 'anomaly' | 'suggestion' | 'pattern';
+  column?: string;
+  message: string;
+  severity: 'info' | 'warning' | 'error';
+  details?: Record<string, unknown>;
+}
+
+export interface AnalyzeDataResponse {
+  success: boolean;
+  insights?: DataInsight[];
+  summary?: string;
+  error?: string;
+}

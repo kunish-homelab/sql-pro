@@ -100,6 +100,18 @@ importers:
       '@radix-ui/react-tooltip':
         specifier: ^1.2.8
         version: 1.2.8(@types/react-dom@19.2.3(@types/react@19.2.7))(@types/react@19.2.7)(react-dom@19.2.3(react@19.2.3))(react@19.2.3)
+      '@tanstack/ai':
+        specifier: ^0.2.0
+        version: 0.2.0
+      '@tanstack/ai-anthropic':
+        specifier: ^0.2.0
+        version: 0.2.0(@tanstack/ai@0.2.0)(zod@4.2.1)
+      '@tanstack/ai-openai':
+        specifier: ^0.2.0
+        version: 0.2.0(@tanstack/ai@0.2.0)(ws@8.18.3)(zod@4.2.1)
+      '@tanstack/ai-react':
+        specifier: ^0.2.0
+        version: 0.2.0(@tanstack/ai@0.2.0)(@types/react@19.2.7)(react@19.2.3)
       '@tanstack/db':
         specifier: ^0.5.16
         version: 0.5.16(typescript@5.9.3)
@@ -388,6 +400,18 @@ packages:
       {
         integrity: sha512-MGQsmw10ZyI+EJo45CdSER4zEb+p31LpDAFp2Z3gkSd1yqVZGi0Ebx++YTEMonJy4oChEMLsxZ64j8FH6sSqtQ==,
       }
+
+  '@anthropic-ai/sdk@0.71.2':
+    resolution:
+      {
+        integrity: sha512-TGNDEUuEstk/DKu0/TflXAEt+p+p/WhTlFzEnoosvbaDU2LTjm42igSdlL0VijrKpWejtOKxX0b8A7uc+XiSAQ==,
+      }
+    hasBin: true
+    peerDependencies:
+      zod: ^3.25.0 || ^4.0.0
+    peerDependenciesMeta:
+      zod:
+        optional: true
 
   '@babel/code-frame@7.27.1':
     resolution:
@@ -2871,6 +2895,47 @@ packages:
       }
     peerDependencies:
       vite: ^5.2.0 || ^6 || ^7
+
+  '@tanstack/ai-anthropic@0.2.0':
+    resolution:
+      {
+        integrity: sha512-52uwfHGmclhFQx+xOlaNnqLUfh1O1arcAIPlenzFp8infqgG9wVPwtDfvGRlr8zUkYlEKlXsZSpUxRbT21RYuA==,
+      }
+    peerDependencies:
+      '@tanstack/ai': ^0.2.0
+      zod: ^4.0.0
+
+  '@tanstack/ai-client@0.2.0':
+    resolution:
+      {
+        integrity: sha512-0XzSBVFEkgdJRAuHM0lT1U0RyuqCaJxxuxurw7tg9ouXt3MzgLtULvw9c7E6YdklurJb9Wt+UqBpeu7/4CbMIQ==,
+      }
+
+  '@tanstack/ai-openai@0.2.0':
+    resolution:
+      {
+        integrity: sha512-xxDbG2+nqdOXCj4QGiA3y2zxY2DfUw+Hzb7jjUvpWKUiu02atIKFIrmH8ccdjNq1O4K2dh8J9nSK7RP84tSkpQ==,
+      }
+    peerDependencies:
+      '@tanstack/ai': ^0.2.0
+      zod: ^4.0.0
+
+  '@tanstack/ai-react@0.2.0':
+    resolution:
+      {
+        integrity: sha512-tdwYN3/jIodP1louWsDBNzgbHqHchcUPO3RKVKqexM8Iy4xqyHpCrdCzJzXk9lCO6TpUlWvvk04Bq1GyMHC8nA==,
+      }
+    peerDependencies:
+      '@tanstack/ai': ^0.2.0
+      '@types/react': '>=18.0.0'
+      react: '>=18.0.0'
+
+  '@tanstack/ai@0.2.0':
+    resolution:
+      {
+        integrity: sha512-liGeP7pa7YsgDbUQZOSBHSunWXTQ9FdzDeBGFnDXt9iXF8Fa/GyYu+x2w8IwjK9aWaKLd4CNpULRbzwHP5SzYA==,
+      }
+    engines: { node: '>=18' }
 
   '@tanstack/db-ivm@0.1.14':
     resolution:
@@ -6468,6 +6533,13 @@ packages:
         integrity: sha512-xyFwyhro/JEof6Ghe2iz2NcXoj2sloNsWr/XsERDK/oiPCfaNhl5ONfp+jQdAZRQQ0IJWNzH9zIZF7li91kh2w==,
       }
 
+  json-schema-to-ts@3.1.1:
+    resolution:
+      {
+        integrity: sha512-+DWg8jCJG2TEnpy7kOm/7/AxaYoaRbjVB4LFZLySZlWn8exGs3A4OLJR966cVvU26N7X9TWxl+Jsw7dzAqKT6g==,
+      }
+    engines: { node: '>=16' }
+
   json-schema-traverse@0.4.1:
     resolution:
       {
@@ -7577,6 +7649,21 @@ packages:
       }
     engines: { node: '>=18' }
 
+  openai@6.15.0:
+    resolution:
+      {
+        integrity: sha512-F1Lvs5BoVvmZtzkUEVyh8mDQPPFolq4F+xdsx/DO8Hee8YF3IGAlZqUIsF+DVGhqf4aU0a3bTghsxB6OIsRy1g==,
+      }
+    hasBin: true
+    peerDependencies:
+      ws: ^8.18.0
+      zod: ^3.25 || ^4.0
+    peerDependenciesMeta:
+      ws:
+        optional: true
+      zod:
+        optional: true
+
   optionator@0.9.4:
     resolution:
       {
@@ -7683,6 +7770,12 @@ packages:
     resolution:
       {
         integrity: sha512-HlsyYdMBnbPQ9Jr/VgJ1YF4scnldvJpJxCVx6KgqPL4dxppsWrJHCIIxQXMJrqGnsRkNPATbeMJ8Yxu7JMsYcA==,
+      }
+
+  partial-json@0.1.7:
+    resolution:
+      {
+        integrity: sha512-Njv/59hHaokb/hRUjce3Hdv12wd60MtM9Z5Olmn+nehe0QDAsRtRbJPvJ0Z91TusF0SuZRIvnM+S4l6EIP8leA==,
       }
 
   path-exists@4.0.0:
@@ -8950,6 +9043,12 @@ packages:
         integrity: sha512-95Pu1QXQvruGEhv62XCMO3Mm90GscOCClvrIUwCM0PYOXK3kaF3l3sIHxx71ThJfcbM2O5Au6SO3AWCSEfW4mQ==,
       }
 
+  ts-algebra@2.0.0:
+    resolution:
+      {
+        integrity: sha512-FPAhNPFMrkwz76P7cdjdmiShwMynZYN6SgOujD1urY4oNm80Ou9oMdmbR45LotcKOXoy7wSmHkRFE6Mxbrhefw==,
+      }
+
   ts-api-utils@2.1.0:
     resolution:
       {
@@ -9542,6 +9641,12 @@ snapshots:
     dependencies:
       package-manager-detector: 1.6.0
       tinyexec: 1.0.2
+
+  '@anthropic-ai/sdk@0.71.2(zod@4.2.1)':
+    dependencies:
+      json-schema-to-ts: 3.1.1
+    optionalDependencies:
+      zod: 4.2.1
 
   '@babel/code-frame@7.27.1':
     dependencies:
@@ -11272,6 +11377,36 @@ snapshots:
       '@tailwindcss/oxide': 4.1.18
       tailwindcss: 4.1.18
       vite: rolldown-vite@7.3.0(@types/node@25.0.3)(esbuild@0.27.2)(jiti@2.6.1)(tsx@4.21.0)(yaml@2.8.2)
+
+  '@tanstack/ai-anthropic@0.2.0(@tanstack/ai@0.2.0)(zod@4.2.1)':
+    dependencies:
+      '@anthropic-ai/sdk': 0.71.2(zod@4.2.1)
+      '@tanstack/ai': 0.2.0
+      zod: 4.2.1
+
+  '@tanstack/ai-client@0.2.0':
+    dependencies:
+      '@tanstack/ai': 0.2.0
+
+  '@tanstack/ai-openai@0.2.0(@tanstack/ai@0.2.0)(ws@8.18.3)(zod@4.2.1)':
+    dependencies:
+      '@tanstack/ai': 0.2.0
+      openai: 6.15.0(ws@8.18.3)(zod@4.2.1)
+      zod: 4.2.1
+    transitivePeerDependencies:
+      - ws
+
+  '@tanstack/ai-react@0.2.0(@tanstack/ai@0.2.0)(@types/react@19.2.7)(react@19.2.3)':
+    dependencies:
+      '@tanstack/ai': 0.2.0
+      '@tanstack/ai-client': 0.2.0
+      '@types/react': 19.2.7
+      react: 19.2.3
+
+  '@tanstack/ai@0.2.0':
+    dependencies:
+      '@tanstack/devtools-event-client': 0.4.0
+      partial-json: 0.1.7
 
   '@tanstack/db-ivm@0.1.14(typescript@5.9.3)':
     dependencies:
@@ -13796,6 +13931,11 @@ snapshots:
 
   json-parse-even-better-errors@2.3.1: {}
 
+  json-schema-to-ts@3.1.1:
+    dependencies:
+      '@babel/runtime': 7.28.4
+      ts-algebra: 2.0.0
+
   json-schema-traverse@0.4.1: {}
 
   json-schema-traverse@1.0.0: {}
@@ -14572,6 +14712,11 @@ snapshots:
     dependencies:
       mimic-function: 5.0.1
 
+  openai@6.15.0(ws@8.18.3)(zod@4.2.1):
+    optionalDependencies:
+      ws: 8.18.3
+      zod: 4.2.1
+
   optionator@0.9.4:
     dependencies:
       deep-is: 0.1.4
@@ -14639,6 +14784,8 @@ snapshots:
       lines-and-columns: 1.2.4
 
   parse-statements@1.0.11: {}
+
+  partial-json@0.1.7: {}
 
   path-exists@4.0.0: {}
 
@@ -15325,6 +15472,8 @@ snapshots:
   truncate-utf8-bytes@1.0.2:
     dependencies:
       utf8-byte-length: 1.0.5
+
+  ts-algebra@2.0.0: {}
 
   ts-api-utils@2.1.0(typescript@5.9.3):
     dependencies:

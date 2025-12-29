@@ -1,12 +1,16 @@
 import {
   AlertCircle,
+  BarChart3,
   Clock,
   Code,
   History,
   Loader2,
   Play,
   Search,
+  Settings2,
+  Sparkles,
   Trash2,
+  Wand2,
   X,
   Zap,
 } from 'lucide-react';
@@ -18,6 +22,11 @@ import React, {
   useState,
 } from 'react';
 import { createPortal } from 'react-dom';
+import {
+  AISettingsDialog,
+  DataAnalysisPanel,
+  NLToSQLDialog,
+} from '@/components/ai';
 import { Button } from '@/components/ui/button';
 import {
   Dialog,
@@ -27,6 +36,13 @@ import {
   DialogHeader,
   DialogTitle,
 } from '@/components/ui/dialog';
+import {
+  DropdownMenu,
+  DropdownMenuContent,
+  DropdownMenuItem,
+  DropdownMenuSeparator,
+  DropdownMenuTrigger,
+} from '@/components/ui/dropdown-menu';
 import { Input } from '@/components/ui/input';
 import {
   ResizableHandle,
@@ -37,7 +53,12 @@ import { ScrollArea } from '@/components/ui/scroll-area';
 import { sqlPro } from '@/lib/api';
 import { generateSuggestions } from '@/lib/query-plan-analyzer';
 import { cn } from '@/lib/utils';
-import { useConnectionStore, useQueryStore, useQueryTabsStore } from '@/stores';
+import {
+  useAIStore,
+  useConnectionStore,
+  useQueryStore,
+  useQueryTabsStore,
+} from '@/stores';
 import { QueryOptimizerPanel } from './data-tools/QueryOptimizerPanel';
 import { MonacoSqlEditor } from './MonacoSqlEditor';
 import { QueryPane } from './query-editor/QueryPane';
@@ -98,7 +119,13 @@ export function QueryEditor() {
   const [showClearConfirm, setShowClearConfirm] = useState(false);
   const [showTemplates, setShowTemplates] = useState(false);
   const [showOptimizer, setShowOptimizer] = useState(false);
+  const [showNLToSQL, setShowNLToSQL] = useState(false);
+  const [showDataAnalysis, setShowDataAnalysis] = useState(false);
+  const [showAISettings, setShowAISettings] = useState(false);
   const containerRef = useRef<HTMLDivElement>(null);
+
+  // AI store
+  const { isConfigured: isAIConfigured } = useAIStore();
 
   // Check if in split view mode
   const isSplitView = isSplit();
@@ -284,6 +311,41 @@ export function QueryEditor() {
           </span>
         </div>
         <div className="flex items-center gap-2">
+          {/* AI Features Dropdown */}
+          <DropdownMenu>
+            <DropdownMenuTrigger asChild>
+              <Button variant="ghost" size="sm" className="gap-1">
+                <Sparkles className="h-4 w-4" />
+                AI
+                {!isAIConfigured && (
+                  <span className="bg-warning ml-1 h-1.5 w-1.5 rounded-full" />
+                )}
+              </Button>
+            </DropdownMenuTrigger>
+            <DropdownMenuContent align="end">
+              <DropdownMenuItem onClick={() => setShowNLToSQL(true)}>
+                <Wand2 className="mr-2 h-4 w-4" />
+                Natural Language to SQL
+              </DropdownMenuItem>
+              <DropdownMenuItem
+                onClick={() => setShowDataAnalysis(true)}
+                disabled={!tabResults}
+              >
+                <BarChart3 className="mr-2 h-4 w-4" />
+                Analyze Results
+              </DropdownMenuItem>
+              <DropdownMenuSeparator />
+              <DropdownMenuItem onClick={() => setShowAISettings(true)}>
+                <Settings2 className="mr-2 h-4 w-4" />
+                AI Settings
+                {!isAIConfigured && (
+                  <span className="text-warning ml-auto text-xs">
+                    Not configured
+                  </span>
+                )}
+              </DropdownMenuItem>
+            </DropdownMenuContent>
+          </DropdownMenu>
           <Button
             variant="ghost"
             size="sm"
@@ -557,6 +619,36 @@ export function QueryEditor() {
         onOpenChange={setShowOptimizer}
         query={tabQuery}
         onAnalyze={handleAnalyze}
+      />
+
+      {/* AI: Natural Language to SQL Dialog */}
+      <NLToSQLDialog
+        open={showNLToSQL}
+        onOpenChange={setShowNLToSQL}
+        schema={schema?.schemas ?? []}
+        onSQLGenerated={handleQueryChange}
+      />
+
+      {/* AI: Data Analysis Panel */}
+      <DataAnalysisPanel
+        open={showDataAnalysis}
+        onOpenChange={setShowDataAnalysis}
+        columns={
+          tabResults?.columns?.map((c) => ({
+            name: c,
+            type: 'unknown',
+            nullable: true,
+            defaultValue: null,
+            isPrimaryKey: false,
+          })) ?? []
+        }
+        rows={tabResults?.rows ?? []}
+      />
+
+      {/* AI: Settings Dialog */}
+      <AISettingsDialog
+        open={showAISettings}
+        onOpenChange={setShowAISettings}
       />
     </div>
   );

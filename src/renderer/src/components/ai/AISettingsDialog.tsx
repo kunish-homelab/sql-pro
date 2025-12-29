@@ -1,0 +1,197 @@
+import type { AIProvider } from '../../../../shared/types';
+import { Eye, EyeOff, Loader2, Sparkles } from 'lucide-react';
+import { useEffect, useState } from 'react';
+import { Button } from '@/components/ui/button';
+import {
+  Dialog,
+  DialogContent,
+  DialogDescription,
+  DialogFooter,
+  DialogHeader,
+  DialogTitle,
+} from '@/components/ui/dialog';
+import { Input } from '@/components/ui/input';
+import { Label } from '@/components/ui/label';
+import {
+  Select,
+  SelectContent,
+  SelectItem,
+  SelectTrigger,
+  SelectValue,
+} from '@/components/ui/select';
+import { DEFAULT_MODELS, useAIStore } from '@/stores';
+
+interface AISettingsDialogProps {
+  open: boolean;
+  onOpenChange: (open: boolean) => void;
+}
+
+export function AISettingsDialog({
+  open,
+  onOpenChange,
+}: AISettingsDialogProps) {
+  const {
+    provider,
+    apiKey,
+    model,
+    isLoading,
+    isSaving,
+    loadSettings,
+    saveSettings,
+  } = useAIStore();
+
+  const [showApiKey, setShowApiKey] = useState(false);
+  const [localApiKey, setLocalApiKey] = useState(apiKey);
+  const [localProvider, setLocalProvider] = useState<AIProvider>(provider);
+  const [localModel, setLocalModel] = useState(model);
+
+  // Load settings when dialog opens
+  useEffect(() => {
+    if (open) {
+      loadSettings();
+    }
+  }, [open, loadSettings]);
+
+  // Sync local state with store
+  useEffect(() => {
+    setLocalApiKey(apiKey);
+    setLocalProvider(provider);
+    setLocalModel(model);
+  }, [apiKey, provider, model]);
+
+  const handleProviderChange = (newProvider: AIProvider) => {
+    setLocalProvider(newProvider);
+    // Reset to first model of new provider
+    setLocalModel(DEFAULT_MODELS[newProvider][0]);
+  };
+
+  const handleSave = async () => {
+    const success = await saveSettings({
+      provider: localProvider,
+      apiKey: localApiKey,
+      model: localModel,
+    });
+    if (success) {
+      onOpenChange(false);
+    }
+  };
+
+  const handleCancel = () => {
+    // Reset to store values
+    setLocalApiKey(apiKey);
+    setLocalProvider(provider);
+    setLocalModel(model);
+    onOpenChange(false);
+  };
+
+  return (
+    <Dialog open={open} onOpenChange={onOpenChange}>
+      <DialogContent className="sm:max-w-[425px]">
+        <DialogHeader>
+          <DialogTitle className="flex items-center gap-2">
+            <Sparkles className="h-5 w-5" />
+            AI Settings
+          </DialogTitle>
+          <DialogDescription>
+            Configure your AI provider and API key to enable AI-powered features
+            like natural language to SQL conversion, query optimization, and
+            data analysis.
+          </DialogDescription>
+        </DialogHeader>
+
+        {isLoading ? (
+          <div className="flex items-center justify-center py-8">
+            <Loader2 className="h-6 w-6 animate-spin" />
+          </div>
+        ) : (
+          <div className="grid gap-4 py-4">
+            {/* Provider Selection */}
+            <div className="grid gap-2">
+              <Label htmlFor="provider">AI Provider</Label>
+              <Select
+                value={localProvider}
+                onValueChange={(value) =>
+                  handleProviderChange(value as AIProvider)
+                }
+              >
+                <SelectTrigger id="provider">
+                  <SelectValue placeholder="Select provider" />
+                </SelectTrigger>
+                <SelectContent>
+                  <SelectItem value="openai">OpenAI</SelectItem>
+                  <SelectItem value="anthropic">Anthropic</SelectItem>
+                </SelectContent>
+              </Select>
+            </div>
+
+            {/* API Key Input */}
+            <div className="grid gap-2">
+              <Label htmlFor="apiKey">API Key</Label>
+              <div className="relative">
+                <Input
+                  id="apiKey"
+                  type={showApiKey ? 'text' : 'password'}
+                  value={localApiKey}
+                  onChange={(e) => setLocalApiKey(e.target.value)}
+                  placeholder={
+                    localProvider === 'openai' ? 'sk-...' : 'sk-ant-...'
+                  }
+                  className="pr-10"
+                />
+                <Button
+                  type="button"
+                  variant="ghost"
+                  size="icon"
+                  className="absolute top-0 right-0 h-full px-3"
+                  onClick={() => setShowApiKey(!showApiKey)}
+                >
+                  {showApiKey ? (
+                    <EyeOff className="h-4 w-4" />
+                  ) : (
+                    <Eye className="h-4 w-4" />
+                  )}
+                </Button>
+              </div>
+              <p className="text-muted-foreground text-xs">
+                Your API key is stored securely and never shared.
+              </p>
+            </div>
+
+            {/* Model Selection */}
+            <div className="grid gap-2">
+              <Label htmlFor="model">Model</Label>
+              <Select value={localModel} onValueChange={setLocalModel}>
+                <SelectTrigger id="model">
+                  <SelectValue placeholder="Select model" />
+                </SelectTrigger>
+                <SelectContent>
+                  {DEFAULT_MODELS[localProvider].map((m) => (
+                    <SelectItem key={m} value={m}>
+                      {m}
+                    </SelectItem>
+                  ))}
+                </SelectContent>
+              </Select>
+            </div>
+          </div>
+        )}
+
+        <DialogFooter>
+          <Button variant="outline" onClick={handleCancel} disabled={isSaving}>
+            Cancel
+          </Button>
+          <Button onClick={handleSave} disabled={isSaving || !localApiKey}>
+            {isSaving ? (
+              <>
+                <Loader2 className="mr-2 h-4 w-4 animate-spin" />
+                Saving...
+              </>
+            ) : (
+              'Save Settings'
+            )}
+          </Button>
+        </DialogFooter>
+      </DialogContent>
+    </Dialog>
+  );
+}

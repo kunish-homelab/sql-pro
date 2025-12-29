@@ -1,4 +1,5 @@
 import type {
+  AISettings,
   AnalyzeQueryPlanRequest,
   ApplyChangesRequest,
   ClearQueryHistoryRequest,
@@ -16,6 +17,7 @@ import type {
   QueryHistoryEntry,
   RemoveConnectionRequest,
   RemovePasswordRequest,
+  SaveAISettingsRequest,
   SaveFileDialogRequest,
   SavePasswordRequest,
   SaveQueryHistoryRequest,
@@ -33,6 +35,7 @@ import { passwordStorageService } from './password-storage';
 let _preferencesPath: string | null = null;
 let _recentConnectionsPath: string | null = null;
 let _queryHistoryPath: string | null = null;
+let _aiSettingsPath: string | null = null;
 
 function getPreferencesPath(): string {
   if (!_preferencesPath) {
@@ -49,6 +52,13 @@ function getRecentConnectionsPath(): string {
     );
   }
   return _recentConnectionsPath;
+}
+
+function getAISettingsPath(): string {
+  if (!_aiSettingsPath) {
+    _aiSettingsPath = path.join(app.getPath('userData'), 'ai-settings.json');
+  }
+  return _aiSettingsPath;
 }
 
 function getQueryHistoryPath(): string {
@@ -116,6 +126,23 @@ function saveRecentConnections(connections: StoredRecentConnection[]): void {
     getRecentConnectionsPath(),
     JSON.stringify(connections, null, 2)
   );
+}
+
+// AI settings storage
+function loadAISettings(): AISettings | null {
+  try {
+    const settingsPath = getAISettingsPath();
+    if (fs.existsSync(settingsPath)) {
+      return JSON.parse(fs.readFileSync(settingsPath, 'utf-8'));
+    }
+  } catch {
+    // Return null if not configured
+  }
+  return null;
+}
+
+function saveAISettings(settings: AISettings): void {
+  fs.writeFileSync(getAISettingsPath(), JSON.stringify(settings, null, 2));
 }
 
 // Query history storage format: { [dbPath]: QueryHistoryEntry[] }
@@ -737,6 +764,39 @@ export function setupIpcHandlers(): void {
     IPC_CHANNELS.HISTORY_CLEAR,
     async (_event, request: ClearQueryHistoryRequest) => {
       return clearQueryHistory(request.dbPath);
+    }
+  );
+
+  // AI: Get settings
+  ipcMain.handle(IPC_CHANNELS.AI_GET_SETTINGS, async () => {
+    try {
+      const settings = loadAISettings();
+      return { success: true, settings };
+    } catch (error) {
+      return {
+        success: false,
+        error:
+          error instanceof Error ? error.message : 'Failed to load AI settings',
+      };
+    }
+  });
+
+  // AI: Save settings
+  ipcMain.handle(
+    IPC_CHANNELS.AI_SAVE_SETTINGS,
+    async (_event, request: SaveAISettingsRequest) => {
+      try {
+        saveAISettings(request.settings);
+        return { success: true };
+      } catch (error) {
+        return {
+          success: false,
+          error:
+            error instanceof Error
+              ? error.message
+              : 'Failed to save AI settings',
+        };
+      }
     }
   );
 }
