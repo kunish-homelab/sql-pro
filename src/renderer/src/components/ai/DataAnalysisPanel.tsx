@@ -11,6 +11,7 @@ import {
   TrendingUp,
 } from 'lucide-react';
 import { memo, useState } from 'react';
+import { SettingsDialog } from '@/components/SettingsDialog';
 import { Badge } from '@/components/ui/badge';
 import { Button } from '@/components/ui/button';
 import {
@@ -23,7 +24,6 @@ import {
 import { ScrollArea } from '@/components/ui/scroll-area';
 import { useDataAnalysis } from '@/hooks/useAI';
 import { cn } from '@/lib/utils';
-import { AISettingsDialog } from './AISettingsDialog';
 
 interface DataAnalysisPanelProps {
   open: boolean;
@@ -243,7 +243,7 @@ export const DataAnalysisPanel = memo(
         </Dialog>
 
         {/* Settings Dialog */}
-        <AISettingsDialog open={showSettings} onOpenChange={setShowSettings} />
+        <SettingsDialog open={showSettings} onOpenChange={setShowSettings} />
       </>
     );
   }

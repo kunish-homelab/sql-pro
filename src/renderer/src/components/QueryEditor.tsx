@@ -7,7 +7,6 @@ import {
   Loader2,
   Play,
   Search,
-  Settings2,
   Sparkles,
   Trash2,
   Wand2,
@@ -22,11 +21,8 @@ import React, {
   useState,
 } from 'react';
 
-import {
-  AISettingsDialog,
-  DataAnalysisPanel,
-  NLToSQLDialog,
-} from '@/components/ai';
+import { DataAnalysisPanel, NLToSQLDialog } from '@/components/ai';
+import { SettingsDialog } from '@/components/SettingsDialog';
 import { Button } from '@/components/ui/button';
 import {
   Dialog,
@@ -40,7 +36,6 @@ import {
   DropdownMenu,
   DropdownMenuContent,
   DropdownMenuItem,
-  DropdownMenuSeparator,
   DropdownMenuTrigger,
 } from '@/components/ui/dropdown-menu';
 import { Input } from '@/components/ui/input';
@@ -354,16 +349,6 @@ export function QueryEditor() {
               >
                 <BarChart3 className="mr-2 h-4 w-4" />
                 Analyze Results
-              </DropdownMenuItem>
-              <DropdownMenuSeparator />
-              <DropdownMenuItem onClick={() => setShowAISettings(true)}>
-                <Settings2 className="mr-2 h-4 w-4" />
-                AI Settings
-                {!isAIConfigured && (
-                  <span className="text-warning ml-auto text-xs">
-                    Not configured
-                  </span>
-                )}
               </DropdownMenuItem>
             </DropdownMenuContent>
           </DropdownMenu>
@@ -682,10 +667,7 @@ export function QueryEditor() {
       />
 
       {/* AI: Settings Dialog */}
-      <AISettingsDialog
-        open={showAISettings}
-        onOpenChange={setShowAISettings}
-      />
+      <SettingsDialog open={showAISettings} onOpenChange={setShowAISettings} />
     </div>
   );
 }

@@ -8,6 +8,7 @@ import {
   Wand2,
 } from 'lucide-react';
 import { useState } from 'react';
+import { SettingsDialog } from '@/components/SettingsDialog';
 import { Button } from '@/components/ui/button';
 import {
   Dialog,
@@ -19,7 +20,6 @@ import {
 import { Textarea } from '@/components/ui/textarea';
 import { useNLToSQL } from '@/hooks/useAI';
 import { cn } from '@/lib/utils';
-import { AISettingsDialog } from './AISettingsDialog';
 
 interface NLToSQLDialogProps {
   open: boolean;
@@ -181,7 +181,7 @@ export function NLToSQLDialog({
       </Dialog>
 
       {/* Settings Dialog */}
-      <AISettingsDialog open={showSettings} onOpenChange={setShowSettings} />
+      <SettingsDialog open={showSettings} onOpenChange={setShowSettings} />
     </>
   );
 }
