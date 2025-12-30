@@ -1,7 +1,8 @@
-import { FileDown, FileSpreadsheet, FileJson, FileCode, FileText } from 'lucide-react';
-import { useEffect, useState } from 'react';
+import { FileDown, FileSpreadsheet, FileJson, FileCode, FileText, Loader2 } from 'lucide-react';
+import { useEffect, useState, useCallback } from 'react';
 
 import { Button } from '@/components/ui/button';
+import { Progress } from '@/components/ui/progress';
 import { Checkbox } from '@/components/ui/checkbox';
 import {
   Dialog,
@@ -104,6 +105,10 @@ export function ExportDialog({
   const [prettyPrint, setPrettyPrint] = useState<boolean>(false);
   const [sheetName, setSheetName] = useState<string>(tableName);
 
+  // Export progress state
+  const [isExporting, setIsExporting] = useState<boolean>(false);
+  const [exportProgress, setExportProgress] = useState<number>(0);
+
   // Reset selected columns when columns prop changes (e.g., different table)
   useEffect(() => {
     setSelectedColumns(new Set(columns.map((col) => col.name)));
@@ -113,6 +118,14 @@ export function ExportDialog({
   useEffect(() => {
     setSheetName(tableName);
   }, [tableName]);
+
+  // Reset export progress when dialog closes
+  useEffect(() => {
+    if (!open) {
+      setIsExporting(false);
+      setExportProgress(0);
+    }
+  }, [open]);
 
   const handleColumnToggle = (columnName: string, checked: boolean) => {
     setSelectedColumns((prev) => {
@@ -137,31 +150,91 @@ export function ExportDialog({
   const allSelected = selectedColumns.size === columns.length;
   const noneSelected = selectedColumns.size === 0;
 
-  const handleExport = () => {
+  // Threshold for showing progress indicator (per spec: >1000 rows)
+  const LARGE_EXPORT_THRESHOLD = 1000;
+  const isLargeExport = rows.length > LARGE_EXPORT_THRESHOLD;
+
+  const handleExport = useCallback(async () => {
     const columnNames = Array.from(selectedColumns);
 
-    onExport({
-      format: selectedFormat,
-      columns: columnNames,
-      tableName,
-      rows,
-      connectionId,
-      // Format-specific options
-      delimiter,
-      includeHeaders,
-      prettyPrint,
-      sheetName: sheetName || tableName,
-    });
+    // For large exports, show progress indicator
+    if (isLargeExport) {
+      setIsExporting(true);
+      setExportProgress(0);
+
+      // Simulate progress for user feedback
+      // The actual export happens asynchronously via IPC
+      const progressInterval = setInterval(() => {
+        setExportProgress((prev) => {
+          if (prev >= 90) {
+            return prev; // Cap at 90% until actually complete
+          }
+          // Slower progress for larger datasets
+          const increment = Math.max(1, 10 - Math.floor(rows.length / 5000));
+          return Math.min(90, prev + increment);
+        });
+      }, 100);
+
+      try {
+        onExport({
+          format: selectedFormat,
+          columns: columnNames,
+          tableName,
+          rows,
+          connectionId,
+          delimiter,
+          includeHeaders,
+          prettyPrint,
+          sheetName: sheetName || tableName,
+        });
+
+        // Complete the progress
+        clearInterval(progressInterval);
+        setExportProgress(100);
+
+        // Small delay to show 100% before closing
+        await new Promise((resolve) => setTimeout(resolve, 300));
+      } finally {
+        clearInterval(progressInterval);
+        setIsExporting(false);
+        setExportProgress(0);
+      }
+    } else {
+      onExport({
+        format: selectedFormat,
+        columns: columnNames,
+        tableName,
+        rows,
+        connectionId,
+        delimiter,
+        includeHeaders,
+        prettyPrint,
+        sheetName: sheetName || tableName,
+      });
+    }
 
     onOpenChange(false);
-  };
+  }, [
+    selectedColumns,
+    selectedFormat,
+    tableName,
+    rows,
+    connectionId,
+    delimiter,
+    includeHeaders,
+    prettyPrint,
+    sheetName,
+    isLargeExport,
+    onExport,
+    onOpenChange,
+  ]);
 
   const selectedFormatInfo = FORMAT_OPTIONS.find(
     (opt) => opt.value === selectedFormat
   );
   const FormatIcon = selectedFormatInfo?.icon ?? FileText;
 
-  const isExportDisabled = rows.length === 0 || noneSelected;
+  const isExportDisabled = rows.length === 0 || noneSelected || isExporting;
 
   return (
     <Dialog open={open} onOpenChange={onOpenChange}>
@@ -335,15 +408,42 @@ export function ExportDialog({
               </div>
             </div>
           )}
+
+          {/* Progress indicator for large exports */}
+          {isExporting && (
+            <div className="space-y-2">
+              <div className="flex items-center justify-between text-sm">
+                <span className="text-muted-foreground flex items-center gap-2">
+                  <Loader2 className="h-4 w-4 animate-spin" />
+                  Exporting {rows.length.toLocaleString()} rows...
+                </span>
+                <span className="text-muted-foreground">{Math.round(exportProgress)}%</span>
+              </div>
+              <Progress value={exportProgress} className="h-2" />
+            </div>
+          )}
         </div>
 
         <DialogFooter>
-          <Button variant="outline" onClick={() => onOpenChange(false)}>
+          <Button
+            variant="outline"
+            onClick={() => onOpenChange(false)}
+            disabled={isExporting}
+          >
             Cancel
           </Button>
           <Button onClick={handleExport} disabled={isExportDisabled}>
-            <FileDown className="mr-2 h-4 w-4" />
-            Export
+            {isExporting ? (
+              <>
+                <Loader2 className="mr-2 h-4 w-4 animate-spin" />
+                Exporting...
+              </>
+            ) : (
+              <>
+                <FileDown className="mr-2 h-4 w-4" />
+                Export
+              </>
+            )}
           </Button>
         </DialogFooter>
       </DialogContent>
