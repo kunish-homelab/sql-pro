@@ -146,9 +146,11 @@ const HeaderCell = memo(
     };
 
     if (pinnedPosition === 'left') {
+      pinnedStyles.position = 'sticky';
       pinnedStyles.left = pinnedOffset ?? 0;
       pinnedStyles.zIndex = 20;
     } else if (pinnedPosition === 'right') {
+      pinnedStyles.position = 'sticky';
       pinnedStyles.right = pinnedOffset ?? 0;
       pinnedStyles.zIndex = 20;
     }

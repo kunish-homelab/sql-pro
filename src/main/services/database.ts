@@ -1,5 +1,7 @@
 import type {
   ColumnInfo,
+  ErrorCode,
+  ErrorPosition,
   ForeignKeyInfo,
   IndexInfo,
   PendingChangeInfo,
@@ -13,6 +15,7 @@ import type {
 import { Buffer } from 'node:buffer';
 import { readFileSync } from 'node:fs';
 import Database from 'better-sqlite3-multiple-ciphers';
+import { enhanceConnectionError, enhanceQueryError } from '../lib/error-parser';
 
 interface ConnectionInfo {
   id: string;
@@ -103,7 +106,14 @@ class DatabaseService {
     readOnly = false
   ): Promise<
     | { success: true; connection: Omit<ConnectionInfo, 'db'> }
-    | { success: false; error: string; needsPassword?: boolean }
+    | {
+        success: false;
+        error: string;
+        needsPassword?: boolean;
+        errorCode?: ErrorCode;
+        troubleshootingSteps?: string[];
+        documentationUrl?: string;
+      }
   > {
     try {
       // Check if file appears encrypted before trying to open
@@ -111,10 +121,16 @@ class DatabaseService {
 
       // If no password provided and file appears encrypted, ask for password
       if (!password && fileIsEncrypted) {
+        const encryptedError =
+          'Database appears to be encrypted. Please provide a password.';
+        const enhanced = enhanceConnectionError(encryptedError);
         return {
           success: false,
-          error: 'Database appears to be encrypted. Please provide a password.',
+          error: encryptedError,
           needsPassword: true,
+          errorCode: enhanced.errorCode,
+          troubleshootingSteps: enhanced.troubleshootingSteps,
+          documentationUrl: enhanced.documentationUrl,
         };
       }
 
@@ -196,10 +212,21 @@ class DatabaseService {
         }
 
         // All cipher configs failed
+        const invalidPasswordError =
+          'Invalid password or unsupported encryption format. Supported formats: SQLCipher 1-4, ChaCha20, AES-256-CBC, RC4.';
+        const encryptionEnhanced = enhanceConnectionError(invalidPasswordError);
         return {
           success: false,
-          error:
-            'Invalid password or unsupported encryption format. Supported formats: SQLCipher 1-4, ChaCha20, AES-256-CBC, RC4.',
+          error: invalidPasswordError,
+          errorCode: 'ENCRYPTION_ERROR',
+          troubleshootingSteps: [
+            'Verify the encryption password is correct',
+            'Try different cipher configurations (SQLCipher 3 vs 4)',
+            'Check if the database was created with a different encryption tool',
+            'Verify the file is actually an encrypted SQLite database',
+            'Contact the database creator for the correct password/cipher settings',
+          ],
+          documentationUrl: encryptionEnhanced.documentationUrl,
         };
       }
 
@@ -242,16 +269,27 @@ class DatabaseService {
         errorMessage.includes('file is not a database') ||
         errorMessage.includes('encrypted')
       ) {
+        const encryptedError =
+          'Database appears to be encrypted. Please provide a password.';
+        const enhanced = enhanceConnectionError(encryptedError);
         return {
           success: false,
-          error: 'Database appears to be encrypted. Please provide a password.',
+          error: encryptedError,
           needsPassword: true,
+          errorCode: enhanced.errorCode,
+          troubleshootingSteps: enhanced.troubleshootingSteps,
+          documentationUrl: enhanced.documentationUrl,
         };
       }
 
+      // Enhance other connection errors with troubleshooting steps
+      const enhanced = enhanceConnectionError(errorMessage);
       return {
         success: false,
-        error: errorMessage,
+        error: enhanced.error,
+        errorCode: enhanced.errorCode,
+        troubleshootingSteps: enhanced.troubleshootingSteps,
+        documentationUrl: enhanced.documentationUrl,
       };
     }
   }
@@ -654,7 +692,14 @@ class DatabaseService {
         lastInsertRowId?: number;
         executionTime: number;
       }
-    | { success: false; error: string } {
+    | {
+        success: false;
+        error: string;
+        errorCode?: ErrorCode;
+        errorPosition?: ErrorPosition;
+        suggestions?: string[];
+        documentationUrl?: string;
+      } {
     const conn = this.connections.get(connectionId);
     if (!conn) {
       return { success: false, error: 'Connection not found' };
@@ -694,10 +739,17 @@ class DatabaseService {
         };
       }
     } catch (error) {
+      const errorMessage =
+        error instanceof Error ? error.message : 'Failed to execute query';
+      const enhanced = enhanceQueryError(errorMessage, query);
+
       return {
         success: false,
-        error:
-          error instanceof Error ? error.message : 'Failed to execute query',
+        error: enhanced.error,
+        errorCode: enhanced.errorCode,
+        errorPosition: enhanced.errorPosition,
+        suggestions: enhanced.suggestions,
+        documentationUrl: enhanced.documentationUrl,
       };
     }
   }

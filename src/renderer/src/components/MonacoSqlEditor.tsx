@@ -1,6 +1,7 @@
 import type { BeforeMount, OnMount } from '@monaco-editor/react';
 import type * as Monaco from 'monaco-editor';
 import type { VimMode } from 'monaco-vim';
+import type { ErrorPosition } from '@/../../shared/types';
 import type { DatabaseSchema } from '@/types/database';
 import Editor, { loader } from '@monaco-editor/react';
 // Configure Monaco to use local package with Vite worker
@@ -32,6 +33,17 @@ globalThis.MonacoEnvironment = {
 
 loader.config({ monaco });
 
+/**
+ * Error information for highlighting execution errors in the editor.
+ * This is passed from the parent component (QueryPane) when a query execution fails.
+ */
+export interface ExecutionErrorInfo {
+  /** Human-readable error message */
+  message: string;
+  /** Position in SQL where the error occurred (optional) */
+  position?: ErrorPosition;
+}
+
 interface MonacoSqlEditorProps {
   value: string;
   onChange: (value: string) => void;
@@ -40,6 +52,8 @@ interface MonacoSqlEditorProps {
   height?: string;
   minHeight?: number;
   maxHeight?: number;
+  /** Error info from query execution for highlighting in editor */
+  executionError?: ExecutionErrorInfo | null;
 }
 
 /**
@@ -59,6 +73,7 @@ export function MonacoSqlEditor({
   height = '150px',
   minHeight = 100,
   maxHeight = 500,
+  executionError,
 }: MonacoSqlEditorProps) {
   const { theme } = useThemeStore();
   const { editorVimMode, tabSize } = useSettingsStore();
@@ -215,6 +230,53 @@ export function MonacoSqlEditor({
       );
   }, [schema]);
 
+  // Handle execution error highlighting
+  // Sets markers in the editor when a query execution error occurs with position info
+  useEffect(() => {
+    if (!monacoRef.current || !editorRef.current) return;
+
+    const model = editorRef.current.getModel();
+    if (!model) return;
+
+    // Clear previous execution error markers
+    monacoRef.current.editor.setModelMarkers(model, 'sql-execution-error', []);
+
+    // If there's an execution error with position info, create a marker
+    if (executionError && executionError.position) {
+      const { line, column } = executionError.position;
+
+      // Calculate end column - try to highlight a reasonable range
+      // If the error is at a specific position, highlight at least 10 characters
+      // or until the end of the line, whichever is shorter
+      const lineContent = model.getLineContent(line);
+      const maxColumn = lineContent.length + 1;
+      const endColumn = Math.min(column + 10, maxColumn);
+
+      const markers: Monaco.editor.IMarkerData[] = [
+        {
+          startLineNumber: line,
+          startColumn: column,
+          endLineNumber: line,
+          endColumn: Math.max(endColumn, column + 1), // Ensure at least 1 character
+          message: executionError.message,
+          severity: monacoRef.current.MarkerSeverity.Error,
+        },
+      ];
+
+      monacoRef.current.editor.setModelMarkers(
+        model,
+        'sql-execution-error',
+        markers
+      );
+
+      // Reveal the error position in the editor
+      editorRef.current.revealPositionInCenter({
+        lineNumber: line,
+        column,
+      });
+    }
+  }, [executionError]);
+
   // Initialize or dispose vim mode based on editorMode setting
   // Must wait for both editor to be ready AND vimStatusRef to be mounted
   useEffect(() => {
@@ -269,6 +331,17 @@ export function MonacoSqlEditor({
       if (vimModeRef.current) {
         vimModeRef.current.dispose();
         vimModeRef.current = null;
+      }
+      // Clear execution error markers on unmount
+      if (editorRef.current && monacoRef.current) {
+        const model = editorRef.current.getModel();
+        if (model) {
+          monacoRef.current.editor.setModelMarkers(
+            model,
+            'sql-execution-error',
+            []
+          );
+        }
       }
     };
   }, []);
