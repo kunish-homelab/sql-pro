@@ -23,6 +23,7 @@ export default defineConfig({
     nav: [
       { text: 'Guide', link: '/getting-started/' },
       { text: 'Features', link: '/features/' },
+      { text: 'Plugins', link: '/plugin-development' },
       { text: 'Shortcuts', link: '/shortcuts' },
       { text: 'Troubleshooting', link: '/troubleshooting' },
     ],
@@ -55,12 +56,22 @@ export default defineConfig({
           ],
         },
       ],
+      '/plugin': [
+        {
+          text: 'Plugin Development',
+          items: [
+            { text: 'Development Guide', link: '/plugin-development' },
+            { text: 'API Reference', link: '/plugin-api' },
+          ],
+        },
+      ],
       '/': [
         {
           text: 'Documentation',
           items: [
             { text: 'Getting Started', link: '/getting-started/' },
             { text: 'Features', link: '/features/' },
+            { text: 'Plugin Development', link: '/plugin-development' },
             { text: 'Keyboard Shortcuts', link: '/shortcuts' },
             { text: 'Troubleshooting', link: '/troubleshooting' },
           ],

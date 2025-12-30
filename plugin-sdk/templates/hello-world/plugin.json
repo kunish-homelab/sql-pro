@@ -1,0 +1,17 @@
+{
+  "id": "com.sqlpro.example.hello-world",
+  "name": "Hello World",
+  "version": "1.0.0",
+  "description": "A minimal example plugin demonstrating the basic structure of a SQL Pro plugin. Shows how to register a command, add a menu item, and display a notification.",
+  "author": "SQL Pro Team",
+  "main": "index.js",
+  "license": "MIT",
+  "keywords": ["example", "template", "hello-world", "getting-started"],
+  "permissions": ["ui:command", "ui:menu"],
+  "engines": {
+    "sqlpro": "^1.6.0"
+  },
+  "apiVersion": "1.0.0",
+  "repository": "https://github.com/sqlpro/sqlpro-plugins",
+  "homepage": "https://github.com/sqlpro/sqlpro-plugins/tree/main/examples/hello-world"
+}

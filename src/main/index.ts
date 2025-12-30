@@ -3,6 +3,7 @@ import process from 'node:process';
 import { app, BrowserWindow, nativeImage, shell } from 'electron';
 import { cleanupIpcHandlers, setupIpcHandlers } from './services/ipc-handlers';
 import { createApplicationMenu } from './services/menu';
+import { pluginService } from './services/plugin/PluginService';
 import { checkForUpdatesOnStartup, initAutoUpdater } from './services/updater';
 import { windowManager } from './services/window-manager';
 
@@ -91,11 +92,22 @@ if (is.dev) {
   app.name = 'SQL Pro';
 }
 
-app.whenReady().then(() => {
+app.whenReady().then(async () => {
   setAppUserModelId('com.sqlpro.app');
 
   // Setup IPC handlers for database operations
   setupIpcHandlers();
+
+  // Initialize plugin system (after IPC handlers are ready)
+  const pluginInitResult = await pluginService.initialize();
+  if (!pluginInitResult.success) {
+    // Log warning but don't block app startup - plugin system is non-critical
+
+    console.warn(
+      'Plugin system initialization failed:',
+      pluginInitResult.error
+    );
+  }
 
   // Initialize auto-updater
   initAutoUpdater();
@@ -123,7 +135,10 @@ app.whenReady().then(() => {
   checkForUpdatesOnStartup();
 });
 
-app.on('window-all-closed', () => {
+app.on('window-all-closed', async () => {
+  // Shutdown plugin system (unloads all plugins)
+  await pluginService.shutdown();
+
   cleanupIpcHandlers();
   if (process.platform !== 'darwin') {
     app.quit();

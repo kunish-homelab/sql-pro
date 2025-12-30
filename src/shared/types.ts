@@ -534,6 +534,8 @@ export interface QueryPlanNode {
   id: number;
   /** Parent node ID (0 for root nodes) */
   parent: number;
+  /** Reserved field from SQLite */
+  notUsed: number;
   /** Operation description (e.g., "SCAN TABLE users", "SEARCH TABLE users USING INDEX") */
   detail: string;
   /** Child nodes in the query plan tree */
@@ -578,87 +580,6 @@ export interface AnalyzeQueryPlanResponse {
   stats?: QueryPlanStats;
   error?: string;
 }
-
-// ============ IPC Channel Names ============
-
-export const IPC_CHANNELS = {
-  // Database operations
-  DB_OPEN: 'db:open',
-  DB_CLOSE: 'db:close',
-  DB_GET_SCHEMA: 'db:getSchema',
-  DB_GET_TABLE_DATA: 'db:getTableData',
-  DB_EXECUTE_QUERY: 'db:executeQuery',
-  DB_VALIDATE_CHANGES: 'db:validateChanges',
-  DB_APPLY_CHANGES: 'db:applyChanges',
-  DB_ANALYZE_PLAN: 'db:analyzeQueryPlan',
-
-  // Dialogs
-  DIALOG_OPEN_FILE: 'dialog:openFile',
-  DIALOG_SAVE_FILE: 'dialog:saveFile',
-
-  // Export
-  EXPORT_DATA: 'export:data',
-
-  // Preferences
-  APP_GET_RECENT_CONNECTIONS: 'app:getRecentConnections',
-  APP_GET_PREFERENCES: 'app:getPreferences',
-  APP_SET_PREFERENCES: 'app:setPreferences',
-
-  // Password storage
-  PASSWORD_SAVE: 'password:save',
-  PASSWORD_GET: 'password:get',
-  PASSWORD_HAS: 'password:has',
-  PASSWORD_REMOVE: 'password:remove',
-  PASSWORD_IS_AVAILABLE: 'password:isAvailable',
-
-  // Connection profile operations
-  CONNECTION_UPDATE: 'connection:update',
-  CONNECTION_REMOVE: 'connection:remove',
-
-  // Query history operations
-  HISTORY_GET: 'history:get',
-  HISTORY_SAVE: 'history:save',
-  HISTORY_DELETE: 'history:delete',
-  HISTORY_CLEAR: 'history:clear',
-
-  // Window operations
-  WINDOW_CREATE: 'window:create',
-  WINDOW_CLOSE: 'window:close',
-  WINDOW_FOCUS: 'window:focus',
-  WINDOW_GET_ALL: 'window:getAll',
-  WINDOW_GET_CURRENT: 'window:getCurrent',
-
-  // Menu actions (main -> renderer)
-  MENU_ACTION: 'menu:action',
-
-  // AI operations
-  AI_GET_SETTINGS: 'ai:getSettings',
-  AI_SAVE_SETTINGS: 'ai:saveSettings',
-  AI_FETCH_ANTHROPIC: 'ai:fetchAnthropic',
-  AI_FETCH_OPENAI: 'ai:fetchOpenAI',
-
-  // System operations
-  SYSTEM_GET_FONTS: 'system:getFonts',
-
-  // Auto-update operations
-  UPDATE_CHECK: 'update:check',
-  UPDATE_DOWNLOAD: 'update:download',
-  UPDATE_INSTALL: 'update:install',
-  UPDATE_STATUS: 'update:status',
-} as const;
-
-// Menu action types
-export type MenuAction =
-  | 'open-database'
-  | 'close-database'
-  | 'refresh-schema'
-  | 'open-settings'
-  | 'toggle-command-palette'
-  | 'switch-to-data'
-  | 'switch-to-query'
-  | 'execute-query'
-  | 'toggle-history'
-  | 'new-window';
 
 // ============ Window Types ============
 
@@ -747,6 +668,26 @@ export interface NLToSQLResponse {
   error?: string;
 }
 
+export interface OptimizeQueryRequest {
+  query: string;
+  schema: SchemaInfo[];
+  queryPlan?: QueryPlanNode[];
+}
+
+export interface OptimizeQueryResponse {
+  success: boolean;
+  optimizedQuery?: string;
+  suggestions?: string[];
+  explanation?: string;
+  error?: string;
+}
+
+export interface AnalyzeDataRequest {
+  columns: ColumnInfo[];
+  rows: Record<string, unknown>[];
+  analysisType: 'anomaly' | 'suggestions' | 'patterns';
+}
+
 export interface DataInsight {
   type: 'anomaly' | 'suggestion' | 'pattern';
   column?: string;
@@ -759,20 +700,6 @@ export interface AnalyzeDataResponse {
   success: boolean;
   insights?: DataInsight[];
   summary?: string;
-  error?: string;
-}
-
-export interface FetchAIRequest {
-  provider: AIProvider;
-  model: string;
-  messages: Array<{ role: 'user' | 'assistant'; content: string }>;
-  apiKey: string;
-  baseUrl?: string;
-}
-
-export interface FetchAIResponse {
-  success: boolean;
-  response?: string;
   error?: string;
 }
 
@@ -797,6 +724,7 @@ export interface AIFetchOpenAIRequest {
   apiKey: string;
   model: string;
   messages: Array<{ role: string; content: string }>;
+  maxTokens?: number;
   responseFormat?: { type: string };
 }
 
@@ -805,3 +733,278 @@ export interface AIFetchOpenAIResponse {
   content?: string;
   error?: string;
 }
+
+// ============ Plugin Types ============
+
+export interface PluginManifest {
+  /** Unique identifier for the plugin (e.g., 'com.example.my-plugin') */
+  id: string;
+  /** Human-readable plugin name */
+  name: string;
+  /** Plugin version (semver) */
+  version: string;
+  /** Plugin description */
+  description: string;
+  /** Author name */
+  author: string;
+  /** Minimum app version required (semver) */
+  minAppVersion?: string;
+  /** Plugin entry point (path to main file) */
+  main: string;
+  /** Plugin repository URL */
+  repository?: string;
+  /** Plugin home page URL */
+  homepage?: string;
+  /** License type (e.g., 'MIT', 'Apache-2.0') */
+  license?: string;
+  /** Plugin permissions required */
+  permissions?: string[];
+  /** Plugin configuration schema (JSON schema) */
+  configSchema?: Record<string, unknown>;
+  /** Whether the plugin can be disabled */
+  canDisable?: boolean;
+}
+
+export interface PluginInfo {
+  manifest: PluginManifest;
+  /** Absolute path to plugin directory */
+  pluginPath: string;
+  /** Whether the plugin is enabled */
+  enabled: boolean;
+  /** Whether the plugin has updates available */
+  hasUpdates?: boolean;
+  /** Available version if hasUpdates is true */
+  availableVersion?: string;
+}
+
+export interface ListPluginsRequest {
+  /** Filter plugins by enabled status */
+  enabled?: boolean;
+}
+
+export interface ListPluginsResponse {
+  success: boolean;
+  plugins?: PluginInfo[];
+  error?: string;
+}
+
+export interface GetPluginRequest {
+  /** Plugin ID */
+  id: string;
+}
+
+export interface GetPluginResponse {
+  success: boolean;
+  plugin?: PluginInfo;
+  error?: string;
+}
+
+export interface InstallPluginRequest {
+  /** Plugin ID from marketplace or local path */
+  pluginId: string;
+  /** Version to install (defaults to latest) */
+  version?: string;
+}
+
+export interface InstallPluginResponse {
+  success: boolean;
+  plugin?: PluginInfo;
+  error?: string;
+}
+
+export interface UninstallPluginRequest {
+  /** Plugin ID */
+  id: string;
+}
+
+export interface UninstallPluginResponse {
+  success: boolean;
+  error?: string;
+}
+
+export interface EnablePluginRequest {
+  /** Plugin ID */
+  id: string;
+}
+
+export interface EnablePluginResponse {
+  success: boolean;
+  error?: string;
+}
+
+export interface DisablePluginRequest {
+  /** Plugin ID */
+  id: string;
+}
+
+export interface DisablePluginResponse {
+  success: boolean;
+  error?: string;
+}
+
+export interface UpdatePluginRequest {
+  /** Plugin ID */
+  id: string;
+  /** Version to update to (defaults to latest) */
+  version?: string;
+}
+
+export interface UpdatePluginResponse {
+  success: boolean;
+  plugin?: PluginInfo;
+  error?: string;
+}
+
+export interface CheckPluginUpdatesRequest {
+  /** Plugin IDs to check (defaults to all) */
+  pluginIds?: string[];
+}
+
+export interface CheckPluginUpdatesResponse {
+  success: boolean;
+  updates?: Array<{
+    pluginId: string;
+    currentVersion: string;
+    availableVersion: string;
+  }>;
+  error?: string;
+}
+
+export interface PluginMarketplaceFetchRequest {
+  /** Search query */
+  query?: string;
+  /** Filter by category */
+  category?: string;
+  /** Pagination offset */
+  offset?: number;
+  /** Pagination limit */
+  limit?: number;
+}
+
+export interface MarketplacePluginInfo {
+  id: string;
+  name: string;
+  version: string;
+  description: string;
+  author: string;
+  downloads: number;
+  rating: number;
+  /** URL to plugin icon/image */
+  icon?: string;
+  /** URL to repository */
+  repository?: string;
+  /** URL to documentation */
+  documentation?: string;
+}
+
+export interface PluginMarketplaceFetchResponse {
+  success: boolean;
+  plugins?: MarketplacePluginInfo[];
+  total?: number;
+  error?: string;
+}
+
+/** System fonts available on the platform */
+export interface GetSystemFontsResponse {
+  success: boolean;
+  fonts?: string[];
+  error?: string;
+}
+
+// ============ IPC Channel Names ============
+
+export const IPC_CHANNELS = {
+  // Database operations
+  DB_OPEN: 'db:open',
+  DB_CLOSE: 'db:close',
+  DB_GET_SCHEMA: 'db:getSchema',
+  DB_GET_TABLE_DATA: 'db:getTableData',
+  DB_EXECUTE_QUERY: 'db:executeQuery',
+  DB_VALIDATE_CHANGES: 'db:validateChanges',
+  DB_APPLY_CHANGES: 'db:applyChanges',
+  DB_ANALYZE_PLAN: 'db:analyzeQueryPlan',
+
+  // Dialogs
+  DIALOG_OPEN_FILE: 'dialog:openFile',
+  DIALOG_SAVE_FILE: 'dialog:saveFile',
+
+  // Export
+  EXPORT_DATA: 'export:data',
+
+  // Preferences
+  APP_GET_RECENT_CONNECTIONS: 'app:getRecentConnections',
+  APP_GET_PREFERENCES: 'app:getPreferences',
+  APP_SET_PREFERENCES: 'app:setPreferences',
+
+  // Password storage
+  PASSWORD_SAVE: 'password:save',
+  PASSWORD_GET: 'password:get',
+  PASSWORD_HAS: 'password:has',
+  PASSWORD_REMOVE: 'password:remove',
+  PASSWORD_IS_AVAILABLE: 'password:isAvailable',
+
+  // Connection profile operations
+  CONNECTION_UPDATE: 'connection:update',
+  CONNECTION_REMOVE: 'connection:remove',
+
+  // Query history operations
+  HISTORY_GET: 'history:get',
+  HISTORY_SAVE: 'history:save',
+  HISTORY_DELETE: 'history:delete',
+  HISTORY_CLEAR: 'history:clear',
+
+  // Window operations
+  WINDOW_CREATE: 'window:create',
+  WINDOW_CLOSE: 'window:close',
+  WINDOW_FOCUS: 'window:focus',
+  WINDOW_GET_ALL: 'window:getAll',
+  WINDOW_GET_CURRENT: 'window:getCurrent',
+
+  // Menu actions (main -> renderer)
+  MENU_ACTION: 'menu:action',
+
+  // AI operations
+  AI_GET_SETTINGS: 'ai:getSettings',
+  AI_SAVE_SETTINGS: 'ai:saveSettings',
+  AI_FETCH_ANTHROPIC: 'ai:fetchAnthropic',
+  AI_FETCH_OPENAI: 'ai:fetchOpenAI',
+
+  // System operations
+  SYSTEM_GET_FONTS: 'system:getFonts',
+
+  // Auto-update operations
+  UPDATE_CHECK: 'update:check',
+  UPDATE_DOWNLOAD: 'update:download',
+  UPDATE_INSTALL: 'update:install',
+  UPDATE_STATUS: 'update:status',
+
+  // Plugin operations
+  PLUGIN_LIST: 'plugin:list',
+  PLUGIN_GET: 'plugin:get',
+  PLUGIN_INSTALL: 'plugin:install',
+  PLUGIN_UNINSTALL: 'plugin:uninstall',
+  PLUGIN_ENABLE: 'plugin:enable',
+  PLUGIN_DISABLE: 'plugin:disable',
+  PLUGIN_UPDATE: 'plugin:update',
+  PLUGIN_CHECK_UPDATES: 'plugin:checkUpdates',
+
+  // Plugin marketplace operations
+  PLUGIN_MARKETPLACE_FETCH: 'plugin:marketplace:fetch',
+
+  // Plugin events (main -> renderer)
+  PLUGIN_EVENT: 'plugin:event',
+} as const;
+
+// Menu action types
+export type MenuAction =
+  | 'open-database'
+  | 'close-database'
+  | 'refresh-schema'
+  | 'open-settings'
+  | 'open-plugins'
+  | 'toggle-command-palette'
+  | 'switch-to-data'
+  | 'switch-to-query'
+  | 'execute-query'
+  | 'toggle-history'
+  | 'new-window';

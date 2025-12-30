@@ -124,6 +124,11 @@ export function useMenuActions() {
           break;
         }
 
+        case 'open-plugins': {
+          navigate({ to: '/plugins' });
+          break;
+        }
+
         case 'toggle-command-palette': {
           toggle();
           break;

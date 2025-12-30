@@ -1,4 +1,25 @@
 import type {
+  CheckUpdatesRequest,
+  CheckUpdatesResponse,
+  DisablePluginRequest,
+  DisablePluginResponse,
+  EnablePluginRequest,
+  EnablePluginResponse,
+  FetchMarketplaceRequest,
+  FetchMarketplaceResponse,
+  GetPluginRequest,
+  GetPluginResponse,
+  InstallPluginRequest,
+  InstallPluginResponse,
+  ListPluginsRequest,
+  ListPluginsResponse,
+  PluginEvent,
+  UninstallPluginRequest,
+  UninstallPluginResponse,
+  UpdatePluginRequest,
+  UpdatePluginResponse,
+} from '../main/types/plugin.d';
+import type {
   AIFetchAnthropicRequest,
   AIFetchAnthropicResponse,
   AIFetchOpenAIRequest,
@@ -252,6 +273,42 @@ const sqlProAPI = {
       ) => callback(status);
       ipcRenderer.on('update-status', handler);
       return () => ipcRenderer.off('update-status', handler);
+    },
+  },
+
+  // Plugin operations
+  plugin: {
+    list: (request?: ListPluginsRequest): Promise<ListPluginsResponse> =>
+      ipcRenderer.invoke(IPC_CHANNELS.PLUGIN_LIST, request || {}),
+    get: (request: GetPluginRequest): Promise<GetPluginResponse> =>
+      ipcRenderer.invoke(IPC_CHANNELS.PLUGIN_GET, request),
+    install: (request: InstallPluginRequest): Promise<InstallPluginResponse> =>
+      ipcRenderer.invoke(IPC_CHANNELS.PLUGIN_INSTALL, request),
+    uninstall: (
+      request: UninstallPluginRequest
+    ): Promise<UninstallPluginResponse> =>
+      ipcRenderer.invoke(IPC_CHANNELS.PLUGIN_UNINSTALL, request),
+    enable: (request: EnablePluginRequest): Promise<EnablePluginResponse> =>
+      ipcRenderer.invoke(IPC_CHANNELS.PLUGIN_ENABLE, request),
+    disable: (request: DisablePluginRequest): Promise<DisablePluginResponse> =>
+      ipcRenderer.invoke(IPC_CHANNELS.PLUGIN_DISABLE, request),
+    update: (request: UpdatePluginRequest): Promise<UpdatePluginResponse> =>
+      ipcRenderer.invoke(IPC_CHANNELS.PLUGIN_UPDATE, request),
+    checkUpdates: (
+      request?: CheckUpdatesRequest
+    ): Promise<CheckUpdatesResponse> =>
+      ipcRenderer.invoke(IPC_CHANNELS.PLUGIN_CHECK_UPDATES, request || {}),
+    fetchMarketplace: (
+      request?: FetchMarketplaceRequest
+    ): Promise<FetchMarketplaceResponse> =>
+      ipcRenderer.invoke(IPC_CHANNELS.PLUGIN_MARKETPLACE_FETCH, request || {}),
+    onEvent: (callback: (event: PluginEvent) => void): (() => void) => {
+      const handler = (
+        _event: Electron.IpcRendererEvent,
+        pluginEvent: PluginEvent
+      ) => callback(pluginEvent);
+      ipcRenderer.on(IPC_CHANNELS.PLUGIN_EVENT, handler);
+      return () => ipcRenderer.off(IPC_CHANNELS.PLUGIN_EVENT, handler);
     },
   },
 };

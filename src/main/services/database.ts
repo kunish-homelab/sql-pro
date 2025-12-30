@@ -733,6 +733,7 @@ class DatabaseService {
         const node: QueryPlanNode = {
           id: row.id,
           parent: row.parent,
+          notUsed: row.notused,
           detail: row.detail,
           children: [] as QueryPlanNode[],
         };
@@ -760,7 +761,13 @@ class DatabaseService {
 
       return {
         success: true,
-        plan: roots[0] || { id: 0, parent: 0, detail: 'UNKNOWN', children: [] },
+        plan: roots[0] || {
+          id: 0,
+          parent: 0,
+          notUsed: 0,
+          detail: 'UNKNOWN',
+          children: [],
+        },
         stats,
       };
     } catch (error) {

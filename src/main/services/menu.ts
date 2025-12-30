@@ -29,6 +29,11 @@ export function createApplicationMenu(): void {
                 accelerator: 'CmdOrCtrl+,',
                 click: () => sendMenuAction('open-settings'),
               },
+              {
+                label: 'Plugins...',
+                accelerator: 'CmdOrCtrl+Shift+P',
+                click: () => sendMenuAction('open-plugins'),
+              },
               { type: 'separator' as const },
               { role: 'services' as const },
               { type: 'separator' as const },
@@ -78,6 +83,11 @@ export function createApplicationMenu(): void {
                 label: 'Settings...',
                 accelerator: 'CmdOrCtrl+,',
                 click: () => sendMenuAction('open-settings'),
+              },
+              {
+                label: 'Plugins...',
+                accelerator: 'CmdOrCtrl+Shift+P',
+                click: () => sendMenuAction('open-plugins'),
               },
               { type: 'separator' as const },
             ]),

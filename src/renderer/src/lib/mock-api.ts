@@ -753,7 +753,7 @@ export const mockSqlProAPI = {
       await delay(200);
       return {
         success: true,
-        plan: [{ id: 2, parent: 0, detail: 'SCAN TABLE users' }],
+        plan: [{ id: 2, parent: 0, notUsed: 0, detail: 'SCAN TABLE users' }],
         stats: {
           executionTime: 1.5,
           rowsExamined: 100,

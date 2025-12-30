@@ -8,6 +8,7 @@ import {
 import { useConnectionStore } from '@/stores';
 import { DatabasePage } from './database';
 import { RouterErrorFallback } from './error';
+import { PluginsPage } from './plugins';
 import { RootLayout } from './root';
 import { WelcomePage } from './welcome';
 
@@ -46,8 +47,19 @@ const databaseRoute = createRoute({
   },
 });
 
+// Plugins route - plugin management and marketplace
+const pluginsRoute = createRoute({
+  getParentRoute: () => rootRoute,
+  path: '/plugins',
+  component: PluginsPage,
+});
+
 // Create the route tree
-const routeTree = rootRoute.addChildren([welcomeRoute, databaseRoute]);
+const routeTree = rootRoute.addChildren([
+  welcomeRoute,
+  databaseRoute,
+  pluginsRoute,
+]);
 
 // Create and export the router with hash history for Electron compatibility
 export const router = createRouter({
