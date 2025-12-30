@@ -49,10 +49,9 @@ export function SettingsDialog({ open, onOpenChange }: SettingsDialogProps) {
   const [systemFonts, setSystemFonts] = useState<string[]>([]);
   const [fontsLoading, setFontsLoading] = useState(true);
 
-  // Fetch system fonts using Font Access API
+  // Fetch system fonts using Electron IPC
   useEffect(() => {
     let cancelled = false;
-    let timeoutId: ReturnType<typeof setTimeout> | undefined;
 
     async function loadSystemFonts() {
       // Common monospace fallback fonts
@@ -74,74 +73,21 @@ export function SettingsDialog({ open, onOpenChange }: SettingsDialogProps) {
       ];
 
       try {
-        // Check if Font Access API is available
-        if ('queryLocalFonts' in window) {
-          // Add a timeout to prevent hanging
-          const timeoutPromise = new Promise<never>((_, reject) => {
-            timeoutId = setTimeout(
-              () => reject(new Error('Font query timeout')),
-              3000
-            );
-          });
+        // Use Electron IPC to get system fonts from main process
+        const result = await window.sqlPro.system.getFonts();
 
-          // Request permission and get fonts
-          const fontsPromise = (
-            window as Window & {
-              queryLocalFonts: () => Promise<
-                Array<{ family: string; fullName: string; style: string }>
-              >;
-            }
-          ).queryLocalFonts();
+        if (cancelled) return;
 
-          const fonts = await Promise.race([fontsPromise, timeoutPromise]);
-
-          if (cancelled) return;
-
-          // Extract unique font families and filter for monospace fonts
-          const fontFamilies = new Set<string>();
-          for (const font of fonts) {
-            const family = font.family;
-            const lowerName = family.toLowerCase();
-
-            // Filter for monospace fonts
-            if (
-              lowerName.includes('mono') ||
-              lowerName.includes('code') ||
-              lowerName.includes('courier') ||
-              lowerName.includes('console') ||
-              lowerName.includes('terminal') ||
-              lowerName.includes('menlo') ||
-              lowerName.includes('hack') ||
-              lowerName.includes('fira') ||
-              lowerName.includes('jetbrains') ||
-              lowerName.includes('source code') ||
-              lowerName.includes('ibm plex') ||
-              lowerName.includes('cascadia') ||
-              lowerName.includes('inconsolata') ||
-              lowerName.includes('sf mono') ||
-              lowerName.includes('monaco') ||
-              lowerName.includes('andale') ||
-              lowerName.includes('dejavu sans mono') ||
-              lowerName.includes('liberation mono') ||
-              lowerName.includes('droid sans mono')
-            ) {
-              fontFamilies.add(family);
-            }
-          }
-
-          setSystemFonts(
-            Array.from(fontFamilies).sort((a, b) => a.localeCompare(b))
-          );
+        if (result.success && result.fonts.length > 0) {
+          setSystemFonts(result.fonts);
         } else {
-          // Fallback: use common monospace fonts
-          console.warn(
-            'Font Access API not available, using fallback font list'
-          );
+          // Fallback to common fonts if no fonts returned
+          console.warn('No system fonts returned, using fallback font list');
           setSystemFonts(fallbackFonts);
         }
       } catch (error) {
         console.error('Failed to load system fonts:', error);
-        // Fallback to common fonts on error or timeout
+        // Fallback to common fonts on error
         if (!cancelled) {
           setSystemFonts(fallbackFonts);
         }
@@ -156,9 +102,6 @@ export function SettingsDialog({ open, onOpenChange }: SettingsDialogProps) {
 
     return () => {
       cancelled = true;
-      if (timeoutId) {
-        clearTimeout(timeoutId);
-      }
     };
   }, []);
 

@@ -504,6 +504,9 @@ export const IPC_CHANNELS = {
   AI_SAVE_SETTINGS: 'ai:saveSettings',
   AI_FETCH_ANTHROPIC: 'ai:fetchAnthropic',
   AI_FETCH_OPENAI: 'ai:fetchOpenAI',
+
+  // System operations
+  SYSTEM_GET_FONTS: 'system:getFonts',
 } as const;
 
 // Menu action types

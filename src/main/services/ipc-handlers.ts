@@ -27,7 +27,10 @@ import type {
   ValidateChangesRequest,
 } from '../../shared/types';
 import type { StoredPreferences } from './store';
+import { exec } from 'node:child_process';
 import fs from 'node:fs';
+import os from 'node:os';
+import { promisify } from 'node:util';
 import Anthropic from '@anthropic-ai/sdk';
 import { BrowserWindow, dialog, ipcMain } from 'electron';
 import OpenAI from 'openai';
@@ -687,6 +690,121 @@ export function setupIpcHandlers(): void {
           error instanceof Error
             ? error.message
             : 'Failed to get current window',
+      };
+    }
+  });
+
+  // System: Get Fonts
+  ipcMain.handle(IPC_CHANNELS.SYSTEM_GET_FONTS, async () => {
+    const execAsync = promisify(exec);
+    const platform = os.platform();
+
+    // Monospace font keywords to filter
+    const monoKeywords = [
+      'mono',
+      'code',
+      'courier',
+      'console',
+      'terminal',
+      'menlo',
+      'hack',
+      'fira',
+      'jetbrains',
+      'source code',
+      'ibm plex',
+      'cascadia',
+      'inconsolata',
+      'sf mono',
+      'monaco',
+      'andale',
+      'dejavu sans mono',
+      'liberation mono',
+      'droid sans mono',
+    ];
+
+    const isMonospaceFont = (fontName: string): boolean => {
+      const lower = fontName.toLowerCase();
+      return monoKeywords.some((keyword) => lower.includes(keyword));
+    };
+
+    try {
+      let fonts: string[] = [];
+
+      if (platform === 'darwin') {
+        // macOS: prefer fc-list (fast, ~2s) over system_profiler (slow, ~15s)
+        try {
+          const { stdout: fcOutput } = await execAsync(
+            'fc-list : family 2>/dev/null | sort -u',
+            { timeout: 5000 }
+          );
+          // fc-list may return comma-separated font names, extract the last one (usually English name)
+          fonts = fcOutput
+            .split('\n')
+            .map((line) => {
+              const parts = line.split(',');
+              return parts[parts.length - 1].trim();
+            })
+            .filter(Boolean);
+        } catch {
+          // Fallback: use system_profiler if fc-list is not available
+          try {
+            const { stdout } = await execAsync(
+              'system_profiler SPFontsDataType -json 2>/dev/null || echo "{}"',
+              { timeout: 20000, maxBuffer: 50 * 1024 * 1024 }
+            );
+            const data = JSON.parse(stdout);
+            const fontData = data.SPFontsDataType || [];
+            const fontSet = new Set<string>();
+            for (const fontFile of fontData) {
+              const typefaces = fontFile.typefaces || [];
+              for (const typeface of typefaces) {
+                if (typeface.family) {
+                  fontSet.add(typeface.family);
+                }
+              }
+            }
+            fonts = Array.from(fontSet);
+          } catch (parseError) {
+            console.error(
+              '[SYSTEM_GET_FONTS] Failed to get fonts on macOS:',
+              parseError
+            );
+            fonts = [];
+          }
+        }
+      } else if (platform === 'win32') {
+        // Windows: use PowerShell
+        const { stdout } = await execAsync(
+          'powershell -command "[System.Reflection.Assembly]::LoadWithPartialName(\'System.Drawing\') | Out-Null; (New-Object System.Drawing.Text.InstalledFontCollection).Families | ForEach-Object { $_.Name }"',
+          { timeout: 10000 }
+        );
+        fonts = stdout
+          .split('\n')
+          .map((f) => f.trim())
+          .filter(Boolean);
+      } else {
+        // Linux: use fc-list
+        const { stdout } = await execAsync('fc-list : family | sort -u', {
+          timeout: 5000,
+        });
+        fonts = stdout
+          .split('\n')
+          .map((f) => f.trim())
+          .filter(Boolean);
+      }
+
+      // Filter for monospace fonts and sort
+      const monoFonts = fonts
+        .filter(isMonospaceFont)
+        .sort((a, b) => a.localeCompare(b));
+
+      return { success: true, fonts: monoFonts };
+    } catch (error) {
+      console.error('[SYSTEM_GET_FONTS] Failed to get system fonts:', error);
+      return {
+        success: false,
+        error: error instanceof Error ? error.message : 'Failed to get fonts',
+        fonts: [],
       };
     }
   });
