@@ -36,12 +36,16 @@ export interface ErrorPosition {
 
 export type ErrorCode =
   | 'SQL_SYNTAX_ERROR'
+  | 'SQL_CONSTRAINT_ERROR'
   | 'TABLE_NOT_FOUND'
   | 'COLUMN_NOT_FOUND'
   | 'CONSTRAINT_VIOLATION'
   | 'TYPE_MISMATCH'
   | 'CONNECTION_ERROR'
   | 'PERMISSION_ERROR'
+  | 'FILE_NOT_FOUND'
+  | 'ENCRYPTION_ERROR'
+  | 'QUERY_EXECUTION_ERROR'
   | 'UNKNOWN_ERROR';
 
 export interface EnhancedErrorInfo {

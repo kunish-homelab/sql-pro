@@ -21,6 +21,11 @@ const ERROR_DOCUMENTATION: Record<ErrorCode, string> = {
   SQL_SYNTAX_ERROR: 'https://www.sqlite.org/lang.html',
   SQL_CONSTRAINT_ERROR:
     'https://www.sqlite.org/lang_createtable.html#constraints',
+  TABLE_NOT_FOUND: 'https://www.sqlite.org/lang_select.html',
+  COLUMN_NOT_FOUND: 'https://www.sqlite.org/lang_select.html',
+  CONSTRAINT_VIOLATION:
+    'https://www.sqlite.org/lang_createtable.html#constraints',
+  TYPE_MISMATCH: 'https://www.sqlite.org/datatype3.html',
   CONNECTION_ERROR: 'https://www.sqlite.org/c3ref/open.html',
   ENCRYPTION_ERROR: 'https://www.zetetic.net/sqlcipher/sqlcipher-api/',
   PERMISSION_ERROR: 'https://www.sqlite.org/c3ref/open.html',

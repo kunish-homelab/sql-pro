@@ -8,7 +8,7 @@ import {
   Loader2,
 } from 'lucide-react';
 
-import { useCallback, useEffect, useState } from 'react';
+import { useCallback, useMemo, useRef, useState } from 'react';
 import { Button } from '@/components/ui/button';
 import { Checkbox } from '@/components/ui/checkbox';
 import {
@@ -102,6 +102,13 @@ export function ExportDialog({
   onExport,
 }: ExportDialogProps) {
   const [selectedFormat, setSelectedFormat] = useState<ExportFormat>('csv');
+
+  // Derive column names for dependency tracking
+  const columnNames = useMemo(
+    () => columns.map((col) => col.name).join(','),
+    [columns]
+  );
+
   const [selectedColumns, setSelectedColumns] = useState<Set<string>>(
     () => new Set(columns.map((col) => col.name))
   );
@@ -117,22 +124,30 @@ export function ExportDialog({
   const [exportProgress, setExportProgress] = useState<number>(0);
 
   // Reset selected columns when columns prop changes (e.g., different table)
-  useEffect(() => {
+  // Using a ref to track previous columns to avoid direct setState in useEffect
+  const prevColumnNamesRef = useRef(columnNames);
+  if (prevColumnNamesRef.current !== columnNames) {
+    prevColumnNamesRef.current = columnNames;
     setSelectedColumns(new Set(columns.map((col) => col.name)));
-  }, [columns]);
+  }
 
   // Reset sheet name when table name changes
-  useEffect(() => {
+  const prevTableNameRef = useRef(tableName);
+  if (prevTableNameRef.current !== tableName) {
+    prevTableNameRef.current = tableName;
     setSheetName(tableName);
-  }, [tableName]);
+  }
 
   // Reset export progress when dialog closes
-  useEffect(() => {
-    if (!open) {
-      setIsExporting(false);
-      setExportProgress(0);
-    }
-  }, [open]);
+  const prevOpenRef = useRef(open);
+  if (prevOpenRef.current !== open && !open) {
+    prevOpenRef.current = open;
+    setIsExporting(false);
+    setExportProgress(0);
+  }
+  if (prevOpenRef.current !== open) {
+    prevOpenRef.current = open;
+  }
 
   const handleColumnToggle = (columnName: string, checked: boolean) => {
     setSelectedColumns((prev) => {

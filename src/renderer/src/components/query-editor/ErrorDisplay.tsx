@@ -121,9 +121,9 @@ export const ErrorDisplay = memo(
                 <span>Suggestions</span>
               </div>
               <ul className="space-y-1.5">
-                {suggestions.map((suggestion, index) => (
+                {suggestions.map((suggestion) => (
                   <li
-                    key={index}
+                    key={suggestion}
                     className="text-muted-foreground flex items-start gap-2 text-sm"
                   >
                     <ChevronRight className="mt-0.5 h-4 w-4 shrink-0" />
@@ -142,8 +142,8 @@ export const ErrorDisplay = memo(
                 <span>Troubleshooting Steps</span>
               </div>
               <ol className="list-inside list-decimal space-y-1.5">
-                {troubleshootingSteps.map((step, index) => (
-                  <li key={index} className="text-muted-foreground text-sm">
+                {troubleshootingSteps.map((step) => (
+                  <li key={step} className="text-muted-foreground text-sm">
                     {step}
                   </li>
                 ))}
