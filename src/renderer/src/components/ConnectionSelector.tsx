@@ -179,7 +179,7 @@ export function ConnectionSelector({
 
         <DropdownMenuContent
           align="start"
-          className="w-[var(--radix-dropdown-menu-trigger-width)] min-w-[200px]"
+          className="w-(--radix-dropdown-menu-trigger-width) min-w-50"
         >
           {/* Connection list */}
           {allConnections.map((conn) => (

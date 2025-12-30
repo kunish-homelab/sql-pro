@@ -180,7 +180,7 @@ export function CommandPalette() {
           </div>
 
           {/* Commands List */}
-          <ScrollArea className="h-[300px]">
+          <ScrollArea className="h-75">
             <div ref={listRef} className="p-2">
               {filteredCommands.length === 0 ? (
                 <div className="text-muted-foreground py-8 text-center text-sm">
