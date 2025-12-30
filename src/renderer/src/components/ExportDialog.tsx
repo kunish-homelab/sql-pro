@@ -11,6 +11,7 @@ import {
   DialogHeader,
   DialogTitle,
 } from '@/components/ui/dialog';
+import { Input } from '@/components/ui/input';
 import { Label } from '@/components/ui/label';
 import {
   Select,
@@ -20,6 +21,13 @@ import {
   SelectValue,
 } from '@/components/ui/select';
 import type { ExportFormat, ColumnInfo } from '../../../shared/types';
+
+const DELIMITER_OPTIONS = [
+  { value: ',', label: 'Comma (,)' },
+  { value: '\t', label: 'Tab' },
+  { value: ';', label: 'Semicolon (;)' },
+  { value: '|', label: 'Pipe (|)' },
+] as const;
 
 interface ExportDialogProps {
   open: boolean;
@@ -37,7 +45,7 @@ export interface ExportOptions {
   tableName: string;
   rows: Record<string, unknown>[];
   connectionId: string;
-  // Format-specific options (will be extended in subtask-5-3)
+  // Format-specific options
   delimiter?: string;
   includeHeaders?: boolean;
   prettyPrint?: boolean;
@@ -90,10 +98,21 @@ export function ExportDialog({
     () => new Set(columns.map((col) => col.name))
   );
 
+  // Format-specific options
+  const [delimiter, setDelimiter] = useState<string>(',');
+  const [includeHeaders, setIncludeHeaders] = useState<boolean>(true);
+  const [prettyPrint, setPrettyPrint] = useState<boolean>(false);
+  const [sheetName, setSheetName] = useState<string>(tableName);
+
   // Reset selected columns when columns prop changes (e.g., different table)
   useEffect(() => {
     setSelectedColumns(new Set(columns.map((col) => col.name)));
   }, [columns]);
+
+  // Reset sheet name when table name changes
+  useEffect(() => {
+    setSheetName(tableName);
+  }, [tableName]);
 
   const handleColumnToggle = (columnName: string, checked: boolean) => {
     setSelectedColumns((prev) => {
@@ -127,11 +146,11 @@ export function ExportDialog({
       tableName,
       rows,
       connectionId,
-      // Default format-specific options
-      delimiter: ',',
-      includeHeaders: true,
-      prettyPrint: false,
-      sheetName: tableName,
+      // Format-specific options
+      delimiter,
+      includeHeaders,
+      prettyPrint,
+      sheetName: sheetName || tableName,
     });
 
     onOpenChange(false);
@@ -245,6 +264,77 @@ export function ExportDialog({
               ))}
             </div>
           </div>
+
+          {/* Format-Specific Options */}
+          {selectedFormat === 'csv' && (
+            <div className="space-y-3">
+              <Label className="text-sm font-medium">CSV Options</Label>
+              <div className="space-y-3 rounded-md border p-3">
+                <div className="space-y-2">
+                  <Label htmlFor="delimiter" className="text-muted-foreground text-xs">
+                    Delimiter
+                  </Label>
+                  <Select value={delimiter} onValueChange={setDelimiter}>
+                    <SelectTrigger id="delimiter" className="w-full">
+                      <SelectValue placeholder="Select delimiter" />
+                    </SelectTrigger>
+                    <SelectContent>
+                      {DELIMITER_OPTIONS.map((option) => (
+                        <SelectItem key={option.value} value={option.value}>
+                          {option.label}
+                        </SelectItem>
+                      ))}
+                    </SelectContent>
+                  </Select>
+                </div>
+                <label className="flex cursor-pointer items-center gap-2">
+                  <Checkbox
+                    checked={includeHeaders}
+                    onCheckedChange={(checked) => setIncludeHeaders(checked === true)}
+                  />
+                  <span className="text-sm">Include column headers</span>
+                </label>
+              </div>
+            </div>
+          )}
+
+          {selectedFormat === 'json' && (
+            <div className="space-y-3">
+              <Label className="text-sm font-medium">JSON Options</Label>
+              <div className="space-y-3 rounded-md border p-3">
+                <label className="flex cursor-pointer items-center gap-2">
+                  <Checkbox
+                    checked={prettyPrint}
+                    onCheckedChange={(checked) => setPrettyPrint(checked === true)}
+                  />
+                  <span className="text-sm">Pretty-print (indented output)</span>
+                </label>
+              </div>
+            </div>
+          )}
+
+          {selectedFormat === 'xlsx' && (
+            <div className="space-y-3">
+              <Label className="text-sm font-medium">Excel Options</Label>
+              <div className="space-y-3 rounded-md border p-3">
+                <div className="space-y-2">
+                  <Label htmlFor="sheet-name" className="text-muted-foreground text-xs">
+                    Sheet Name
+                  </Label>
+                  <Input
+                    id="sheet-name"
+                    value={sheetName}
+                    onChange={(e) => setSheetName(e.target.value)}
+                    placeholder={tableName}
+                    maxLength={31}
+                  />
+                  <p className="text-muted-foreground text-xs">
+                    Maximum 31 characters
+                  </p>
+                </div>
+              </div>
+            </div>
+          )}
         </div>
 
         <DialogFooter>
