@@ -24,6 +24,7 @@ import {
   useConnectionStore,
   useSettingsStore,
   useTableDataStore,
+  useTableFont,
 } from '@/stores';
 import { ConnectionSelector } from './ConnectionSelector';
 import { SettingsDialog } from './SettingsDialog';
@@ -58,6 +59,9 @@ export function Sidebar({ onOpenDatabase }: SidebarProps) {
   });
   const [searchQuery, setSearchQuery] = useState('');
   const [settingsOpen, setSettingsOpen] = useState(false);
+
+  // Font settings for sidebar
+  const tableFont = useTableFont();
 
   // Vim navigation state
   const [focusedIndex, setFocusedIndex] = useState<number>(-1);
@@ -422,7 +426,13 @@ export function Sidebar({ onOpenDatabase }: SidebarProps) {
 
       {/* Schema Tree */}
       <ScrollArea className="min-h-0 min-w-0 flex-1">
-        <div className="min-w-0 overflow-hidden p-2">
+        <div
+          className="min-w-0 overflow-hidden p-2"
+          style={{
+            fontFamily: tableFont.family || undefined,
+            fontSize: tableFont.size ? `${tableFont.size}px` : undefined,
+          }}
+        >
           {isLoadingSchema ? (
             <div className="text-muted-foreground flex items-center justify-center py-8 text-sm">
               Loading schema...
@@ -531,7 +541,7 @@ function SchemaSection({
       {showSchemaHeader && (
         <button
           onClick={onToggleSchema}
-          className="text-muted-foreground hover:bg-accent flex w-full items-center gap-1 rounded px-2 py-1 text-sm font-medium"
+          className="text-muted-foreground hover:bg-accent flex w-full items-center gap-1 rounded px-2 py-1 font-medium"
         >
           {isSchemaExpanded ? (
             <ChevronDown className="h-4 w-4" />
@@ -551,7 +561,7 @@ function SchemaSection({
             <div className="mb-1">
               <button
                 onClick={() => onToggleSection(tablesKey)}
-                className="text-muted-foreground hover:bg-accent flex w-full items-center gap-1 rounded px-2 py-1 text-sm font-medium"
+                className="text-muted-foreground hover:bg-accent flex w-full items-center gap-1 rounded px-2 py-1 font-medium"
               >
                 {tablesExpanded ? (
                   <ChevronDown className="h-4 w-4" />
@@ -587,7 +597,7 @@ function SchemaSection({
             <div className="mb-1">
               <button
                 onClick={() => onToggleSection(viewsKey)}
-                className="text-muted-foreground hover:bg-accent flex w-full items-center gap-1 rounded px-2 py-1 text-sm font-medium"
+                className="text-muted-foreground hover:bg-accent flex w-full items-center gap-1 rounded px-2 py-1 font-medium"
               >
                 {viewsExpanded ? (
                   <ChevronDown className="h-4 w-4" />
@@ -624,7 +634,7 @@ function SchemaSection({
             <div>
               <button
                 onClick={() => onToggleSection(triggersKey)}
-                className="text-muted-foreground hover:bg-accent flex w-full items-center gap-1 rounded px-2 py-1 text-sm font-medium"
+                className="text-muted-foreground hover:bg-accent flex w-full items-center gap-1 rounded px-2 py-1 font-medium"
               >
                 {triggersExpanded ? (
                   <ChevronDown className="h-4 w-4" />
@@ -670,7 +680,7 @@ function TableItem({
     <button
       onClick={onClick}
       className={cn(
-        'flex w-full items-center gap-2 overflow-hidden rounded px-2 py-1.5 text-sm transition-colors',
+        'flex w-full items-center gap-2 overflow-hidden rounded px-2 py-1.5 transition-colors',
         isSelected
           ? 'bg-accent text-accent-foreground'
           : 'hover:bg-accent/50 text-foreground',
@@ -698,7 +708,7 @@ interface TriggerItemProps {
 
 function TriggerItem({ trigger }: TriggerItemProps) {
   return (
-    <div className="text-foreground hover:bg-accent/50 flex w-full items-center gap-2 rounded px-2 py-1.5 text-sm transition-colors">
+    <div className="text-foreground hover:bg-accent/50 flex w-full items-center gap-2 rounded px-2 py-1.5 transition-colors">
       <Zap className="text-muted-foreground h-4 w-4 shrink-0" />
       <span className="truncate">{trigger.name}</span>
       <span className="text-muted-foreground ml-auto text-xs">

@@ -162,7 +162,7 @@ export const TableCell = memo(
       return (
         <td
           className={cn(
-            'text-muted-foreground border-border border-r border-b px-2 py-1 text-sm whitespace-nowrap',
+            'text-muted-foreground border-border border-r border-b px-2 py-1 whitespace-nowrap',
             pinnedClassName
           )}
           style={pinnedStyles}
@@ -205,7 +205,7 @@ export const TableCell = memo(
             onBlur={handleSave}
             onKeyDown={handleKeyDown}
             className={cn(
-              'bg-background h-full w-full px-2 py-1 text-sm ring-2 outline-none ring-inset',
+              'bg-background h-full w-full px-2 py-1 ring-2 outline-none ring-inset',
               validationError ? 'ring-destructive' : 'ring-ring'
             )}
             aria-invalid={!!validationError}
@@ -249,24 +249,24 @@ export const TableCell = memo(
 
 function CellDisplay({ value, type }: { value: unknown; type: string }) {
   if (value === null) {
-    return <span className="text-muted-foreground text-sm italic">NULL</span>;
+    return <span className="text-muted-foreground italic">NULL</span>;
   }
 
   if (typeof value === 'boolean') {
-    return <span className="text-sm">{value ? 'true' : 'false'}</span>;
+    return <span>{value ? 'true' : 'false'}</span>;
   }
 
   if (typeof value === 'number') {
-    return <span className="font-mono text-sm tabular-nums">{value}</span>;
+    return <span className="font-mono tabular-nums">{value}</span>;
   }
 
   if (type.toLowerCase().includes('blob')) {
-    return <span className="text-muted-foreground text-sm italic">[BLOB]</span>;
+    return <span className="text-muted-foreground italic">[BLOB]</span>;
   }
 
   const strValue = String(value);
   return (
-    <span className="text-sm whitespace-nowrap" title={strValue}>
+    <span className="whitespace-nowrap" title={strValue}>
       {strValue}
     </span>
   );

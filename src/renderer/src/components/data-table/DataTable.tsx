@@ -252,10 +252,6 @@ export const DataTable = function DataTable({
         'focus-visible:ring-ring focus-visible:ring-2 focus-visible:ring-offset-2',
         className
       )}
-      style={{
-        fontFamily: tableFont.family || undefined,
-        fontSize: tableFont.size ? `${tableFont.size}px` : undefined,
-      }}
       tabIndex={0}
       onKeyDown={handleKeyDown}
       onFocus={handleContainerFocus}
@@ -265,6 +261,8 @@ export const DataTable = function DataTable({
         style={{
           ...columnSizeVars,
           minWidth: table.getTotalSize(),
+          fontFamily: tableFont.family || undefined,
+          fontSize: tableFont.size ? `${tableFont.size}px` : undefined,
         }}
       >
         {/* Column group for width control - use CSS variables for dynamic sizing */}
