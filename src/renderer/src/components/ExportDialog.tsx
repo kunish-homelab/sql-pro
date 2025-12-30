@@ -1,7 +1,8 @@
 import { FileDown, FileSpreadsheet, FileJson, FileCode, FileText } from 'lucide-react';
-import { useState } from 'react';
+import { useEffect, useState } from 'react';
 
 import { Button } from '@/components/ui/button';
+import { Checkbox } from '@/components/ui/checkbox';
 import {
   Dialog,
   DialogContent,
@@ -85,9 +86,40 @@ export function ExportDialog({
   onExport,
 }: ExportDialogProps) {
   const [selectedFormat, setSelectedFormat] = useState<ExportFormat>('csv');
+  const [selectedColumns, setSelectedColumns] = useState<Set<string>>(
+    () => new Set(columns.map((col) => col.name))
+  );
+
+  // Reset selected columns when columns prop changes (e.g., different table)
+  useEffect(() => {
+    setSelectedColumns(new Set(columns.map((col) => col.name)));
+  }, [columns]);
+
+  const handleColumnToggle = (columnName: string, checked: boolean) => {
+    setSelectedColumns((prev) => {
+      const next = new Set(prev);
+      if (checked) {
+        next.add(columnName);
+      } else {
+        next.delete(columnName);
+      }
+      return next;
+    });
+  };
+
+  const handleSelectAll = () => {
+    setSelectedColumns(new Set(columns.map((col) => col.name)));
+  };
+
+  const handleDeselectAll = () => {
+    setSelectedColumns(new Set());
+  };
+
+  const allSelected = selectedColumns.size === columns.length;
+  const noneSelected = selectedColumns.size === 0;
 
   const handleExport = () => {
-    const columnNames = columns.map((col) => col.name);
+    const columnNames = Array.from(selectedColumns);
 
     onExport({
       format: selectedFormat,
@@ -110,7 +142,7 @@ export function ExportDialog({
   );
   const FormatIcon = selectedFormatInfo?.icon ?? FileText;
 
-  const isExportDisabled = rows.length === 0;
+  const isExportDisabled = rows.length === 0 || noneSelected;
 
   return (
     <Dialog open={open} onOpenChange={onOpenChange}>
@@ -164,9 +196,54 @@ export function ExportDialog({
             </Select>
           </div>
 
-          {/* Column count info - placeholder for column selection in subtask-5-2 */}
-          <div className="text-muted-foreground text-sm">
-            {columns.length} column{columns.length !== 1 ? 's' : ''} will be exported
+          {/* Column Selection */}
+          <div className="space-y-2">
+            <div className="flex items-center justify-between">
+              <Label className="text-sm font-medium">
+                Columns ({selectedColumns.size} of {columns.length} selected)
+              </Label>
+              <div className="flex gap-2">
+                <Button
+                  type="button"
+                  variant="ghost"
+                  size="sm"
+                  className="h-auto px-2 py-1 text-xs"
+                  onClick={handleSelectAll}
+                  disabled={allSelected}
+                >
+                  Select All
+                </Button>
+                <Button
+                  type="button"
+                  variant="ghost"
+                  size="sm"
+                  className="h-auto px-2 py-1 text-xs"
+                  onClick={handleDeselectAll}
+                  disabled={noneSelected}
+                >
+                  Deselect All
+                </Button>
+              </div>
+            </div>
+            <div className="border-input max-h-40 space-y-1 overflow-y-auto rounded-md border p-2">
+              {columns.map((column) => (
+                <label
+                  key={column.name}
+                  className="hover:bg-accent flex cursor-pointer items-center gap-2 rounded px-2 py-1"
+                >
+                  <Checkbox
+                    checked={selectedColumns.has(column.name)}
+                    onCheckedChange={(checked) =>
+                      handleColumnToggle(column.name, checked === true)
+                    }
+                  />
+                  <span className="text-sm">{column.name}</span>
+                  <span className="text-muted-foreground text-xs">
+                    {column.type}
+                  </span>
+                </label>
+              ))}
+            </div>
           </div>
         </div>
 
