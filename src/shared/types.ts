@@ -237,6 +237,12 @@ export interface ExportRequest {
   prettyPrint?: boolean;
   /** Excel worksheet name (defaults to table name) */
   sheetName?: string;
+  /**
+   * Pre-filtered rows to export. When provided, these rows are used directly
+   * instead of fetching all data from the table. This supports exporting
+   * filtered/selected rows from the UI.
+   */
+  rows?: Record<string, unknown>[];
 }
 
 export interface ExportResponse {

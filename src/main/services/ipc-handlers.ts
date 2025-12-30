@@ -201,22 +201,42 @@ export function setupIpcHandlers(): void {
     IPC_CHANNELS.EXPORT_DATA,
     async (_event, request: ExportRequest) => {
       try {
-        // Get all data from table
-        const dataResult = databaseService.getTableData(
-          request.connectionId,
-          request.table,
-          1,
-          1000000, // Large number to get all rows
-          undefined,
-          undefined,
-          undefined
-        );
+        let columns: { name: string; type: string; nullable: boolean; defaultValue: string | null; isPrimaryKey: boolean }[];
+        let rows: Record<string, unknown>[];
 
-        if (!dataResult.success) {
-          return dataResult;
+        // Check if pre-filtered rows were provided
+        if (request.rows && request.rows.length > 0) {
+          // Use provided rows directly (for filtered/selected data export)
+          rows = request.rows;
+          // Create column info from the first row's keys
+          // Generators only use the 'name' property, so other fields can be defaults
+          const columnNames = Object.keys(rows[0]);
+          columns = columnNames.map((name) => ({
+            name,
+            type: 'TEXT',
+            nullable: true,
+            defaultValue: null,
+            isPrimaryKey: false,
+          }));
+        } else {
+          // Fetch all data from the table
+          const dataResult = databaseService.getTableData(
+            request.connectionId,
+            request.table,
+            1,
+            1000000, // Large number to get all rows
+            undefined,
+            undefined,
+            undefined
+          );
+
+          if (!dataResult.success) {
+            return dataResult;
+          }
+
+          columns = dataResult.columns!;
+          rows = dataResult.rows!;
         }
-
-        const { columns, rows } = dataResult;
 
         switch (request.format) {
           case 'csv': {
