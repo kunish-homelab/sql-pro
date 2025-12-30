@@ -1,4 +1,4 @@
-import type { ColumnPinningState, Row } from '@tanstack/react-table';
+import type { Row } from '@tanstack/react-table';
 import type { TableRowData } from './hooks/useTableCore';
 import type { PendingChange } from '@/types/database';
 import { memo, useMemo } from 'react';
@@ -19,12 +19,10 @@ interface DataRowProps {
   stopEditing?: () => void;
   isCellFocused?: (rowId: string, columnId: string) => boolean;
   isCellEditing?: (rowId: string, columnId: string) => boolean;
-  /** Column pinning state */
-  columnPinning?: ColumnPinningState;
-  /** Left pinned column offsets */
-  leftOffsets?: Record<string, number>;
-  /** Right pinned column offsets */
-  rightOffsets?: Record<string, number>;
+  /** Pinned column IDs (left only) */
+  pinnedColumns?: string[];
+  /** Pinned column offsets */
+  pinnedOffsets?: Record<string, number>;
 }
 
 const DataRow = memo(
@@ -41,14 +39,10 @@ const DataRow = memo(
     stopEditing,
     isCellFocused,
     isCellEditing,
-    columnPinning,
-    leftOffsets = {},
-    rightOffsets = {},
+    pinnedColumns = [],
+    pinnedOffsets = {},
   }: DataRowProps) => {
     const isEven = rowIndex % 2 === 0;
-
-    const leftPinned = columnPinning?.left ?? [];
-    const rightPinned = columnPinning?.right ?? [];
 
     return (
       <tr
@@ -77,12 +71,9 @@ const DataRow = memo(
           const oldValue = change?.oldValues?.[columnId];
 
           // Pinning info
-          const pinnedPosition = cell.column.getIsPinned();
-          const isLastLeftPinned =
-            pinnedPosition === 'left' &&
-            leftPinned[leftPinned.length - 1] === columnId;
-          const isFirstRightPinned =
-            pinnedPosition === 'right' && rightPinned[0] === columnId;
+          const isPinned = pinnedColumns.includes(columnId);
+          const isLastPinned =
+            isPinned && pinnedColumns[pinnedColumns.length - 1] === columnId;
 
           return (
             <TableCell
@@ -106,16 +97,9 @@ const DataRow = memo(
               onClick={() => {
                 onCellClick?.(row.id, columnId);
               }}
-              pinnedPosition={pinnedPosition}
-              pinnedOffset={
-                pinnedPosition === 'left'
-                  ? leftOffsets[columnId]
-                  : pinnedPosition === 'right'
-                    ? rightOffsets[columnId]
-                    : undefined
-              }
-              isLastLeftPinned={isLastLeftPinned}
-              isFirstRightPinned={isFirstRightPinned}
+              isPinned={isPinned}
+              pinnedOffset={isPinned ? pinnedOffsets[columnId] : undefined}
+              isLastPinned={isLastPinned}
             />
           );
         })}
@@ -136,8 +120,8 @@ interface TableBodyProps {
   isCellEditing?: (rowId: string, columnId: string) => boolean;
   // Change tracking
   changes?: Map<string | number, PendingChange>;
-  // Column pinning
-  columnPinning?: ColumnPinningState;
+  // Column pinning (left only)
+  pinnedColumns?: string[];
   /** Get column size by id */
   getColumnSize?: (columnId: string) => number;
 }
@@ -153,31 +137,19 @@ export const TableBody = memo(
     isCellFocused,
     isCellEditing,
     changes,
-    columnPinning = { left: [], right: [] },
+    pinnedColumns = [],
     getColumnSize,
   }: TableBodyProps) => {
     // Calculate pinned offsets
-    const { leftOffsets, rightOffsets } = useMemo(() => {
-      const leftPinned = columnPinning.left ?? [];
-      const rightPinned = columnPinning.right ?? [];
-
-      const left: Record<string, number> = {};
-      let leftOffset = 0;
-      for (const colId of leftPinned) {
-        left[colId] = leftOffset;
-        leftOffset += getColumnSize?.(colId) ?? 150;
+    const pinnedOffsets = useMemo(() => {
+      const offsets: Record<string, number> = {};
+      let offset = 0;
+      for (const colId of pinnedColumns) {
+        offsets[colId] = offset;
+        offset += getColumnSize?.(colId) ?? 150;
       }
-
-      const right: Record<string, number> = {};
-      let rightOffset = 0;
-      for (let i = rightPinned.length - 1; i >= 0; i--) {
-        const colId = rightPinned[i];
-        right[colId] = rightOffset;
-        rightOffset += getColumnSize?.(colId) ?? 150;
-      }
-
-      return { leftOffsets: left, rightOffsets: right };
-    }, [columnPinning.left, columnPinning.right, getColumnSize]);
+      return offsets;
+    }, [pinnedColumns, getColumnSize]);
 
     return (
       <tbody>
@@ -210,9 +182,8 @@ export const TableBody = memo(
               stopEditing={stopEditing}
               isCellFocused={isCellFocused}
               isCellEditing={isCellEditing}
-              columnPinning={columnPinning}
-              leftOffsets={leftOffsets}
-              rightOffsets={rightOffsets}
+              pinnedColumns={pinnedColumns}
+              pinnedOffsets={pinnedOffsets}
             />
           );
         })}

@@ -113,7 +113,7 @@ export const DataTable = function DataTable({
     toggleGrouping,
     grouping,
     resetColumnSize,
-    columnPinning,
+    pinnedColumns,
     toggleColumnPin,
   } = useTableCore({
     columns,
@@ -290,7 +290,7 @@ export const DataTable = function DataTable({
           filters={filters}
           onFilterAdd={onFilterAdd}
           onFilterRemove={onFilterRemove}
-          columnPinning={columnPinning}
+          pinnedColumns={pinnedColumns}
         />
 
         {/* Table body */}
@@ -304,7 +304,7 @@ export const DataTable = function DataTable({
           isCellFocused={isCellFocused}
           isCellEditing={isCellEditing}
           changes={changes}
-          columnPinning={columnPinning}
+          pinnedColumns={pinnedColumns}
           getColumnSize={(columnId) =>
             table.getColumn(columnId)?.getSize() ?? 150
           }

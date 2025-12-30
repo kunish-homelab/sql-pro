@@ -1,6 +1,5 @@
 import type {
   ColumnDef,
-  ColumnPinningState,
   ColumnSizingInfoState,
   ColumnSizingState,
   ExpandedState,
@@ -113,11 +112,8 @@ export function useTableCore({
       columnSizingStart: [],
     });
 
-  // Column pinning state
-  const [columnPinning, setColumnPinning] = useState<ColumnPinningState>({
-    left: [],
-    right: [],
-  });
+  // Pinned columns (left only)
+  const [pinnedColumns, setPinnedColumns] = useState<string[]>([]);
 
   // Convert external sort to TanStack sorting state
   const sorting = useMemo<SortingState>(() => {
@@ -185,7 +181,7 @@ export function useTableCore({
       sorting,
       columnSizing,
       columnSizingInfo,
-      columnPinning,
+      columnPinning: { left: pinnedColumns, right: [] },
     },
     onGroupingChange: (updater) => {
       const newGrouping =
@@ -196,7 +192,13 @@ export function useTableCore({
     onSortingChange: handleSortingChange,
     onColumnSizingChange: setColumnSizing,
     onColumnSizingInfoChange: setColumnSizingInfo,
-    onColumnPinningChange: setColumnPinning,
+    onColumnPinningChange: (updater) => {
+      const newPinning =
+        typeof updater === 'function'
+          ? updater({ left: pinnedColumns, right: [] })
+          : updater;
+      setPinnedColumns(newPinning.left ?? []);
+    },
     getCoreRowModel: getCoreRowModel(),
     getGroupedRowModel: getGroupedRowModel(),
     getExpandedRowModel: getExpandedRowModel(),
@@ -236,24 +238,15 @@ export function useTableCore({
     });
   }, []);
 
-  // Toggle column pinning
-  const toggleColumnPin = useCallback(
-    (columnId: string, position: 'left' | 'right' | false) => {
-      setColumnPinning((prev) => {
-        const newLeft = prev.left?.filter((id) => id !== columnId) ?? [];
-        const newRight = prev.right?.filter((id) => id !== columnId) ?? [];
-
-        if (position === 'left') {
-          newLeft.push(columnId);
-        } else if (position === 'right') {
-          newRight.push(columnId);
-        }
-
-        return { left: newLeft, right: newRight };
-      });
-    },
-    []
-  );
+  // Toggle column pinning (left only)
+  const toggleColumnPin = useCallback((columnId: string) => {
+    setPinnedColumns((prev) => {
+      if (prev.includes(columnId)) {
+        return prev.filter((id) => id !== columnId);
+      }
+      return [...prev, columnId];
+    });
+  }, []);
 
   return {
     table,
@@ -263,7 +256,7 @@ export function useTableCore({
     flexRender,
     columnSizing,
     resetColumnSize,
-    columnPinning,
+    pinnedColumns,
     toggleColumnPin,
   };
 }

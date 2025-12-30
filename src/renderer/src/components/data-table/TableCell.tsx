@@ -17,14 +17,12 @@ interface TableCellProps {
   onCancel: () => void;
   onKeyDown?: (e: React.KeyboardEvent) => void;
   onClick?: () => void;
-  /** Pinned position of this column */
-  pinnedPosition?: 'left' | 'right' | false;
+  /** Whether this column is pinned */
+  isPinned?: boolean;
   /** Offset for pinned columns */
   pinnedOffset?: number;
-  /** Whether this is the last left-pinned column */
-  isLastLeftPinned?: boolean;
-  /** Whether this is the first right-pinned column */
-  isFirstRightPinned?: boolean;
+  /** Whether this is the last pinned column */
+  isLastPinned?: boolean;
 }
 
 export const TableCell = memo(
@@ -39,10 +37,9 @@ export const TableCell = memo(
     onCancel,
     onKeyDown,
     onClick,
-    pinnedPosition,
+    isPinned,
     pinnedOffset,
-    isLastLeftPinned,
-    isFirstRightPinned,
+    isLastPinned,
   }: TableCellProps) => {
     const [editValue, setEditValue] = useState('');
     const [validationError, setValidationError] = useState<string | null>(null);
@@ -145,22 +142,16 @@ export const TableCell = memo(
 
     // Calculate pinned styles
     const pinnedStyles: React.CSSProperties = {};
-    if (pinnedPosition === 'left') {
+    if (isPinned) {
       pinnedStyles.position = 'sticky';
       pinnedStyles.left = pinnedOffset ?? 0;
-      pinnedStyles.zIndex = 1;
-    } else if (pinnedPosition === 'right') {
-      pinnedStyles.position = 'sticky';
-      pinnedStyles.right = pinnedOffset ?? 0;
       pinnedStyles.zIndex = 1;
     }
 
     const pinnedClassName = cn(
-      pinnedPosition && 'bg-background',
-      isLastLeftPinned &&
-        'after:bg-border after:absolute after:top-0 after:right-0 after:bottom-0 after:w-px after:shadow-[2px_0_4px_rgba(0,0,0,0.1)]',
-      isFirstRightPinned &&
-        'before:bg-border before:absolute before:top-0 before:bottom-0 before:left-0 before:w-px before:shadow-[-2px_0_4px_rgba(0,0,0,0.1)]'
+      isPinned && 'bg-background',
+      isLastPinned &&
+        'after:bg-border after:absolute after:top-0 after:right-0 after:bottom-0 after:w-px after:shadow-[2px_0_4px_rgba(0,0,0,0.1)]'
     );
 
     // For grouped cells, show the aggregated value
