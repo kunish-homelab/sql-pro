@@ -138,7 +138,7 @@ export function Toolbar({ onOpenChanges }: ToolbarProps) {
         </TooltipTrigger>
         <TooltipContent>
           <span>Refresh Schema</span>
-          <kbd className="bg-muted ml-2 rounded px-1 py-0.5 font-mono text-xs">
+          <kbd className="bg-muted text-muted-foreground ml-2 rounded px-1 py-0.5 font-mono text-xs">
             ⇧⌘R
           </kbd>
         </TooltipContent>
@@ -188,7 +188,7 @@ export function Toolbar({ onOpenChanges }: ToolbarProps) {
             className="text-muted-foreground gap-1.5 text-xs"
           >
             <span>Commands</span>
-            <kbd className="bg-muted rounded px-1 py-0.5 font-mono text-[10px]">
+            <kbd className="bg-muted text-muted-foreground rounded px-1 py-0.5 font-mono text-[10px]">
               ⌘K
             </kbd>
           </Button>

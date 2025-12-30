@@ -136,11 +136,15 @@ export function CommandPalette() {
           <div className="text-muted-foreground flex items-center justify-between border-t px-4 py-2 text-xs">
             <div className="flex items-center gap-3">
               <span className="flex items-center gap-1">
-                <kbd className="bg-muted rounded px-1 py-0.5">↑↓</kbd>
+                <kbd className="bg-muted text-muted-foreground rounded px-1 py-0.5">
+                  ↑↓
+                </kbd>
                 <span>Select</span>
               </span>
               <span className="flex items-center gap-1">
-                <kbd className="bg-muted rounded px-1 py-0.5">↵</kbd>
+                <kbd className="bg-muted text-muted-foreground rounded px-1 py-0.5">
+                  ↵
+                </kbd>
                 <span>Run</span>
               </span>
             </div>

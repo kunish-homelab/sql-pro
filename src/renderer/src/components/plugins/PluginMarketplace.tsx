@@ -513,7 +513,7 @@ export function PluginMarketplace({
                 </span>
                 <span>
                   Press{' '}
-                  <kbd className="bg-muted rounded px-1.5 py-0.5 font-mono text-[10px]">
+                  <kbd className="bg-muted text-muted-foreground rounded px-1.5 py-0.5 font-mono text-[10px]">
                     Cmd/Ctrl+F
                   </kbd>{' '}
                   to search

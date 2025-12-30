@@ -146,8 +146,6 @@ export function createApplicationMenu(): void {
           click: () => sendMenuAction('toggle-history'),
         },
         { type: 'separator' },
-        { role: 'reload' },
-        { role: 'forceReload' },
         { role: 'toggleDevTools' },
         { type: 'separator' },
         { role: 'resetZoom' },
