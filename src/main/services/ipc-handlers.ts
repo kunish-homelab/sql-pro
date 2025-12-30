@@ -543,10 +543,12 @@ export function setupIpcHandlers(): void {
           model: request.model,
           max_tokens: request.maxTokens || 1024,
           system: request.system,
-          messages: request.messages.map((m) => ({
-            role: m.role as 'user' | 'assistant',
-            content: m.content,
-          })),
+          messages: request.messages.map(
+            (m: { role: string; content: string }) => ({
+              role: m.role as 'user' | 'assistant',
+              content: m.content,
+            })
+          ),
         });
 
         // Extract text content from response
@@ -585,10 +587,12 @@ export function setupIpcHandlers(): void {
         // Use official SDK to make the request
         const response = await client.chat.completions.create({
           model: request.model,
-          messages: request.messages.map((m) => ({
-            role: m.role as 'user' | 'assistant' | 'system',
-            content: m.content,
-          })),
+          messages: request.messages.map(
+            (m: { role: string; content: string }) => ({
+              role: m.role as 'user' | 'assistant' | 'system',
+              content: m.content,
+            })
+          ),
           ...(request.responseFormat && {
             response_format: request.responseFormat as { type: 'json_object' },
           }),

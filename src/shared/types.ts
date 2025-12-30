@@ -27,33 +27,52 @@ export interface UpdateStatus {
   progress?: UpdateProgress;
 }
 
-// ============ Error Types ============
+// ============ Enhanced Error Types ============
 
+/**
+ * Error codes for categorizing different types of errors.
+ * These codes help the UI determine how to display errors and what suggestions to show.
+ */
+export type ErrorCode =
+  | 'SQL_SYNTAX_ERROR' // Invalid SQL syntax
+  | 'SQL_CONSTRAINT_ERROR' // Constraint violation (foreign key, unique, check, not null)
+  | 'TABLE_NOT_FOUND' // Table does not exist
+  | 'COLUMN_NOT_FOUND' // Column does not exist
+  | 'CONSTRAINT_VIOLATION' // General constraint violation
+  | 'TYPE_MISMATCH' // Data type mismatch
+  | 'CONNECTION_ERROR' // Database connection failure
+  | 'PERMISSION_ERROR' // File system permission denied
+  | 'FILE_NOT_FOUND' // Database file doesn't exist
+  | 'ENCRYPTION_ERROR' // Encrypted database password issues
+  | 'QUERY_EXECUTION_ERROR' // General query execution failure
+  | 'UNKNOWN_ERROR'; // Fallback for unrecognized errors
+
+/**
+ * Position information for errors that occur at a specific location in SQL.
+ */
 export interface ErrorPosition {
+  /** Line number (1-based) */
   line: number;
+  /** Column number (1-based) */
   column: number;
 }
 
-export type ErrorCode =
-  | 'SQL_SYNTAX_ERROR'
-  | 'SQL_CONSTRAINT_ERROR'
-  | 'TABLE_NOT_FOUND'
-  | 'COLUMN_NOT_FOUND'
-  | 'CONSTRAINT_VIOLATION'
-  | 'TYPE_MISMATCH'
-  | 'CONNECTION_ERROR'
-  | 'PERMISSION_ERROR'
-  | 'FILE_NOT_FOUND'
-  | 'ENCRYPTION_ERROR'
-  | 'QUERY_EXECUTION_ERROR'
-  | 'UNKNOWN_ERROR';
-
+/**
+ * Enhanced error information with actionable suggestions and documentation links.
+ * This interface extends basic error responses with richer error details.
+ */
 export interface EnhancedErrorInfo {
+  /** Human-readable error message */
   error: string;
-  errorCode: ErrorCode;
+  /** Categorized error code for programmatic handling */
+  errorCode?: ErrorCode;
+  /** Position in SQL where the error occurred (for syntax errors) */
   errorPosition?: ErrorPosition;
-  suggestions: string[];
+  /** Actionable suggestions to fix the error (2-3 items) */
+  suggestions?: string[];
+  /** URL to relevant SQLite documentation */
   documentationUrl?: string;
+  /** Step-by-step troubleshooting instructions (for connection errors) */
   troubleshootingSteps?: string[];
 }
 
@@ -77,6 +96,12 @@ export interface OpenDatabaseResponse {
   error?: string;
   /** When true, indicates the database requires a password to open */
   needsPassword?: boolean;
+  /** Categorized error code for programmatic handling */
+  errorCode?: ErrorCode;
+  /** Step-by-step troubleshooting instructions (for connection errors) */
+  troubleshootingSteps?: string[];
+  /** URL to relevant SQLite documentation */
+  documentationUrl?: string;
 }
 
 export interface CloseDatabaseRequest {
@@ -184,6 +209,10 @@ export interface GetTableDataResponse {
   rows?: Record<string, unknown>[];
   totalRows?: number;
   error?: string;
+  /** Categorized error code for programmatic handling */
+  errorCode?: ErrorCode;
+  /** Actionable suggestions to fix the error */
+  suggestions?: string[];
 }
 
 // ============ Query Types ============
@@ -201,6 +230,14 @@ export interface ExecuteQueryResponse {
   lastInsertRowId?: number;
   executionTime?: number;
   error?: string;
+  /** Categorized error code for programmatic handling */
+  errorCode?: ErrorCode;
+  /** Position in SQL where the error occurred (for syntax errors) */
+  errorPosition?: ErrorPosition;
+  /** Actionable suggestions to fix the error (2-3 items) */
+  suggestions?: string[];
+  /** URL to relevant SQLite documentation */
+  documentationUrl?: string;
 }
 
 // ============ Change Types ============
@@ -225,8 +262,9 @@ export interface ValidateChangesRequest {
 }
 
 export interface ValidationResult {
-  changeId: string;
-  isValid: boolean;
+  changeId?: string;
+  isValid?: boolean;
+  valid?: boolean;
   error?: string;
 }
 
@@ -245,6 +283,12 @@ export interface ApplyChangesResponse {
   success: boolean;
   appliedCount?: number;
   error?: string;
+  /** Categorized error code for programmatic handling */
+  errorCode?: ErrorCode;
+  /** Actionable suggestions to fix the error */
+  suggestions?: string[];
+  /** URL to relevant SQLite documentation */
+  documentationUrl?: string;
 }
 
 // ============ Dialog Types ============
@@ -490,23 +534,37 @@ export interface QueryPlanNode {
   id: number;
   /** Parent node ID (0 for root nodes) */
   parent: number;
-  /** Reserved field from SQLite */
-  notUsed: number;
   /** Operation description (e.g., "SCAN TABLE users", "SEARCH TABLE users USING INDEX") */
   detail: string;
+  /** Child nodes in the query plan tree */
+  children?: QueryPlanNode[];
+  /** Estimated cost of the operation */
+  estimatedCost?: number;
+  /** Estimated number of rows processed */
+  estimatedRows?: number;
 }
 
 export interface QueryPlanStats {
   /** Query execution time in milliseconds */
-  executionTime: number;
+  executionTime?: number;
   /** Estimated or actual rows examined */
-  rowsExamined: number;
+  rowsExamined?: number;
   /** Number of rows returned */
-  rowsReturned: number;
+  rowsReturned?: number;
   /** List of indexes used in the query */
-  indexesUsed: string[];
+  indexesUsed?: string[];
   /** List of tables accessed */
-  tablesAccessed: string[];
+  tablesAccessed?: string[];
+  /** Total number of nodes in the plan */
+  totalNodes?: number;
+  /** Depth of the plan tree */
+  depth?: number;
+  /** Whether the plan includes a table scan */
+  hasScan?: boolean;
+  /** Whether the plan includes a sort operation */
+  hasSort?: boolean;
+  /** Whether the plan uses an index */
+  hasIndex?: boolean;
 }
 
 export interface AnalyzeQueryPlanRequest {
@@ -689,26 +747,6 @@ export interface NLToSQLResponse {
   error?: string;
 }
 
-export interface OptimizeQueryRequest {
-  query: string;
-  schema: SchemaInfo[];
-  queryPlan?: QueryPlanNode[];
-}
-
-export interface OptimizeQueryResponse {
-  success: boolean;
-  optimizedQuery?: string;
-  suggestions?: string[];
-  explanation?: string;
-  error?: string;
-}
-
-export interface AnalyzeDataRequest {
-  columns: ColumnInfo[];
-  rows: Record<string, unknown>[];
-  analysisType: 'anomaly' | 'suggestions' | 'patterns';
-}
-
 export interface DataInsight {
   type: 'anomaly' | 'suggestion' | 'pattern';
   column?: string;
@@ -721,6 +759,20 @@ export interface AnalyzeDataResponse {
   success: boolean;
   insights?: DataInsight[];
   summary?: string;
+  error?: string;
+}
+
+export interface FetchAIRequest {
+  provider: AIProvider;
+  model: string;
+  messages: Array<{ role: 'user' | 'assistant'; content: string }>;
+  apiKey: string;
+  baseUrl?: string;
+}
+
+export interface FetchAIResponse {
+  success: boolean;
+  response?: string;
   error?: string;
 }
 

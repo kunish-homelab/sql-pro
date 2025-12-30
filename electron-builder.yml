@@ -43,7 +43,7 @@ mac:
   gatekeeperAssess: false
   notarize: false
   # Specify the signing identity to avoid picking wrong certificate
-  identity: 'shuyuan sun'
+  identity: shuyuan sun
   # Required for auto-update on macOS
   artifactName: ${name}-${version}-${os}-${arch}.${ext}
 

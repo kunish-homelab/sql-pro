@@ -34,7 +34,7 @@ export function generateSuggestions(
   }
 
   // Check if no indexes are used
-  if (stats.indexesUsed.length === 0 && plan.length > 0) {
+  if ((stats.indexesUsed?.length ?? 0) === 0 && plan.length > 0) {
     suggestions.push({
       type: 'warning',
       title: 'No indexes used',
@@ -45,11 +45,11 @@ export function generateSuggestions(
   }
 
   // Check for multiple table accesses (potential join optimization)
-  if (stats.tablesAccessed.length > 2) {
+  if ((stats.tablesAccessed?.length ?? 0) > 2) {
     suggestions.push({
       type: 'rewrite',
       title: 'Multiple tables accessed',
-      description: `This query accesses ${stats.tablesAccessed.length} tables. Ensure all join columns are indexed and consider breaking complex queries into smaller parts.`,
+      description: `This query accesses ${stats.tablesAccessed?.length ?? 0} tables. Ensure all join columns are indexed and consider breaking complex queries into smaller parts.`,
       impact: 'medium',
     });
   }
@@ -117,7 +117,10 @@ export function generateSuggestions(
   }
 
   // Check for high rows examined vs returned ratio
-  if (stats.rowsReturned > 0 && stats.rowsExamined > stats.rowsReturned * 10) {
+  if (
+    (stats.rowsReturned ?? 0) > 0 &&
+    (stats.rowsExamined ?? 0) > (stats.rowsReturned ?? 0) * 10
+  ) {
     suggestions.push({
       type: 'warning',
       title: 'High scan-to-return ratio',
@@ -129,13 +132,13 @@ export function generateSuggestions(
   // If query is fast and uses indexes, give positive feedback
   if (
     suggestions.length === 0 &&
-    stats.indexesUsed.length > 0 &&
-    stats.executionTime < 100
+    (stats.indexesUsed?.length ?? 0) > 0 &&
+    (stats.executionTime ?? 0) < 100
   ) {
     suggestions.push({
       type: 'rewrite',
       title: 'Query looks optimized',
-      description: `The query uses ${stats.indexesUsed.length} index(es) and executes quickly. No obvious optimizations needed.`,
+      description: `The query uses ${stats.indexesUsed?.length ?? 0} index(es) and executes quickly. No obvious optimizations needed.`,
       impact: 'low',
     });
   }

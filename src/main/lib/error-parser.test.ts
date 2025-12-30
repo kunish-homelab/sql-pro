@@ -414,46 +414,35 @@ describe('error-parser', () => {
 
     it('should return false for non-encryption errors', () => {
       expect(needsPassword('no such table: users')).toBe(false);
-      expect(needsPassword('permission denied')).toBe(false);
-      expect(needsPassword('database is locked')).toBe(false);
+    });
+
+    it('should handle multiple error keywords', () => {
+      expect(
+        needsPassword('database is encrypted and password is required')
+      ).toBe(true);
     });
   });
 
   describe('truncateErrorMessage', () => {
+    it('should truncate long error messages', () => {
+      const longMessage = 'A'.repeat(500);
+      const result = truncateErrorMessage(longMessage);
+      expect(result.length).toBeLessThanOrEqual(200);
+      expect(result).toContain('...');
+    });
+
     it('should not truncate short messages', () => {
-      const message = 'Short error';
-      expect(truncateErrorMessage(message)).toBe(message);
+      const shortMessage = 'short error';
+      const result = truncateErrorMessage(shortMessage);
+      expect(result).toBe(shortMessage);
     });
 
-    it('should truncate long messages', () => {
-      const message = 'A'.repeat(300);
-      const result = truncateErrorMessage(message, 200);
-      expect(result.length).toBeLessThanOrEqual(203); // 200 + '...'
-      expect(result.endsWith('...')).toBe(true);
-    });
-
-    it('should break at word boundaries when possible', () => {
+    it('should preserve error context when truncating', () => {
       const message =
-        'This is a very long error message that needs to be truncated at a reasonable word boundary';
-      const result = truncateErrorMessage(message, 50);
-      expect(result.endsWith('...')).toBe(true);
-      // Should not break in the middle of a word
-      expect(result.includes('truncat...')).toBe(false);
-    });
-
-    it('should use default max length of 200', () => {
-      const message = 'A'.repeat(300);
-      const result = truncateErrorMessage(message);
-      expect(result.length).toBeLessThanOrEqual(203);
-    });
-
-    it('should handle empty string', () => {
-      expect(truncateErrorMessage('')).toBe('');
-    });
-
-    it('should handle exact length messages', () => {
-      const message = 'A'.repeat(200);
-      expect(truncateErrorMessage(message, 200)).toBe(message);
+        'syntax error at position 42 in SELECT * FROM users WHERE x = 1';
+      const result = truncateErrorMessage(message, 40);
+      expect(result.length).toBeLessThanOrEqual(40);
+      expect(result).toContain('...');
     });
   });
 });

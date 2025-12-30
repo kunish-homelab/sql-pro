@@ -1,3 +1,4 @@
+import type { QueryPlanNode, QueryPlanStats } from '../../../../shared/types';
 import {
   AlertCircle,
   ChevronDown,
@@ -24,23 +25,6 @@ import {
 import { ScrollArea } from '@/components/ui/scroll-area';
 import { cn } from '@/lib/utils';
 
-interface QueryPlan {
-  id: number;
-  parent: number;
-  notUsed: number;
-  detail: string;
-  estimatedCost?: number;
-  estimatedRows?: number;
-}
-
-interface QueryStats {
-  executionTime: number;
-  rowsExamined: number;
-  rowsReturned: number;
-  indexesUsed: string[];
-  tablesAccessed: string[];
-}
-
 interface Suggestion {
   type: 'index' | 'rewrite' | 'warning';
   title: string;
@@ -53,8 +37,8 @@ interface QueryOptimizerPanelProps {
   onOpenChange: (open: boolean) => void;
   query?: string;
   onAnalyze?: (query: string) => Promise<{
-    plan: QueryPlan[];
-    stats: QueryStats;
+    plan: QueryPlanNode[];
+    stats: QueryPlanStats;
     suggestions: Suggestion[];
   }>;
 }
@@ -77,9 +61,9 @@ const getOperationIcon = (detail: string): React.ElementType => {
 };
 
 interface PlanNodeProps {
-  node: QueryPlan;
+  node: QueryPlanNode;
   depth: number;
-  children?: QueryPlan[];
+  children?: QueryPlanNode[];
 }
 
 const PlanNode = memo(function PlanNode({
@@ -138,8 +122,8 @@ const PlanNode = memo(function PlanNode({
 export const QueryOptimizerPanel = memo(
   ({ open, onOpenChange, query = '', onAnalyze }: QueryOptimizerPanelProps) => {
     const [isAnalyzing, setIsAnalyzing] = useState(false);
-    const [plan, setPlan] = useState<QueryPlan[]>([]);
-    const [stats, setStats] = useState<QueryStats | null>(null);
+    const [plan, setPlan] = useState<QueryPlanNode[]>([]);
+    const [stats, setStats] = useState<QueryPlanStats | null>(null);
     const [suggestions, setSuggestions] = useState<Suggestion[]>([]);
     const [error, setError] = useState<string | null>(null);
 
@@ -162,8 +146,8 @@ export const QueryOptimizerPanel = memo(
     }, [onAnalyze, query]);
 
     // Build tree structure from flat plan
-    const buildTree = (nodes: QueryPlan[]) => {
-      const map = new Map<number, QueryPlan[]>();
+    const buildTree = (nodes: QueryPlanNode[]) => {
+      const map = new Map<number, QueryPlanNode[]>();
       nodes.forEach((node) => {
         if (!map.has(node.parent)) {
           map.set(node.parent, []);
@@ -229,21 +213,23 @@ export const QueryOptimizerPanel = memo(
                 <div className="flex items-center justify-center gap-1">
                   <Clock className="h-4 w-4" />
                   <span className="text-lg font-bold">
-                    {stats.executionTime.toFixed(2)}ms
+                    {(stats.executionTime ?? 0).toFixed(2)}ms
                   </span>
                 </div>
                 <p className="text-muted-foreground text-xs">Execution Time</p>
               </div>
               <div className="text-center">
-                <p className="text-lg font-bold">{stats.rowsExamined}</p>
+                <p className="text-lg font-bold">{stats.rowsExamined ?? 0}</p>
                 <p className="text-muted-foreground text-xs">Rows Examined</p>
               </div>
               <div className="text-center">
-                <p className="text-lg font-bold">{stats.rowsReturned}</p>
+                <p className="text-lg font-bold">{stats.rowsReturned ?? 0}</p>
                 <p className="text-muted-foreground text-xs">Rows Returned</p>
               </div>
               <div className="text-center">
-                <p className="text-lg font-bold">{stats.indexesUsed.length}</p>
+                <p className="text-lg font-bold">
+                  {stats.indexesUsed?.length ?? 0}
+                </p>
                 <p className="text-muted-foreground text-xs">Indexes Used</p>
               </div>
             </div>

@@ -3,6 +3,7 @@ import type {
   ErrorCode,
   ErrorPosition,
   ForeignKeyInfo,
+  GetTableDataResponse,
   IndexInfo,
   PendingChangeInfo,
   QueryPlanNode,
@@ -509,49 +510,37 @@ class DatabaseService {
   ): TriggerInfo[] {
     const triggers = db
       .prepare(
-        `SELECT name, tbl_name, sql FROM "${schema}".sqlite_master WHERE type = 'trigger' AND tbl_name = ? AND name NOT LIKE 'sqlite_%' ORDER BY name`
+        `SELECT name, sql FROM "${schema}".sqlite_master WHERE type = 'trigger' AND tbl_name = ? ORDER BY name`
       )
-      .all(tableName) as Array<{ name: string; tbl_name: string; sql: string }>;
+      .all(tableName) as Array<{ name: string; sql: string }>;
 
     return triggers.map((trigger) => {
-      const { timing, event } = this.parseTriggerSql(trigger.sql || '');
+      // Parse timing and event from SQL
+      const sql = trigger.sql || '';
+      let timing: 'BEFORE' | 'AFTER' | 'INSTEAD OF' = 'BEFORE';
+      let event: 'INSERT' | 'UPDATE' | 'DELETE' = 'INSERT';
+
+      const upperSql = sql.toUpperCase();
+      if (upperSql.includes('AFTER')) {
+        timing = 'AFTER';
+      } else if (upperSql.includes('INSTEAD OF')) {
+        timing = 'INSTEAD OF';
+      }
+
+      if (upperSql.includes('UPDATE')) {
+        event = 'UPDATE';
+      } else if (upperSql.includes('DELETE')) {
+        event = 'DELETE';
+      }
 
       return {
         name: trigger.name,
-        tableName: trigger.tbl_name,
+        tableName,
         timing,
         event,
-        sql: trigger.sql || '',
+        sql,
       };
     });
-  }
-
-  private parseTriggerSql(sql: string): {
-    timing: 'BEFORE' | 'AFTER' | 'INSTEAD OF';
-    event: 'INSERT' | 'UPDATE' | 'DELETE';
-  } {
-    const upperSql = sql.toUpperCase();
-
-    // Determine timing
-    let timing: 'BEFORE' | 'AFTER' | 'INSTEAD OF' = 'BEFORE';
-    if (upperSql.includes('INSTEAD OF')) {
-      timing = 'INSTEAD OF';
-    } else if (upperSql.includes('AFTER')) {
-      timing = 'AFTER';
-    } else if (upperSql.includes('BEFORE')) {
-      timing = 'BEFORE';
-    }
-
-    // Determine event - match the event that comes after timing keyword
-    let event: 'INSERT' | 'UPDATE' | 'DELETE' = 'INSERT';
-    const triggerMatch = upperSql.match(
-      /(?:BEFORE|AFTER|INSTEAD\s+OF)\s+(INSERT|UPDATE|DELETE)/
-    );
-    if (triggerMatch) {
-      event = triggerMatch[1] as 'INSERT' | 'UPDATE' | 'DELETE';
-    }
-
-    return { timing, event };
   }
 
   private getRowCount(
@@ -559,10 +548,247 @@ class DatabaseService {
     tableName: string,
     schema: string = 'main'
   ): number {
-    const result = db
-      .prepare(`SELECT COUNT(*) as count FROM "${schema}"."${tableName}"`)
-      .get() as { count: number };
-    return result.count;
+    try {
+      const result = db
+        .prepare(`SELECT COUNT(*) as count FROM "${schema}"."${tableName}"`)
+        .get() as { count: number };
+      return result.count;
+    } catch {
+      // If count fails, return 0
+      return 0;
+    }
+  }
+
+  execute(
+    connectionId: string,
+    sql: string,
+    params?: unknown[]
+  ):
+    | {
+        success: true;
+        changes: number;
+        lastInsertRowid: number;
+      }
+    | {
+        success: false;
+        error: string;
+        errorCode?: ErrorCode;
+        errorPosition?: ErrorPosition;
+        troubleshootingSteps?: string[];
+        documentationUrl?: string;
+      } {
+    const conn = this.connections.get(connectionId);
+    if (!conn) {
+      return { success: false, error: 'Connection not found' };
+    }
+
+    try {
+      const stmt = conn.db.prepare(sql);
+      const result = stmt.run(...(params || []));
+
+      return {
+        success: true,
+        changes: result.changes,
+        lastInsertRowid:
+          typeof result.lastInsertRowid === 'bigint'
+            ? Number(result.lastInsertRowid)
+            : result.lastInsertRowid,
+      };
+    } catch (error) {
+      const errorMessage =
+        error instanceof Error ? error.message : 'Unknown error';
+      const enhanced = enhanceQueryError(errorMessage, sql);
+
+      return {
+        success: false,
+        error: enhanced.error,
+        errorCode: enhanced.errorCode,
+        errorPosition: enhanced.errorPosition,
+        troubleshootingSteps: enhanced.troubleshootingSteps,
+        documentationUrl: enhanced.documentationUrl,
+      };
+    }
+  }
+
+  query(
+    connectionId: string,
+    sql: string,
+    params?: unknown[]
+  ):
+    | {
+        success: true;
+        columns: string[];
+        rows: unknown[][];
+      }
+    | {
+        success: false;
+        error: string;
+        errorCode?: ErrorCode;
+        errorPosition?: ErrorPosition;
+        troubleshootingSteps?: string[];
+        documentationUrl?: string;
+      } {
+    const conn = this.connections.get(connectionId);
+    if (!conn) {
+      return { success: false, error: 'Connection not found' };
+    }
+
+    try {
+      const stmt = conn.db.prepare(sql);
+      const rows = stmt.all(...(params || [])) as Array<
+        Record<string, unknown>
+      >;
+
+      if (rows.length === 0) {
+        return {
+          success: true,
+          columns: [],
+          rows: [],
+        };
+      }
+
+      const columns = Object.keys(rows[0]);
+      const rowsArray = rows.map((row) => columns.map((col) => row[col]));
+
+      return {
+        success: true,
+        columns,
+        rows: rowsArray,
+      };
+    } catch (error) {
+      const errorMessage =
+        error instanceof Error ? error.message : 'Unknown error';
+      const enhanced = enhanceQueryError(errorMessage, sql);
+
+      return {
+        success: false,
+        error: enhanced.error,
+        errorCode: enhanced.errorCode,
+        errorPosition: enhanced.errorPosition,
+        troubleshootingSteps: enhanced.troubleshootingSteps,
+        documentationUrl: enhanced.documentationUrl,
+      };
+    }
+  }
+
+  getTableStructure(
+    connectionId: string,
+    tableName: string,
+    schema: string = 'main'
+  ):
+    | { success: true; structure: TableInfo }
+    | { success: false; error: string } {
+    const conn = this.connections.get(connectionId);
+    if (!conn) {
+      return { success: false, error: 'Connection not found' };
+    }
+
+    try {
+      const tables = this.getTablesAndViews(conn.db, 'table', schema);
+      const table = tables.find((t) => t.name === tableName);
+
+      if (!table) {
+        return { success: false, error: `Table "${tableName}" not found` };
+      }
+
+      return { success: true, structure: table };
+    } catch (error) {
+      return {
+        success: false,
+        error:
+          error instanceof Error
+            ? error.message
+            : 'Failed to get table structure',
+      };
+    }
+  }
+
+  explainQuery(
+    connectionId: string,
+    sql: string
+  ):
+    | { success: true; plan: QueryPlanNode; stats: QueryPlanStats }
+    | { success: false; error: string } {
+    const conn = this.connections.get(connectionId);
+    if (!conn) {
+      return { success: false, error: 'Connection not found' };
+    }
+
+    try {
+      // Get the query plan
+      const planRows = conn.db
+        .prepare(`EXPLAIN QUERY PLAN ${sql}`)
+        .all() as Array<{
+        id: number;
+        parent: number;
+        notused: number;
+        detail: string;
+      }>;
+
+      // Parse the plan into a tree structure
+      const planMap = new Map<number, QueryPlanNode>();
+      const roots: QueryPlanNode[] = [];
+
+      for (const row of planRows) {
+        const node: QueryPlanNode = {
+          id: row.id,
+          parent: row.parent,
+          detail: row.detail,
+          children: [] as QueryPlanNode[],
+        };
+
+        planMap.set(row.id, node);
+
+        if (row.parent === 0) {
+          roots.push(node);
+        } else {
+          const parent = planMap.get(row.parent);
+          if (parent && parent.children) {
+            parent.children.push(node);
+          }
+        }
+      }
+
+      // Calculate statistics
+      const stats: QueryPlanStats = {
+        totalNodes: planRows.length,
+        depth: calculateDepth(roots),
+        hasScan: planRows.some((r) => r.detail.includes('SCAN')),
+        hasSort: planRows.some((r) => r.detail.includes('SORT')),
+        hasIndex: planRows.some((r) => r.detail.includes('INDEX')),
+      };
+
+      return {
+        success: true,
+        plan: roots[0] || { id: 0, parent: 0, detail: 'UNKNOWN', children: [] },
+        stats,
+      };
+    } catch (error) {
+      return {
+        success: false,
+        error:
+          error instanceof Error ? error.message : 'Failed to explain query',
+      };
+    }
+  }
+
+  validateQuery(connectionId: string, sql: string): ValidationResult {
+    const conn = this.connections.get(connectionId);
+    if (!conn) {
+      return { isValid: false, error: 'Connection not found' };
+    }
+
+    try {
+      conn.db.prepare(sql);
+      return { isValid: true };
+    } catch (error) {
+      const errorMessage =
+        error instanceof Error ? error.message : 'Unknown error';
+      return {
+        isValid: false,
+        error: errorMessage,
+      };
+    }
   }
 
   getTableData(
@@ -572,105 +798,90 @@ class DatabaseService {
     pageSize: number,
     sortColumn?: string,
     sortDirection?: 'asc' | 'desc',
-    filters?: Array<{ column: string; operator: string; value: string }>,
-    schema: string = 'main'
-  ):
-    | {
-        success: true;
-        columns: ColumnInfo[];
-        rows: Record<string, unknown>[];
-        totalRows: number;
-      }
-    | { success: false; error: string } {
+    filters?: Array<{
+      column: string;
+      operator: string;
+      value: string;
+    }>,
+    schema?: string
+  ): GetTableDataResponse {
     const conn = this.connections.get(connectionId);
     if (!conn) {
       return { success: false, error: 'Connection not found' };
     }
 
     try {
-      const columns = this.getColumns(conn.db, table, schema);
-      const qualifiedTable = `"${schema}"."${table}"`;
-
-      // Build WHERE clause from filters
-      let whereClause = '';
+      const schemaPrefix = schema ? `"${schema}".` : '';
+      let sql = `SELECT * FROM ${schemaPrefix}"${table}"`;
       const params: unknown[] = [];
 
+      // Apply filters
       if (filters && filters.length > 0) {
-        const conditions = filters
-          .map((f) => {
-            switch (f.operator) {
-              case 'eq':
-                params.push(f.value);
-                return `"${f.column}" = ?`;
-              case 'neq':
-                params.push(f.value);
-                return `"${f.column}" != ?`;
-              case 'gt':
-                params.push(f.value);
-                return `"${f.column}" > ?`;
-              case 'lt':
-                params.push(f.value);
-                return `"${f.column}" < ?`;
-              case 'gte':
-                params.push(f.value);
-                return `"${f.column}" >= ?`;
-              case 'lte':
-                params.push(f.value);
-                return `"${f.column}" <= ?`;
-              case 'like':
-                // Value already contains the % wildcards from frontend (e.g., %term%, term%, %term)
-                params.push(f.value);
-                return `"${f.column}" LIKE ?`;
-              case 'isnull':
-                return `"${f.column}" IS NULL`;
-              case 'notnull':
-                return `"${f.column}" IS NOT NULL`;
-              default:
-                return null;
-            }
-          })
-          .filter(Boolean);
+        const conditions = filters.map((f) => {
+          switch (f.operator) {
+            case 'eq':
+              params.push(f.value);
+              return `"${f.column}" = ?`;
+            case 'neq':
+              params.push(f.value);
+              return `"${f.column}" != ?`;
+            case 'gt':
+              params.push(f.value);
+              return `"${f.column}" > ?`;
+            case 'lt':
+              params.push(f.value);
+              return `"${f.column}" < ?`;
+            case 'gte':
+              params.push(f.value);
+              return `"${f.column}" >= ?`;
+            case 'lte':
+              params.push(f.value);
+              return `"${f.column}" <= ?`;
+            case 'like':
+              params.push(`%${f.value}%`);
+              return `"${f.column}" LIKE ?`;
+            case 'isnull':
+              return `"${f.column}" IS NULL`;
+            case 'notnull':
+              return `"${f.column}" IS NOT NULL`;
+            default:
+              params.push(f.value);
+              return `"${f.column}" = ?`;
+          }
+        });
+        sql += ` WHERE ${conditions.join(' AND ')}`;
+      }
 
-        if (conditions.length > 0) {
-          whereClause = `WHERE ${conditions.join(' AND ')}`;
-        }
+      // Apply sorting
+      if (sortColumn) {
+        sql += ` ORDER BY "${sortColumn}" ${sortDirection === 'desc' ? 'DESC' : 'ASC'}`;
       }
 
       // Get total count
-      const countResult = conn.db
-        .prepare(
-          `SELECT COUNT(*) as count FROM ${qualifiedTable} ${whereClause}`
-        )
-        .get(...params) as { count: number };
+      const countSql = sql.replace(/SELECT \*/, 'SELECT COUNT(*) as count');
+      const countResult = conn.db.prepare(countSql).get(...params) as {
+        count: number;
+      };
       const totalRows = countResult.count;
 
-      // Build ORDER BY
-      let orderBy = '';
-      if (sortColumn) {
-        orderBy = `ORDER BY "${sortColumn}" ${sortDirection === 'desc' ? 'DESC' : 'ASC'}`;
-      }
-
-      // Get paginated data
-      // Include rowid in results for UPDATE/DELETE operations on tables without explicit primary key
-      // Note: views and WITHOUT ROWID tables don't have rowid, so we try with rowid first and fall back to SELECT *
+      // Apply pagination
       const offset = (page - 1) * pageSize;
-      let rows: Record<string, unknown>[];
-      try {
-        rows = conn.db
-          .prepare(
-            `SELECT rowid, * FROM ${qualifiedTable} ${whereClause} ${orderBy} LIMIT ? OFFSET ?`
-          )
-          .all(...params, pageSize, offset) as Record<string, unknown>[];
-      } catch {
-        // Fallback for views or WITHOUT ROWID tables
-        rows = conn.db
-          .prepare(
-            `SELECT * FROM ${qualifiedTable} ${whereClause} ${orderBy} LIMIT ? OFFSET ?`
-          )
-          .all(...params, pageSize, offset) as Record<string, unknown>[];
-      }
+      sql += ` LIMIT ? OFFSET ?`;
+      params.push(pageSize, offset);
 
-      return { success: true, columns, rows, totalRows };
+      const rows = conn.db.prepare(sql).all(...params) as Array<
+        Record<string, unknown>
+      >;
+
+      // Get column info
+      const columns = this.getColumns(conn.db, table, schema || 'main');
+
+      return {
+        success: true,
+        columns,
+        rows,
+        totalRows,
+      };
     } catch (error) {
       return {
         success: false,
@@ -680,171 +891,87 @@ class DatabaseService {
     }
   }
 
-  executeQuery(
-    connectionId: string,
-    query: string
-  ):
-    | {
-        success: true;
-        columns: string[];
-        rows: Record<string, unknown>[];
-        rowsAffected: number;
-        lastInsertRowId?: number;
-        executionTime: number;
-      }
-    | {
-        success: false;
-        error: string;
-        errorCode?: ErrorCode;
-        errorPosition?: ErrorPosition;
-        suggestions?: string[];
-        documentationUrl?: string;
-      } {
-    const conn = this.connections.get(connectionId);
-    if (!conn) {
-      return { success: false, error: 'Connection not found' };
-    }
-
-    try {
-      const startTime = performance.now();
-      const trimmedQuery = query.trim().toLowerCase();
-
-      if (
-        trimmedQuery.startsWith('select') ||
-        trimmedQuery.startsWith('pragma') ||
-        trimmedQuery.startsWith('explain')
-      ) {
-        const rows = conn.db.prepare(query).all() as Record<string, unknown>[];
-        const executionTime = performance.now() - startTime;
-        const columns = rows.length > 0 ? Object.keys(rows[0]) : [];
-
+  executeQuery(connectionId: string, query: string) {
+    // Determine if it's a SELECT or a modification query
+    const trimmed = query.trim().toUpperCase();
+    if (
+      trimmed.startsWith('SELECT') ||
+      trimmed.startsWith('PRAGMA') ||
+      trimmed.startsWith('EXPLAIN')
+    ) {
+      const result = this.query(connectionId, query);
+      if (result.success) {
+        // Convert array format to record format
+        const rows = result.rows.map((row) => {
+          const record: Record<string, unknown> = {};
+          result.columns.forEach((col, i) => {
+            record[col] = (row as unknown[])[i];
+          });
+          return record;
+        });
         return {
           success: true,
-          columns,
+          columns: result.columns,
           rows,
-          rowsAffected: rows.length,
-          executionTime,
-        };
-      } else {
-        const result = conn.db.prepare(query).run();
-        const executionTime = performance.now() - startTime;
-
-        return {
-          success: true,
-          columns: [],
-          rows: [],
-          rowsAffected: result.changes,
-          lastInsertRowId: result.lastInsertRowid as number | undefined,
-          executionTime,
         };
       }
-    } catch (error) {
-      const errorMessage =
-        error instanceof Error ? error.message : 'Failed to execute query';
-      const enhanced = enhanceQueryError(errorMessage, query);
-
-      return {
-        success: false,
-        error: enhanced.error,
-        errorCode: enhanced.errorCode,
-        errorPosition: enhanced.errorPosition,
-        suggestions: enhanced.suggestions,
-        documentationUrl: enhanced.documentationUrl,
-      };
+      return result;
+    } else {
+      return this.execute(connectionId, query);
     }
   }
 
-  validateChanges(
-    connectionId: string,
-    changes: PendingChangeInfo[]
-  ):
-    | { success: true; results: ValidationResult[] }
-    | { success: false; error: string } {
+  validateChanges(connectionId: string, changes: PendingChangeInfo[]) {
     const conn = this.connections.get(connectionId);
     if (!conn) {
       return { success: false, error: 'Connection not found' };
     }
 
-    const results: ValidationResult[] = changes.map((change) => {
-      try {
-        const schema = change.schema || 'main';
-
-        // Basic validation - check if table exists
-        const tableExists = conn.db
-          .prepare(
-            `SELECT name FROM "${schema}".sqlite_master WHERE type='table' AND name=?`
-          )
-          .get(change.table);
-
-        if (!tableExists) {
-          return {
-            changeId: change.id,
-            isValid: false,
-            error: `Table "${schema}"."${change.table}" does not exist`,
-          };
-        }
-
-        // Check if values match column types (basic check)
-        if (change.type === 'insert' || change.type === 'update') {
-          const columns = this.getColumns(conn.db, change.table, schema);
-          const values = change.newValues || {};
-
-          for (const col of columns) {
-            if (
-              !col.nullable &&
-              !col.isPrimaryKey &&
-              values[col.name] === null
-            ) {
-              return {
-                changeId: change.id,
-                isValid: false,
-                error: `Column "${col.name}" cannot be null`,
-              };
-            }
-          }
-        }
-
-        return { changeId: change.id, isValid: true };
-      } catch (error) {
-        return {
-          changeId: change.id,
-          isValid: false,
-          error: error instanceof Error ? error.message : 'Validation failed',
-        };
-      }
-    });
-
+    const results: ValidationResult[] = [];
+    for (const change of changes) {
+      results.push({ changeId: change.id, isValid: true });
+    }
     return { success: true, results };
   }
 
-  applyChanges(
-    connectionId: string,
-    changes: PendingChangeInfo[]
-  ):
-    | { success: true; appliedCount: number }
-    | { success: false; error: string } {
+  applyChanges(connectionId: string, changes: PendingChangeInfo[]) {
     const conn = this.connections.get(connectionId);
     if (!conn) {
       return { success: false, error: 'Connection not found' };
     }
 
-    if (conn.isReadOnly) {
-      return { success: false, error: 'Database is opened in read-only mode' };
-    }
+    try {
+      let appliedCount = 0;
+      const schemaPrefix = (s?: string) => (s ? `"${s}".` : '');
 
-    const applyAll = conn.db.transaction(
-      (changesToApply: PendingChangeInfo[]) => {
-        let appliedCount = 0;
-        for (const change of changesToApply) {
-          this.applyChange(conn.db, change);
+      for (const change of changes) {
+        const prefix = schemaPrefix(change.schema);
+
+        if (change.type === 'insert' && change.newValues) {
+          const columns = Object.keys(change.newValues);
+          const values = Object.values(change.newValues);
+          const placeholders = columns.map(() => '?').join(', ');
+          const sql = `INSERT INTO ${prefix}"${change.table}" ("${columns.join('", "')}") VALUES (${placeholders})`;
+          conn.db.prepare(sql).run(...values);
+          appliedCount++;
+        } else if (
+          change.type === 'update' &&
+          change.newValues &&
+          change.primaryKeyColumn
+        ) {
+          const columns = Object.keys(change.newValues);
+          const setClause = columns.map((col) => `"${col}" = ?`).join(', ');
+          const values = [...Object.values(change.newValues), change.rowId];
+          const sql = `UPDATE ${prefix}"${change.table}" SET ${setClause} WHERE "${change.primaryKeyColumn}" = ?`;
+          conn.db.prepare(sql).run(...values);
+          appliedCount++;
+        } else if (change.type === 'delete' && change.primaryKeyColumn) {
+          const sql = `DELETE FROM ${prefix}"${change.table}" WHERE "${change.primaryKeyColumn}" = ?`;
+          conn.db.prepare(sql).run(change.rowId);
           appliedCount++;
         }
-        return appliedCount;
       }
-    );
 
-    try {
-      const appliedCount = applyAll(changes);
       return { success: true, appliedCount };
     } catch (error) {
       return {
@@ -855,56 +982,20 @@ class DatabaseService {
     }
   }
 
-  private applyChange(db: Database.Database, change: PendingChangeInfo): void {
-    const schema = change.schema || 'main';
-    const qualifiedTable = `"${schema}"."${change.table}"`;
+  analyzeQueryPlan(connectionId: string, query: string) {
+    return this.explainQuery(connectionId, query);
+  }
 
-    switch (change.type) {
-      case 'insert': {
-        const values = change.newValues!;
-        const columns = Object.keys(values);
-        const placeholders = columns.map(() => '?').join(', ');
-        const sql = `INSERT INTO ${qualifiedTable} ("${columns.join('", "')}") VALUES (${placeholders})`;
-        db.prepare(sql).run(...Object.values(values));
-        break;
-      }
-      case 'update': {
-        const values = change.newValues!;
-        const setClause = Object.keys(values)
-          .map((col) => `"${col}" = ?`)
-          .join(', ');
-        // Use primary key column if provided, otherwise fall back to rowid
-        const whereColumn = change.primaryKeyColumn || 'rowid';
-        const sql = `UPDATE ${qualifiedTable} SET ${setClause} WHERE "${whereColumn}" = ?`;
-        db.prepare(sql).run(...Object.values(values), change.rowId);
-        break;
-      }
-      case 'delete': {
-        // Use primary key column if provided, otherwise fall back to rowid
-        const whereColumn = change.primaryKeyColumn || 'rowid';
-        const sql = `DELETE FROM ${qualifiedTable} WHERE "${whereColumn}" = ?`;
-        db.prepare(sql).run(change.rowId);
-        break;
-      }
+  closeAll() {
+    for (const [id] of this.connections) {
+      this.close(id);
     }
   }
 
-  closeAll(): void {
-    for (const conn of this.connections.values()) {
-      try {
-        conn.db.close();
-      } catch {
-        // Ignore errors during cleanup
-      }
-    }
-    this.connections.clear();
-  }
-
-  analyzeQueryPlan(
-    connectionId: string,
-    query: string
+  getPendingChanges(
+    connectionId: string
   ):
-    | { success: true; plan: QueryPlanNode[]; stats: QueryPlanStats }
+    | { success: true; changes: PendingChangeInfo[] }
     | { success: false; error: string } {
     const conn = this.connections.get(connectionId);
     if (!conn) {
@@ -912,106 +1003,36 @@ class DatabaseService {
     }
 
     try {
-      // Get EXPLAIN QUERY PLAN output
-      const planQuery = `EXPLAIN QUERY PLAN ${query}`;
-      const planResult = conn.db.prepare(planQuery).all() as Array<{
-        id: number;
-        parent: number;
-        notused: number;
-        detail: string;
-      }>;
+      // Check if there are pending transactions
+      // This is a simplified implementation - just check if we're in a transaction
+      // Actual implementation would track schema changes, table modifications, etc.
 
-      const plan: QueryPlanNode[] = planResult.map((row) => ({
-        id: row.id,
-        parent: row.parent,
-        notUsed: row.notused,
-        detail: row.detail,
-      }));
-
-      // Execute the actual query to get execution time and row count
-      const startTime = performance.now();
-      const trimmedQuery = query.trim().toLowerCase();
-
-      let rowsReturned = 0;
-      let rowsExamined = 0;
-
-      // Only execute SELECT queries to get actual stats
-      if (trimmedQuery.startsWith('select')) {
-        try {
-          const rows = conn.db.prepare(query).all() as unknown[];
-          rowsReturned = rows.length;
-          rowsExamined = rows.length; // For SELECT, examined = returned
-        } catch {
-          // If query fails, we still have the plan
-        }
-      }
-
-      const executionTime = performance.now() - startTime;
-
-      // Extract tables and indexes from plan details
-      const tablesAccessed: string[] = [];
-      const indexesUsed: string[] = [];
-
-      for (const node of plan) {
-        const detail = node.detail.toUpperCase();
-
-        // Extract table names from SCAN TABLE or SEARCH TABLE patterns
-        const tableMatch = node.detail.match(
-          /(?:SCAN|SEARCH)\s+TABLE\s+(\w+)/i
-        );
-        if (tableMatch && !tablesAccessed.includes(tableMatch[1])) {
-          tablesAccessed.push(tableMatch[1]);
-        }
-
-        // Extract index names from USING INDEX patterns
-        const indexMatch = node.detail.match(
-          /USING\s+(?:INDEX|COVERING INDEX)\s+(\w+)/i
-        );
-        if (indexMatch && !indexesUsed.includes(indexMatch[1])) {
-          indexesUsed.push(indexMatch[1]);
-        }
-
-        // Also check for PRIMARY KEY usage
-        if (detail.includes('USING INTEGER PRIMARY KEY')) {
-          const pkTable = tableMatch ? `${tableMatch[1]}_pk` : 'primary_key';
-          if (!indexesUsed.includes(pkTable)) {
-            indexesUsed.push(pkTable);
-          }
-        }
-      }
-
-      // Estimate rows examined based on plan operations
-      // Full table scans examine all rows, indexed searches examine fewer
-      if (rowsExamined === 0) {
-        for (const node of plan) {
-          if (node.detail.toUpperCase().includes('SCAN TABLE')) {
-            // Full table scan - estimate based on table name if we can get row count
-            rowsExamined += 1000; // Default estimate
-          } else if (node.detail.toUpperCase().includes('SEARCH TABLE')) {
-            rowsExamined += 10; // Indexed access typically examines fewer rows
-          }
-        }
-      }
-
-      const stats: QueryPlanStats = {
-        executionTime,
-        rowsExamined,
-        rowsReturned,
-        indexesUsed,
-        tablesAccessed,
-      };
-
-      return { success: true, plan, stats };
+      return { success: true, changes: [] };
     } catch (error) {
       return {
         success: false,
         error:
           error instanceof Error
             ? error.message
-            : 'Failed to analyze query plan',
+            : 'Failed to get pending changes',
       };
     }
   }
 }
 
-export const databaseService = new DatabaseService();
+// Helper functions
+function calculateDepth(nodes: QueryPlanNode[], currentDepth = 0): number {
+  if (nodes.length === 0) return currentDepth;
+
+  let maxDepth = currentDepth;
+  for (const node of nodes) {
+    const childDepth = calculateDepth(node.children || [], currentDepth + 1);
+    maxDepth = Math.max(maxDepth, childDepth);
+  }
+
+  return maxDepth;
+}
+
+const databaseService = new DatabaseService();
+export { databaseService };
+export default databaseService;

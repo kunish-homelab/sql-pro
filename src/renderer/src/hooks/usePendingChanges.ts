@@ -107,16 +107,22 @@ export function usePendingChanges(
       let allValid = true;
 
       for (const result of response.results || []) {
-        if (!result.isValid) {
+        const isValid = result.isValid ?? result.valid ?? false;
+        if (!isValid) {
           allValid = false;
-          errors.set(result.changeId, result.error || 'Validation failed');
+          errors.set(
+            result.changeId ?? '',
+            result.error || 'Validation failed'
+          );
         }
 
         // Update the change in the collection
-        pendingChangesCollection.update(result.changeId, (draft) => {
-          draft.isValid = result.isValid;
-          draft.validationError = result.error;
-        });
+        if (result.changeId) {
+          pendingChangesCollection.update(result.changeId, (draft) => {
+            draft.isValid = isValid;
+            draft.validationError = result.error;
+          });
+        }
       }
 
       setValidationErrors(errors);

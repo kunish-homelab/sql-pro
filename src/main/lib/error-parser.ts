@@ -492,28 +492,18 @@ export function needsPassword(errorMessage: string): boolean {
 }
 
 /**
- * Truncates a long error message while preserving key information.
- * Useful for displaying errors in constrained UI spaces.
- *
- * @param errorMessage - The original error message
- * @param maxLength - Maximum length of the truncated message (default: 200)
- * @returns Truncated error message with ellipsis if needed
+ * Truncates an error message to a maximum length while preserving context.
+ * Adds ellipsis if truncated.
  */
 export function truncateErrorMessage(
-  errorMessage: string,
+  message: string,
   maxLength: number = 200
 ): string {
-  if (errorMessage.length <= maxLength) {
-    return errorMessage;
+  if (message.length <= maxLength) {
+    return message;
   }
 
-  // Try to break at a word boundary
-  const truncated = errorMessage.substring(0, maxLength);
-  const lastSpace = truncated.lastIndexOf(' ');
-
-  if (lastSpace > maxLength * 0.7) {
-    return `${truncated.substring(0, lastSpace)}...`;
-  }
-
+  // Truncate and add ellipsis
+  const truncated = message.slice(0, maxLength - 3);
   return `${truncated}...`;
 }
