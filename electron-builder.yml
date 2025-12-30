@@ -42,6 +42,8 @@ mac:
   hardenedRuntime: true
   gatekeeperAssess: false
   notarize: false
+  # Specify the signing identity to avoid picking wrong certificate
+  identity: 'Developer ID Application: shuyuan sun (62HCT6Q83X)'
   # Required for auto-update on macOS
   artifactName: ${name}-${version}-${os}-${arch}.${ext}
 
