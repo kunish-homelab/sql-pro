@@ -3,6 +3,7 @@
  * These utilities convert row data to different export formats (CSV, JSON, SQL, Excel).
  */
 import Papa from 'papaparse';
+import * as XLSX from 'xlsx';
 
 import type { ColumnInfo } from '../../shared/types';
 
@@ -200,4 +201,61 @@ export function generateSQL(
   });
 
   return insertStatements.join('\n');
+}
+
+// ============ Excel Generator ============
+
+export interface ExcelExportOptions {
+  /** Columns to include (all columns if not specified) */
+  columns?: string[];
+  /** Sheet name (defaults to 'Sheet1') */
+  sheetName?: string;
+}
+
+/**
+ * Generates Excel (.xlsx) content from row data using SheetJS.
+ *
+ * @param rows - Array of data objects to export
+ * @param allColumns - All available column definitions
+ * @param options - Excel export configuration
+ * @returns Buffer containing the Excel file data
+ */
+export function generateExcel(
+  rows: Record<string, unknown>[],
+  allColumns: ColumnInfo[],
+  options: ExcelExportOptions = {}
+): Buffer {
+  const { columns, sheetName = 'Sheet1' } = options;
+
+  // Determine which columns to include
+  const columnNames = columns ?? allColumns.map((c) => c.name);
+
+  // Filter rows to only include selected columns
+  const filteredRows = rows.map((row) => {
+    const filteredRow: Record<string, unknown> = {};
+    for (const col of columnNames) {
+      filteredRow[col] = row[col];
+    }
+    return filteredRow;
+  });
+
+  // Create a new workbook
+  const workbook = XLSX.utils.book_new();
+
+  // Convert data to worksheet
+  const worksheet = XLSX.utils.json_to_sheet(filteredRows, {
+    header: columnNames,
+  });
+
+  // Append worksheet to workbook
+  XLSX.utils.book_append_sheet(workbook, worksheet, sheetName);
+
+  // Write workbook to buffer with compression enabled for smaller file sizes
+  const buffer = XLSX.write(workbook, {
+    type: 'buffer',
+    bookType: 'xlsx',
+    compression: true,
+  });
+
+  return buffer;
 }
