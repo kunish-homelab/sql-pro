@@ -97,7 +97,7 @@ export const ErrorDisplay = memo(
             <AlertCircle className="text-destructive mt-0.5 h-5 w-5 shrink-0" />
             <div className="min-w-0 flex-1">
               <p className="text-destructive font-medium">{title}</p>
-              <p className="text-destructive/80 mt-1 text-sm break-words">
+              <p className="text-destructive/80 mt-1 text-sm wrap-break-word">
                 {error}
               </p>
             </div>

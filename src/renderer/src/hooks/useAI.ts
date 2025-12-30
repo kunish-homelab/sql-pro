@@ -1,5 +1,4 @@
 import type { DataInsight, SchemaInfo } from '../../../shared/types';
-import Anthropic from '@anthropic-ai/sdk';
 import OpenAI from 'openai';
 import { useCallback, useState } from 'react';
 import { useAIStore } from '@/stores/ai-store';
@@ -76,7 +75,7 @@ function formatSchemaForAI(schema: SchemaInfo[]): string {
     .join('\n\n');
 }
 
-// Create OpenAI client (only for official API)
+// Create OpenAI client (only for official API, used when no custom baseUrl)
 function createOpenAIClient(apiKey: string): OpenAI {
   return new OpenAI({
     apiKey,
@@ -84,16 +83,33 @@ function createOpenAIClient(apiKey: string): OpenAI {
   });
 }
 
-// Create Anthropic client (only for official API)
-function createAnthropicClient(apiKey: string): Anthropic {
-  return new Anthropic({
+// Fetch from Anthropic via IPC (uses @tanstack/ai-anthropic in main process)
+async function fetchAnthropic(
+  baseUrl: string | undefined,
+  apiKey: string,
+  model: string,
+  system: string,
+  messages: Array<{ role: string; content: string }>,
+  maxTokens: number = 1024
+): Promise<string | null> {
+  const response = await sqlProAPI.ai.fetchAnthropic({
+    baseUrl: baseUrl || undefined,
     apiKey,
-    dangerouslyAllowBrowser: true,
+    model,
+    system,
+    messages,
+    maxTokens,
   });
+
+  if (!response.success) {
+    throw new Error(response.error || 'API error');
+  }
+
+  return response.content || null;
 }
 
-// Fetch-based API call for custom endpoints via IPC (bypasses CORS)
-async function fetchOpenAICompatible(
+// Fetch from OpenAI via IPC (bypasses CORS for custom endpoints)
+async function fetchOpenAIViaIPC(
   baseUrl: string,
   apiKey: string,
   model: string,
@@ -106,30 +122,6 @@ async function fetchOpenAICompatible(
     model,
     messages,
     responseFormat: options?.response_format,
-  });
-
-  if (!response.success) {
-    throw new Error(response.error || 'API error');
-  }
-
-  return response.content || null;
-}
-
-async function fetchAnthropicCompatible(
-  baseUrl: string,
-  apiKey: string,
-  model: string,
-  system: string,
-  messages: Array<{ role: string; content: string }>,
-  maxTokens: number = 1024
-): Promise<string | null> {
-  const response = await sqlProAPI.ai.fetchAnthropic({
-    baseUrl,
-    apiKey,
-    model,
-    system,
-    messages,
-    maxTokens,
   });
 
   if (!response.success) {
@@ -171,15 +163,15 @@ export function useNLToSQL({ schema, onSuccess, onError }: UseNLToSQLOptions) {
 
         let sql: string | null = null;
 
-        // Use fetch for custom endpoints to avoid SDK's extra headers causing CORS issues
-        // Use SDK for official APIs for better type safety and features
         if (provider === 'openai') {
           if (baseUrl) {
-            sql = await fetchOpenAICompatible(baseUrl, apiKey, model, [
+            // Use IPC for custom endpoints
+            sql = await fetchOpenAIViaIPC(baseUrl, apiKey, model, [
               { role: 'system', content: SYSTEM_PROMPTS.nlToSql },
               { role: 'user', content: userContent },
             ]);
           } else {
+            // Use SDK directly for official API
             const client = createOpenAIClient(apiKey);
             const response = await client.chat.completions.create({
               model,
@@ -191,29 +183,15 @@ export function useNLToSQL({ schema, onSuccess, onError }: UseNLToSQLOptions) {
             sql = response.choices[0]?.message?.content?.trim() || null;
           }
         } else {
-          if (baseUrl) {
-            sql = await fetchAnthropicCompatible(
-              baseUrl,
-              apiKey,
-              model,
-              SYSTEM_PROMPTS.nlToSql,
-              [{ role: 'user', content: userContent }],
-              1024
-            );
-          } else {
-            const client = createAnthropicClient(apiKey);
-            const response = await client.messages.create({
-              model,
-              max_tokens: 1024,
-              system: SYSTEM_PROMPTS.nlToSql,
-              messages: [{ role: 'user', content: userContent }],
-            });
-            const textBlock = response.content.find(
-              (block) => block.type === 'text'
-            );
-            sql =
-              textBlock && 'text' in textBlock ? textBlock.text.trim() : null;
-          }
+          // Anthropic: always use IPC (main process uses @tanstack/ai-anthropic)
+          sql = await fetchAnthropic(
+            baseUrl,
+            apiKey,
+            model,
+            SYSTEM_PROMPTS.nlToSql,
+            [{ role: 'user', content: userContent }],
+            1024
+          );
         }
 
         if (sql) {
@@ -296,11 +274,10 @@ export function useQueryOptimizer({
 
         let content: string | null = null;
 
-        // Use fetch for custom endpoints to avoid SDK's extra headers causing CORS issues
-        // Use SDK for official APIs for better type safety and features
         if (provider === 'openai') {
           if (baseUrl) {
-            content = await fetchOpenAICompatible(
+            // Use IPC for custom endpoints
+            content = await fetchOpenAIViaIPC(
               baseUrl,
               apiKey,
               model,
@@ -311,6 +288,7 @@ export function useQueryOptimizer({
               { response_format: { type: 'json_object' } }
             );
           } else {
+            // Use SDK directly for official API
             const client = createOpenAIClient(apiKey);
             const response = await client.chat.completions.create({
               model,
@@ -323,39 +301,20 @@ export function useQueryOptimizer({
             content = response.choices[0]?.message?.content || null;
           }
         } else {
-          if (baseUrl) {
-            content = await fetchAnthropicCompatible(
-              baseUrl,
-              apiKey,
-              model,
-              SYSTEM_PROMPTS.queryOptimize,
-              [
-                {
-                  role: 'user',
-                  content: `${userContent}\n\nRespond with a JSON object.`,
-                },
-              ],
-              2048
-            );
-          } else {
-            const client = createAnthropicClient(apiKey);
-            const response = await client.messages.create({
-              model,
-              max_tokens: 2048,
-              system: SYSTEM_PROMPTS.queryOptimize,
-              messages: [
-                {
-                  role: 'user',
-                  content: `${userContent}\n\nRespond with a JSON object.`,
-                },
-              ],
-            });
-            const textBlock = response.content.find(
-              (block) => block.type === 'text'
-            );
-            content =
-              textBlock && 'text' in textBlock ? textBlock.text.trim() : null;
-          }
+          // Anthropic: always use IPC (main process uses @tanstack/ai-anthropic)
+          content = await fetchAnthropic(
+            baseUrl,
+            apiKey,
+            model,
+            SYSTEM_PROMPTS.queryOptimize,
+            [
+              {
+                role: 'user',
+                content: `${userContent}\n\nRespond with a JSON object.`,
+              },
+            ],
+            2048
+          );
         }
 
         if (content) {
@@ -434,11 +393,10 @@ export function useDataAnalysis({
 
         let content: string | null = null;
 
-        // Use fetch for custom endpoints to avoid SDK's extra headers causing CORS issues
-        // Use SDK for official APIs for better type safety and features
         if (provider === 'openai') {
           if (baseUrl) {
-            content = await fetchOpenAICompatible(
+            // Use IPC for custom endpoints
+            content = await fetchOpenAIViaIPC(
               baseUrl,
               apiKey,
               model,
@@ -449,6 +407,7 @@ export function useDataAnalysis({
               { response_format: { type: 'json_object' } }
             );
           } else {
+            // Use SDK directly for official API
             const client = createOpenAIClient(apiKey);
             const response = await client.chat.completions.create({
               model,
@@ -461,39 +420,20 @@ export function useDataAnalysis({
             content = response.choices[0]?.message?.content || null;
           }
         } else {
-          if (baseUrl) {
-            content = await fetchAnthropicCompatible(
-              baseUrl,
-              apiKey,
-              model,
-              SYSTEM_PROMPTS.dataAnalysis,
-              [
-                {
-                  role: 'user',
-                  content: `${dataContext}\n\nRespond with a JSON object.`,
-                },
-              ],
-              2048
-            );
-          } else {
-            const client = createAnthropicClient(apiKey);
-            const response = await client.messages.create({
-              model,
-              max_tokens: 2048,
-              system: SYSTEM_PROMPTS.dataAnalysis,
-              messages: [
-                {
-                  role: 'user',
-                  content: `${dataContext}\n\nRespond with a JSON object.`,
-                },
-              ],
-            });
-            const textBlock = response.content.find(
-              (block) => block.type === 'text'
-            );
-            content =
-              textBlock && 'text' in textBlock ? textBlock.text.trim() : null;
-          }
+          // Anthropic: always use IPC (main process uses @tanstack/ai-anthropic)
+          content = await fetchAnthropic(
+            baseUrl,
+            apiKey,
+            model,
+            SYSTEM_PROMPTS.dataAnalysis,
+            [
+              {
+                role: 'user',
+                content: `${dataContext}\n\nRespond with a JSON object.`,
+              },
+            ],
+            2048
+          );
         }
 
         if (content) {

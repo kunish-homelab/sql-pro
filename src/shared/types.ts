@@ -778,7 +778,7 @@ export interface FetchAIResponse {
 
 // AI Fetch Request/Response types (for IPC-based API calls)
 export interface AIFetchAnthropicRequest {
-  baseUrl: string;
+  baseUrl?: string;
   apiKey: string;
   model: string;
   system: string;
@@ -793,7 +793,7 @@ export interface AIFetchAnthropicResponse {
 }
 
 export interface AIFetchOpenAIRequest {
-  baseUrl: string;
+  baseUrl?: string;
   apiKey: string;
   model: string;
   messages: Array<{ role: string; content: string }>;

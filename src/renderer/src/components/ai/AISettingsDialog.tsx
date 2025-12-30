@@ -1,7 +1,22 @@
 import type { AIProvider } from '../../../../shared/types';
-import { Eye, EyeOff, Loader2, Sparkles } from 'lucide-react';
+import {
+  Check,
+  ChevronsUpDown,
+  Eye,
+  EyeOff,
+  Loader2,
+  Sparkles,
+} from 'lucide-react';
 import { useEffect, useMemo, useState } from 'react';
 import { Button } from '@/components/ui/button';
+import {
+  Command,
+  CommandEmpty,
+  CommandGroup,
+  CommandInput,
+  CommandItem,
+  CommandList,
+} from '@/components/ui/command';
 import {
   Dialog,
   DialogContent,
@@ -13,12 +28,18 @@ import {
 import { Input } from '@/components/ui/input';
 import { Label } from '@/components/ui/label';
 import {
+  Popover,
+  PopoverContent,
+  PopoverTrigger,
+} from '@/components/ui/popover';
+import {
   Select,
   SelectContent,
   SelectItem,
   SelectTrigger,
   SelectValue,
 } from '@/components/ui/select';
+import { cn } from '@/lib/utils';
 import { DEFAULT_MODELS, useAIStore } from '@/stores';
 
 interface AISettingsDialogProps {
@@ -42,6 +63,7 @@ export function AISettingsDialog({
   } = useAIStore();
 
   const [showApiKey, setShowApiKey] = useState(false);
+  const [modelPopoverOpen, setModelPopoverOpen] = useState(false);
 
   // Create a key that changes when store values change to reset local state
   const storeKey = useMemo(
@@ -102,6 +124,8 @@ export function AISettingsDialog({
     setLocalBaseUrl(baseUrl);
     onOpenChange(false);
   };
+
+  const availableModels = DEFAULT_MODELS[localProvider];
 
   return (
     <Dialog open={open} onOpenChange={onOpenChange}>
@@ -196,21 +220,67 @@ export function AISettingsDialog({
               </p>
             </div>
 
-            {/* Model Selection */}
+            {/* Model Selection with Custom Input */}
             <div className="grid gap-2">
               <Label htmlFor="model">Model</Label>
-              <Select value={localModel} onValueChange={setLocalModel}>
-                <SelectTrigger id="model">
-                  <SelectValue placeholder="Select model" />
-                </SelectTrigger>
-                <SelectContent>
-                  {DEFAULT_MODELS[localProvider].map((m) => (
-                    <SelectItem key={m} value={m}>
-                      {m}
-                    </SelectItem>
-                  ))}
-                </SelectContent>
-              </Select>
+              <Popover
+                open={modelPopoverOpen}
+                onOpenChange={setModelPopoverOpen}
+              >
+                <PopoverTrigger asChild>
+                  <Button
+                    variant="outline"
+                    role="combobox"
+                    aria-expanded={modelPopoverOpen}
+                    className="w-full justify-between font-normal"
+                  >
+                    {localModel || 'Select or enter model...'}
+                    <ChevronsUpDown className="ml-2 h-4 w-4 shrink-0 opacity-50" />
+                  </Button>
+                </PopoverTrigger>
+                <PopoverContent
+                  className="w-(--radix-popover-trigger-width) p-0"
+                  align="start"
+                >
+                  <Command>
+                    <CommandInput
+                      placeholder="Search or enter custom model..."
+                      value={localModel}
+                      onValueChange={setLocalModel}
+                    />
+                    <CommandList>
+                      <CommandEmpty>
+                        <div className="py-2 text-sm">
+                          Press Enter to use "{localModel}"
+                        </div>
+                      </CommandEmpty>
+                      <CommandGroup heading="Suggested Models">
+                        {availableModels.map((m) => (
+                          <CommandItem
+                            key={m}
+                            value={m}
+                            onSelect={(currentValue) => {
+                              setLocalModel(currentValue);
+                              setModelPopoverOpen(false);
+                            }}
+                          >
+                            <Check
+                              className={cn(
+                                'mr-2 h-4 w-4',
+                                localModel === m ? 'opacity-100' : 'opacity-0'
+                              )}
+                            />
+                            {m}
+                          </CommandItem>
+                        ))}
+                      </CommandGroup>
+                    </CommandList>
+                  </Command>
+                </PopoverContent>
+              </Popover>
+              <p className="text-muted-foreground text-xs">
+                Select a suggested model or enter a custom model name.
+              </p>
             </div>
           </div>
         )}

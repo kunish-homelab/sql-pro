@@ -30,6 +30,7 @@ interface AIState {
 export const DEFAULT_MODELS: Record<AIProvider, string[]> = {
   openai: ['gpt-4o', 'gpt-4o-mini', 'gpt-4-turbo', 'gpt-3.5-turbo'],
   anthropic: [
+    'claude-opus-4-5',
     'claude-sonnet-4-5',
     'claude-3-5-sonnet-20241022',
     'claude-3-5-haiku-20241022',

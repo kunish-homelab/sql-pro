@@ -533,16 +533,21 @@ export function setupIpcHandlers(): void {
     async (_event, request: AIFetchAnthropicRequest) => {
       try {
         // Create Anthropic client with custom baseURL if provided
+        // Only pass baseURL if it's a non-empty string, otherwise let SDK use default
         const client = new Anthropic({
           apiKey: request.apiKey,
-          baseURL: request.baseUrl,
+          baseURL: request.baseUrl || undefined,
         });
 
         // Use official SDK to make the request
+        // Convert system to array format for better compatibility with proxy services
+        // Some proxies expect system as array [{type: "text", text: "..."}] instead of string
         const response = await client.messages.create({
           model: request.model,
           max_tokens: request.maxTokens || 1024,
-          system: request.system,
+          system: request.system
+            ? [{ type: 'text' as const, text: request.system }]
+            : undefined,
           messages: request.messages.map(
             (m: { role: string; content: string }) => ({
               role: m.role as 'user' | 'assistant',
@@ -579,9 +584,10 @@ export function setupIpcHandlers(): void {
     async (_event, request: AIFetchOpenAIRequest) => {
       try {
         // Create OpenAI client with custom baseURL if provided
+        // Only pass baseURL if it's a non-empty string, otherwise let SDK use default
         const client = new OpenAI({
           apiKey: request.apiKey,
-          baseURL: request.baseUrl,
+          baseURL: request.baseUrl || undefined,
         });
 
         // Use official SDK to make the request
