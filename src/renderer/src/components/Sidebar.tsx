@@ -694,7 +694,7 @@ function TableItem({
       )}
       <span className="min-w-0 flex-1 truncate text-left">{table.name}</span>
       {table.rowCount !== undefined && (
-        <span className="text-muted-foreground shrink-0 text-xs tabular-nums">
+        <span className="text-muted-foreground shrink-0 tabular-nums">
           {table.rowCount.toLocaleString()}
         </span>
       )}
@@ -711,7 +711,7 @@ function TriggerItem({ trigger }: TriggerItemProps) {
     <div className="text-foreground hover:bg-accent/50 flex w-full items-center gap-2 rounded px-2 py-1.5 transition-colors">
       <Zap className="text-muted-foreground h-4 w-4 shrink-0" />
       <span className="truncate">{trigger.name}</span>
-      <span className="text-muted-foreground ml-auto text-xs">
+      <span className="text-muted-foreground ml-auto">
         {trigger.timing} {trigger.event}
       </span>
     </div>
