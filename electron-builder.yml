@@ -14,24 +14,11 @@ directories:
   output: dist
 
 files:
-  - '!**/.vscode/*'
-  - '!src/*'
-  - '!specs/*'
-  - '!docs/*'
-  - '!scripts/*'
-  - '!.gitignore'
-  - '!*.md'
-  - '!*.yml'
-  - '!*.yaml'
-  - '!electron.vite.config.*'
-  - '!{.eslintrc,.prettierrc,tailwind.config}.*'
-  - '!{commitlint,eslint,renovate}.config.*'
-  - '!{tsconfig,tsconfig.*}.json'
-  - '!pnpm-lock.yaml'
-  - '!pnpm-workspace.yaml'
-  - '!**/*.map'
-  - '!**/*.ts'
-  - '!**/node_modules/.cache'
+  - from: .
+    to: .
+    filter:
+      - package.json
+      - out/**/*
 
 asarUnpack:
   - resources/**
