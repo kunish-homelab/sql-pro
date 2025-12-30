@@ -1,6 +1,11 @@
-import type { DataInsight, SchemaInfo } from '../../../shared/types';
+import type {
+  AIAgentMessage,
+  AIStreamChunk,
+  DataInsight,
+  SchemaInfo,
+} from '../../../shared/types';
 import OpenAI from 'openai';
-import { useCallback, useState } from 'react';
+import { useCallback, useEffect, useRef, useState } from 'react';
 import { useAIStore } from '@/stores/ai-store';
 
 // Access the IPC API exposed by preload
@@ -466,6 +471,341 @@ export function useDataAnalysis({
     insights,
     summary,
     isAnalyzing,
+    error,
+    isConfigured,
+  };
+}
+
+// Generate unique request ID
+function generateRequestId(): string {
+  return `${Date.now()}-${Math.random().toString(36).substring(2, 9)}`;
+}
+
+interface UseStreamingAIOptions {
+  system: string;
+  onChunk?: (chunk: string) => void;
+  onComplete?: (
+    fullContent: string,
+    usage?: { inputTokens: number; outputTokens: number }
+  ) => void;
+  onError?: (error: string) => void;
+}
+
+/**
+ * Hook for streaming AI responses with real-time updates
+ */
+export function useStreamingAI({
+  system,
+  onChunk,
+  onComplete,
+  onError,
+}: UseStreamingAIOptions) {
+  const { apiKey, provider, model, baseUrl, isConfigured } = useAIStore();
+  const [content, setContent] = useState<string>('');
+  const [isStreaming, setIsStreaming] = useState(false);
+  const [error, setError] = useState<string | null>(null);
+  const requestIdRef = useRef<string | null>(null);
+  const cleanupRef = useRef<(() => void) | null>(null);
+
+  // Set up stream chunk listener
+  useEffect(() => {
+    const unsubscribe = sqlProAPI.ai.onStreamChunk((chunk: AIStreamChunk) => {
+      // Only process chunks for our current request
+      if (chunk.requestId !== requestIdRef.current) return;
+
+      switch (chunk.type) {
+        case 'delta':
+          if (chunk.content) {
+            setContent((prev) => prev + chunk.content);
+            onChunk?.(chunk.content);
+          }
+          break;
+        case 'done':
+          setIsStreaming(false);
+          requestIdRef.current = null;
+          onComplete?.(chunk.fullContent || '', chunk.usage);
+          break;
+        case 'error':
+          setIsStreaming(false);
+          setError(chunk.error || 'Stream error');
+          requestIdRef.current = null;
+          onError?.(chunk.error || 'Stream error');
+          break;
+      }
+    });
+
+    cleanupRef.current = unsubscribe;
+    return () => {
+      unsubscribe();
+    };
+  }, [onChunk, onComplete, onError]);
+
+  const stream = useCallback(
+    async (messages: Array<{ role: string; content: string }>) => {
+      if (!isConfigured) {
+        const err =
+          'AI is not configured. Please set up your API key in settings.';
+        setError(err);
+        onError?.(err);
+        return;
+      }
+
+      // Cancel any existing stream
+      if (requestIdRef.current) {
+        await sqlProAPI.ai.cancelStream({ requestId: requestIdRef.current });
+      }
+
+      const requestId = generateRequestId();
+      requestIdRef.current = requestId;
+      setContent('');
+      setError(null);
+      setIsStreaming(true);
+
+      try {
+        if (provider === 'openai') {
+          await sqlProAPI.ai.streamOpenAI({
+            baseUrl: baseUrl || undefined,
+            apiKey,
+            model,
+            messages: [{ role: 'system', content: system }, ...messages],
+            requestId,
+          });
+        } else {
+          await sqlProAPI.ai.streamAnthropic({
+            baseUrl: baseUrl || undefined,
+            apiKey,
+            model,
+            system,
+            messages,
+            requestId,
+          });
+        }
+      } catch (err) {
+        setIsStreaming(false);
+        const errorMsg =
+          err instanceof Error ? err.message : 'Failed to start stream';
+        setError(errorMsg);
+        onError?.(errorMsg);
+      }
+    },
+    [apiKey, provider, model, baseUrl, system, isConfigured, onError]
+  );
+
+  const cancel = useCallback(async () => {
+    if (requestIdRef.current) {
+      await sqlProAPI.ai.cancelStream({ requestId: requestIdRef.current });
+      requestIdRef.current = null;
+      setIsStreaming(false);
+    }
+  }, []);
+
+  return {
+    stream,
+    cancel,
+    content,
+    isStreaming,
+    error,
+    isConfigured,
+  };
+}
+
+interface UseStreamingNLToSQLOptions {
+  schema: SchemaInfo[];
+  onChunk?: (chunk: string) => void;
+  onComplete?: (sql: string) => void;
+  onError?: (error: string) => void;
+}
+
+/**
+ * Hook for streaming NL to SQL conversion with real-time updates
+ */
+export function useStreamingNLToSQL({
+  schema,
+  onChunk,
+  onComplete,
+  onError,
+}: UseStreamingNLToSQLOptions) {
+  const { stream, cancel, content, isStreaming, error, isConfigured } =
+    useStreamingAI({
+      system: SYSTEM_PROMPTS.nlToSql,
+      onChunk,
+      onComplete: (fullContent) => {
+        // Clean up the SQL (remove markdown code blocks if present)
+        const cleanSQL = fullContent
+          .replace(/^```sql\n?/i, '')
+          .replace(/^```\n?/, '')
+          .replace(/\n?```$/, '')
+          .trim();
+        onComplete?.(cleanSQL);
+      },
+      onError,
+    });
+
+  const generateSQL = useCallback(
+    async (prompt: string) => {
+      const schemaContext = formatSchemaForAI(schema);
+      const userContent = `Database Schema:\n${schemaContext}\n\nUser Request: ${prompt}`;
+      await stream([{ role: 'user', content: userContent }]);
+    },
+    [schema, stream]
+  );
+
+  // Clean up SQL for display
+  const cleanedSQL = content
+    .replace(/^```sql\n?/i, '')
+    .replace(/^```\n?/, '')
+    .replace(/\n?```$/, '')
+    .trim();
+
+  return {
+    generateSQL,
+    cancel,
+    generatedSQL: cleanedSQL,
+    isGenerating: isStreaming,
+    error,
+    isConfigured,
+  };
+}
+
+interface UseAgentNLToSQLOptions {
+  schema: SchemaInfo[];
+  onMessage?: (message: AIAgentMessage) => void;
+  onComplete?: (sql: string) => void;
+  onError?: (error: string) => void;
+}
+
+/**
+ * Hook for NL to SQL conversion using Claude Agent SDK
+ * Provides more powerful AI capabilities with Claude Code's agent features
+ */
+export function useAgentNLToSQL({
+  schema,
+  onMessage,
+  onComplete,
+  onError,
+}: UseAgentNLToSQLOptions) {
+  const { isConfigured } = useAIStore();
+  const [generatedSQL, setGeneratedSQL] = useState<string>('');
+  const [isGenerating, setIsGenerating] = useState(false);
+  const [error, setError] = useState<string | null>(null);
+  const requestIdRef = useRef<string | null>(null);
+  const cleanupRef = useRef<(() => void) | null>(null);
+
+  // Set up agent message listener
+  useEffect(() => {
+    const unsubscribe = sqlProAPI.ai.onAgentMessage(
+      (message: AIAgentMessage) => {
+        // Only process messages for our current request
+        if (message.requestId !== requestIdRef.current) return;
+
+        onMessage?.(message);
+
+        if (message.type === 'assistant' && message.content) {
+          // Clean up the SQL (remove markdown code blocks if present)
+          const cleanSQL = message.content
+            .replace(/^```sql\n?/i, '')
+            .replace(/^```\n?/, '')
+            .replace(/\n?```$/, '')
+            .trim();
+          setGeneratedSQL(cleanSQL);
+        } else if (message.type === 'result') {
+          setIsGenerating(false);
+          requestIdRef.current = null;
+
+          if (message.error) {
+            setError(message.error);
+            onError?.(message.error);
+          } else if (message.result) {
+            const cleanSQL = message.result
+              .replace(/^```sql\n?/i, '')
+              .replace(/^```\n?/, '')
+              .replace(/\n?```$/, '')
+              .trim();
+            setGeneratedSQL(cleanSQL);
+            onComplete?.(cleanSQL);
+          }
+        }
+      }
+    );
+
+    cleanupRef.current = unsubscribe;
+    return () => {
+      unsubscribe();
+    };
+  }, [onMessage, onComplete, onError]);
+
+  const generateSQL = useCallback(
+    async (prompt: string) => {
+      if (!isConfigured) {
+        const err =
+          'AI is not configured. Please ensure Claude Code is installed and ANTHROPIC_API_KEY is set.';
+        setError(err);
+        onError?.(err);
+        return;
+      }
+
+      // Cancel any existing query
+      if (requestIdRef.current) {
+        await sqlProAPI.ai.agentCancel({ requestId: requestIdRef.current });
+      }
+
+      const requestId = `${Date.now()}-${Math.random().toString(36).substring(2, 9)}`;
+      requestIdRef.current = requestId;
+      setGeneratedSQL('');
+      setError(null);
+      setIsGenerating(true);
+
+      try {
+        const schemaContext = formatSchemaForAI(schema);
+        const fullPrompt = `You are an expert SQL query generator for SQLite databases. 
+
+Given the following database schema:
+${schemaContext}
+
+Generate a valid SQLite query for this request: ${prompt}
+
+Rules:
+1. Only output valid SQLite syntax
+2. Use the provided schema to reference correct table and column names
+3. Use proper quoting for identifiers when needed
+4. Prefer explicit column names over SELECT *
+5. Include appropriate WHERE clauses, JOINs, and ORDER BY as needed
+6. For aggregations, always include GROUP BY when using aggregate functions
+7. Output ONLY the SQL query, no explanations`;
+
+        const result = await sqlProAPI.ai.agentQuery({
+          prompt: fullPrompt,
+          requestId,
+          maxTurns: 1, // Single turn for SQL generation
+        });
+
+        if (!result.success) {
+          throw new Error(result.error || 'Failed to generate SQL');
+        }
+      } catch (err) {
+        setIsGenerating(false);
+        const errorMsg =
+          err instanceof Error ? err.message : 'Failed to generate SQL';
+        setError(errorMsg);
+        onError?.(errorMsg);
+      }
+    },
+    [schema, isConfigured, onError]
+  );
+
+  const cancel = useCallback(async () => {
+    if (requestIdRef.current) {
+      await sqlProAPI.ai.agentCancel({ requestId: requestIdRef.current });
+      requestIdRef.current = null;
+      setIsGenerating(false);
+    }
+  }, []);
+
+  return {
+    generateSQL,
+    cancel,
+    generatedSQL,
+    isGenerating,
     error,
     isConfigured,
   };

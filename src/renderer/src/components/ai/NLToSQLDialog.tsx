@@ -65,7 +65,7 @@ export function NLToSQLDialog({
   return (
     <>
       <Dialog open={open} onOpenChange={onOpenChange}>
-        <DialogContent className="sm:max-w-[600px]">
+        <DialogContent className="sm:max-w-150">
           <DialogHeader>
             <DialogTitle className="flex items-center gap-2">
               <Wand2 className="h-5 w-5" />
@@ -159,7 +159,7 @@ export function NLToSQLDialog({
                 <pre
                   className={cn(
                     'bg-muted overflow-x-auto rounded-lg p-4 font-mono text-sm',
-                    'max-h-[200px] overflow-y-auto'
+                    'max-h-50 overflow-y-auto'
                   )}
                 >
                   {generatedSQL}

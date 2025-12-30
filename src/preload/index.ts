@@ -20,10 +20,16 @@ import type {
   UpdatePluginResponse,
 } from '../main/types/plugin.d';
 import type {
+  AIAgentMessage,
+  AIAgentQueryRequest,
+  AICancelStreamRequest,
   AIFetchAnthropicRequest,
   AIFetchAnthropicResponse,
   AIFetchOpenAIRequest,
   AIFetchOpenAIResponse,
+  AIStreamAnthropicRequest,
+  AIStreamChunk,
+  AIStreamOpenAIRequest,
   AnalyzeQueryPlanRequest,
   AnalyzeQueryPlanResponse,
   ApplyChangesRequest,
@@ -45,6 +51,7 @@ import type {
   FocusWindowResponse,
   GetAISettingsResponse,
   GetAllWindowsResponse,
+  GetClaudeCodePathsResponse,
   GetCurrentWindowResponse,
   GetPasswordRequest,
   GetPasswordResponse,
@@ -218,6 +225,8 @@ const sqlProAPI = {
       request: SaveAISettingsRequest
     ): Promise<SaveAISettingsResponse> =>
       ipcRenderer.invoke(IPC_CHANNELS.AI_SAVE_SETTINGS, request),
+    getClaudeCodePaths: (): Promise<GetClaudeCodePathsResponse> =>
+      ipcRenderer.invoke(IPC_CHANNELS.AI_GET_CLAUDE_CODE_PATHS),
     fetchAnthropic: (
       request: AIFetchAnthropicRequest
     ): Promise<AIFetchAnthropicResponse> =>
@@ -226,6 +235,46 @@ const sqlProAPI = {
       request: AIFetchOpenAIRequest
     ): Promise<AIFetchOpenAIResponse> =>
       ipcRenderer.invoke(IPC_CHANNELS.AI_FETCH_OPENAI, request),
+    // Streaming APIs
+    streamAnthropic: (
+      request: AIStreamAnthropicRequest
+    ): Promise<{ success: boolean; error?: string }> =>
+      ipcRenderer.invoke(IPC_CHANNELS.AI_STREAM_ANTHROPIC, request),
+    streamOpenAI: (
+      request: AIStreamOpenAIRequest
+    ): Promise<{ success: boolean; error?: string }> =>
+      ipcRenderer.invoke(IPC_CHANNELS.AI_STREAM_OPENAI, request),
+    cancelStream: (
+      request: AICancelStreamRequest
+    ): Promise<{ success: boolean; error?: string }> =>
+      ipcRenderer.invoke(IPC_CHANNELS.AI_CANCEL_STREAM, request),
+    onStreamChunk: (callback: (chunk: AIStreamChunk) => void): (() => void) => {
+      const handler = (
+        _event: Electron.IpcRendererEvent,
+        chunk: AIStreamChunk
+      ) => callback(chunk);
+      ipcRenderer.on(IPC_CHANNELS.AI_STREAM_CHUNK, handler);
+      return () => ipcRenderer.off(IPC_CHANNELS.AI_STREAM_CHUNK, handler);
+    },
+    // Claude Agent SDK APIs
+    agentQuery: (
+      request: AIAgentQueryRequest
+    ): Promise<{ success: boolean; content?: string; error?: string }> =>
+      ipcRenderer.invoke(IPC_CHANNELS.AI_AGENT_QUERY, request),
+    agentCancel: (request: {
+      requestId: string;
+    }): Promise<{ success: boolean; error?: string }> =>
+      ipcRenderer.invoke(IPC_CHANNELS.AI_AGENT_CANCEL, request),
+    onAgentMessage: (
+      callback: (message: AIAgentMessage) => void
+    ): (() => void) => {
+      const handler = (
+        _event: Electron.IpcRendererEvent,
+        message: AIAgentMessage
+      ) => callback(message);
+      ipcRenderer.on(IPC_CHANNELS.AI_AGENT_MESSAGE, handler);
+      return () => ipcRenderer.off(IPC_CHANNELS.AI_AGENT_MESSAGE, handler);
+    },
   },
 
   // System operations

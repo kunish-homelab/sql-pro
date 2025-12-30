@@ -4,7 +4,9 @@ import {
   ChevronsUpDown,
   Eye,
   EyeOff,
+  FolderSearch,
   Loader2,
+  RefreshCw,
   Sparkles,
 } from 'lucide-react';
 import { useEffect, useMemo, useState } from 'react';
@@ -56,32 +58,41 @@ export function AISettingsDialog({
     apiKey,
     model,
     baseUrl,
+    claudeCodePath,
+    availableClaudeCodePaths,
     isLoading,
     isSaving,
+    isLoadingClaudeCodePaths,
     loadSettings,
+    loadClaudeCodePaths,
     saveSettings,
   } = useAIStore();
 
   const [showApiKey, setShowApiKey] = useState(false);
   const [modelPopoverOpen, setModelPopoverOpen] = useState(false);
+  const [claudeCodePathPopoverOpen, setClaudeCodePathPopoverOpen] =
+    useState(false);
 
   // Create a key that changes when store values change to reset local state
   const storeKey = useMemo(
-    () => `${apiKey}-${provider}-${model}-${baseUrl}`,
-    [apiKey, provider, model, baseUrl]
+    () => `${apiKey}-${provider}-${model}-${baseUrl}-${claudeCodePath}`,
+    [apiKey, provider, model, baseUrl, claudeCodePath]
   );
 
   const [localApiKey, setLocalApiKey] = useState(apiKey);
   const [localProvider, setLocalProvider] = useState<AIProvider>(provider);
   const [localModel, setLocalModel] = useState(model);
   const [localBaseUrl, setLocalBaseUrl] = useState(baseUrl);
+  const [localClaudeCodePath, setLocalClaudeCodePath] =
+    useState(claudeCodePath);
 
   // Load settings when dialog opens
   useEffect(() => {
     if (open) {
       loadSettings();
+      loadClaudeCodePaths();
     }
-  }, [open, loadSettings]);
+  }, [open, loadSettings, loadClaudeCodePaths]);
 
   // Reset local state when store values change (using key pattern)
   useEffect(() => {
@@ -93,6 +104,8 @@ export function AISettingsDialog({
     setLocalModel(model);
     // eslint-disable-next-line react-hooks-extra/no-direct-set-state-in-use-effect
     setLocalBaseUrl(baseUrl);
+    // eslint-disable-next-line react-hooks-extra/no-direct-set-state-in-use-effect
+    setLocalClaudeCodePath(claudeCodePath);
     // eslint-disable-next-line react-hooks/exhaustive-deps
   }, [storeKey]);
 
@@ -110,6 +123,7 @@ export function AISettingsDialog({
       apiKey: localApiKey,
       model: localModel,
       baseUrl: localBaseUrl,
+      claudeCodePath: localClaudeCodePath,
     });
     if (success) {
       onOpenChange(false);
@@ -122,6 +136,7 @@ export function AISettingsDialog({
     setLocalProvider(provider);
     setLocalModel(model);
     setLocalBaseUrl(baseUrl);
+    setLocalClaudeCodePath(claudeCodePath);
     onOpenChange(false);
   };
 
@@ -282,6 +297,115 @@ export function AISettingsDialog({
                 Select a suggested model or enter a custom model name.
               </p>
             </div>
+
+            {/* Claude Code Path (only for Anthropic provider) */}
+            {localProvider === 'anthropic' && (
+              <div className="grid gap-2">
+                <div className="flex items-center justify-between">
+                  <Label htmlFor="claudeCodePath">Claude Code Path</Label>
+                  <Button
+                    type="button"
+                    variant="ghost"
+                    size="sm"
+                    onClick={loadClaudeCodePaths}
+                    disabled={isLoadingClaudeCodePaths}
+                    className="h-6 px-2"
+                  >
+                    {isLoadingClaudeCodePaths ? (
+                      <Loader2 className="h-3 w-3 animate-spin" />
+                    ) : (
+                      <RefreshCw className="h-3 w-3" />
+                    )}
+                    <span className="ml-1 text-xs">Scan</span>
+                  </Button>
+                </div>
+                <Popover
+                  open={claudeCodePathPopoverOpen}
+                  onOpenChange={setClaudeCodePathPopoverOpen}
+                >
+                  <PopoverTrigger asChild>
+                    <Button
+                      variant="outline"
+                      role="combobox"
+                      aria-expanded={claudeCodePathPopoverOpen}
+                      className="w-full justify-between font-normal"
+                    >
+                      <span className="flex items-center gap-2 truncate">
+                        <FolderSearch className="h-4 w-4 shrink-0 opacity-50" />
+                        {localClaudeCodePath || 'Auto-detect'}
+                      </span>
+                      <ChevronsUpDown className="ml-2 h-4 w-4 shrink-0 opacity-50" />
+                    </Button>
+                  </PopoverTrigger>
+                  <PopoverContent
+                    className="w-(--radix-popover-trigger-width) p-0"
+                    align="start"
+                  >
+                    <Command>
+                      <CommandInput
+                        placeholder="Search or enter custom path..."
+                        value={localClaudeCodePath}
+                        onValueChange={setLocalClaudeCodePath}
+                      />
+                      <CommandList>
+                        <CommandEmpty>
+                          <div className="py-2 text-sm">
+                            Press Enter to use "{localClaudeCodePath}"
+                          </div>
+                        </CommandEmpty>
+                        <CommandGroup heading="Auto-detect">
+                          <CommandItem
+                            value=""
+                            onSelect={() => {
+                              setLocalClaudeCodePath('');
+                              setClaudeCodePathPopoverOpen(false);
+                            }}
+                          >
+                            <Check
+                              className={cn(
+                                'mr-2 h-4 w-4',
+                                !localClaudeCodePath
+                                  ? 'opacity-100'
+                                  : 'opacity-0'
+                              )}
+                            />
+                            Auto-detect (recommended)
+                          </CommandItem>
+                        </CommandGroup>
+                        {availableClaudeCodePaths.length > 0 && (
+                          <CommandGroup heading="Found Paths">
+                            {availableClaudeCodePaths.map((path) => (
+                              <CommandItem
+                                key={path}
+                                value={path}
+                                onSelect={(currentValue) => {
+                                  setLocalClaudeCodePath(currentValue);
+                                  setClaudeCodePathPopoverOpen(false);
+                                }}
+                              >
+                                <Check
+                                  className={cn(
+                                    'mr-2 h-4 w-4',
+                                    localClaudeCodePath === path
+                                      ? 'opacity-100'
+                                      : 'opacity-0'
+                                  )}
+                                />
+                                {path}
+                              </CommandItem>
+                            ))}
+                          </CommandGroup>
+                        )}
+                      </CommandList>
+                    </Command>
+                  </PopoverContent>
+                </Popover>
+                <p className="text-muted-foreground text-xs">
+                  Path to Claude Code executable. Leave as auto-detect or select
+                  from found paths, or enter a custom path.
+                </p>
+              </div>
+            )}
           </div>
         )}
 

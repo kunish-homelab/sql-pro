@@ -1,6 +1,12 @@
 import type {
+  AIAgentMessage,
+  AIAgentQueryRequest,
+  AICancelStreamRequest,
   AIFetchAnthropicRequest,
   AIFetchOpenAIRequest,
+  AIStreamAnthropicRequest,
+  AIStreamChunk,
+  AIStreamOpenAIRequest,
   AnalyzeQueryPlanRequest,
   ApplyChangesRequest,
   ClearQueryHistoryRequest,
@@ -31,7 +37,7 @@ import { exec } from 'node:child_process';
 import fs from 'node:fs';
 import os from 'node:os';
 import { promisify } from 'node:util';
-import Anthropic from '@anthropic-ai/sdk';
+import { query as claudeAgentQuery } from '@anthropic-ai/claude-agent-sdk';
 import { BrowserWindow, dialog, ipcMain } from 'electron';
 import OpenAI from 'openai';
 import { IPC_CHANNELS } from '../../shared/types';
@@ -64,6 +70,74 @@ import {
   quitAndInstall,
 } from './updater';
 import { windowManager } from './window-manager';
+
+const execAsync = promisify(exec);
+
+/**
+ * Common installation paths for Claude Code executable.
+ */
+const COMMON_CLAUDE_PATHS = [
+  '/opt/homebrew/bin/claude',
+  '/usr/local/bin/claude',
+  '/usr/bin/claude',
+  `${os.homedir()}/.local/bin/claude`,
+];
+
+/**
+ * Find all available Claude Code executables.
+ * Searches common paths and user's PATH environment variable.
+ */
+async function findClaudeCodePaths(): Promise<string[]> {
+  const foundPaths = new Set<string>();
+
+  // Check common paths
+  for (const path of COMMON_CLAUDE_PATHS) {
+    const resolvedPath = path.replace('~', os.homedir());
+    if (fs.existsSync(resolvedPath)) {
+      foundPaths.add(resolvedPath);
+    }
+  }
+
+  // Search in PATH environment variable
+  try {
+    const { stdout } = await execAsync('which -a claude');
+    const pathsFromWhich = stdout
+      .trim()
+      .split('\n')
+      .filter((p) => p.length > 0);
+    for (const p of pathsFromWhich) {
+      if (fs.existsSync(p)) {
+        foundPaths.add(p);
+      }
+    }
+  } catch {
+    // 'which' command failed, ignore
+  }
+
+  return Array.from(foundPaths);
+}
+
+/**
+ * Get the path to Claude Code executable.
+ * Uses user-configured path or finds the first available one.
+ */
+function getClaudeCodePath(customPath?: string): string {
+  // Use custom path if provided and exists
+  if (customPath && fs.existsSync(customPath)) {
+    return customPath;
+  }
+
+  // Check common paths
+  for (const path of COMMON_CLAUDE_PATHS) {
+    const resolvedPath = path.replace('~', os.homedir());
+    if (fs.existsSync(resolvedPath)) {
+      return resolvedPath;
+    }
+  }
+
+  // Fallback to the most common Homebrew path
+  return '/opt/homebrew/bin/claude';
+}
 
 export function setupIpcHandlers(): void {
   // Database: Open
@@ -527,47 +601,81 @@ export function setupIpcHandlers(): void {
     }
   );
 
-  // AI: Fetch from Anthropic-compatible API using official SDK (bypasses CORS)
+  // AI: Get available Claude Code executable paths
+  ipcMain.handle(IPC_CHANNELS.AI_GET_CLAUDE_CODE_PATHS, async () => {
+    try {
+      const paths = await findClaudeCodePaths();
+      return { success: true, paths };
+    } catch (error) {
+      return {
+        success: false,
+        error:
+          error instanceof Error
+            ? error.message
+            : 'Failed to find Claude Code paths',
+      };
+    }
+  });
+
+  // AI: Fetch from Anthropic-compatible API using Claude Agent SDK
   ipcMain.handle(
     IPC_CHANNELS.AI_FETCH_ANTHROPIC,
     async (_event, request: AIFetchAnthropicRequest) => {
       try {
-        // Create Anthropic client with custom baseURL if provided
-        // Only pass baseURL if it's a non-empty string, otherwise let SDK use default
-        const client = new Anthropic({
-          apiKey: request.apiKey,
-          baseURL: request.baseUrl || undefined,
+        // Get user-configured Claude Code path
+        const aiSettings = getAISettings();
+        const claudePath = getClaudeCodePath(aiSettings?.claudeCodePath);
+
+        // Build the prompt with system message and user messages
+        const userMessages = request.messages
+          .map((m) => `${m.role}: ${m.content}`)
+          .join('\n');
+
+        const fullPrompt = request.system
+          ? `${request.system}\n\n${userMessages}`
+          : userMessages;
+
+        // Use Claude Agent SDK query function
+        const agentQuery = claudeAgentQuery({
+          prompt: fullPrompt,
+          options: {
+            // Specify Claude Code executable path
+            pathToClaudeCodeExecutable: claudePath,
+            // Disable all tools for pure text generation
+            tools: [],
+            // Bypass permissions since we're not using any tools
+            permissionMode: 'bypassPermissions',
+            allowDangerouslySkipPermissions: true,
+            maxTurns: 1,
+            env: {
+              ANTHROPIC_BASE_URL: request.baseUrl,
+              ANTHROPIC_AUTH_TOKEN: request.apiKey,
+            },
+          },
         });
 
-        // Use official SDK to make the request
-        // Convert system to array format for better compatibility with proxy services
-        // Some proxies expect system as array [{type: "text", text: "..."}] instead of string
-        const response = await client.messages.create({
-          model: request.model,
-          max_tokens: request.maxTokens || 1024,
-          system: request.system
-            ? [{ type: 'text' as const, text: request.system }]
-            : undefined,
-          messages: request.messages.map(
-            (m: { role: string; content: string }) => ({
-              role: m.role as 'user' | 'assistant',
-              content: m.content,
-            })
-          ),
-        });
+        let resultContent = '';
 
-        // Extract text content from response
-        const textBlock = response.content.find(
-          (block) => block.type === 'text'
-        );
-        const content =
-          textBlock && 'text' in textBlock ? textBlock.text.trim() : null;
+        // Process messages from the agent
+        for await (const message of agentQuery) {
+          if (message.type === 'assistant' && 'message' in message) {
+            // Extract text content from assistant message
+            const textContent = message.message.content.find(
+              (block: { type: string }) => block.type === 'text'
+            );
+            if (textContent && 'text' in textContent) {
+              resultContent = textContent.text;
+            }
+          } else if (message.type === 'result' && 'result' in message) {
+            resultContent = message.result;
+          }
+        }
 
-        if (!content) {
+        if (!resultContent) {
           return { success: false, error: 'No content in response' };
         }
 
-        return { success: true, content };
+        return { success: true, content: resultContent.trim() };
       } catch (error) {
         return {
           success: false,
@@ -618,6 +726,338 @@ export function setupIpcHandlers(): void {
             error instanceof Error ? error.message : 'Failed to fetch from AI',
         };
       }
+    }
+  );
+
+  // Store active stream abort controllers
+  const activeStreams = new Map<string, AbortController>();
+
+  // AI: Stream from Anthropic API with real-time chunks using Claude Agent SDK
+  ipcMain.handle(
+    IPC_CHANNELS.AI_STREAM_ANTHROPIC,
+    async (event, request: AIStreamAnthropicRequest) => {
+      const { requestId } = request;
+      const abortController = new AbortController();
+      activeStreams.set(requestId, abortController);
+
+      try {
+        // Get user-configured Claude Code path
+        const aiSettings = getAISettings();
+        const claudePath = getClaudeCodePath(aiSettings?.claudeCodePath);
+
+        // Get the sender window to send chunks back
+        const webContents = event.sender;
+
+        // Build the prompt with system message and user messages
+        const userMessages = request.messages
+          .map((m) => `${m.role}: ${m.content}`)
+          .join('\n');
+
+        const fullPrompt = request.system
+          ? `${request.system}\n\n${userMessages}`
+          : userMessages;
+
+        // Use Claude Agent SDK query function with streaming
+        const agentQuery = claudeAgentQuery({
+          prompt: fullPrompt,
+          options: {
+            // Specify Claude Code executable path
+            pathToClaudeCodeExecutable: claudePath,
+            tools: [],
+            permissionMode: 'bypassPermissions',
+            allowDangerouslySkipPermissions: true,
+            maxTurns: 1,
+            abortController,
+            includePartialMessages: true,
+          },
+        });
+
+        let fullContent = '';
+        let inputTokens = 0;
+        let outputTokens = 0;
+
+        // Process messages from the agent
+        for await (const message of agentQuery) {
+          if (abortController.signal.aborted) break;
+
+          if (message.type === 'stream_event' && 'event' in message) {
+            // Handle streaming events
+            const streamEvent = message.event;
+            if (
+              streamEvent.type === 'content_block_delta' &&
+              'delta' in streamEvent
+            ) {
+              const delta = streamEvent.delta;
+              if (delta.type === 'text_delta' && 'text' in delta) {
+                fullContent += delta.text;
+                const chunk: AIStreamChunk = {
+                  type: 'delta',
+                  requestId,
+                  content: delta.text,
+                };
+                webContents.send(IPC_CHANNELS.AI_STREAM_CHUNK, chunk);
+              }
+            }
+          } else if (message.type === 'assistant' && 'message' in message) {
+            // Extract text content from assistant message
+            const textContent = message.message.content.find(
+              (block: { type: string }) => block.type === 'text'
+            );
+            if (textContent && 'text' in textContent) {
+              // If we haven't received streaming events, send the full content
+              if (!fullContent) {
+                fullContent = textContent.text;
+                const chunk: AIStreamChunk = {
+                  type: 'delta',
+                  requestId,
+                  content: textContent.text,
+                };
+                webContents.send(IPC_CHANNELS.AI_STREAM_CHUNK, chunk);
+              }
+            }
+          } else if (message.type === 'result' && 'result' in message) {
+            inputTokens = message.usage?.input_tokens || 0;
+            outputTokens = message.usage?.output_tokens || 0;
+            if (!fullContent) {
+              fullContent = message.result;
+            }
+          }
+        }
+
+        // Clean up
+        activeStreams.delete(requestId);
+
+        // Send done message with full content and usage
+        const doneChunk: AIStreamChunk = {
+          type: 'done',
+          requestId,
+          fullContent,
+          usage: {
+            inputTokens,
+            outputTokens,
+          },
+        };
+        webContents.send(IPC_CHANNELS.AI_STREAM_CHUNK, doneChunk);
+
+        return { success: true };
+      } catch (error) {
+        activeStreams.delete(requestId);
+
+        // Send error chunk
+        const errorChunk: AIStreamChunk = {
+          type: 'error',
+          requestId,
+          error:
+            error instanceof Error ? error.message : 'Failed to stream from AI',
+        };
+        event.sender.send(IPC_CHANNELS.AI_STREAM_CHUNK, errorChunk);
+
+        return {
+          success: false,
+          error:
+            error instanceof Error ? error.message : 'Failed to stream from AI',
+        };
+      }
+    }
+  );
+
+  // AI: Stream from OpenAI-compatible API with real-time chunks
+  ipcMain.handle(
+    IPC_CHANNELS.AI_STREAM_OPENAI,
+    async (event, request: AIStreamOpenAIRequest) => {
+      const { requestId } = request;
+      const abortController = new AbortController();
+      activeStreams.set(requestId, abortController);
+
+      try {
+        const client = new OpenAI({
+          apiKey: request.apiKey,
+          baseURL: request.baseUrl || undefined,
+        });
+
+        const webContents = event.sender;
+
+        // Use streaming API
+        const stream = await client.chat.completions.create({
+          model: request.model,
+          messages: request.messages.map(
+            (m: { role: string; content: string }) => ({
+              role: m.role as 'user' | 'assistant' | 'system',
+              content: m.content,
+            })
+          ),
+          stream: true,
+        });
+
+        let fullContent = '';
+
+        // Process stream
+        for await (const chunk of stream) {
+          if (abortController.signal.aborted) break;
+
+          const delta = chunk.choices[0]?.delta?.content;
+          if (delta) {
+            fullContent += delta;
+            const streamChunk: AIStreamChunk = {
+              type: 'delta',
+              requestId,
+              content: delta,
+            };
+            webContents.send(IPC_CHANNELS.AI_STREAM_CHUNK, streamChunk);
+          }
+        }
+
+        // Clean up
+        activeStreams.delete(requestId);
+
+        // Send done message
+        const doneChunk: AIStreamChunk = {
+          type: 'done',
+          requestId,
+          fullContent,
+        };
+        webContents.send(IPC_CHANNELS.AI_STREAM_CHUNK, doneChunk);
+
+        return { success: true };
+      } catch (error) {
+        activeStreams.delete(requestId);
+
+        const errorChunk: AIStreamChunk = {
+          type: 'error',
+          requestId,
+          error:
+            error instanceof Error ? error.message : 'Failed to stream from AI',
+        };
+        event.sender.send(IPC_CHANNELS.AI_STREAM_CHUNK, errorChunk);
+
+        return {
+          success: false,
+          error:
+            error instanceof Error ? error.message : 'Failed to stream from AI',
+        };
+      }
+    }
+  );
+
+  // AI: Cancel an active stream
+  ipcMain.handle(
+    IPC_CHANNELS.AI_CANCEL_STREAM,
+    async (_event, request: AICancelStreamRequest) => {
+      const controller = activeStreams.get(request.requestId);
+      if (controller) {
+        controller.abort();
+        activeStreams.delete(request.requestId);
+        return { success: true };
+      }
+      return { success: false, error: 'Stream not found' };
+    }
+  );
+
+  // Store active agent query abort controllers
+  const activeAgentQueries = new Map<string, AbortController>();
+
+  // AI: Query using Claude Agent SDK for advanced AI operations
+  ipcMain.handle(
+    IPC_CHANNELS.AI_AGENT_QUERY,
+    async (event, request: AIAgentQueryRequest) => {
+      const { requestId, prompt, systemPrompt, maxTurns } = request;
+      const abortController = new AbortController();
+      activeAgentQueries.set(requestId, abortController);
+
+      try {
+        // Get user-configured Claude Code path
+        const aiSettings = getAISettings();
+        const claudePath = getClaudeCodePath(aiSettings?.claudeCodePath);
+
+        const webContents = event.sender;
+
+        // Use Claude Agent SDK query function
+        const agentQuery = claudeAgentQuery({
+          prompt,
+          options: {
+            // Specify Claude Code executable path
+            pathToClaudeCodeExecutable: claudePath,
+            systemPrompt: systemPrompt || undefined,
+            maxTurns: maxTurns || 3,
+            abortController,
+            // Disable all tools for pure text generation (SQL query generation)
+            tools: [],
+            // Bypass permissions since we're not using any tools
+            permissionMode: 'bypassPermissions',
+            allowDangerouslySkipPermissions: true,
+          },
+        });
+
+        let resultContent = '';
+
+        // Process messages from the agent
+        for await (const message of agentQuery) {
+          if (abortController.signal.aborted) break;
+
+          // Send message to renderer based on type
+          const agentMessage: AIAgentMessage = {
+            type: message.type as AIAgentMessage['type'],
+            requestId,
+          };
+
+          if (message.type === 'assistant' && 'message' in message) {
+            // Extract text content from assistant message
+            const textContent = message.message.content.find(
+              (block: { type: string }) => block.type === 'text'
+            );
+            if (textContent && 'text' in textContent) {
+              agentMessage.content = textContent.text;
+              resultContent = textContent.text;
+            }
+          } else if (message.type === 'result' && 'result' in message) {
+            agentMessage.result = message.result;
+            agentMessage.usage = {
+              inputTokens: message.usage?.input_tokens || 0,
+              outputTokens: message.usage?.output_tokens || 0,
+            };
+            agentMessage.costUsd = message.total_cost_usd;
+            resultContent = message.result;
+          }
+
+          webContents.send(IPC_CHANNELS.AI_AGENT_MESSAGE, agentMessage);
+        }
+
+        // Clean up
+        activeAgentQueries.delete(requestId);
+
+        return { success: true, content: resultContent };
+      } catch (error) {
+        activeAgentQueries.delete(requestId);
+
+        // Send error message
+        const errorMessage: AIAgentMessage = {
+          type: 'result',
+          requestId,
+          error:
+            error instanceof Error ? error.message : 'Failed to query AI agent',
+        };
+        event.sender.send(IPC_CHANNELS.AI_AGENT_MESSAGE, errorMessage);
+
+        return {
+          success: false,
+          error:
+            error instanceof Error ? error.message : 'Failed to query AI agent',
+        };
+      }
+    }
+  );
+
+  // AI: Cancel an active agent query
+  ipcMain.handle(
+    IPC_CHANNELS.AI_AGENT_CANCEL,
+    async (_event, request: { requestId: string }) => {
+      const controller = activeAgentQueries.get(request.requestId);
+      if (controller) {
+        controller.abort();
+        activeAgentQueries.delete(request.requestId);
+        return { success: true };
+      }
+      return { success: false, error: 'Agent query not found' };
     }
   );
 

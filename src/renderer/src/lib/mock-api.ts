@@ -15,6 +15,7 @@ import type {
   ExportRequest,
   ExportResponse,
   GetAISettingsResponse,
+  GetClaudeCodePathsResponse,
   GetPasswordRequest,
   GetPasswordResponse,
   GetPreferencesResponse,
@@ -932,6 +933,7 @@ export const mockSqlProAPI = {
         apiKey: '',
         model: 'gpt-4o',
         baseUrl: '',
+        claudeCodePath: '',
       };
       return { success: true, settings: mockSettings };
     },
@@ -939,6 +941,13 @@ export const mockSqlProAPI = {
       _request: SaveAISettingsRequest
     ): Promise<SaveAISettingsResponse> => {
       return { success: true };
+    },
+    getClaudeCodePaths: async (): Promise<GetClaudeCodePathsResponse> => {
+      // Return mock Claude Code paths
+      return {
+        success: true,
+        paths: ['/opt/homebrew/bin/claude', '/usr/local/bin/claude'],
+      };
     },
   },
 

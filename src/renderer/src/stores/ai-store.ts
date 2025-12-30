@@ -9,7 +9,12 @@ interface AIState {
   apiKey: string;
   model: string;
   baseUrl: string;
+  claudeCodePath: string;
   isConfigured: boolean;
+
+  // Claude Code paths
+  availableClaudeCodePaths: string[];
+  isLoadingClaudeCodePaths: boolean;
 
   // Loading states
   isLoading: boolean;
@@ -18,10 +23,12 @@ interface AIState {
   // Actions
   loadSettings: () => Promise<void>;
   saveSettings: (settings: Partial<AISettings>) => Promise<boolean>;
+  loadClaudeCodePaths: () => Promise<void>;
   setProvider: (provider: AIProvider) => void;
   setApiKey: (apiKey: string) => void;
   setModel: (model: string) => void;
   setBaseUrl: (baseUrl: string) => void;
+  setClaudeCodePath: (path: string) => void;
   clearSettings: () => void;
   getEffectiveBaseUrl: () => string;
 }
@@ -42,7 +49,10 @@ export const useAIStore = create<AIState>((set, get) => ({
   apiKey: '',
   model: 'gpt-4o',
   baseUrl: '',
+  claudeCodePath: '',
   isConfigured: false,
+  availableClaudeCodePaths: [],
+  isLoadingClaudeCodePaths: false,
   isLoading: false,
   isSaving: false,
 
@@ -56,6 +66,7 @@ export const useAIStore = create<AIState>((set, get) => ({
           apiKey: result.settings.apiKey,
           model: result.settings.model,
           baseUrl: result.settings.baseUrl || '',
+          claudeCodePath: result.settings.claudeCodePath || '',
           isConfigured: Boolean(result.settings.apiKey),
         });
       }
@@ -66,6 +77,20 @@ export const useAIStore = create<AIState>((set, get) => ({
     }
   },
 
+  loadClaudeCodePaths: async () => {
+    set({ isLoadingClaudeCodePaths: true });
+    try {
+      const result = await sqlPro.ai.getClaudeCodePaths();
+      if (result.success && result.paths) {
+        set({ availableClaudeCodePaths: result.paths });
+      }
+    } catch (error) {
+      console.error('Failed to load Claude Code paths:', error);
+    } finally {
+      set({ isLoadingClaudeCodePaths: false });
+    }
+  },
+
   saveSettings: async (settings) => {
     const state = get();
     const newSettings: AISettings = {
@@ -73,6 +98,7 @@ export const useAIStore = create<AIState>((set, get) => ({
       apiKey: settings.apiKey ?? state.apiKey,
       model: settings.model ?? state.model,
       baseUrl: settings.baseUrl ?? state.baseUrl,
+      claudeCodePath: settings.claudeCodePath ?? state.claudeCodePath,
     };
 
     set({ isSaving: true });
@@ -111,12 +137,15 @@ export const useAIStore = create<AIState>((set, get) => ({
 
   setBaseUrl: (baseUrl) => set({ baseUrl }),
 
+  setClaudeCodePath: (claudeCodePath) => set({ claudeCodePath }),
+
   clearSettings: () =>
     set({
       provider: 'openai',
       apiKey: '',
       model: 'gpt-4o',
       baseUrl: '',
+      claudeCodePath: '',
       isConfigured: false,
     }),
 

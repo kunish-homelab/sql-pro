@@ -635,6 +635,14 @@ export interface AISettings {
   model: string;
   /** Custom base URL for API calls (optional, uses default if empty) */
   baseUrl?: string;
+  /** Path to Claude Code executable (for Anthropic provider with claude-agent-sdk) */
+  claudeCodePath?: string;
+}
+
+export interface GetClaudeCodePathsResponse {
+  success: boolean;
+  paths?: string[];
+  error?: string;
 }
 
 export interface SaveAISettingsRequest {
@@ -717,6 +725,63 @@ export interface AIFetchAnthropicResponse {
   success: boolean;
   content?: string;
   error?: string;
+}
+
+// Streaming AI request/response types
+export interface AIStreamAnthropicRequest {
+  baseUrl?: string;
+  apiKey: string;
+  model: string;
+  system: string;
+  messages: Array<{ role: string; content: string }>;
+  maxTokens?: number;
+  requestId: string; // Unique ID to identify the stream
+}
+
+export interface AIStreamChunk {
+  type: 'delta' | 'done' | 'error';
+  requestId: string;
+  content?: string; // Text delta for 'delta' type
+  fullContent?: string; // Full accumulated content for 'done' type
+  error?: string; // Error message for 'error' type
+  usage?: {
+    inputTokens: number;
+    outputTokens: number;
+  };
+}
+
+export interface AIStreamOpenAIRequest {
+  baseUrl?: string;
+  apiKey: string;
+  model: string;
+  messages: Array<{ role: string; content: string }>;
+  maxTokens?: number;
+  requestId: string;
+}
+
+export interface AICancelStreamRequest {
+  requestId: string;
+}
+
+// Claude Agent SDK types for advanced AI operations
+export interface AIAgentQueryRequest {
+  prompt: string;
+  systemPrompt?: string;
+  requestId: string;
+  maxTurns?: number;
+}
+
+export interface AIAgentMessage {
+  type: 'system' | 'assistant' | 'result' | 'stream_event';
+  requestId: string;
+  content?: string;
+  result?: string;
+  error?: string;
+  usage?: {
+    inputTokens: number;
+    outputTokens: number;
+  };
+  costUsd?: number;
 }
 
 export interface AIFetchOpenAIRequest {
@@ -966,8 +1031,16 @@ export const IPC_CHANNELS = {
   // AI operations
   AI_GET_SETTINGS: 'ai:getSettings',
   AI_SAVE_SETTINGS: 'ai:saveSettings',
+  AI_GET_CLAUDE_CODE_PATHS: 'ai:getClaudeCodePaths',
   AI_FETCH_ANTHROPIC: 'ai:fetchAnthropic',
   AI_FETCH_OPENAI: 'ai:fetchOpenAI',
+  AI_STREAM_ANTHROPIC: 'ai:streamAnthropic',
+  AI_STREAM_OPENAI: 'ai:streamOpenAI',
+  AI_STREAM_CHUNK: 'ai:streamChunk',
+  AI_CANCEL_STREAM: 'ai:cancelStream',
+  AI_AGENT_QUERY: 'ai:agentQuery',
+  AI_AGENT_MESSAGE: 'ai:agentMessage',
+  AI_AGENT_CANCEL: 'ai:agentCancel',
 
   // System operations
   SYSTEM_GET_FONTS: 'system:getFonts',
