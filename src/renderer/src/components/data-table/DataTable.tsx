@@ -108,7 +108,14 @@ export const DataTable = function DataTable({
   const tableFont = useTableFont();
 
   // Initialize TanStack Table
-  const { table, toggleGrouping, grouping, resetColumnSize } = useTableCore({
+  const {
+    table,
+    toggleGrouping,
+    grouping,
+    resetColumnSize,
+    columnPinning,
+    toggleColumnPin,
+  } = useTableCore({
     columns,
     data,
     sort,
@@ -274,6 +281,7 @@ export const DataTable = function DataTable({
           table={table}
           onToggleGrouping={toggleGrouping}
           onResetColumnSize={resetColumnSize}
+          onTogglePin={toggleColumnPin}
           grouping={grouping}
           sorting={sort}
           columnSizingInfo={{
@@ -282,6 +290,7 @@ export const DataTable = function DataTable({
           filters={filters}
           onFilterAdd={onFilterAdd}
           onFilterRemove={onFilterRemove}
+          columnPinning={columnPinning}
         />
 
         {/* Table body */}
@@ -295,6 +304,10 @@ export const DataTable = function DataTable({
           isCellFocused={isCellFocused}
           isCellEditing={isCellEditing}
           changes={changes}
+          columnPinning={columnPinning}
+          getColumnSize={(columnId) =>
+            table.getColumn(columnId)?.getSize() ?? 150
+          }
         />
       </table>
 

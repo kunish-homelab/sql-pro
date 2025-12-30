@@ -17,6 +17,14 @@ interface TableCellProps {
   onCancel: () => void;
   onKeyDown?: (e: React.KeyboardEvent) => void;
   onClick?: () => void;
+  /** Pinned position of this column */
+  pinnedPosition?: 'left' | 'right' | false;
+  /** Offset for pinned columns */
+  pinnedOffset?: number;
+  /** Whether this is the last left-pinned column */
+  isLastLeftPinned?: boolean;
+  /** Whether this is the first right-pinned column */
+  isFirstRightPinned?: boolean;
 }
 
 export const TableCell = memo(
@@ -31,6 +39,10 @@ export const TableCell = memo(
     onCancel,
     onKeyDown,
     onClick,
+    pinnedPosition,
+    pinnedOffset,
+    isLastLeftPinned,
+    isFirstRightPinned,
   }: TableCellProps) => {
     const [editValue, setEditValue] = useState('');
     const [validationError, setValidationError] = useState<string | null>(null);
@@ -131,13 +143,39 @@ export const TableCell = memo(
       }
     };
 
+    // Calculate pinned styles
+    const pinnedStyles: React.CSSProperties = {};
+    if (pinnedPosition === 'left') {
+      pinnedStyles.position = 'sticky';
+      pinnedStyles.left = pinnedOffset ?? 0;
+      pinnedStyles.zIndex = 1;
+    } else if (pinnedPosition === 'right') {
+      pinnedStyles.position = 'sticky';
+      pinnedStyles.right = pinnedOffset ?? 0;
+      pinnedStyles.zIndex = 1;
+    }
+
+    const pinnedClassName = cn(
+      pinnedPosition && 'bg-background',
+      isLastLeftPinned &&
+        'after:bg-border after:absolute after:top-0 after:right-0 after:bottom-0 after:w-px after:shadow-[2px_0_4px_rgba(0,0,0,0.1)]',
+      isFirstRightPinned &&
+        'before:bg-border before:absolute before:top-0 before:bottom-0 before:left-0 before:w-px before:shadow-[-2px_0_4px_rgba(0,0,0,0.1)]'
+    );
+
     // For grouped cells, show the aggregated value
     if (cell.getIsAggregated()) {
       const renderedValue =
         flexRender(cell.column.columnDef.aggregatedCell, cell.getContext()) ??
         (cell.renderValue() as ReactNode);
       return (
-        <td className="text-muted-foreground border-border border-r border-b px-2 py-1 text-sm whitespace-nowrap">
+        <td
+          className={cn(
+            'text-muted-foreground border-border border-r border-b px-2 py-1 text-sm whitespace-nowrap',
+            pinnedClassName
+          )}
+          style={pinnedStyles}
+        >
           {renderedValue}
         </td>
       );
@@ -145,13 +183,24 @@ export const TableCell = memo(
 
     // For placeholder cells in grouped rows
     if (cell.getIsPlaceholder()) {
-      return <td className="border-border border-r border-b" />;
+      return (
+        <td
+          className={cn('border-border border-r border-b', pinnedClassName)}
+          style={pinnedStyles}
+        />
+      );
     }
 
     // Edit mode
     if (isEditing) {
       return (
-        <td className="border-border relative border-r border-b p-0">
+        <td
+          className={cn(
+            'border-border relative border-r border-b p-0',
+            pinnedClassName
+          )}
+          style={pinnedStyles}
+        >
           <input
             ref={inputRef}
             type="text"
@@ -191,8 +240,10 @@ export const TableCell = memo(
         className={cn(
           'border-border cursor-pointer border-r border-b px-2 py-1 whitespace-nowrap',
           isFocused && 'ring-ring ring-2 ring-inset',
-          hasChange && 'bg-amber-500/20'
+          hasChange && 'bg-amber-500/20',
+          pinnedClassName
         )}
+        style={pinnedStyles}
         title={
           hasChange && oldValue !== undefined
             ? `Original: ${oldValue}`

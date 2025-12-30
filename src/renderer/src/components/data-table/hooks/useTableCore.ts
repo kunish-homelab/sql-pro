@@ -1,5 +1,6 @@
 import type {
   ColumnDef,
+  ColumnPinningState,
   ColumnSizingInfoState,
   ColumnSizingState,
   ExpandedState,
@@ -112,6 +113,12 @@ export function useTableCore({
       columnSizingStart: [],
     });
 
+  // Column pinning state
+  const [columnPinning, setColumnPinning] = useState<ColumnPinningState>({
+    left: [],
+    right: [],
+  });
+
   // Convert external sort to TanStack sorting state
   const sorting = useMemo<SortingState>(() => {
     if (!sort) return [];
@@ -178,6 +185,7 @@ export function useTableCore({
       sorting,
       columnSizing,
       columnSizingInfo,
+      columnPinning,
     },
     onGroupingChange: (updater) => {
       const newGrouping =
@@ -188,6 +196,7 @@ export function useTableCore({
     onSortingChange: handleSortingChange,
     onColumnSizingChange: setColumnSizing,
     onColumnSizingInfoChange: setColumnSizingInfo,
+    onColumnPinningChange: setColumnPinning,
     getCoreRowModel: getCoreRowModel(),
     getGroupedRowModel: getGroupedRowModel(),
     getExpandedRowModel: getExpandedRowModel(),
@@ -197,6 +206,7 @@ export function useTableCore({
     enableExpanding: true,
     enableSorting: true,
     enableColumnResizing: true,
+    enableColumnPinning: true,
     getRowId: (row, index) => {
       if (row.__rowId !== undefined) return String(row.__rowId);
       if (primaryKeyColumn && row[primaryKeyColumn] !== undefined) {
@@ -226,6 +236,25 @@ export function useTableCore({
     });
   }, []);
 
+  // Toggle column pinning
+  const toggleColumnPin = useCallback(
+    (columnId: string, position: 'left' | 'right' | false) => {
+      setColumnPinning((prev) => {
+        const newLeft = prev.left?.filter((id) => id !== columnId) ?? [];
+        const newRight = prev.right?.filter((id) => id !== columnId) ?? [];
+
+        if (position === 'left') {
+          newLeft.push(columnId);
+        } else if (position === 'right') {
+          newRight.push(columnId);
+        }
+
+        return { left: newLeft, right: newRight };
+      });
+    },
+    []
+  );
+
   return {
     table,
     toggleGrouping,
@@ -234,5 +263,7 @@ export function useTableCore({
     flexRender,
     columnSizing,
     resetColumnSize,
+    columnPinning,
+    toggleColumnPin,
   };
 }

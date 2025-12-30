@@ -3,7 +3,15 @@ import type { TableRowData } from './hooks/useTableCore';
 import type { ColumnTypeCategory, UIFilterState } from '@/lib/filter-utils';
 import type { ColumnSchema } from '@/types/database';
 import { flexRender } from '@tanstack/react-table';
-import { ArrowDown, ArrowUp, Filter, Key, Layers } from 'lucide-react';
+import {
+  ArrowDown,
+  ArrowUp,
+  Filter,
+  Key,
+  Layers,
+  Pin,
+  PinOff,
+} from 'lucide-react';
 import { memo, useRef, useState } from 'react';
 import { getColumnTypeCategory } from '@/lib/filter-utils';
 import { cn } from '@/lib/utils';
@@ -14,6 +22,7 @@ interface HeaderCellProps {
   header: Header<TableRowData, unknown>;
   onToggleGrouping?: (columnId: string) => void;
   onResetColumnSize?: (columnId: string) => void;
+  onTogglePin?: (columnId: string, position: 'left' | 'right' | false) => void;
   isGrouped: boolean;
   /** Current sort direction for this column */
   sortDirection: 'asc' | 'desc' | false;
@@ -25,6 +34,14 @@ interface HeaderCellProps {
   onFilterAdd?: (filter: UIFilterState) => void;
   /** Callback when a filter is cleared/removed */
   onFilterRemove?: (columnId: string) => void;
+  /** Pinned position of this column */
+  pinnedPosition: 'left' | 'right' | false;
+  /** Left offset for pinned columns */
+  pinnedOffset?: number;
+  /** Whether this is the last left-pinned column */
+  isLastLeftPinned?: boolean;
+  /** Whether this is the first right-pinned column */
+  isFirstRightPinned?: boolean;
 }
 
 const HeaderCell = memo(
@@ -32,11 +49,16 @@ const HeaderCell = memo(
     header,
     onToggleGrouping,
     onResetColumnSize,
+    onTogglePin,
     isGrouped,
     sortDirection,
     existingFilter,
     onFilterAdd,
     onFilterRemove,
+    pinnedPosition,
+    pinnedOffset,
+    isLastLeftPinned,
+    isFirstRightPinned,
   }: HeaderCellProps) => {
     // State for filter popover
     const [filterPopoverOpen, setFilterPopoverOpen] = useState(false);
@@ -87,6 +109,20 @@ const HeaderCell = memo(
       }
     };
 
+    const handlePinClick = (e: React.MouseEvent) => {
+      e.stopPropagation();
+      if (onTogglePin) {
+        // Cycle: none -> left -> right -> none
+        if (pinnedPosition === false) {
+          onTogglePin(header.column.id, 'left');
+        } else if (pinnedPosition === 'left') {
+          onTogglePin(header.column.id, 'right');
+        } else {
+          onTogglePin(header.column.id, false);
+        }
+      }
+    };
+
     // Determine column type for filter operators
     const columnSchema = columnMeta?.schema;
     const columnTypeCategory: ColumnTypeCategory = columnSchema
@@ -104,17 +140,34 @@ const HeaderCell = memo(
 
     const hasActiveFilter = Boolean(existingFilter);
 
+    // Calculate pinned styles
+    const pinnedStyles: React.CSSProperties = {
+      width: header.getSize(),
+    };
+
+    if (pinnedPosition === 'left') {
+      pinnedStyles.left = pinnedOffset ?? 0;
+      pinnedStyles.zIndex = 20;
+    } else if (pinnedPosition === 'right') {
+      pinnedStyles.right = pinnedOffset ?? 0;
+      pinnedStyles.zIndex = 20;
+    }
+
     return (
       <th
         className={cn(
-          'group border-border sticky top-0 z-10 border-r border-b',
+          'group border-border border-r border-b',
           'bg-background whitespace-nowrap select-none',
           canSort && 'hover:bg-muted/50 cursor-pointer',
-          columnSchema ? 'min-h-14' : 'h-9'
+          columnSchema ? 'min-h-14' : 'h-9',
+          // Pinned column styles
+          pinnedPosition && 'z-20',
+          isLastLeftPinned &&
+            'after:bg-border after:absolute after:top-0 after:right-0 after:bottom-0 after:w-px after:shadow-[2px_0_4px_rgba(0,0,0,0.1)]',
+          isFirstRightPinned &&
+            'before:bg-border before:absolute before:top-0 before:bottom-0 before:left-0 before:w-px before:shadow-[-2px_0_4px_rgba(0,0,0,0.1)]'
         )}
-        style={{
-          width: header.getSize(),
-        }}
+        style={pinnedStyles}
         onClick={handleClick}
       >
         <div className="flex items-center px-2 py-1">
@@ -161,6 +214,32 @@ const HeaderCell = memo(
               />
             )}
           </div>
+
+          {/* Pin toggle button (visible on hover) */}
+          {onTogglePin && (
+            <button
+              className={cn(
+                'mr-1 flex h-5 w-5 items-center justify-center rounded opacity-0',
+                'transition-opacity group-hover:opacity-100',
+                'hover:bg-accent',
+                pinnedPosition && 'text-primary opacity-100'
+              )}
+              onClick={handlePinClick}
+              title={
+                pinnedPosition === false
+                  ? 'Pin to left'
+                  : pinnedPosition === 'left'
+                    ? 'Pin to right'
+                    : 'Unpin column'
+              }
+            >
+              {pinnedPosition ? (
+                <PinOff className="h-3 w-3" />
+              ) : (
+                <Pin className="h-3 w-3" />
+              )}
+            </button>
+          )}
 
           {/* Group toggle button (visible on hover) */}
           {canGroup && onToggleGrouping && (
@@ -247,6 +326,7 @@ interface TableHeaderProps {
   table: Table<TableRowData>;
   onToggleGrouping?: (columnId: string) => void;
   onResetColumnSize?: (columnId: string) => void;
+  onTogglePin?: (columnId: string, position: 'left' | 'right' | false) => void;
   grouping?: string[];
   /** Sorting state - used to trigger re-render when sorting changes */
   sorting?: { column: string; direction: 'asc' | 'desc' } | null;
@@ -258,6 +338,8 @@ interface TableHeaderProps {
   onFilterAdd?: (filter: UIFilterState) => void;
   /** Callback when a filter is removed from a column */
   onFilterRemove?: (columnId: string) => void;
+  /** Column pinning state */
+  columnPinning?: { left?: string[]; right?: string[] };
 }
 
 export const TableHeader = memo(
@@ -265,12 +347,14 @@ export const TableHeader = memo(
     table,
     onToggleGrouping,
     onResetColumnSize,
+    onTogglePin,
     grouping = [],
     sorting: _sorting, // Used to trigger re-render when sorting changes
     columnSizingInfo: _columnSizingInfo, // Used to trigger re-render during resize
     filters = [],
     onFilterAdd,
     onFilterRemove,
+    columnPinning = { left: [], right: [] },
   }: TableHeaderProps) => {
     // Create a map of column id to existing filter for quick lookup
     const filtersByColumn = filters.reduce<Record<string, UIFilterState>>(
@@ -281,24 +365,71 @@ export const TableHeader = memo(
       {}
     );
 
+    // Calculate pinned offsets
+    const leftPinned = columnPinning.left ?? [];
+    const rightPinned = columnPinning.right ?? [];
+
+    // Build offset maps
+    const leftOffsets: Record<string, number> = {};
+    let leftOffset = 0;
+    for (const colId of leftPinned) {
+      leftOffsets[colId] = leftOffset;
+      const col = table.getColumn(colId);
+      if (col) {
+        leftOffset += col.getSize();
+      }
+    }
+
+    const rightOffsets: Record<string, number> = {};
+    let rightOffset = 0;
+    for (let i = rightPinned.length - 1; i >= 0; i--) {
+      const colId = rightPinned[i];
+      rightOffsets[colId] = rightOffset;
+      const col = table.getColumn(colId);
+      if (col) {
+        rightOffset += col.getSize();
+      }
+    }
+
     return (
-      <thead>
+      <thead className="bg-background sticky top-0 z-10">
         {table.getHeaderGroups().map((headerGroup) => (
           <tr key={headerGroup.id}>
-            {headerGroup.headers.map((header) => (
-              <HeaderCell
-                key={header.id}
-                header={header}
-                onToggleGrouping={onToggleGrouping}
-                onResetColumnSize={onResetColumnSize}
-                isGrouped={grouping.includes(header.column.id)}
-                sortDirection={header.column.getIsSorted()}
-                columnSize={header.getSize()}
-                existingFilter={filtersByColumn[header.column.id]}
-                onFilterAdd={onFilterAdd}
-                onFilterRemove={onFilterRemove}
-              />
-            ))}
+            {headerGroup.headers.map((header) => {
+              const pinnedPosition = header.column.getIsPinned();
+              const isLastLeftPinned =
+                pinnedPosition === 'left' &&
+                leftPinned[leftPinned.length - 1] === header.column.id;
+              const isFirstRightPinned =
+                pinnedPosition === 'right' &&
+                rightPinned[0] === header.column.id;
+
+              return (
+                <HeaderCell
+                  key={header.id}
+                  header={header}
+                  onToggleGrouping={onToggleGrouping}
+                  onResetColumnSize={onResetColumnSize}
+                  onTogglePin={onTogglePin}
+                  isGrouped={grouping.includes(header.column.id)}
+                  sortDirection={header.column.getIsSorted()}
+                  columnSize={header.getSize()}
+                  existingFilter={filtersByColumn[header.column.id]}
+                  onFilterAdd={onFilterAdd}
+                  onFilterRemove={onFilterRemove}
+                  pinnedPosition={pinnedPosition}
+                  pinnedOffset={
+                    pinnedPosition === 'left'
+                      ? leftOffsets[header.column.id]
+                      : pinnedPosition === 'right'
+                        ? rightOffsets[header.column.id]
+                        : undefined
+                  }
+                  isLastLeftPinned={isLastLeftPinned}
+                  isFirstRightPinned={isFirstRightPinned}
+                />
+              );
+            })}
           </tr>
         ))}
       </thead>
