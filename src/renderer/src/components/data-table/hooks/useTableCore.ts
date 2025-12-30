@@ -229,13 +229,18 @@ export function useTableCore({
     [grouping, setGrouping]
   );
 
-  // Reset column size to auto (remove from sizing state)
+  // Reset column size to auto (remove from sizing state, let table use auto layout)
   const resetColumnSize = useCallback((columnId: string) => {
     setColumnSizing((prev) => {
       const next = { ...prev };
       delete next[columnId];
       return next;
     });
+  }, []);
+
+  // Reset all column sizes to auto layout
+  const resetAllColumnSizes = useCallback(() => {
+    setColumnSizing({});
   }, []);
 
   // Toggle column pinning (left only)
@@ -256,6 +261,7 @@ export function useTableCore({
     flexRender,
     columnSizing,
     resetColumnSize,
+    resetAllColumnSizes,
     pinnedColumns,
     toggleColumnPin,
   };

@@ -142,7 +142,7 @@ const HeaderCell = memo(
     return (
       <th
         className={cn(
-          'group border-border border-r border-b',
+          'group border-border relative border-r border-b',
           'bg-background whitespace-nowrap select-none',
           canSort && 'hover:bg-muted/50 cursor-pointer',
           columnSchema ? 'min-h-14' : 'h-9',
@@ -269,8 +269,12 @@ const HeaderCell = memo(
         {header.column.getCanResize() && (
           <div
             className={cn(
-              'absolute top-0 right-0 z-20 h-full w-1 cursor-col-resize select-none',
-              'hover:bg-primary/50 active:bg-primary/70',
+              // Visual bar is 2px wide, but the hit area extends 4px on each side
+              'absolute top-0 -right-1 z-20 h-full w-2 cursor-col-resize select-none',
+              // Use pseudo-element for larger hit area
+              'before:absolute before:inset-y-0 before:-right-2 before:-left-2 before:content-[""]',
+              // Visual indicator
+              'hover:bg-primary/50 active:bg-primary/70 bg-transparent',
               'transition-colors duration-75',
               isResizing && 'bg-primary/70'
             )}

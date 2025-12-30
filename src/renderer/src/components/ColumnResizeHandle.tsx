@@ -19,8 +19,12 @@ export function ColumnResizeHandle({
   return (
     <div
       className={cn(
-        'absolute top-0 right-0 z-20 h-full w-1 cursor-col-resize',
-        'hover:bg-primary/50 active:bg-primary',
+        // Visual bar is 2px wide, but the hit area extends 4px on each side
+        'absolute top-0 -right-1 z-20 h-full w-2 cursor-col-resize',
+        // Use pseudo-element for larger hit area
+        'before:absolute before:inset-y-0 before:-right-2 before:-left-2 before:content-[""]',
+        // Visual indicator
+        'hover:bg-primary/50 active:bg-primary bg-transparent',
         'transition-colors duration-75',
         isResizing && 'bg-primary'
       )}
@@ -30,7 +34,7 @@ export function ColumnResizeHandle({
         e.stopPropagation();
         onDoubleClick();
       }}
-      title="Drag to resize, double-click to auto-fit"
+      title="Drag to resize, double-click to reset"
     />
   );
 }

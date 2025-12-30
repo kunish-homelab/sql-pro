@@ -173,7 +173,7 @@ export const DataAnalysisPanel = memo(
                 </div>
 
                 {/* Insights List */}
-                <ScrollArea className="h-[300px]">
+                <ScrollArea className="h-75">
                   <div className="space-y-2 pr-4">
                     {insights.map((insight) => {
                       const Icon = INSIGHT_ICONS[insight.type];

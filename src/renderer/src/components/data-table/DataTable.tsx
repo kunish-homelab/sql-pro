@@ -75,6 +75,7 @@ export interface DataTableProps {
 export interface DataTableRef {
   scrollToRow: (rowIndex: number) => void;
   focus: () => void;
+  resetAllColumnSizes: () => void;
 }
 
 export const DataTable = function DataTable({
@@ -113,6 +114,7 @@ export const DataTable = function DataTable({
     toggleGrouping,
     grouping,
     resetColumnSize,
+    resetAllColumnSizes,
     pinnedColumns,
     toggleColumnPin,
   } = useTableCore({
@@ -227,6 +229,7 @@ export const DataTable = function DataTable({
     focus: () => {
       containerRef.current?.focus();
     },
+    resetAllColumnSizes,
   }));
 
   // Handle container focus
