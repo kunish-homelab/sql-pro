@@ -21,7 +21,7 @@ import React, {
   useRef,
   useState,
 } from 'react';
-import { createPortal } from 'react-dom';
+
 import {
   AISettingsDialog,
   DataAnalysisPanel,
@@ -46,8 +46,8 @@ import {
 import { Input } from '@/components/ui/input';
 import {
   ResizableHandle,
-  ResizablePanel,
   ResizablePanelGroup,
+  ResizablePanel as ResizablePanelUI,
 } from '@/components/ui/resizable';
 import { ScrollArea } from '@/components/ui/scroll-area';
 import { sqlPro } from '@/lib/api';
@@ -65,6 +65,7 @@ import { QueryPane } from './query-editor/QueryPane';
 import { QueryTabBar } from './query-editor/QueryTabBar';
 import { QueryTemplatesPicker } from './query-editor/QueryTemplatesPicker';
 import { QueryResults } from './QueryResults';
+import { ResizablePanel } from './ResizablePanel';
 
 /**
  * Formats duration in milliseconds to a readable string
@@ -426,7 +427,7 @@ export function QueryEditor() {
             {splitLayout.panes.map((pane, index) => (
               <React.Fragment key={pane.id}>
                 {index > 0 && <ResizableHandle withHandle />}
-                <ResizablePanel defaultSize={50} minSize={20}>
+                <ResizablePanelUI defaultSize={50} minSize={20}>
                   <QueryPane
                     pane={pane}
                     connectionId={connection?.id || ''}
@@ -444,7 +445,7 @@ export function QueryEditor() {
                     }
                     showCloseButton={index > 0}
                   />
-                </ResizablePanel>
+                </ResizablePanelUI>
               </React.Fragment>
             ))}
           </ResizablePanelGroup>
@@ -514,11 +515,16 @@ export function QueryEditor() {
           </>
         )}
 
-        {/* History Panel - rendered via Portal */}
-        {showHistory &&
-          containerRef.current &&
-          createPortal(
-            <div className="bg-background absolute top-0 right-0 bottom-0 flex w-96 flex-col border-l">
+        {/* History Panel - Resizable */}
+        {showHistory && (
+          <ResizablePanel
+            side="right"
+            defaultWidth={384}
+            minWidth={280}
+            maxWidth={600}
+            storageKey="query-history-panel"
+          >
+            <div className="bg-background flex h-full flex-col border-l">
               <div className="flex shrink-0 items-center justify-between border-b px-4 py-2">
                 <h3 className="font-medium">Query History</h3>
                 <div className="flex items-center gap-1">
@@ -607,9 +613,9 @@ export function QueryEditor() {
                   )}
                 </div>
               </ScrollArea>
-            </div>,
-            containerRef.current
-          )}
+            </div>
+          </ResizablePanel>
+        )}
       </div>
 
       {/* Clear All Confirmation Dialog */}

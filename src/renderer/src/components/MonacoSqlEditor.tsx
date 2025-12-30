@@ -80,6 +80,7 @@ export function MonacoSqlEditor({
   const editorFont = useEditorFont();
   const editorRef = useRef<Monaco.editor.IStandaloneCodeEditor | null>(null);
   const monacoRef = useRef<typeof Monaco | null>(null);
+  const onExecuteRef = useRef(onExecute);
   const completionDisposableRef = useRef<Monaco.IDisposable | null>(null);
   const hoverDisposableRef = useRef<Monaco.IDisposable | null>(null);
   const validatorRef = useRef<{
@@ -112,6 +113,11 @@ export function MonacoSqlEditor({
       window.matchMedia('(prefers-color-scheme: dark)').matches);
   const editorTheme = isDark ? 'sql-pro-dark' : 'sql-pro-light';
 
+  // Keep onExecute ref up to date
+  useEffect(() => {
+    onExecuteRef.current = onExecute;
+  }, [onExecute]);
+
   // Configure Monaco before mount - define custom themes (US2, US3)
   const handleBeforeMount: BeforeMount = useCallback((monacoInstance) => {
     defineCustomThemes(monacoInstance);
@@ -126,7 +132,7 @@ export function MonacoSqlEditor({
       // US4: Register Cmd/Ctrl+Enter shortcut for query execution
       editor.addCommand(
         monacoInstance.KeyMod.CtrlCmd | monacoInstance.KeyCode.Enter,
-        () => onExecute()
+        () => onExecuteRef.current()
       );
 
       // Register Cmd/Ctrl+Shift+F shortcut for SQL formatting
@@ -210,7 +216,7 @@ export function MonacoSqlEditor({
       // Mark editor as ready for vim mode initialization
       setEditorReady(true);
     },
-    [onExecute, schema]
+    [schema]
   );
 
   // US1: Update completion provider when schema changes

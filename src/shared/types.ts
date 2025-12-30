@@ -1,6 +1,32 @@
 // Shared types for IPC communication between main and renderer
 // These types define the contract for all database operations
 
+// ============ Error Types ============
+
+export interface ErrorPosition {
+  line: number;
+  column: number;
+}
+
+export type ErrorCode =
+  | 'SQL_SYNTAX_ERROR'
+  | 'TABLE_NOT_FOUND'
+  | 'COLUMN_NOT_FOUND'
+  | 'CONSTRAINT_VIOLATION'
+  | 'TYPE_MISMATCH'
+  | 'CONNECTION_ERROR'
+  | 'PERMISSION_ERROR'
+  | 'UNKNOWN_ERROR';
+
+export interface EnhancedErrorInfo {
+  error: string;
+  errorCode: ErrorCode;
+  errorPosition?: ErrorPosition;
+  suggestions: string[];
+  documentationUrl?: string;
+  troubleshootingSteps?: string[];
+}
+
 // ============ Connection Types ============
 
 export interface OpenDatabaseRequest {
