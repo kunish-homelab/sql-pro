@@ -2,6 +2,7 @@ import type { MenuAction } from '../../shared/types';
 import process from 'node:process';
 import { app, BrowserWindow, Menu, shell } from 'electron';
 import { IPC_CHANNELS } from '../../shared/types';
+import { windowManager } from './window-manager';
 
 function sendMenuAction(action: MenuAction): void {
   const focusedWindow = BrowserWindow.getFocusedWindow();
@@ -44,6 +45,14 @@ export function createApplicationMenu(): void {
     {
       label: 'File',
       submenu: [
+        {
+          label: 'New Window',
+          accelerator: 'CmdOrCtrl+Shift+N',
+          click: () => {
+            windowManager.createWindow();
+          },
+        },
+        { type: 'separator' },
         {
           label: 'Open Database...',
           accelerator: 'CmdOrCtrl+O',
@@ -154,6 +163,14 @@ export function createApplicationMenu(): void {
     {
       label: 'Window',
       submenu: [
+        {
+          label: 'New Window',
+          accelerator: 'CmdOrCtrl+Shift+N',
+          click: () => {
+            windowManager.createWindow();
+          },
+        },
+        { type: 'separator' },
         { role: 'minimize' },
         { role: 'zoom' },
         ...(isMac

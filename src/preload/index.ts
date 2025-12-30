@@ -11,13 +11,20 @@ import type {
   ClearQueryHistoryResponse,
   CloseDatabaseRequest,
   CloseDatabaseResponse,
+  CloseWindowRequest,
+  CloseWindowResponse,
+  CreateWindowResponse,
   DeleteQueryHistoryRequest,
   DeleteQueryHistoryResponse,
   ExecuteQueryRequest,
   ExecuteQueryResponse,
   ExportRequest,
   ExportResponse,
+  FocusWindowRequest,
+  FocusWindowResponse,
   GetAISettingsResponse,
+  GetAllWindowsResponse,
+  GetCurrentWindowResponse,
   GetPasswordRequest,
   GetPasswordResponse,
   GetPreferencesResponse,
@@ -197,6 +204,20 @@ const sqlProAPI = {
       request: AIFetchOpenAIRequest
     ): Promise<AIFetchOpenAIResponse> =>
       ipcRenderer.invoke(IPC_CHANNELS.AI_FETCH_OPENAI, request),
+  },
+
+  // Window operations
+  window: {
+    create: (): Promise<CreateWindowResponse> =>
+      ipcRenderer.invoke(IPC_CHANNELS.WINDOW_CREATE),
+    close: (request?: CloseWindowRequest): Promise<CloseWindowResponse> =>
+      ipcRenderer.invoke(IPC_CHANNELS.WINDOW_CLOSE, request || {}),
+    focus: (request: FocusWindowRequest): Promise<FocusWindowResponse> =>
+      ipcRenderer.invoke(IPC_CHANNELS.WINDOW_FOCUS, request),
+    getAll: (): Promise<GetAllWindowsResponse> =>
+      ipcRenderer.invoke(IPC_CHANNELS.WINDOW_GET_ALL),
+    getCurrent: (): Promise<GetCurrentWindowResponse> =>
+      ipcRenderer.invoke(IPC_CHANNELS.WINDOW_GET_CURRENT),
   },
 };
 

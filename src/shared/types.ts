@@ -489,6 +489,13 @@ export const IPC_CHANNELS = {
   HISTORY_DELETE: 'history:delete',
   HISTORY_CLEAR: 'history:clear',
 
+  // Window operations
+  WINDOW_CREATE: 'window:create',
+  WINDOW_CLOSE: 'window:close',
+  WINDOW_FOCUS: 'window:focus',
+  WINDOW_GET_ALL: 'window:getAll',
+  WINDOW_GET_CURRENT: 'window:getCurrent',
+
   // Menu actions (main -> renderer)
   MENU_ACTION: 'menu:action',
 
@@ -509,7 +516,46 @@ export type MenuAction =
   | 'switch-to-data'
   | 'switch-to-query'
   | 'execute-query'
-  | 'toggle-history';
+  | 'toggle-history'
+  | 'new-window';
+
+// ============ Window Types ============
+
+export interface CreateWindowResponse {
+  success: boolean;
+  windowId?: string;
+  error?: string;
+}
+
+export interface CloseWindowRequest {
+  windowId?: string; // If not provided, closes the current window
+}
+
+export interface CloseWindowResponse {
+  success: boolean;
+  error?: string;
+}
+
+export interface FocusWindowRequest {
+  windowId: string;
+}
+
+export interface FocusWindowResponse {
+  success: boolean;
+  error?: string;
+}
+
+export interface GetAllWindowsResponse {
+  success: boolean;
+  windowIds?: string[];
+  error?: string;
+}
+
+export interface GetCurrentWindowResponse {
+  success: boolean;
+  windowId?: string;
+  error?: string;
+}
 
 // ============ AI Types ============
 

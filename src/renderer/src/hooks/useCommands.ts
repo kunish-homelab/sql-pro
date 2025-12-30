@@ -9,6 +9,7 @@ import {
   Keyboard,
   Monitor,
   Moon,
+  PanelLeft,
   RefreshCw,
   Search,
   Settings,
@@ -182,15 +183,19 @@ export function useCommands() {
         category: 'actions',
         keywords: ['refresh', 'schema', 'reload', 'update'],
         action: async () => {
-          const { connection, setIsLoadingSchema, setSchema } =
-            connectionStoreRef.current;
-          if (!connection) return;
+          const {
+            connection,
+            activeConnectionId,
+            setIsLoadingSchema,
+            setSchema,
+          } = connectionStoreRef.current;
+          if (!connection || !activeConnectionId) return;
           setIsLoadingSchema(true);
           const result = await sqlPro.db.getSchema({
             connectionId: connection.id,
           });
           if (result.success) {
-            setSchema({
+            setSchema(activeConnectionId, {
               schemas: result.schemas || [],
               tables: result.tables || [],
               views: result.views || [],
@@ -237,19 +242,37 @@ export function useCommands() {
         category: 'actions',
         keywords: ['disconnect', 'close', 'database'],
         action: async () => {
-          const { connection, setConnection, setSchema, setSelectedTable } =
-            connectionStoreRef.current;
-          if (connection) {
+          const {
+            connection,
+            activeConnectionId,
+            removeConnection,
+            setSelectedTable,
+          } = connectionStoreRef.current;
+          if (connection && activeConnectionId) {
             await sqlPro.db.close({ connectionId: connection.id });
-            setConnection(null);
-            setSchema(null);
+            removeConnection(activeConnectionId);
             setSelectedTable(null);
-            changesStoreRef.current.clearChanges();
-            tableDataStoreRef.current.reset();
+            changesStoreRef.current.clearChangesForConnection(
+              activeConnectionId
+            );
+            tableDataStoreRef.current.resetConnection(activeConnectionId);
             navigate({ to: '/' });
           }
         },
         disabled: () => !connectionStoreRef.current.connection,
+      },
+      {
+        id: 'action.new-window',
+        label: 'New Window',
+        shortcut: formatShortcut('N', { cmd: true, shift: true }),
+        icon: PanelLeft,
+        category: 'actions',
+        keywords: ['new', 'window', 'open'],
+        action: async () => {
+          if (window.sqlPro?.window) {
+            await sqlPro.window.create();
+          }
+        },
       },
       {
         id: 'action.open-database',

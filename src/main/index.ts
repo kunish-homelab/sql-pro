@@ -3,6 +3,7 @@ import process from 'node:process';
 import { app, BrowserWindow, nativeImage, shell } from 'electron';
 import { cleanupIpcHandlers, setupIpcHandlers } from './services/ipc-handlers';
 import { createApplicationMenu } from './services/menu';
+import { windowManager } from './services/window-manager';
 
 // Inline utilities to avoid @electron-toolkit/utils initialization issues
 // Use getter to defer app.isPackaged access until after app ready
@@ -45,7 +46,7 @@ function getIconPath(): string {
   }
 }
 
-function createWindow(): void {
+function createWindow(): BrowserWindow {
   // Create icon for the window
   const iconPath = getIconPath();
   const icon = nativeImage.createFromPath(iconPath);
@@ -80,6 +81,8 @@ function createWindow(): void {
   } else {
     mainWindow.loadFile(join(__dirname, '../renderer/index.html'));
   }
+
+  return mainWindow;
 }
 
 // Set app name for development mode
@@ -100,10 +103,16 @@ app.whenReady().then(() => {
     watchWindowShortcuts(window);
   });
 
-  createWindow();
+  // Create the initial window and register it with the window manager
+  const mainWindow = createWindow();
+  windowManager.registerWindow(mainWindow);
 
   app.on('activate', () => {
-    if (BrowserWindow.getAllWindows().length === 0) createWindow();
+    // On macOS, re-create a window when the dock icon is clicked and no windows are open
+    if (BrowserWindow.getAllWindows().length === 0) {
+      const newWindow = createWindow();
+      windowManager.registerWindow(newWindow);
+    }
   });
 });
 

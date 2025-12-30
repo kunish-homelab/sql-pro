@@ -20,7 +20,11 @@ import { Toolbar } from './Toolbar';
 
 type TabValue = 'data' | 'query' | 'diagram';
 
-export function DatabaseView() {
+interface DatabaseViewProps {
+  onOpenDatabase?: () => void;
+}
+
+export function DatabaseView({ onOpenDatabase }: DatabaseViewProps) {
   const { selectedTable } = useConnectionStore();
   const { hasChanges } = useChangesStore();
   const [activeTab, setActiveTab] = useState<TabValue>('data');
@@ -81,7 +85,7 @@ export function DatabaseView() {
           maxWidth={400}
           storageKey="sidebar"
         >
-          <Sidebar />
+          <Sidebar onOpenDatabase={onOpenDatabase} />
         </ResizablePanel>
 
         {/* Content Area with Tabs */}

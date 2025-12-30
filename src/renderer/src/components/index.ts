@@ -1,3 +1,4 @@
+export { ConnectionSelector } from './ConnectionSelector';
 export { ConnectionSettingsDialog } from './ConnectionSettingsDialog';
 export type { ConnectionSettings } from './ConnectionSettingsDialog';
 export { DatabaseView } from './DatabaseView';

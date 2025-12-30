@@ -72,7 +72,7 @@ export function WelcomeScreen() {
     recentConnections,
     isConnecting,
     error,
-    setConnection,
+    addConnection,
     setSchema,
     setIsConnecting,
     setIsLoadingSchema,
@@ -145,7 +145,7 @@ export function WelcomeScreen() {
           });
         }
 
-        setConnection({
+        addConnection({
           id: result.connection.id,
           path: result.connection.path,
           filename: result.connection.filename,
@@ -161,7 +161,7 @@ export function WelcomeScreen() {
         });
 
         if (schemaResult.success) {
-          setSchema({
+          setSchema(result.connection.id, {
             schemas: schemaResult.schemas || [],
             tables: schemaResult.tables || [],
             views: schemaResult.views || [],

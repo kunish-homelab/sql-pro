@@ -2,7 +2,7 @@ import type { ChangeType, PendingChange } from '@/types/database';
 import { create } from 'zustand';
 
 interface ChangesState {
-  // Pending changes
+  // Pending changes (now includes connectionId)
   changes: PendingChange[];
 
   // Validation state
@@ -16,6 +16,7 @@ interface ChangesState {
   updateChange: (id: string, updates: Partial<PendingChange>) => void;
   removeChange: (id: string) => void;
   clearChanges: () => void;
+  clearChangesForConnection: (connectionId: string) => void;
   setValidationResult: (
     results: Array<{ changeId: string; isValid: boolean; error?: string }>
   ) => void;
@@ -24,10 +25,13 @@ interface ChangesState {
 
   // Computed
   hasChanges: () => boolean;
-  getChangesForTable: (table: string) => PendingChange[];
+  hasChangesForConnection: (connectionId: string) => boolean;
+  getChangesForTable: (table: string, connectionId?: string) => PendingChange[];
+  getChangesForConnection: (connectionId: string) => PendingChange[];
   getChangeForRow: (
     table: string,
-    rowId: string | number
+    rowId: string | number,
+    connectionId?: string
   ) => PendingChange | undefined;
 }
 
@@ -43,7 +47,11 @@ export const useChangesStore = create<ChangesState>((set, get) => ({
   isApplying: false,
 
   addChange: (change) => {
-    const existingChange = get().getChangeForRow(change.table, change.rowId);
+    const existingChange = get().getChangeForRow(
+      change.table,
+      change.rowId,
+      change.connectionId
+    );
 
     if (existingChange) {
       // Merge with existing change
@@ -123,6 +131,11 @@ export const useChangesStore = create<ChangesState>((set, get) => ({
 
   clearChanges: () => set({ changes: [] }),
 
+  clearChangesForConnection: (connectionId) =>
+    set((state) => ({
+      changes: state.changes.filter((c) => c.connectionId !== connectionId),
+    })),
+
   setValidationResult: (results) =>
     set((state) => ({
       changes: state.changes.map((c) => {
@@ -143,8 +156,30 @@ export const useChangesStore = create<ChangesState>((set, get) => ({
 
   hasChanges: () => get().changes.length > 0,
 
-  getChangesForTable: (table) => get().changes.filter((c) => c.table === table),
+  hasChangesForConnection: (connectionId) =>
+    get().changes.some((c) => c.connectionId === connectionId),
 
-  getChangeForRow: (table, rowId) =>
-    get().changes.find((c) => c.table === table && c.rowId === rowId),
+  getChangesForTable: (table, connectionId) => {
+    const changes = get().changes.filter((c) => c.table === table);
+    if (connectionId) {
+      return changes.filter((c) => c.connectionId === connectionId);
+    }
+    return changes;
+  },
+
+  getChangesForConnection: (connectionId) =>
+    get().changes.filter((c) => c.connectionId === connectionId),
+
+  getChangeForRow: (table, rowId, connectionId) => {
+    const changes = get().changes;
+    if (connectionId) {
+      return changes.find(
+        (c) =>
+          c.table === table &&
+          c.rowId === rowId &&
+          c.connectionId === connectionId
+      );
+    }
+    return changes.find((c) => c.table === table && c.rowId === rowId);
+  },
 }));

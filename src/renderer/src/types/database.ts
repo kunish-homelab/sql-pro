@@ -79,6 +79,8 @@ export type ChangeType = 'insert' | 'update' | 'delete';
 
 export interface PendingChange {
   id: string;
+  /** Connection ID this change belongs to */
+  connectionId: string;
   table: string;
   schema?: string; // Database schema (defaults to 'main' for SQLite)
   rowId: string | number;

@@ -941,6 +941,25 @@ export const mockSqlProAPI = {
       return { success: true };
     },
   },
+
+  window: {
+    create: async () => {
+      // In mock mode, we can't actually create windows
+      return { success: true, windowId: `mock-window-${Date.now()}` };
+    },
+    close: async () => {
+      return { success: true };
+    },
+    focus: async (_request: { windowId: string }) => {
+      return { success: true };
+    },
+    getAll: async () => {
+      return { success: true, windowIds: ['mock-window-1'] };
+    },
+    getCurrent: async () => {
+      return { success: true, windowId: 'mock-window-1' };
+    },
+  },
 };
 
 // Check if running in mock mode

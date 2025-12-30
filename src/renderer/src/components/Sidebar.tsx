@@ -25,17 +25,24 @@ import {
   useSettingsStore,
   useTableDataStore,
 } from '@/stores';
+import { ConnectionSelector } from './ConnectionSelector';
 import { SettingsDialog } from './SettingsDialog';
 
-export function Sidebar() {
+interface SidebarProps {
+  onOpenDatabase?: () => void;
+}
+
+export function Sidebar({ onOpenDatabase }: SidebarProps) {
   const {
     schema,
     selectedTable,
     setSelectedTable,
     connection,
+    activeConnectionId,
     isLoadingSchema,
   } = useConnectionStore();
-  const { setTableData, setIsLoading, setError, reset } = useTableDataStore();
+  const { setTableData, setIsLoading, setError, resetConnection } =
+    useTableDataStore();
 
   // Expansion state for schemas (key is schema name)
   const [expandedSchemas, setExpandedSchemas] = useState<
@@ -136,11 +143,11 @@ export function Sidebar() {
 
   const handleSelectTable = useCallback(
     async (table: TableSchema) => {
-      if (!connection) return;
+      if (!connection || !activeConnectionId) return;
 
       setSelectedTable(table);
-      reset();
-      setIsLoading(true);
+      resetConnection(activeConnectionId);
+      setIsLoading(activeConnectionId, true);
 
       try {
         const result = await sqlPro.db.getTableData({
@@ -153,21 +160,36 @@ export function Sidebar() {
 
         if (result.success) {
           setTableData(
+            activeConnectionId,
             table.name,
             result.columns || [],
             result.rows || [],
             result.totalRows || 0
           );
         } else {
-          setError(result.error || 'Failed to load table data');
+          setError(
+            activeConnectionId,
+            result.error || 'Failed to load table data'
+          );
         }
       } catch (err) {
-        setError(err instanceof Error ? err.message : 'Unknown error');
+        setError(
+          activeConnectionId,
+          err instanceof Error ? err.message : 'Unknown error'
+        );
       } finally {
-        setIsLoading(false);
+        setIsLoading(activeConnectionId, false);
       }
     },
-    [connection, setSelectedTable, reset, setIsLoading, setTableData, setError]
+    [
+      connection,
+      activeConnectionId,
+      setSelectedTable,
+      resetConnection,
+      setIsLoading,
+      setTableData,
+      setError,
+    ]
   );
 
   // Filter schemas based on search query
@@ -374,6 +396,11 @@ export function Sidebar() {
       tabIndex={0}
       onKeyDown={handleKeyDown}
     >
+      {/* Connection Selector */}
+      <div className="border-b p-2">
+        <ConnectionSelector onOpenDatabase={onOpenDatabase} />
+      </div>
+
       {/* Search */}
       <div className="p-2">
         <div className="relative">

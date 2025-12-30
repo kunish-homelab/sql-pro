@@ -30,24 +30,24 @@ interface ToolbarProps {
 export function Toolbar({ onOpenChanges }: ToolbarProps) {
   const {
     connection,
-    setConnection,
+    activeConnectionId,
+    removeConnection,
     setSchema,
     setSelectedTable,
     isLoadingSchema,
     setIsLoadingSchema,
   } = useConnectionStore();
-  const { hasChanges, clearChanges, changes } = useChangesStore();
-  const { reset: resetTableData } = useTableDataStore();
+  const { hasChanges, clearChangesForConnection, changes } = useChangesStore();
+  const { resetConnection } = useTableDataStore();
   const { theme, setTheme } = useThemeStore();
 
   const handleDisconnect = async () => {
-    if (connection) {
+    if (connection && activeConnectionId) {
       await sqlPro.db.close({ connectionId: connection.id });
-      setConnection(null);
-      setSchema(null);
+      removeConnection(activeConnectionId);
       setSelectedTable(null);
-      clearChanges();
-      resetTableData();
+      clearChangesForConnection(activeConnectionId);
+      resetConnection(activeConnectionId);
     }
   };
 
@@ -59,8 +59,8 @@ export function Toolbar({ onOpenChanges }: ToolbarProps) {
       connectionId: connection.id,
     });
 
-    if (result.success) {
-      setSchema({
+    if (result.success && activeConnectionId) {
+      setSchema(activeConnectionId, {
         schemas: result.schemas || [],
         tables: result.tables || [],
         views: result.views || [],

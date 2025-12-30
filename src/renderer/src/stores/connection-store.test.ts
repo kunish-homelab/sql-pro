@@ -199,9 +199,11 @@ describe('connection-store', () => {
   describe('setSchema', () => {
     it('should set schema', () => {
       const mockSchema = createMockDatabaseSchema();
-      const { setSchema } = useConnectionStore.getState();
+      const mockConnection = createMockConnection();
+      const { setSchema, addConnection } = useConnectionStore.getState();
 
-      setSchema(mockSchema);
+      addConnection(mockConnection);
+      setSchema(mockConnection.id, mockSchema);
 
       const { schema } = useConnectionStore.getState();
       expect(schema).toEqual(mockSchema);
@@ -209,29 +211,34 @@ describe('connection-store', () => {
 
     it('should clear schema when set to null', () => {
       const mockSchema = createMockDatabaseSchema();
-      const { setSchema } = useConnectionStore.getState();
+      const mockConnection = createMockConnection();
+      const { setSchema, addConnection } = useConnectionStore.getState();
 
-      setSchema(mockSchema);
-      setSchema(null);
+      addConnection(mockConnection);
+      setSchema(mockConnection.id, mockSchema);
+      setSchema(mockConnection.id, null);
 
       const { schema } = useConnectionStore.getState();
       expect(schema).toBeNull();
     });
 
     it('should update schema with new value', () => {
-      const { setSchema } = useConnectionStore.getState();
+      const mockConnection = createMockConnection();
+      const { setSchema, addConnection } = useConnectionStore.getState();
+
+      addConnection(mockConnection);
 
       const schema1 = createMockDatabaseSchema();
       const schema2 = createMockDatabaseSchema({
         tables: [createMockTableSchema({ name: 'new_table' })],
       });
 
-      setSchema(schema1);
+      setSchema(mockConnection.id, schema1);
       expect(useConnectionStore.getState().schema?.tables[0].name).toBe(
         'users'
       );
 
-      setSchema(schema2);
+      setSchema(mockConnection.id, schema2);
       expect(useConnectionStore.getState().schema?.tables[0].name).toBe(
         'new_table'
       );
@@ -429,7 +436,7 @@ describe('connection-store', () => {
   describe('reset', () => {
     it('should reset all state to initial values', () => {
       const {
-        setConnection,
+        addConnection,
         setSchema,
         setSelectedTable,
         setSelectedSchemaObject,
@@ -441,8 +448,9 @@ describe('connection-store', () => {
       } = useConnectionStore.getState();
 
       // Set all state values
-      setConnection(createMockConnection());
-      setSchema(createMockDatabaseSchema());
+      const mockConnection = createMockConnection();
+      addConnection(mockConnection);
+      setSchema(mockConnection.id, createMockDatabaseSchema());
       setSelectedTable(createMockTableSchema());
       setSelectedSchemaObject(createMockTableSchema({ name: 'orders' }));
       setRecentConnections([createMockRecentConnection()]);
@@ -546,28 +554,28 @@ describe('connection-store', () => {
     it('should handle rapid state changes correctly', () => {
       const { setIsConnecting, setError } = useConnectionStore.getState();
 
-      // Simulate rapid connection attempt
+      setIsConnecting(true);
+      setError('Error 1');
+      setIsConnecting(false);
+      setError('Error 2');
       setIsConnecting(true);
       setError(null);
-      setIsConnecting(false);
-      setError('Connection failed');
 
       const state = useConnectionStore.getState();
-      expect(state.isConnecting).toBe(false);
-      expect(state.error).toBe('Connection failed');
+      expect(state.isConnecting).toBe(true);
+      expect(state.error).toBeNull();
     });
 
     it('should maintain state consistency during multiple updates', () => {
-      const { setConnection, setSchema, setSelectedTable } =
+      const { addConnection, setSchema, setSelectedTable } =
         useConnectionStore.getState();
 
       const connection = createMockConnection();
       const schema = createMockDatabaseSchema();
       const table = createMockTableSchema();
 
-      // Simulate typical connection flow
-      setConnection(connection);
-      setSchema(schema);
+      addConnection(connection);
+      setSchema(connection.id, schema);
       setSelectedTable(table);
 
       const state = useConnectionStore.getState();
@@ -617,14 +625,18 @@ describe('connection-store', () => {
     });
 
     it('should handle empty schema', () => {
-      const { setSchema } = useConnectionStore.getState();
+      const mockConnection = createMockConnection();
+      const { setSchema, addConnection } = useConnectionStore.getState();
 
-      const emptySchema: DatabaseSchema = {
+      addConnection(mockConnection);
+
+      const emptySchema = {
         schemas: [],
         tables: [],
         views: [],
       };
-      setSchema(emptySchema);
+
+      setSchema(mockConnection.id, emptySchema);
 
       const { schema } = useConnectionStore.getState();
       expect(schema?.tables).toHaveLength(0);

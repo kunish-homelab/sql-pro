@@ -5,9 +5,11 @@ import type {
   ApplyChangesRequest,
   ClearQueryHistoryRequest,
   CloseDatabaseRequest,
+  CloseWindowRequest,
   DeleteQueryHistoryRequest,
   ExecuteQueryRequest,
   ExportRequest,
+  FocusWindowRequest,
   GetPasswordRequest,
   GetQueryHistoryRequest,
   GetSchemaRequest,
@@ -27,7 +29,7 @@ import type {
 import type { StoredPreferences } from './store';
 import fs from 'node:fs';
 import Anthropic from '@anthropic-ai/sdk';
-import { dialog, ipcMain } from 'electron';
+import { BrowserWindow, dialog, ipcMain } from 'electron';
 import OpenAI from 'openai';
 import { IPC_CHANNELS } from '../../shared/types';
 import { databaseService } from './database';
@@ -46,6 +48,7 @@ import {
   setPreferences,
   updateRecentConnection,
 } from './store';
+import { windowManager } from './window-manager';
 
 export function setupIpcHandlers(): void {
   // Database: Open
@@ -578,6 +581,115 @@ export function setupIpcHandlers(): void {
       }
     }
   );
+
+  // Window: Create new window
+  ipcMain.handle(IPC_CHANNELS.WINDOW_CREATE, async () => {
+    try {
+      const windowId = windowManager.createWindow();
+      return { success: true, windowId };
+    } catch (error) {
+      return {
+        success: false,
+        error:
+          error instanceof Error ? error.message : 'Failed to create window',
+      };
+    }
+  });
+
+  // Window: Close window
+  ipcMain.handle(
+    IPC_CHANNELS.WINDOW_CLOSE,
+    async (event, request: CloseWindowRequest) => {
+      try {
+        if (request.windowId) {
+          // Close specific window
+          const success = windowManager.closeWindow(request.windowId);
+          if (!success) {
+            return { success: false, error: 'Window not found' };
+          }
+        } else {
+          // Close the window that sent this request
+          const webContents = event.sender;
+          const window = BrowserWindow.fromWebContents(webContents);
+          if (window) {
+            window.close();
+          }
+        }
+        return { success: true };
+      } catch (error) {
+        return {
+          success: false,
+          error:
+            error instanceof Error ? error.message : 'Failed to close window',
+        };
+      }
+    }
+  );
+
+  // Window: Focus window
+  ipcMain.handle(
+    IPC_CHANNELS.WINDOW_FOCUS,
+    async (_event, request: FocusWindowRequest) => {
+      try {
+        const success = windowManager.focusWindow(request.windowId);
+        if (!success) {
+          return { success: false, error: 'Window not found' };
+        }
+        return { success: true };
+      } catch (error) {
+        return {
+          success: false,
+          error:
+            error instanceof Error ? error.message : 'Failed to focus window',
+        };
+      }
+    }
+  );
+
+  // Window: Get all windows
+  ipcMain.handle(IPC_CHANNELS.WINDOW_GET_ALL, async () => {
+    try {
+      const windowIds = windowManager.getAllWindowIds();
+      return { success: true, windowIds };
+    } catch (error) {
+      return {
+        success: false,
+        error: error instanceof Error ? error.message : 'Failed to get windows',
+      };
+    }
+  });
+
+  // Window: Get current window ID
+  ipcMain.handle(IPC_CHANNELS.WINDOW_GET_CURRENT, async (event) => {
+    try {
+      const webContents = event.sender;
+      const window = BrowserWindow.fromWebContents(webContents);
+      if (!window) {
+        return { success: false, error: 'Window not found' };
+      }
+
+      // Find the window ID from our manager
+      const allWindows = windowManager.getAllWindows();
+      const windowIndex = allWindows.findIndex((w) => w.id === window.id);
+
+      if (windowIndex === -1) {
+        // Window exists but not registered - register it now
+        const windowId = windowManager.registerWindow(window);
+        return { success: true, windowId };
+      }
+
+      const windowIds = windowManager.getAllWindowIds();
+      return { success: true, windowId: windowIds[windowIndex] };
+    } catch (error) {
+      return {
+        success: false,
+        error:
+          error instanceof Error
+            ? error.message
+            : 'Failed to get current window',
+      };
+    }
+  });
 }
 
 export function cleanupIpcHandlers(): void {

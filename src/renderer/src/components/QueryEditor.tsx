@@ -79,7 +79,7 @@ function formatDuration(ms: number): string {
 }
 
 export function QueryEditor() {
-  const { connection, schema } = useConnectionStore();
+  const { connection, schema, activeConnectionId } = useConnectionStore();
   const {
     currentQuery,
     results,
@@ -98,21 +98,30 @@ export function QueryEditor() {
     clearHistory,
   } = useQueryStore();
 
-  // Multi-tab state
+  // Multi-tab state - now connection-aware
   const {
-    activeTabId,
-    setDbPath,
     getActiveTab,
     updateTabQuery,
     updateTabResults,
     updateTabError,
     setTabExecuting,
-    splitLayout,
-    activePaneId,
-    setActivePaneId,
-    closeSplit,
+    setActiveConnectionId: setTabsActiveConnection,
     isSplit,
+    closeSplit,
+    setActivePaneId,
+    tabsByConnection,
   } = useQueryTabsStore();
+
+  // Get connection-specific tab state
+  const connectionTabState = activeConnectionId
+    ? tabsByConnection[activeConnectionId]
+    : null;
+  const activeTabId = connectionTabState?.activeTabId || null;
+  const splitLayout = connectionTabState?.splitLayout || {
+    direction: null,
+    panes: [],
+  };
+  const activePaneId = connectionTabState?.activePaneId || 'pane-main';
 
   const [showHistory, setShowHistory] = useState(false);
   const [historySearch, setHistorySearch] = useState('');
@@ -128,22 +137,22 @@ export function QueryEditor() {
   const { isConfigured: isAIConfigured } = useAIStore();
 
   // Check if in split view mode
-  const isSplitView = isSplit();
+  const isSplitView = activeConnectionId ? isSplit(activeConnectionId) : false;
 
   // Get active tab state
-  const activeTab = getActiveTab();
+  const activeTab = getActiveTab(activeConnectionId || undefined);
   const tabQuery = activeTab?.query ?? currentQuery;
   const tabResults = activeTab?.results ?? results;
   const tabError = activeTab?.error ?? error;
   const tabIsExecuting = activeTab?.isExecuting ?? isExecuting;
   const tabExecutionTime = activeTab?.executionTime ?? executionTime;
 
-  // Initialize tabs when database changes
+  // Initialize tabs when connection changes
   useEffect(() => {
-    if (connection?.path) {
-      setDbPath(connection.path);
+    if (activeConnectionId) {
+      setTabsActiveConnection(activeConnectionId);
     }
-  }, [connection?.path, setDbPath]);
+  }, [activeConnectionId, setTabsActiveConnection]);
 
   // Filter history based on search term (case-insensitive)
   const filteredHistory = useMemo(() => {
@@ -177,13 +186,14 @@ export function QueryEditor() {
   }, []);
 
   const handleExecute = useCallback(async () => {
-    if (!connection || !tabQuery.trim() || !activeTabId) return;
+    if (!connection || !activeConnectionId || !tabQuery.trim() || !activeTabId)
+      return;
 
-    setTabExecuting(activeTabId, true);
+    setTabExecuting(activeConnectionId, activeTabId, true);
     setIsExecuting(true);
     setError(null);
     setResults(null);
-    updateTabError(activeTabId, null);
+    updateTabError(activeConnectionId, activeTabId, null);
 
     try {
       const result = await sqlPro.db.executeQuery({
@@ -200,7 +210,12 @@ export function QueryEditor() {
         };
         setResults(queryResult);
         setExecutionTime(result.executionTime || 0);
-        updateTabResults(activeTabId, queryResult, result.executionTime || 0);
+        updateTabResults(
+          activeConnectionId,
+          activeTabId,
+          queryResult,
+          result.executionTime || 0
+        );
         addToHistory(
           connection.path,
           tabQuery.trim(),
@@ -209,20 +224,25 @@ export function QueryEditor() {
         );
       } else {
         setError(result.error || 'Query failed');
-        updateTabError(activeTabId, result.error || 'Query failed');
+        updateTabError(
+          activeConnectionId,
+          activeTabId,
+          result.error || 'Query failed'
+        );
         addToHistory(connection.path, tabQuery.trim(), false, 0, result.error);
       }
     } catch (err) {
       const errorMessage = err instanceof Error ? err.message : 'Unknown error';
       setError(errorMessage);
-      updateTabError(activeTabId, errorMessage);
+      updateTabError(activeConnectionId, activeTabId, errorMessage);
       addToHistory(connection.path, tabQuery.trim(), false, 0, errorMessage);
     } finally {
-      setTabExecuting(activeTabId, false);
+      setTabExecuting(activeConnectionId, activeTabId, false);
       setIsExecuting(false);
     }
   }, [
     connection,
+    activeConnectionId,
     tabQuery,
     activeTabId,
     setTabExecuting,
@@ -238,11 +258,11 @@ export function QueryEditor() {
   const handleQueryChange = useCallback(
     (query: string) => {
       setCurrentQuery(query);
-      if (activeTabId) {
-        updateTabQuery(activeTabId, query);
+      if (activeConnectionId && activeTabId) {
+        updateTabQuery(activeConnectionId, activeTabId, query);
       }
     },
-    [activeTabId, setCurrentQuery, updateTabQuery]
+    [activeConnectionId, activeTabId, setCurrentQuery, updateTabQuery]
   );
 
   const handleTemplateSelect = useCallback(
@@ -412,8 +432,16 @@ export function QueryEditor() {
                     connectionId={connection?.id || ''}
                     schema={schema}
                     isActive={pane.id === activePaneId}
-                    onActivate={() => setActivePaneId(pane.id)}
-                    onClose={index > 0 ? closeSplit : undefined}
+                    onActivate={() =>
+                      activeConnectionId &&
+                      setActivePaneId(activeConnectionId, pane.id)
+                    }
+                    onClose={
+                      index > 0
+                        ? () =>
+                            activeConnectionId && closeSplit(activeConnectionId)
+                        : undefined
+                    }
                     showCloseButton={index > 0}
                   />
                 </ResizablePanel>

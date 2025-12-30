@@ -8,6 +8,11 @@ import {
   useTableDataStore,
 } from '@/stores';
 
+// Check if we're in Electron environment with window API
+const hasWindowAPI = (): boolean => {
+  return typeof window !== 'undefined' && !!window.sqlPro?.window;
+};
+
 /**
  * Hook that listens for menu actions from the main process.
  * Should be called once at the app root level.
@@ -43,7 +48,7 @@ export function useMenuActions() {
                   path: result.filePath,
                 });
                 if (openResult.success && openResult.connection) {
-                  connectionStore.setConnection({
+                  connectionStore.addConnection({
                     id: openResult.connection.id,
                     path: openResult.connection.path,
                     filename: openResult.connection.filename,
@@ -61,15 +66,18 @@ export function useMenuActions() {
         }
 
         case 'close-database': {
-          const { connection, setConnection, setSchema, setSelectedTable } =
-            connectionStore;
-          if (connection) {
+          const {
+            connection,
+            activeConnectionId,
+            removeConnection,
+            setSelectedTable,
+          } = connectionStore;
+          if (connection && activeConnectionId) {
             sqlPro.db.close({ connectionId: connection.id }).then(() => {
-              setConnection(null);
-              setSchema(null);
+              removeConnection(activeConnectionId);
               setSelectedTable(null);
-              changesStore.clearChanges();
-              tableDataStore.reset();
+              changesStore.clearChangesForConnection(activeConnectionId);
+              tableDataStore.resetConnection(activeConnectionId);
               navigate({ to: '/' });
             });
           }
@@ -77,14 +85,19 @@ export function useMenuActions() {
         }
 
         case 'refresh-schema': {
-          const { connection, setIsLoadingSchema, setSchema } = connectionStore;
-          if (connection) {
+          const {
+            connection,
+            activeConnectionId,
+            setIsLoadingSchema,
+            setSchema,
+          } = connectionStore;
+          if (connection && activeConnectionId) {
             setIsLoadingSchema(true);
             sqlPro.db
               .getSchema({ connectionId: connection.id })
               .then((result) => {
                 if (result.success) {
-                  setSchema({
+                  setSchema(activeConnectionId, {
                     schemas: result.schemas || [],
                     tables: result.tables || [],
                     views: result.views || [],
@@ -152,6 +165,13 @@ export function useMenuActions() {
               'button[aria-label="History"]'
             );
           historyButton?.click();
+          break;
+        }
+
+        case 'new-window': {
+          if (hasWindowAPI()) {
+            sqlPro.window.create();
+          }
           break;
         }
       }

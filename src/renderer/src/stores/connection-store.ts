@@ -7,9 +7,14 @@ import type {
 import { create } from 'zustand';
 
 interface ConnectionState {
-  // Current connection
-  connection: DatabaseConnection | null;
-  schema: DatabaseSchema | null;
+  // Multiple connections support
+  connections: Map<string, DatabaseConnection>;
+  activeConnectionId: string | null;
+
+  // Schema per connection
+  schemas: Map<string, DatabaseSchema>;
+
+  // Selected table (for the active connection)
   selectedTable: TableSchema | null;
   selectedSchemaObject: TableSchema | null;
 
@@ -23,40 +28,256 @@ interface ConnectionState {
   // Error state
   error: string | null;
 
-  // Actions
-  setConnection: (connection: DatabaseConnection | null) => void;
-  setSchema: (schema: DatabaseSchema | null) => void;
+  // Connection Actions
+  addConnection: (connection: DatabaseConnection) => void;
+  removeConnection: (id: string) => void;
+  setActiveConnection: (id: string | null) => void;
+  updateConnection: (id: string, updates: Partial<DatabaseConnection>) => void;
+
+  // Schema Actions
+  setSchema: (connectionId: string, schema: DatabaseSchema | null) => void;
+
+  // Selection Actions
   setSelectedTable: (table: TableSchema | null) => void;
   setSelectedSchemaObject: (schemaObject: TableSchema | null) => void;
+
+  // Recent Connections Actions
   setRecentConnections: (connections: RecentConnection[]) => void;
+
+  // Loading State Actions
   setIsConnecting: (isConnecting: boolean) => void;
   setIsLoadingSchema: (isLoading: boolean) => void;
+
+  // Error Actions
   setError: (error: string | null) => void;
+
+  // Reset
   reset: () => void;
+
+  // Computed getters
+  getConnection: () => DatabaseConnection | null;
+  getSchema: () => DatabaseSchema | null;
+  getConnectionById: (id: string) => DatabaseConnection | undefined;
+  getSchemaByConnectionId: (id: string) => DatabaseSchema | undefined;
+  getAllConnections: () => DatabaseConnection[];
+  hasUnsavedChanges: (connectionId: string) => boolean;
+
+  // Legacy compatibility
+  connection: DatabaseConnection | null;
+  schema: DatabaseSchema | null;
+  setConnection: (connection: DatabaseConnection | null) => void;
 }
 
 const initialState = {
-  connection: null,
-  schema: null,
+  connections: new Map<string, DatabaseConnection>(),
+  activeConnectionId: null,
+  schemas: new Map<string, DatabaseSchema>(),
   selectedTable: null,
   selectedSchemaObject: null,
   recentConnections: [],
   isConnecting: false,
   isLoadingSchema: false,
   error: null,
+  // Legacy compatibility - computed from active connection
+  connection: null,
+  schema: null,
 };
 
-export const useConnectionStore = create<ConnectionState>((set) => ({
+export const useConnectionStore = create<ConnectionState>((set, get) => ({
   ...initialState,
 
-  setConnection: (connection) => set({ connection, error: null }),
-  setSchema: (schema) => set({ schema }),
+  // Connection Actions
+  addConnection: (connection) =>
+    set((state) => {
+      const newConnections = new Map(state.connections);
+      newConnections.set(connection.id, connection);
+      return {
+        connections: newConnections,
+        activeConnectionId: connection.id,
+        // Legacy compatibility
+        connection,
+        error: null,
+      };
+    }),
+
+  removeConnection: (id) =>
+    set((state) => {
+      const newConnections = new Map(state.connections);
+      newConnections.delete(id);
+
+      const newSchemas = new Map(state.schemas);
+      newSchemas.delete(id);
+
+      // If removing the active connection, switch to another one or null
+      let newActiveId = state.activeConnectionId;
+      let newConnection: DatabaseConnection | null = null;
+      let newSchema: DatabaseSchema | null = null;
+
+      if (state.activeConnectionId === id) {
+        const remainingIds = Array.from(newConnections.keys());
+        newActiveId = remainingIds.length > 0 ? remainingIds[0] : null;
+        newConnection = newActiveId
+          ? newConnections.get(newActiveId) || null
+          : null;
+        newSchema = newActiveId ? newSchemas.get(newActiveId) || null : null;
+      } else {
+        newConnection = state.activeConnectionId
+          ? newConnections.get(state.activeConnectionId) || null
+          : null;
+        newSchema = state.activeConnectionId
+          ? newSchemas.get(state.activeConnectionId) || null
+          : null;
+      }
+
+      return {
+        connections: newConnections,
+        schemas: newSchemas,
+        activeConnectionId: newActiveId,
+        selectedTable:
+          state.activeConnectionId === id ? null : state.selectedTable,
+        selectedSchemaObject:
+          state.activeConnectionId === id ? null : state.selectedSchemaObject,
+        // Legacy compatibility
+        connection: newConnection,
+        schema: newSchema,
+      };
+    }),
+
+  setActiveConnection: (id) =>
+    set((state) => {
+      if (id === null) {
+        return {
+          activeConnectionId: null,
+          selectedTable: null,
+          selectedSchemaObject: null,
+          // Legacy compatibility
+          connection: null,
+          schema: null,
+        };
+      }
+
+      const connection = state.connections.get(id);
+      if (!connection) return state;
+
+      return {
+        activeConnectionId: id,
+        selectedTable: null,
+        selectedSchemaObject: null,
+        // Legacy compatibility
+        connection,
+        schema: state.schemas.get(id) || null,
+      };
+    }),
+
+  updateConnection: (id, updates) =>
+    set((state) => {
+      const existingConnection = state.connections.get(id);
+      if (!existingConnection) return state;
+
+      const updatedConnection = { ...existingConnection, ...updates };
+      const newConnections = new Map(state.connections);
+      newConnections.set(id, updatedConnection);
+
+      return {
+        connections: newConnections,
+        // Legacy compatibility
+        connection:
+          state.activeConnectionId === id
+            ? updatedConnection
+            : state.connection,
+      };
+    }),
+
+  // Schema Actions
+  setSchema: (connectionId, schema) =>
+    set((state) => {
+      const newSchemas = new Map(state.schemas);
+      if (schema) {
+        newSchemas.set(connectionId, schema);
+      } else {
+        newSchemas.delete(connectionId);
+      }
+
+      return {
+        schemas: newSchemas,
+        // Legacy compatibility
+        schema:
+          state.activeConnectionId === connectionId ? schema : state.schema,
+      };
+    }),
+
+  // Selection Actions
   setSelectedTable: (selectedTable) => set({ selectedTable }),
   setSelectedSchemaObject: (selectedSchemaObject) =>
     set({ selectedSchemaObject }),
+
+  // Recent Connections Actions
   setRecentConnections: (recentConnections) => set({ recentConnections }),
+
+  // Loading State Actions
   setIsConnecting: (isConnecting) => set({ isConnecting }),
   setIsLoadingSchema: (isLoadingSchema) => set({ isLoadingSchema }),
+
+  // Error Actions
   setError: (error) => set({ error }),
-  reset: () => set(initialState),
+
+  // Reset - clears all state
+  reset: () =>
+    set({
+      connections: new Map(),
+      activeConnectionId: null,
+      schemas: new Map(),
+      selectedTable: null,
+      selectedSchemaObject: null,
+      recentConnections: get().recentConnections, // Keep recent connections
+      isConnecting: false,
+      isLoadingSchema: false,
+      error: null,
+      // Legacy compatibility
+      connection: null,
+      schema: null,
+    }),
+
+  // Computed getters
+  getConnection: () => {
+    const state = get();
+    if (!state.activeConnectionId) return null;
+    return state.connections.get(state.activeConnectionId) || null;
+  },
+
+  getSchema: () => {
+    const state = get();
+    if (!state.activeConnectionId) return null;
+    return state.schemas.get(state.activeConnectionId) || null;
+  },
+
+  getConnectionById: (id) => {
+    return get().connections.get(id);
+  },
+
+  getSchemaByConnectionId: (id) => {
+    return get().schemas.get(id);
+  },
+
+  getAllConnections: () => {
+    return Array.from(get().connections.values());
+  },
+
+  hasUnsavedChanges: (_connectionId) => {
+    // This will be implemented to check the changes store
+    // For now, return false
+    return false;
+  },
+
+  // Legacy compatibility - setter for single connection
+  setConnection: (connection) => {
+    if (connection === null) {
+      const state = get();
+      if (state.activeConnectionId) {
+        get().removeConnection(state.activeConnectionId);
+      }
+    } else {
+      get().addConnection(connection);
+    }
+  },
 }));

@@ -7,17 +7,38 @@ import { sqlPro } from '@/lib/api';
 import { initMockMode, isMockMode } from '@/lib/mock-api';
 import { queryClient } from '@/lib/query-client';
 import { router } from '@/routes';
-import { useConnectionStore, useThemeStore } from '@/stores';
+import {
+  useConnectionStore,
+  useQueryTabsStore,
+  useTableDataStore,
+  useThemeStore,
+} from '@/stores';
 
 function App(): React.JSX.Element {
-  const { setRecentConnections, setConnection, setSchema } =
+  const { setRecentConnections, addConnection, setSchema, activeConnectionId } =
     useConnectionStore();
+  const { setActiveConnectionId: setTabsActiveConnection } =
+    useQueryTabsStore();
+  const { setActiveConnectionId: setTableDataActiveConnection } =
+    useTableDataStore();
   const { loadTheme } = useThemeStore();
 
   // Load theme from main process on mount
   useEffect(() => {
     loadTheme();
   }, [loadTheme]);
+
+  // Sync active connection across stores
+  useEffect(() => {
+    if (activeConnectionId) {
+      setTabsActiveConnection(activeConnectionId);
+      setTableDataActiveConnection(activeConnectionId);
+    }
+  }, [
+    activeConnectionId,
+    setTabsActiveConnection,
+    setTableDataActiveConnection,
+  ]);
 
   // Load recent connections on mount
   useEffect(() => {
@@ -33,9 +54,9 @@ function App(): React.JSX.Element {
         if (!skipAutoConnect) {
           const mockData = await initMockMode();
           if (mockData) {
-            setConnection(mockData.connection);
+            addConnection(mockData.connection);
             if (mockData.schema) {
-              setSchema(mockData.schema);
+              setSchema(mockData.connection.id, mockData.schema);
             }
             // Navigate to database view after mock connection is set
             router.navigate({ to: '/database' });
@@ -50,7 +71,7 @@ function App(): React.JSX.Element {
       }
     };
     loadRecentConnections();
-  }, [setRecentConnections, setConnection, setSchema]);
+  }, [setRecentConnections, addConnection, setSchema]);
 
   return (
     <ErrorBoundary>

@@ -22,7 +22,7 @@ import {
   TooltipTrigger,
 } from '@/components/ui/tooltip';
 import { cn } from '@/lib/utils';
-import { useQueryTabsStore } from '@/stores';
+import { useConnectionStore, useQueryTabsStore } from '@/stores';
 
 interface QueryTabBarProps {
   className?: string;
@@ -31,6 +31,7 @@ interface QueryTabBarProps {
 interface TabItemProps {
   tab: QueryTab;
   isActive: boolean;
+  connectionId: string;
   onSelect: () => void;
   onClose: () => void;
   onDuplicate: () => void;
@@ -43,6 +44,7 @@ const TabItem = memo(
   ({
     tab,
     isActive,
+    connectionId,
     onSelect,
     onClose,
     onDuplicate,
@@ -64,10 +66,10 @@ const TabItem = memo(
     const handleFinishEdit = useCallback(() => {
       const trimmed = editValue.trim();
       if (trimmed && trimmed !== tab.title) {
-        updateTabTitle(tab.id, trimmed);
+        updateTabTitle(connectionId, tab.id, trimmed);
       }
       setIsEditing(false);
-    }, [editValue, tab.id, tab.title, updateTabTitle]);
+    }, [editValue, connectionId, tab.id, tab.title, updateTabTitle]);
 
     const handleKeyDown = useCallback(
       (e: React.KeyboardEvent) => {
@@ -164,9 +166,9 @@ const TabItem = memo(
 );
 
 export const QueryTabBar = memo(({ className }: QueryTabBarProps) => {
+  const { activeConnectionId } = useConnectionStore();
   const {
-    tabs,
-    activeTabId,
+    tabsByConnection,
     createTab,
     closeTab,
     closeOtherTabs,
@@ -177,23 +179,42 @@ export const QueryTabBar = memo(({ className }: QueryTabBarProps) => {
     isSplit,
   } = useQueryTabsStore();
 
+  // Get tabs for current connection
+  const connectionTabState = activeConnectionId
+    ? tabsByConnection[activeConnectionId]
+    : null;
+  const tabs = connectionTabState?.tabs || [];
+  const activeTabId = connectionTabState?.activeTabId || null;
+
   const handleCreateTab = useCallback(() => {
-    createTab();
-  }, [createTab]);
+    if (activeConnectionId) {
+      createTab(activeConnectionId);
+    }
+  }, [activeConnectionId, createTab]);
 
   const handleSplitHorizontal = useCallback(() => {
-    splitPane('horizontal');
-  }, [splitPane]);
+    if (activeConnectionId) {
+      splitPane(activeConnectionId, 'horizontal');
+    }
+  }, [activeConnectionId, splitPane]);
 
   const handleSplitVertical = useCallback(() => {
-    splitPane('vertical');
-  }, [splitPane]);
+    if (activeConnectionId) {
+      splitPane(activeConnectionId, 'vertical');
+    }
+  }, [activeConnectionId, splitPane]);
 
   const handleCloseSplit = useCallback(() => {
-    closeSplit();
-  }, [closeSplit]);
+    if (activeConnectionId) {
+      closeSplit(activeConnectionId);
+    }
+  }, [activeConnectionId, closeSplit]);
 
-  const isSplitView = isSplit();
+  const isSplitView = activeConnectionId ? isSplit(activeConnectionId) : false;
+
+  if (!activeConnectionId) {
+    return null;
+  }
 
   return (
     <div
@@ -206,10 +227,11 @@ export const QueryTabBar = memo(({ className }: QueryTabBarProps) => {
             key={tab.id}
             tab={tab}
             isActive={tab.id === activeTabId}
-            onSelect={() => setActiveTab(tab.id)}
-            onClose={() => closeTab(tab.id)}
-            onDuplicate={() => duplicateTab(tab.id)}
-            onCloseOthers={() => closeOtherTabs(tab.id)}
+            connectionId={activeConnectionId}
+            onSelect={() => setActiveTab(activeConnectionId, tab.id)}
+            onClose={() => closeTab(activeConnectionId, tab.id)}
+            onDuplicate={() => duplicateTab(activeConnectionId, tab.id)}
+            onCloseOthers={() => closeOtherTabs(activeConnectionId, tab.id)}
             onRename={() => {}}
             tabsCount={tabs.length}
           />

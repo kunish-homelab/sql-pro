@@ -11,6 +11,7 @@ import { TypeBadge } from './data-table/TypeBadge';
 import { EditableCell } from './EditableCell';
 
 interface EditableDataGridProps {
+  connectionId: string;
   tableName: string;
   columns: ColumnSchema[];
   rows: Record<string, unknown>[];
@@ -21,6 +22,7 @@ interface EditableDataGridProps {
 }
 
 export function EditableDataGrid({
+  connectionId,
   tableName,
   columns,
   rows,
@@ -71,7 +73,7 @@ export function EditableDataGrid({
     // Map existing rows with updates/deletes
     const existingRows = rows.map((row, index) => {
       const rowId = getRowId(row, index);
-      const change = getChangeForRow(tableName, rowId);
+      const change = getChangeForRow(tableName, rowId, connectionId);
 
       if (change?.type === 'delete') {
         return { ...row, __deleted: true, __rowId: rowId };
@@ -91,12 +93,12 @@ export function EditableDataGrid({
 
     // Inserts appear at the top
     return [...insertedRows, ...existingRows];
-  }, [rows, changes, tableName, getRowId, getChangeForRow]);
+  }, [rows, changes, tableName, connectionId, getRowId, getChangeForRow]);
 
   // Get changes for a specific cell
   const getCellChange = useCallback(
     (rowId: string | number, column: string): PendingChange | undefined => {
-      const change = getChangeForRow(tableName, rowId);
+      const change = getChangeForRow(tableName, rowId, connectionId);
       if (
         change?.type === 'update' &&
         change.newValues?.[column] !== undefined
@@ -105,7 +107,7 @@ export function EditableDataGrid({
       }
       return undefined;
     },
-    [tableName, getChangeForRow]
+    [tableName, connectionId, getChangeForRow]
   );
 
   const rowVirtualizer = useVirtualizer({
@@ -149,9 +151,10 @@ export function EditableDataGrid({
 
       if (isNew) {
         // For new rows, update the existing insert change
-        const existingChange = getChangeForRow(tableName, rowId);
+        const existingChange = getChangeForRow(tableName, rowId, connectionId);
         if (existingChange) {
           addChange({
+            connectionId,
             table: tableName,
             rowId,
             type: 'insert',
@@ -172,6 +175,7 @@ export function EditableDataGrid({
         // Only create change if value actually changed
         if (newValue !== oldValue) {
           addChange({
+            connectionId,
             table: tableName,
             rowId,
             type: 'update',
@@ -183,7 +187,15 @@ export function EditableDataGrid({
 
       setEditingCell(null);
     },
-    [displayRows, tableName, getChangeForRow, addChange, changes, rows]
+    [
+      displayRows,
+      tableName,
+      connectionId,
+      addChange,
+      changes,
+      rows,
+      getChangeForRow,
+    ]
   );
 
   const handleDeleteRow = useCallback(
@@ -196,6 +208,7 @@ export function EditableDataGrid({
       if (isNew) {
         // For new rows, removing the insert will be handled by addChange
         addChange({
+          connectionId,
           table: tableName,
           rowId,
           type: 'delete',
@@ -211,6 +224,7 @@ export function EditableDataGrid({
         const originalRow = rows[originalRowIndex];
 
         addChange({
+          connectionId,
           table: tableName,
           rowId,
           type: 'delete',
@@ -219,7 +233,7 @@ export function EditableDataGrid({
         });
       }
     },
-    [readOnly, displayRows, tableName, addChange, changes, rows]
+    [readOnly, displayRows, tableName, connectionId, addChange, changes, rows]
   );
 
   // Calculate next/previous cell for keyboard navigation
@@ -263,7 +277,7 @@ export function EditableDataGrid({
             column: columns[next.colIndex].name,
           });
         }
-      } else if (e.key === 'Enter' && !e.shiftKey) {
+      } else if (e.key === 'Tab' && !e.shiftKey) {
         // Enter confirms and moves down
         e.preventDefault();
 
@@ -275,15 +289,16 @@ export function EditableDataGrid({
         // If on last cell of a new row, create another new row
         if (isNew && isLastRow && isLastColumn) {
           // Create a new row
-          const tempId = -Date.now();
+          const newRowId = -Date.now();
           const newRow: Record<string, unknown> = {};
           columns.forEach((col) => {
             newRow[col.name] = col.defaultValue ?? null;
           });
 
           addChange({
+            connectionId,
             table: tableName,
-            rowId: tempId,
+            rowId: newRowId,
             type: 'insert',
             oldValues: null,
             newValues: newRow,
@@ -309,7 +324,7 @@ export function EditableDataGrid({
         setFocusedCell(null);
       }
     },
-    [getNextCell, columns, displayRows, tableName, addChange]
+    [getNextCell, columns, displayRows, tableName, connectionId, addChange]
   );
 
   // Handle arrow key navigation when not editing (grid-level navigation)

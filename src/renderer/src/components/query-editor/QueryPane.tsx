@@ -32,7 +32,7 @@ export const QueryPane = memo(
     showCloseButton = false,
   }: QueryPaneProps) => {
     const {
-      tabs,
+      tabsByConnection,
       updateTabQuery,
       updateTabResults,
       updateTabError,
@@ -42,23 +42,27 @@ export const QueryPane = memo(
 
     const [showOptimizer, setShowOptimizer] = useState(false);
 
+    // Get tabs for this connection
+    const connectionTabState = tabsByConnection[connectionId];
+    const tabs = connectionTabState?.tabs || [];
+
     // Get the tab for this pane
     const tab = tabs.find((t) => t.id === pane.activeTabId);
 
     const handleQueryChange = useCallback(
       (query: string) => {
         if (tab) {
-          updateTabQuery(tab.id, query);
+          updateTabQuery(connectionId, tab.id, query);
         }
       },
-      [tab, updateTabQuery]
+      [tab, connectionId, updateTabQuery]
     );
 
     const handleExecute = useCallback(async () => {
       if (!tab || !tab.query.trim()) return;
 
-      setTabExecuting(tab.id, true);
-      updateTabError(tab.id, null);
+      setTabExecuting(connectionId, tab.id, true);
+      updateTabError(connectionId, tab.id, null);
 
       try {
         const result = await sqlPro.db.executeQuery({
@@ -73,16 +77,21 @@ export const QueryPane = memo(
             rowsAffected: result.rowsAffected || 0,
             lastInsertRowId: result.lastInsertRowId,
           };
-          updateTabResults(tab.id, queryResult, result.executionTime || 0);
+          updateTabResults(
+            connectionId,
+            tab.id,
+            queryResult,
+            result.executionTime || 0
+          );
         } else {
-          updateTabError(tab.id, result.error || 'Query failed');
+          updateTabError(connectionId, tab.id, result.error || 'Query failed');
         }
       } catch (err) {
         const errorMessage =
           err instanceof Error ? err.message : 'Unknown error';
-        updateTabError(tab.id, errorMessage);
+        updateTabError(connectionId, tab.id, errorMessage);
       } finally {
-        setTabExecuting(tab.id, false);
+        setTabExecuting(connectionId, tab.id, false);
       }
     }, [tab, connectionId, setTabExecuting, updateTabError, updateTabResults]);
 
@@ -110,9 +119,9 @@ export const QueryPane = memo(
 
     const handleTabSelect = useCallback(
       (tabId: string) => {
-        setPaneActiveTab(pane.id, tabId);
+        setPaneActiveTab(connectionId, pane.id, tabId);
       },
-      [pane.id, setPaneActiveTab]
+      [connectionId, pane.id, setPaneActiveTab]
     );
 
     if (!tab) {
