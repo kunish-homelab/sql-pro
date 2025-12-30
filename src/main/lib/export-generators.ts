@@ -55,3 +55,49 @@ export function generateCSV(
     newline: '\n',
   });
 }
+
+// ============ JSON Generator ============
+
+export interface JSONExportOptions {
+  /** Columns to include (all columns if not specified) */
+  columns?: string[];
+  /** Pretty-print with indentation (defaults to false) */
+  prettyPrint?: boolean;
+  /** Indentation size when pretty-printing (defaults to 2) */
+  indent?: number;
+}
+
+/**
+ * Generates JSON content from row data.
+ *
+ * @param rows - Array of data objects to export
+ * @param allColumns - All available column definitions
+ * @param options - JSON export configuration
+ * @returns JSON formatted string
+ */
+export function generateJSON(
+  rows: Record<string, unknown>[],
+  allColumns: ColumnInfo[],
+  options: JSONExportOptions = {}
+): string {
+  const { columns, prettyPrint = false, indent = 2 } = options;
+
+  // Determine which columns to include
+  const columnNames = columns ?? allColumns.map((c) => c.name);
+
+  // Filter rows to only include selected columns
+  const filteredRows = rows.map((row) => {
+    const filteredRow: Record<string, unknown> = {};
+    for (const col of columnNames) {
+      filteredRow[col] = row[col];
+    }
+    return filteredRow;
+  });
+
+  // Generate JSON with optional pretty-printing
+  // Dates are automatically converted to ISO strings by JSON.stringify
+  if (prettyPrint) {
+    return JSON.stringify(filteredRows, null, indent);
+  }
+  return JSON.stringify(filteredRows);
+}
