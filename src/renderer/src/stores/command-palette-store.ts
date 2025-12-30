@@ -113,20 +113,24 @@ export const useCommandPaletteStore = create<CommandPaletteState>()(
   })
 );
 
+// Category order for consistent sorting (must match UI)
+const CATEGORY_ORDER = ['actions', 'navigation', 'view', 'settings', 'help'];
+
 // Helper function to filter commands based on search
 export function getFilteredCommands(
   commands: Command[],
   search: string
 ): Command[] {
+  const filtered = commands.filter((c) => !c.disabled?.());
+
+  let matched: Command[];
+
   if (!search.trim()) {
-    return commands.filter((c) => !c.disabled?.());
-  }
+    matched = filtered;
+  } else {
+    const query = search.toLowerCase().trim();
 
-  const query = search.toLowerCase().trim();
-
-  return commands
-    .filter((c) => !c.disabled?.())
-    .filter((command) => {
+    matched = filtered.filter((command) => {
       const label = command.label.toLowerCase();
       const category = command.category.toLowerCase();
       const keywords = command.keywords?.join(' ').toLowerCase() || '';
@@ -136,19 +140,21 @@ export function getFilteredCommands(
         category.includes(query) ||
         keywords.includes(query)
       );
-    })
-    .sort((a, b) => {
-      // Prioritize label matches
-      const aLabel = a.label.toLowerCase();
-      const bLabel = b.label.toLowerCase();
-      const aStartsWith = aLabel.startsWith(query);
-      const bStartsWith = bLabel.startsWith(query);
-
-      if (aStartsWith && !bStartsWith) return -1;
-      if (!aStartsWith && bStartsWith) return 1;
-
-      return aLabel.localeCompare(bLabel);
     });
+  }
+
+  // Sort by category order to match UI display order
+  return matched.sort((a, b) => {
+    const aIndex = CATEGORY_ORDER.indexOf(a.category);
+    const bIndex = CATEGORY_ORDER.indexOf(b.category);
+
+    if (aIndex !== bIndex) {
+      return aIndex - bIndex;
+    }
+
+    // Within same category, sort by label
+    return a.label.localeCompare(b.label);
+  });
 }
 
 // Selector for filtered commands
