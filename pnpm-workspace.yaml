@@ -1,4 +1,8 @@
 nodeLinker: hoisted
-neverBuiltDependencies: []
+shellEmulator: true
+
+trustPolicy: no-downgrade
+
 overrides:
   vite: npm:rolldown-vite@latest
+neverBuiltDependencies: []

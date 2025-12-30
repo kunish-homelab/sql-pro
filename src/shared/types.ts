@@ -245,12 +245,30 @@ export interface SaveFileDialogResponse {
 
 // ============ Export Types ============
 
+/** Supported export formats */
+export type ExportFormat = 'csv' | 'json' | 'sql' | 'xlsx';
+
 export interface ExportRequest {
   connectionId: string;
   table: string;
-  format: 'csv' | 'json' | 'sql';
+  format: ExportFormat;
   filePath: string;
+  /** Columns to include in export (defaults to all columns if not specified) */
+  columns?: string[];
+  /** Include column headers in export (CSV format, defaults to true) */
   includeHeaders?: boolean;
+  /** CSV delimiter character (defaults to ',') */
+  delimiter?: string;
+  /** Pretty-print JSON output with indentation (defaults to false) */
+  prettyPrint?: boolean;
+  /** Excel worksheet name (defaults to table name) */
+  sheetName?: string;
+  /**
+   * Pre-filtered rows to export. When provided, these rows are used directly
+   * instead of fetching all data from the table. This supports exporting
+   * filtered/selected rows from the UI.
+   */
+  rows?: Record<string, unknown>[];
 }
 
 export interface ExportResponse {

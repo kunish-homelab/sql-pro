@@ -35,6 +35,12 @@ import Anthropic from '@anthropic-ai/sdk';
 import { BrowserWindow, dialog, ipcMain } from 'electron';
 import OpenAI from 'openai';
 import { IPC_CHANNELS } from '../../shared/types';
+import {
+  generateCSV,
+  generateExcel,
+  generateJSON,
+  generateSQL,
+} from '../lib/export-generators';
 import { databaseService } from './database';
 import { passwordStorageService } from './password-storage';
 import {
@@ -195,73 +201,87 @@ export function setupIpcHandlers(): void {
     IPC_CHANNELS.EXPORT_DATA,
     async (_event, request: ExportRequest) => {
       try {
-        // Get all data from table
-        const dataResult = databaseService.getTableData(
-          request.connectionId,
-          request.table,
-          1,
-          1000000, // Large number to get all rows
-          undefined,
-          undefined,
-          undefined
-        );
+        let columns: {
+          name: string;
+          type: string;
+          nullable: boolean;
+          defaultValue: string | null;
+          isPrimaryKey: boolean;
+        }[];
+        let rows: Record<string, unknown>[];
 
-        if (!dataResult.success) {
-          return dataResult;
+        // Check if pre-filtered rows were provided
+        if (request.rows && request.rows.length > 0) {
+          // Use provided rows directly (for filtered/selected data export)
+          rows = request.rows;
+          // Create column info from the first row's keys
+          // Generators only use the 'name' property, so other fields can be defaults
+          const columnNames = Object.keys(rows[0]);
+          columns = columnNames.map((name) => ({
+            name,
+            type: 'TEXT',
+            nullable: true,
+            defaultValue: null,
+            isPrimaryKey: false,
+          }));
+        } else {
+          // Fetch all data from the table
+          const dataResult = databaseService.getTableData(
+            request.connectionId,
+            request.table,
+            1,
+            1000000, // Large number to get all rows
+            undefined,
+            undefined,
+            undefined
+          );
+
+          if (!dataResult.success) {
+            return dataResult;
+          }
+
+          columns = dataResult.columns!;
+          rows = dataResult.rows!;
         }
-
-        const { columns, rows } = dataResult;
-        let content: string;
 
         switch (request.format) {
           case 'csv': {
-            const header =
-              request.includeHeaders !== false
-                ? `${columns.map((c) => `"${c.name}"`).join(',')}\n`
-                : '';
-            const body = rows
-              .map((row) =>
-                columns
-                  .map((c) => {
-                    const val = row[c.name];
-                    if (val === null) return '';
-                    if (typeof val === 'string')
-                      return `"${val.replace(/"/g, '""')}"`;
-                    return String(val);
-                  })
-                  .join(',')
-              )
-              .join('\n');
-            content = header + body;
+            const content = generateCSV(rows, columns, {
+              columns: request.columns,
+              includeHeaders: request.includeHeaders,
+              delimiter: request.delimiter,
+            });
+            fs.writeFileSync(request.filePath, content, 'utf-8');
             break;
           }
           case 'json': {
-            content = JSON.stringify(rows, null, 2);
+            const content = generateJSON(rows, columns, {
+              columns: request.columns,
+              prettyPrint: request.prettyPrint,
+            });
+            fs.writeFileSync(request.filePath, content, 'utf-8');
             break;
           }
           case 'sql': {
-            content = rows
-              .map((row) => {
-                const cols = columns.map((c) => `"${c.name}"`).join(', ');
-                const vals = columns
-                  .map((c) => {
-                    const val = row[c.name];
-                    if (val === null) return 'NULL';
-                    if (typeof val === 'string')
-                      return `'${val.replace(/'/g, "''")}'`;
-                    return String(val);
-                  })
-                  .join(', ');
-                return `INSERT INTO "${request.table}" (${cols}) VALUES (${vals});`;
-              })
-              .join('\n');
+            const content = generateSQL(rows, columns, {
+              columns: request.columns,
+              tableName: request.table,
+            });
+            fs.writeFileSync(request.filePath, content, 'utf-8');
+            break;
+          }
+          case 'xlsx': {
+            const buffer = generateExcel(rows, columns, {
+              columns: request.columns,
+              sheetName: request.sheetName ?? request.table,
+            });
+            fs.writeFileSync(request.filePath, buffer);
             break;
           }
           default:
             return { success: false, error: 'Unsupported export format' };
         }
 
-        fs.writeFileSync(request.filePath, content, 'utf-8');
         return { success: true, rowsExported: rows.length };
       } catch (error) {
         return {

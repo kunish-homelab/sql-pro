@@ -291,11 +291,12 @@ export function useCommands() {
           } else {
             // Button not found, navigate to home and retry
             navigate({ to: '/' });
-            setTimeout(() => {
+            const timer = setTimeout(() => {
               const btn = document.querySelector<HTMLButtonElement>(
                 'button[data-action="open-database"]'
               );
               btn?.click();
+              clearTimeout(timer);
             }, 100);
           }
         },

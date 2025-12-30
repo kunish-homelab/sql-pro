@@ -1,4 +1,5 @@
 import type { DataTableRef, TableRowData } from './data-table';
+import type { ExportOptions } from './ExportDialog';
 import type { UIFilterState } from '@/lib/filter-utils';
 import type { PendingChange, SortState } from '@/types/database';
 import {
@@ -6,6 +7,7 @@ import {
   ChevronRight,
   ChevronsLeft,
   ChevronsRight,
+  Download,
   Eye,
   FileText,
   Loader2,
@@ -17,6 +19,7 @@ import { useCallback, useMemo, useRef, useState } from 'react';
 import { Button } from '@/components/ui/button';
 import { Input } from '@/components/ui/input';
 import { useClientSearch } from '@/hooks/useClientSearch';
+import { useExport } from '@/hooks/useExport';
 import { usePendingChanges } from '@/hooks/usePendingChanges';
 import { useTableData } from '@/hooks/useTableData';
 import { convertUIFiltersToAPIFilters } from '@/lib/filter-utils';
@@ -24,6 +27,7 @@ import { useConnectionStore } from '@/stores';
 import { DataTable } from './data-table';
 import { ActiveFilters } from './data-table/ActiveFilters';
 import { DiffPreview } from './DiffPreview';
+import { ExportDialog } from './ExportDialog';
 
 export function TableView() {
   const { connection, selectedTable } = useConnectionStore();
@@ -35,6 +39,7 @@ export function TableView() {
   const [sort, setSort] = useState<SortState | null>(null);
   const [grouping, setGrouping] = useState<string[]>([]);
   const [showDiffPreview, setShowDiffPreview] = useState(false);
+  const [showExportDialog, setShowExportDialog] = useState(false);
   const [filters, setFilters] = useState<UIFilterState[]>([]);
   const [searchTerm, setSearchTerm] = useState('');
 
@@ -83,6 +88,9 @@ export function TableView() {
     schema: selectedTable?.schema,
     table: selectedTable?.name,
   });
+
+  // Export functionality
+  const { exportData } = useExport();
 
   // Transform rows for DataTable display
   const displayRows = useMemo((): TableRowData[] => {
@@ -228,6 +236,24 @@ export function TableView() {
     refetch();
   }, [refetch]);
 
+  // Handle export
+  const handleExport = useCallback(
+    async (options: ExportOptions) => {
+      await exportData({
+        format: options.format,
+        tableName: options.tableName,
+        connectionId: options.connectionId,
+        rows: options.rows,
+        columns: options.columns,
+        delimiter: options.delimiter,
+        includeHeaders: options.includeHeaders,
+        prettyPrint: options.prettyPrint,
+        sheetName: options.sheetName,
+      });
+    },
+    [exportData]
+  );
+
   if (!selectedTable) return null;
 
   return (
@@ -283,6 +309,18 @@ export function TableView() {
                 </button>
               )}
             </div>
+
+            {/* Export button */}
+            <Button
+              variant="outline"
+              size="sm"
+              onClick={() => setShowExportDialog(true)}
+              className="gap-2"
+              disabled={rows.length === 0}
+            >
+              <Download className="h-4 w-4" />
+              Export
+            </Button>
 
             {/* Add Row button */}
             {selectedTable.type !== 'view' && (
@@ -415,6 +453,21 @@ export function TableView() {
           />
         </div>
       )}
+
+      {/* Export Dialog */}
+      <ExportDialog
+        open={showExportDialog}
+        onOpenChange={setShowExportDialog}
+        tableName={selectedTable.name}
+        columns={columns}
+        rows={searchFilteredRows.map((row) => {
+          // Strip internal properties before export
+          const { __rowId, __isNew, __deleted, __change, ...data } = row;
+          return data;
+        })}
+        connectionId={connection?.id || ''}
+        onExport={handleExport}
+      />
     </div>
   );
 }
