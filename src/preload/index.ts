@@ -59,6 +59,7 @@ import type {
   SetPreferencesResponse,
   UpdateConnectionRequest,
   UpdateConnectionResponse,
+  UpdateStatus,
   ValidateChangesRequest,
   ValidateChangesResponse,
 } from '../shared/types';
@@ -227,6 +228,31 @@ const sqlProAPI = {
       ipcRenderer.invoke(IPC_CHANNELS.WINDOW_GET_ALL),
     getCurrent: (): Promise<GetCurrentWindowResponse> =>
       ipcRenderer.invoke(IPC_CHANNELS.WINDOW_GET_CURRENT),
+  },
+
+  // Auto-update operations
+  update: {
+    check: (silent = true): Promise<{ success: boolean; error?: string }> =>
+      ipcRenderer.invoke(IPC_CHANNELS.UPDATE_CHECK, silent),
+    download: (): Promise<{ success: boolean; error?: string }> =>
+      ipcRenderer.invoke(IPC_CHANNELS.UPDATE_DOWNLOAD),
+    install: (): Promise<{ success: boolean; error?: string }> =>
+      ipcRenderer.invoke(IPC_CHANNELS.UPDATE_INSTALL),
+    getStatus: (): Promise<{
+      success: boolean;
+      status?: UpdateStatus;
+      error?: string;
+    }> => ipcRenderer.invoke(IPC_CHANNELS.UPDATE_STATUS),
+    onStatusChange: (
+      callback: (status: UpdateStatus) => void
+    ): (() => void) => {
+      const handler = (
+        _event: Electron.IpcRendererEvent,
+        status: UpdateStatus
+      ) => callback(status);
+      ipcRenderer.on('update-status', handler);
+      return () => ipcRenderer.off('update-status', handler);
+    },
   },
 };
 

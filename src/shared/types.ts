@@ -1,6 +1,32 @@
 // Shared types for IPC communication between main and renderer
 // These types define the contract for all database operations
 
+// ============ Auto-Update Types ============
+
+export interface UpdateProgress {
+  percent: number;
+  bytesPerSecond: number;
+  total: number;
+  transferred: number;
+}
+
+export interface UpdateStatus {
+  status:
+    | 'checking'
+    | 'available'
+    | 'not-available'
+    | 'downloading'
+    | 'downloaded'
+    | 'error';
+  info?: {
+    version: string;
+    releaseDate?: string;
+    releaseNotes?: string;
+  };
+  error?: Error;
+  progress?: UpdateProgress;
+}
+
 // ============ Error Types ============
 
 export interface ErrorPosition {
@@ -551,6 +577,12 @@ export const IPC_CHANNELS = {
 
   // System operations
   SYSTEM_GET_FONTS: 'system:getFonts',
+
+  // Auto-update operations
+  UPDATE_CHECK: 'update:check',
+  UPDATE_DOWNLOAD: 'update:download',
+  UPDATE_INSTALL: 'update:install',
+  UPDATE_STATUS: 'update:status',
 } as const;
 
 // Menu action types

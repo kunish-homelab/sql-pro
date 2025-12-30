@@ -2,9 +2,11 @@ appId: com.sqlpro.app
 productName: SQL Pro
 copyright: Copyright © 2025 kunish
 
-# Publish to existing GitHub release (created by release-please)
+# Auto-update configuration - publish to GitHub releases
 publish:
   provider: github
+  owner: kunish-homelab
+  repo: sql-pro
   releaseType: release
 
 directories:
@@ -15,6 +17,8 @@ files:
   - '!**/.vscode/*'
   - '!src/*'
   - '!specs/*'
+  - '!docs/*'
+  - '!scripts/*'
   - '!.gitignore'
   - '!*.md'
   - '!*.yml'
@@ -25,21 +29,25 @@ files:
   - '!{tsconfig,tsconfig.*}.json'
   - '!pnpm-lock.yaml'
   - '!pnpm-workspace.yaml'
+  - '!**/*.map'
+  - '!**/*.ts'
+  - '!**/node_modules/.cache'
 
 asarUnpack:
   - resources/**
+
+# Generate required update metadata files
+generateUpdatesFilesForAllChannels: true
 
 # macOS Configuration
 mac:
   target:
     - target: dmg
       arch:
-        - x64
-        - arm64
+        - universal
     - target: zip
       arch:
-        - x64
-        - arm64
+        - universal
   icon: resources/icon.icns
   category: public.app-category.developer-tools
   entitlements: resources/entitlements.mac.plist
@@ -47,9 +55,11 @@ mac:
   hardenedRuntime: true
   gatekeeperAssess: false
   notarize: false
+  # Required for auto-update on macOS
+  artifactName: ${name}-${version}-${os}-${arch}.${ext}
 
 dmg:
-  artifactName: ${name}-${version}-${arch}.${ext}
+  artifactName: ${name}-${version}-${os}-${arch}.${ext}
   contents:
     - x: 130
       y: 220
@@ -65,18 +75,22 @@ win:
       arch:
         - x64
         - arm64
-    - target: portable
-      arch:
-        - x64
   icon: resources/icon.ico
-  artifactName: ${name}-${version}-${arch}.${ext}
+  artifactName: ${name}-${version}-${os}-${arch}.${ext}
+  # Sign if certificate is available
+  signAndEditExecutable: true
 
 nsis:
   oneClick: false
   perMachine: false
   allowToChangeInstallationDirectory: true
   deleteAppDataOnUninstall: false
-  artifactName: ${name}-${version}-setup-${arch}.${ext}
+  artifactName: ${name}-${version}-${os}-setup-${arch}.${ext}
+  # Allow updating without admin rights when installed per-user
+  allowElevation: true
+  # Create desktop shortcut
+  createDesktopShortcut: true
+  createStartMenuShortcut: true
 
 # Linux Configuration
 linux:
@@ -94,10 +108,10 @@ linux:
         - x64
   icon: resources/icons
   category: Development
-  artifactName: ${name}-${version}-${arch}.${ext}
+  artifactName: ${name}-${version}-${os}-${arch}.${ext}
 
 appImage:
-  artifactName: ${name}-${version}-${arch}.${ext}
+  artifactName: ${name}-${version}-${os}-${arch}.${ext}
 
 deb:
   depends:
@@ -110,6 +124,7 @@ deb:
     - libatspi2.0-0
     - libuuid1
     - libsecret-1-0
+  artifactName: ${name}-${version}-${os}-${arch}.${ext}
 
 rpm:
   depends:
@@ -122,3 +137,4 @@ rpm:
     - at-spi2-core
     - libuuid
     - libsecret
+  artifactName: ${name}-${version}-${os}-${arch}.${ext}

@@ -3,6 +3,7 @@ import process from 'node:process';
 import { app, BrowserWindow, nativeImage, shell } from 'electron';
 import { cleanupIpcHandlers, setupIpcHandlers } from './services/ipc-handlers';
 import { createApplicationMenu } from './services/menu';
+import { checkForUpdatesOnStartup, initAutoUpdater } from './services/updater';
 import { windowManager } from './services/window-manager';
 
 // Inline utilities to avoid @electron-toolkit/utils initialization issues
@@ -96,6 +97,9 @@ app.whenReady().then(() => {
   // Setup IPC handlers for database operations
   setupIpcHandlers();
 
+  // Initialize auto-updater
+  initAutoUpdater();
+
   // Create native application menu
   createApplicationMenu();
 
@@ -114,6 +118,9 @@ app.whenReady().then(() => {
       windowManager.registerWindow(newWindow);
     }
   });
+
+  // Check for updates after startup (5 second delay)
+  checkForUpdatesOnStartup();
 });
 
 app.on('window-all-closed', () => {

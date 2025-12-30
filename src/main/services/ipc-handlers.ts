@@ -57,6 +57,12 @@ import {
   setPreferences,
   updateRecentConnection,
 } from './store';
+import {
+  checkForUpdates,
+  downloadUpdate,
+  getUpdateStatus,
+  quitAndInstall,
+} from './updater';
 import { windowManager } from './window-manager';
 
 export function setupIpcHandlers(): void {
@@ -825,6 +831,68 @@ export function setupIpcHandlers(): void {
         success: false,
         error: error instanceof Error ? error.message : 'Failed to get fonts',
         fonts: [],
+      };
+    }
+  });
+
+  // ============ Auto-Update Handlers ============
+
+  ipcMain.handle(IPC_CHANNELS.UPDATE_CHECK, async (_event, silent = true) => {
+    try {
+      await checkForUpdates(silent);
+      return { success: true };
+    } catch (error) {
+      console.error('[UPDATE_CHECK] Failed to check for updates:', error);
+      return {
+        success: false,
+        error:
+          error instanceof Error
+            ? error.message
+            : 'Failed to check for updates',
+      };
+    }
+  });
+
+  ipcMain.handle(IPC_CHANNELS.UPDATE_DOWNLOAD, async () => {
+    try {
+      downloadUpdate();
+      return { success: true };
+    } catch (error) {
+      console.error('[UPDATE_DOWNLOAD] Failed to download update:', error);
+      return {
+        success: false,
+        error:
+          error instanceof Error ? error.message : 'Failed to download update',
+      };
+    }
+  });
+
+  ipcMain.handle(IPC_CHANNELS.UPDATE_INSTALL, async () => {
+    try {
+      quitAndInstall();
+      return { success: true };
+    } catch (error) {
+      console.error('[UPDATE_INSTALL] Failed to install update:', error);
+      return {
+        success: false,
+        error:
+          error instanceof Error ? error.message : 'Failed to install update',
+      };
+    }
+  });
+
+  ipcMain.handle(IPC_CHANNELS.UPDATE_STATUS, async () => {
+    try {
+      const status = getUpdateStatus();
+      return { success: true, status };
+    } catch (error) {
+      console.error('[UPDATE_STATUS] Failed to get update status:', error);
+      return {
+        success: false,
+        error:
+          error instanceof Error
+            ? error.message
+            : 'Failed to get update status',
       };
     }
   });

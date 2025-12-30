@@ -2,6 +2,7 @@ import type { MenuAction } from '../../shared/types';
 import process from 'node:process';
 import { app, BrowserWindow, Menu, shell } from 'electron';
 import { IPC_CHANNELS } from '../../shared/types';
+import { checkForUpdates } from './updater';
 import { windowManager } from './window-manager';
 
 function sendMenuAction(action: MenuAction): void {
@@ -188,6 +189,13 @@ export function createApplicationMenu(): void {
     {
       role: 'help',
       submenu: [
+        {
+          label: 'Check for Updates...',
+          click: () => {
+            checkForUpdates(false);
+          },
+        },
+        { type: 'separator' },
         {
           label: 'Learn More',
           click: async () => {
