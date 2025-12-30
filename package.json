@@ -95,7 +95,6 @@
     "eventemitter3": "^5.0.1",
     "html-to-image": "^1.11.13",
     "input-otp": "^1.4.2",
-    "isolated-vm": "^5.0.1",
     "lucide-react": "^0.562.0",
     "monaco-editor": "^0.55.1",
     "monaco-vim": "^0.4.4",
