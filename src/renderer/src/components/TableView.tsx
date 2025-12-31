@@ -1,7 +1,7 @@
 import type { DataTableRef, TableRowData } from './data-table';
 import type { ExportOptions } from './ExportDialog';
 import type { UIFilterState } from '@/lib/filter-utils';
-import type { PendingChange, SortState } from '@/types/database';
+import type { PendingChange, SortState, TableSchema } from '@/types/database';
 import {
   ChevronLeft,
   ChevronRight,
@@ -29,8 +29,17 @@ import { ActiveFilters } from './data-table/ActiveFilters';
 import { DiffPreview } from './DiffPreview';
 import { ExportDialog } from './ExportDialog';
 
-export function TableView() {
-  const { connection, selectedTable } = useConnectionStore();
+interface TableViewProps {
+  /** Optional table override - when provided, uses this table instead of selectedTable from store */
+  tableOverride?: TableSchema;
+}
+
+export function TableView({ tableOverride }: TableViewProps) {
+  const { connection, selectedTable: storeSelectedTable } =
+    useConnectionStore();
+
+  // Use tableOverride if provided, otherwise fall back to store's selectedTable
+  const selectedTable = tableOverride || storeSelectedTable;
   const dataTableRef = useRef<DataTableRef>(null);
 
   // Pagination state (local since TanStack Query handles the data)

@@ -8,6 +8,8 @@ export {
 } from './command-palette-store';
 export type { Command } from './command-palette-store';
 export { useConnectionStore } from './connection-store';
+export { useDataTabsStore } from './data-tabs-store';
+export type { DataTab } from './data-tabs-store';
 export { useDiagramStore } from './diagram-store';
 export { useQueryStore } from './query-store';
 export { useQueryTabsStore } from './query-tabs-store';

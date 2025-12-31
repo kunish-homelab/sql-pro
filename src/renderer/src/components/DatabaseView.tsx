@@ -1,6 +1,6 @@
 import * as Tabs from '@radix-ui/react-tabs';
 import { Code, GitFork, Info, Table } from 'lucide-react';
-import { useEffect, useState } from 'react';
+import { useCallback, useEffect, useRef, useState } from 'react';
 import { Button } from '@/components/ui/button';
 import {
   Tooltip,
@@ -8,7 +8,12 @@ import {
   TooltipTrigger,
 } from '@/components/ui/tooltip';
 import { cn } from '@/lib/utils';
-import { useChangesStore, useConnectionStore } from '@/stores';
+import {
+  useChangesStore,
+  useConnectionStore,
+  useDataTabsStore,
+} from '@/stores';
+import { DataTabBar } from './data-table';
 import { DiffPreview } from './DiffPreview';
 import { ERDiagram } from './er-diagram';
 import { QueryEditor } from './QueryEditor';
@@ -25,11 +30,81 @@ interface DatabaseViewProps {
 }
 
 export function DatabaseView({ onOpenDatabase }: DatabaseViewProps) {
-  const { selectedTable } = useConnectionStore();
+  const { selectedTable, activeConnectionId, setSelectedTable } =
+    useConnectionStore();
   const { hasChanges } = useChangesStore();
+  const {
+    openTable,
+    getActiveTab,
+    tabsByConnection,
+    setActiveConnectionId: setDataTabsActiveConnection,
+  } = useDataTabsStore();
+
   const [activeTab, setActiveTab] = useState<TabValue>('data');
   const [showChangesPanel, setShowChangesPanel] = useState(false);
   const [showDetailsPanel, setShowDetailsPanel] = useState(false);
+
+  // Get the active data tab for current connection
+  const activeDataTab = activeConnectionId
+    ? getActiveTab(activeConnectionId)
+    : undefined;
+  const dataTabs = activeConnectionId
+    ? tabsByConnection[activeConnectionId]?.tabs || []
+    : [];
+
+  // Track last opened table to prevent infinite loops
+  const lastOpenedTableRef = useRef<string | null>(null);
+  const isUpdatingFromTabRef = useRef(false);
+
+  // Sync data tabs store with connection
+  useEffect(() => {
+    if (activeConnectionId) {
+      setDataTabsActiveConnection(activeConnectionId);
+    }
+  }, [activeConnectionId, setDataTabsActiveConnection]);
+
+  // When a table is selected from the sidebar, open it in a new tab
+  useEffect(() => {
+    if (selectedTable && activeConnectionId && !isUpdatingFromTabRef.current) {
+      const tableKey = `${selectedTable.schema || 'main'}.${selectedTable.name}`;
+      // Only open if this is a different table than we last opened
+      if (lastOpenedTableRef.current !== tableKey) {
+        lastOpenedTableRef.current = tableKey;
+        openTable(activeConnectionId, selectedTable);
+      }
+    }
+  }, [selectedTable, activeConnectionId, openTable]);
+
+  // When active data tab changes, update selected table for schema details
+  useEffect(() => {
+    let timeoutId: ReturnType<typeof setTimeout> | null = null;
+
+    if (activeDataTab) {
+      const activeTableKey = `${activeDataTab.table.schema || 'main'}.${activeDataTab.table.name}`;
+      const selectedTableKey = selectedTable
+        ? `${selectedTable.schema || 'main'}.${selectedTable.name}`
+        : null;
+
+      if (activeTableKey !== selectedTableKey) {
+        isUpdatingFromTabRef.current = true;
+        lastOpenedTableRef.current = activeTableKey;
+        setSelectedTable(activeDataTab.table);
+        // Reset the flag after the state update
+        timeoutId = setTimeout(() => {
+          isUpdatingFromTabRef.current = false;
+        }, 0);
+      }
+    }
+
+    return () => {
+      if (timeoutId) {
+        clearTimeout(timeoutId);
+      }
+    };
+  }, [activeDataTab, selectedTable, setSelectedTable]);
+
+  // The table to display - from active data tab or selected table
+  const displayTable = activeDataTab?.table || selectedTable;
 
   // Keyboard shortcuts for tab switching
   useEffect(() => {
@@ -70,6 +145,12 @@ export function DatabaseView({ onOpenDatabase }: DatabaseViewProps) {
     return () => window.removeEventListener('keydown', handleKeyDown);
   }, []);
 
+  // Handler to scroll sidebar into view (used by DataTabBar's + button)
+  const handleOpenSidebar = useCallback(() => {
+    // Focus the sidebar search or just ensure data tab is active
+    setActiveTab('data');
+  }, []);
+
   return (
     <div className="flex h-full flex-col">
       {/* Toolbar */}
@@ -108,6 +189,11 @@ export function DatabaseView({ onOpenDatabase }: DatabaseViewProps) {
             >
               <Table className="h-4 w-4" />
               Data Browser
+              {dataTabs.length > 0 && (
+                <span className="bg-muted text-muted-foreground rounded-full px-1.5 py-0.5 text-[10px] font-normal">
+                  {dataTabs.length}
+                </span>
+              )}
               <kbd className="bg-muted text-muted-foreground ml-1 hidden rounded px-1 py-0.5 font-mono text-[10px] sm:inline-block">
                 ⌘1
               </kbd>
@@ -153,7 +239,7 @@ export function DatabaseView({ onOpenDatabase }: DatabaseViewProps) {
                     variant={showDetailsPanel ? 'secondary' : 'ghost'}
                     size="sm"
                     onClick={() => setShowDetailsPanel((prev) => !prev)}
-                    disabled={!selectedTable}
+                    disabled={!displayTable}
                     className="gap-1.5"
                   >
                     <Info className="h-4 w-4" />
@@ -164,7 +250,7 @@ export function DatabaseView({ onOpenDatabase }: DatabaseViewProps) {
                   </Button>
                 </TooltipTrigger>
                 <TooltipContent>
-                  {selectedTable
+                  {displayTable
                     ? 'View schema details'
                     : 'Select a table to view schema details'}
                 </TooltipContent>
@@ -175,9 +261,20 @@ export function DatabaseView({ onOpenDatabase }: DatabaseViewProps) {
           {/* Tab Content */}
           <Tabs.Content
             value="data"
-            className="h-full min-h-0 flex-1 data-[state=inactive]:hidden"
+            className="flex h-full min-h-0 flex-1 flex-col data-[state=inactive]:hidden"
           >
-            {selectedTable ? (
+            {/* Data Browser Tab Bar - shows opened table tabs */}
+            {dataTabs.length > 0 && (
+              <DataTabBar onOpenSidebar={handleOpenSidebar} />
+            )}
+
+            {/* Table View */}
+            {activeDataTab ? (
+              <TableView
+                key={activeDataTab.id}
+                tableOverride={activeDataTab.table}
+              />
+            ) : displayTable ? (
               <TableView />
             ) : (
               <div className="bg-grid-dot text-muted-foreground flex h-full items-center justify-center">
@@ -224,7 +321,7 @@ export function DatabaseView({ onOpenDatabase }: DatabaseViewProps) {
             storageKey="schema-details-panel"
           >
             <SchemaDetailsPanel
-              table={selectedTable}
+              table={displayTable}
               onClose={() => setShowDetailsPanel(false)}
             />
           </ResizablePanel>

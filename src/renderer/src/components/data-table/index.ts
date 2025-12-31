@@ -3,6 +3,9 @@ export { ActiveFilters, type ActiveFiltersProps } from './ActiveFilters';
 
 export { ColumnFilterPopover } from './ColumnFilterPopover';
 
+// Tab bar for multi-tab support
+export { DataTabBar } from './DataTabBar';
+
 // Main component
 export {
   DataTable,
