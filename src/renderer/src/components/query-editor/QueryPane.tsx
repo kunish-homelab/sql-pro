@@ -38,6 +38,8 @@ export const QueryPane = memo(
       updateTabError,
       setTabExecuting,
       setPaneActiveTab,
+      updateTabCursorPosition,
+      updateTabScrollTop,
     } = useQueryTabsStore();
 
     const [showOptimizer, setShowOptimizer] = useState(false);
@@ -124,6 +126,24 @@ export const QueryPane = memo(
       [connectionId, pane.id, setPaneActiveTab]
     );
 
+    const handleCursorPositionChange = useCallback(
+      (position: { line: number; column: number }) => {
+        if (tab) {
+          updateTabCursorPosition(connectionId, tab.id, position);
+        }
+      },
+      [tab, connectionId, updateTabCursorPosition]
+    );
+
+    const handleScrollPositionChange = useCallback(
+      (scrollTop: number) => {
+        if (tab) {
+          updateTabScrollTop(connectionId, tab.id, scrollTop);
+        }
+      },
+      [tab, connectionId, updateTabScrollTop]
+    );
+
     if (!tab) {
       return (
         <div className="text-muted-foreground flex h-full items-center justify-center">
@@ -203,6 +223,10 @@ export const QueryPane = memo(
             onChange={handleQueryChange}
             onExecute={handleExecute}
             schema={schema}
+            initialCursorPosition={tab.cursorPosition}
+            initialScrollPosition={tab.scrollTop}
+            onCursorPositionChange={handleCursorPositionChange}
+            onScrollPositionChange={handleScrollPositionChange}
           />
         </div>
 
