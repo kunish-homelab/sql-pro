@@ -15,6 +15,10 @@ export interface QueryTab {
   lastExecutedAt: number | null;
   /** Connection ID this tab belongs to */
   connectionId: string;
+  /** Cursor position in the query editor */
+  cursorPosition?: { line: number; column: number };
+  /** Scroll position in the query editor */
+  scrollTop?: number;
 }
 
 export type SplitDirection = 'horizontal' | 'vertical';
