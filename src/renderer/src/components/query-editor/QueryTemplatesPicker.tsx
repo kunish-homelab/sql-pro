@@ -22,7 +22,6 @@ import {
 } from '@/components/ui/dialog';
 import { Input } from '@/components/ui/input';
 import { Label } from '@/components/ui/label';
-import { ScrollArea } from '@/components/ui/scroll-area';
 import {
   Select,
   SelectContent,
@@ -71,39 +70,46 @@ const TemplateCard = memo(
     return (
       <div
         className={cn(
-          'group hover:bg-accent/50 flex cursor-pointer flex-col gap-2 rounded-lg border p-3 transition-colors',
+          'group hover:border-primary/50 hover:bg-accent/30 relative flex cursor-pointer flex-col gap-2.5 rounded-xl border p-4 transition-all duration-200',
           template.isBuiltIn && 'border-dashed'
         )}
         onClick={() => onSelect(template.query)}
       >
+        {/* Header */}
         <div className="flex items-start justify-between gap-2">
-          <div className="flex items-center gap-2">
+          <div className="flex min-w-0 flex-1 items-center gap-2">
             {template.isBuiltIn ? (
               <Star className="h-4 w-4 shrink-0 text-amber-500" />
             ) : (
               <FileText className="text-muted-foreground h-4 w-4 shrink-0" />
             )}
-            <span className="line-clamp-1 font-medium">{template.name}</span>
+            <span className="truncate font-medium">{template.name}</span>
           </div>
           <Badge
             variant="secondary"
             className={cn(
-              'shrink-0 text-xs',
+              'shrink-0 text-[10px] font-medium',
               CATEGORY_COLORS[template.category]
             )}
           >
             {template.category}
           </Badge>
         </div>
-        <p className="text-muted-foreground line-clamp-2 text-sm">
+
+        {/* Description */}
+        <p className="text-muted-foreground line-clamp-2 text-xs leading-relaxed">
           {template.description}
         </p>
+
+        {/* Code Preview */}
         <SqlHighlight
           code={template.query}
           maxLines={3}
-          className="bg-muted rounded p-2"
+          className="bg-muted/50 rounded-lg p-2.5 text-xs"
         />
-        <div className="flex items-center justify-end gap-1 opacity-0 transition-opacity group-hover:opacity-100">
+
+        {/* Actions - appear on hover */}
+        <div className="bg-background/80 absolute top-2 right-2 flex items-center gap-0.5 rounded-md opacity-0 backdrop-blur-sm transition-opacity group-hover:opacity-100">
           <TooltipProvider delay={200}>
             <Tooltip>
               <TooltipTrigger>
@@ -301,8 +307,8 @@ export const QueryTemplatesPicker = memo(
     return (
       <>
         <Dialog open={open} onOpenChange={onOpenChange}>
-          <DialogContent className="flex max-h-[80vh] max-w-4xl flex-col overflow-hidden">
-            <DialogHeader>
+          <DialogContent className="max-w-3xl p-0">
+            <DialogHeader className="border-b px-6 py-4">
               <DialogTitle className="flex items-center gap-2">
                 <Code className="h-5 w-5" />
                 Query Templates
@@ -313,14 +319,14 @@ export const QueryTemplatesPicker = memo(
             </DialogHeader>
 
             {/* Search and Filter */}
-            <div className="flex items-center gap-3 py-2">
-              <div className="relative flex-1">
-                <Search className="text-muted-foreground absolute top-1/2 left-2.5 h-4 w-4 -translate-y-1/2" />
+            <div className="flex items-center gap-3 border-b px-6 py-3">
+              <div className="relative min-w-0 flex-1">
+                <Search className="text-muted-foreground absolute top-1/2 left-3 h-4 w-4 -translate-y-1/2" />
                 <Input
-                  placeholder="Search templates..."
+                  placeholder="Search..."
                   value={searchQuery}
                   onChange={(e) => setSearchQuery(e.target.value)}
-                  className="pl-8"
+                  className="w-full pl-9"
                 />
                 {searchQuery && (
                   <Button
@@ -339,7 +345,7 @@ export const QueryTemplatesPicker = memo(
                   setSelectedCategory(value as TemplateCategory | 'all')
                 }
               >
-                <SelectTrigger className="w-[160px]">
+                <SelectTrigger className="w-[140px]">
                   <SelectValue />
                 </SelectTrigger>
                 <SelectContent>
@@ -351,23 +357,23 @@ export const QueryTemplatesPicker = memo(
                 </SelectContent>
               </Select>
               <Button onClick={() => setShowNewDialog(true)}>
-                <Plus className="mr-1 h-4 w-4" />
+                <Plus className="mr-1.5 h-4 w-4" />
                 New Template
               </Button>
             </div>
 
             {/* Template Grid */}
-            <ScrollArea className="-mx-6 flex-1 px-6">
+            <div className="max-h-[60vh] overflow-y-auto p-6">
               {filteredTemplates.length === 0 ? (
-                <div className="text-muted-foreground flex flex-col items-center justify-center py-12">
-                  <FileText className="mb-2 h-12 w-12 opacity-50" />
-                  <p>No templates found</p>
-                  <p className="text-sm">
+                <div className="text-muted-foreground flex flex-col items-center justify-center py-16">
+                  <FileText className="mb-3 h-12 w-12 opacity-40" />
+                  <p className="font-medium">No templates found</p>
+                  <p className="text-sm opacity-70">
                     Try adjusting your search or category
                   </p>
                 </div>
               ) : (
-                <div className="grid grid-cols-2 gap-3 pb-4">
+                <div className="grid grid-cols-2 gap-4">
                   {filteredTemplates.map((template) => (
                     <TemplateCard
                       key={template.id}
@@ -379,7 +385,7 @@ export const QueryTemplatesPicker = memo(
                   ))}
                 </div>
               )}
-            </ScrollArea>
+            </div>
           </DialogContent>
         </Dialog>
 
