@@ -331,7 +331,7 @@ export function QueryEditor() {
         <div className="flex items-center gap-2">
           {/* AI Features Dropdown */}
           <DropdownMenu>
-            <DropdownMenuTrigger asChild>
+            <DropdownMenuTrigger>
               <Button variant="ghost" size="sm" className="gap-1">
                 <Sparkles className="h-4 w-4" />
                 AI

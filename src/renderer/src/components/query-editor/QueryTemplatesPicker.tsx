@@ -101,9 +101,9 @@ const TemplateCard = memo(
           {template.query}
         </pre>
         <div className="flex items-center justify-end gap-1 opacity-0 transition-opacity group-hover:opacity-100">
-          <TooltipProvider delayDuration={200}>
+          <TooltipProvider delay={200}>
             <Tooltip>
-              <TooltipTrigger asChild>
+              <TooltipTrigger>
                 <Button
                   variant="ghost"
                   size="icon"
@@ -120,9 +120,9 @@ const TemplateCard = memo(
             </Tooltip>
           </TooltipProvider>
           {!template.isBuiltIn && (
-            <TooltipProvider delayDuration={200}>
+            <TooltipProvider delay={200}>
               <Tooltip>
-                <TooltipTrigger asChild>
+                <TooltipTrigger>
                   <Button
                     variant="ghost"
                     size="icon"

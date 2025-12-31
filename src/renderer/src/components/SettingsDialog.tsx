@@ -526,7 +526,7 @@ function FontSettingsSection({
       <div className="flex items-center gap-3">
         {/* Font Family Dropdown with Search */}
         <Popover open={fontSelectOpen} onOpenChange={setFontSelectOpen} modal>
-          <PopoverTrigger asChild>
+          <PopoverTrigger>
             <Button
               variant="outline"
               role="combobox"
@@ -717,7 +717,10 @@ function AISettingsSection() {
         <Label htmlFor="provider-select" className="text-xs font-medium">
           AI Provider
         </Label>
-        <Select value={provider} onValueChange={handleProviderChange}>
+        <Select
+          value={provider}
+          onValueChange={(v) => v && handleProviderChange(v)}
+        >
           <SelectTrigger id="provider-select" className="h-8">
             <SelectValue />
           </SelectTrigger>
@@ -766,7 +769,7 @@ function AISettingsSection() {
           onOpenChange={setModelPopoverOpen}
           modal
         >
-          <PopoverTrigger asChild>
+          <PopoverTrigger>
             <Button
               variant="outline"
               role="combobox"
@@ -833,7 +836,7 @@ function AISettingsSection() {
           open={claudeCodePathPopoverOpen}
           onOpenChange={setClaudeCodePathPopoverOpen}
         >
-          <PopoverTrigger asChild>
+          <PopoverTrigger>
             <Button
               variant="outline"
               role="combobox"

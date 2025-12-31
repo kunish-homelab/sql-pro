@@ -387,7 +387,7 @@ export function PluginCard({
           )}
           {variant === 'installed' && (
             <DropdownMenu>
-              <DropdownMenuTrigger asChild>
+              <DropdownMenuTrigger>
                 <Button variant="ghost" size="icon-sm" disabled={isLoading}>
                   <MoreHorizontal className="size-4" />
                   <span className="sr-only">Plugin options</span>
@@ -532,7 +532,7 @@ export function PluginCard({
           )}
           {variant === 'installed' && (
             <DropdownMenu>
-              <DropdownMenuTrigger asChild>
+              <DropdownMenuTrigger>
                 <Button variant="ghost" size="icon-sm" disabled={isLoading}>
                   <MoreHorizontal className="size-4" />
                   <span className="sr-only">Plugin options</span>

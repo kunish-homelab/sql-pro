@@ -79,9 +79,9 @@ export const UndoRedoControls = memo(
 
     return (
       <div className={cn('flex items-center gap-1', className)}>
-        <TooltipProvider delayDuration={300}>
+        <TooltipProvider delay={300}>
           <Tooltip>
-            <TooltipTrigger asChild>
+            <TooltipTrigger>
               <Button
                 variant="ghost"
                 size="icon"
@@ -105,9 +105,9 @@ export const UndoRedoControls = memo(
           </Tooltip>
         </TooltipProvider>
 
-        <TooltipProvider delayDuration={300}>
+        <TooltipProvider delay={300}>
           <Tooltip>
-            <TooltipTrigger asChild>
+            <TooltipTrigger>
               <Button
                 variant="ghost"
                 size="icon"

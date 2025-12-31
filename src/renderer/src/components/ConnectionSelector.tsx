@@ -142,7 +142,7 @@ export function ConnectionSelector({
   return (
     <>
       <DropdownMenu open={isOpen} onOpenChange={setIsOpen}>
-        <DropdownMenuTrigger asChild>
+        <DropdownMenuTrigger>
           <Button
             variant="outline"
             size="sm"
@@ -166,7 +166,7 @@ export function ConnectionSelector({
               </span>
               {hasUnsavedChanges && (
                 <Tooltip>
-                  <TooltipTrigger asChild>
+                  <TooltipTrigger>
                     <AlertCircle className="h-3.5 w-3.5 shrink-0 text-amber-500" />
                   </TooltipTrigger>
                   <TooltipContent>Unsaved changes</TooltipContent>

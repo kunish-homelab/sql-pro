@@ -1,7 +1,7 @@
-import * as Tabs from '@radix-ui/react-tabs';
 import { Code, GitFork, Info, Table } from 'lucide-react';
 import { useCallback, useEffect, useRef, useState } from 'react';
 import { Button } from '@/components/ui/button';
+import { Tabs, TabsContent, TabsList, TabsTrigger } from '@/components/ui/tabs';
 import {
   Tooltip,
   TooltipContent,
@@ -142,14 +142,14 @@ export function DatabaseView({ onOpenDatabase }: DatabaseViewProps) {
         </ResizablePanel>
 
         {/* Content Area with Tabs */}
-        <Tabs.Root
+        <Tabs
           value={activeTab}
-          onValueChange={(v) => setActiveTab(v as TabValue)}
+          onValueChange={(v) => v && setActiveTab(v as TabValue)}
           className="flex min-w-0 flex-1 flex-col overflow-hidden"
         >
           {/* Tab List */}
-          <Tabs.List className="flex border-b px-2">
-            <Tabs.Trigger
+          <TabsList variant="line" className="flex border-b px-2">
+            <TabsTrigger
               value="data"
               data-tab="data"
               className={cn(
@@ -169,8 +169,8 @@ export function DatabaseView({ onOpenDatabase }: DatabaseViewProps) {
               <kbd className="bg-muted text-muted-foreground ml-1 hidden rounded px-1 py-0.5 font-mono text-[10px] sm:inline-block">
                 ⌘1
               </kbd>
-            </Tabs.Trigger>
-            <Tabs.Trigger
+            </TabsTrigger>
+            <TabsTrigger
               value="query"
               data-tab="query"
               className={cn(
@@ -185,8 +185,8 @@ export function DatabaseView({ onOpenDatabase }: DatabaseViewProps) {
               <kbd className="bg-muted text-muted-foreground ml-1 hidden rounded px-1 py-0.5 font-mono text-[10px] sm:inline-block">
                 ⌘2
               </kbd>
-            </Tabs.Trigger>
-            <Tabs.Trigger
+            </TabsTrigger>
+            <TabsTrigger
               value="diagram"
               data-tab="diagram"
               className={cn(
@@ -201,12 +201,12 @@ export function DatabaseView({ onOpenDatabase }: DatabaseViewProps) {
               <kbd className="bg-muted text-muted-foreground ml-1 hidden rounded px-1 py-0.5 font-mono text-[10px] sm:inline-block">
                 ⌘3
               </kbd>
-            </Tabs.Trigger>
+            </TabsTrigger>
 
             {/* Schema Details Toggle */}
             <div className="ml-auto flex items-center px-2">
               <Tooltip>
-                <TooltipTrigger asChild>
+                <TooltipTrigger>
                   <Button
                     variant={showDetailsPanel ? 'secondary' : 'ghost'}
                     size="sm"
@@ -228,10 +228,10 @@ export function DatabaseView({ onOpenDatabase }: DatabaseViewProps) {
                 </TooltipContent>
               </Tooltip>
             </div>
-          </Tabs.List>
+          </TabsList>
 
           {/* Tab Content */}
-          <Tabs.Content
+          <TabsContent
             value="data"
             className="flex h-full min-h-0 flex-1 flex-col data-[state=inactive]:hidden"
           >
@@ -253,22 +253,22 @@ export function DatabaseView({ onOpenDatabase }: DatabaseViewProps) {
                 <p>Select a table from the sidebar to view its data</p>
               </div>
             )}
-          </Tabs.Content>
+          </TabsContent>
 
-          <Tabs.Content
+          <TabsContent
             value="query"
             className="h-full min-h-0 flex-1 data-[state=inactive]:hidden"
           >
             <QueryEditor />
-          </Tabs.Content>
+          </TabsContent>
 
-          <Tabs.Content
+          <TabsContent
             value="diagram"
             className="h-full min-h-0 flex-1 data-[state=inactive]:hidden"
           >
             <ERDiagram />
-          </Tabs.Content>
-        </Tabs.Root>
+          </TabsContent>
+        </Tabs>
 
         {/* Changes Panel - Resizable */}
         {showChangesPanel && hasChanges() && (

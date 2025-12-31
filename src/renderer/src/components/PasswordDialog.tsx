@@ -111,7 +111,7 @@ export function PasswordDialog({
                 <span>Remember password</span>
                 {!isStorageAvailable && (
                   <Tooltip>
-                    <TooltipTrigger asChild>
+                    <TooltipTrigger>
                       <Info className="text-muted-foreground h-3.5 w-3.5" />
                     </TooltipTrigger>
                     <TooltipContent>

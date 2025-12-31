@@ -61,7 +61,7 @@ function HasSavedPasswordIndicator({ path }: { path: string }) {
 
   return (
     <Tooltip>
-      <TooltipTrigger asChild>
+      <TooltipTrigger>
         <KeyRound className="h-3 w-3 text-green-500" />
       </TooltipTrigger>
       <TooltipContent>Password saved</TooltipContent>
@@ -457,7 +457,7 @@ export function WelcomeScreen() {
       {/* Theme Toggle - Top Right */}
       <div className="absolute top-4 right-4">
         <Tooltip>
-          <TooltipTrigger asChild>
+          <TooltipTrigger>
             <Button variant="ghost" size="icon" onClick={cycleTheme}>
               {getThemeIcon()}
             </Button>
@@ -539,7 +539,7 @@ export function WelcomeScreen() {
                         <div className="flex shrink-0 items-center gap-1">
                           {conn.readOnly && (
                             <Tooltip>
-                              <TooltipTrigger asChild>
+                              <TooltipTrigger>
                                 <Eye className="text-muted-foreground h-3 w-3" />
                               </TooltipTrigger>
                               <TooltipContent>Read-only</TooltipContent>
@@ -554,7 +554,7 @@ export function WelcomeScreen() {
                     </div>
                   </Button>
                   <DropdownMenu>
-                    <DropdownMenuTrigger asChild>
+                    <DropdownMenuTrigger>
                       <Button
                         variant="ghost"
                         size="sm"

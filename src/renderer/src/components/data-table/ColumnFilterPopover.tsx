@@ -99,7 +99,8 @@ export function ColumnFilterPopover({
 
   // Clear values when operator changes if the new operator doesn't require values
   const handleOperatorChange = useCallback(
-    (newOperator: string) => {
+    (newOperator: string | null) => {
+      if (!newOperator) return;
       setSelectedOperator(newOperator as UIOperator);
       setError(undefined);
       setErrorField(null);
@@ -189,7 +190,7 @@ export function ColumnFilterPopover({
 
   return (
     <Popover open={open} onOpenChange={onOpenChange}>
-      <PopoverTrigger asChild>{children}</PopoverTrigger>
+      <PopoverTrigger>{children}</PopoverTrigger>
       <PopoverContent
         className="w-72 p-3"
         align="start"

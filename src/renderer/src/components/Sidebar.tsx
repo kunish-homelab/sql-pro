@@ -477,7 +477,7 @@ export function Sidebar({ onOpenDatabase }: SidebarProps) {
       {/* Footer with Settings */}
       <div className="border-t p-2">
         <Tooltip>
-          <TooltipTrigger asChild>
+          <TooltipTrigger>
             <Button
               variant="ghost"
               size="sm"

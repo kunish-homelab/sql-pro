@@ -229,7 +229,7 @@ export function AISettingsDialog({
                 open={modelPopoverOpen}
                 onOpenChange={setModelPopoverOpen}
               >
-                <PopoverTrigger asChild>
+                <PopoverTrigger>
                   <Button
                     variant="outline"
                     role="combobox"

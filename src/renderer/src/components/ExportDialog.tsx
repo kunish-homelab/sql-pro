@@ -375,7 +375,10 @@ export function ExportDialog({
                   >
                     Delimiter
                   </Label>
-                  <Select value={delimiter} onValueChange={setDelimiter}>
+                  <Select
+                    value={delimiter}
+                    onValueChange={(v) => v && setDelimiter(v)}
+                  >
                     <SelectTrigger id="delimiter" className="w-full">
                       <SelectValue placeholder="Select delimiter" />
                     </SelectTrigger>

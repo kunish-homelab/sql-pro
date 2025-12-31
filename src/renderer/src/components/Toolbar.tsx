@@ -124,7 +124,7 @@ export function Toolbar({ onOpenChanges }: ToolbarProps) {
 
       {/* Actions */}
       <Tooltip>
-        <TooltipTrigger asChild>
+        <TooltipTrigger>
           <Button
             variant="ghost"
             size="icon"
@@ -161,7 +161,7 @@ export function Toolbar({ onOpenChanges }: ToolbarProps) {
 
       {/* Theme Toggle */}
       <Tooltip>
-        <TooltipTrigger asChild>
+        <TooltipTrigger>
           <Button variant="ghost" size="icon" onClick={cycleTheme}>
             {getThemeIcon()}
           </Button>
@@ -171,7 +171,7 @@ export function Toolbar({ onOpenChanges }: ToolbarProps) {
 
       {/* Command Palette Hint */}
       <Tooltip>
-        <TooltipTrigger asChild>
+        <TooltipTrigger>
           <Button
             variant="ghost"
             size="sm"
@@ -198,7 +198,7 @@ export function Toolbar({ onOpenChanges }: ToolbarProps) {
 
       {/* Disconnect */}
       <Tooltip>
-        <TooltipTrigger asChild>
+        <TooltipTrigger>
           <Button variant="ghost" size="icon" onClick={handleDisconnect}>
             <X className="h-4 w-4" />
           </Button>

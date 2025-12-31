@@ -11,7 +11,7 @@ import {
 } from 'lucide-react';
 import { memo, useCallback, useState } from 'react';
 import { Badge } from '@/components/ui/badge';
-import { Button } from '@/components/ui/button';
+import { Button, buttonVariants } from '@/components/ui/button';
 import {
   Dialog,
   DialogContent,
@@ -254,6 +254,7 @@ export const BulkOperationsPanel = memo(
                     <Select
                       value={exportOptions.delimiter}
                       onValueChange={(v) =>
+                        v &&
                         setExportOptions({ ...exportOptions, delimiter: v })
                       }
                     >
@@ -348,10 +349,14 @@ export const BulkOperationsPanel = memo(
                       className="hidden"
                       id="file-upload"
                     />
-                    <Label htmlFor="file-upload" className="cursor-pointer">
-                      <Button variant="outline" asChild>
-                        <span>Browse Files</span>
-                      </Button>
+                    <Label
+                      htmlFor="file-upload"
+                      className={cn(
+                        buttonVariants({ variant: 'outline' }),
+                        'cursor-pointer'
+                      )}
+                    >
+                      Browse Files
                     </Label>
                   </>
                 )}

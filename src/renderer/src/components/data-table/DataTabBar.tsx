@@ -55,7 +55,7 @@ const TabItem = memo(
 
     return (
       <ContextMenu>
-        <ContextMenuTrigger asChild>
+        <ContextMenuTrigger>
           <div
             role="tab"
             aria-selected={isActive}
@@ -80,9 +80,9 @@ const TabItem = memo(
                 {tab.table.schema}
               </span>
             )}
-            <TooltipProvider delayDuration={300}>
+            <TooltipProvider delay={300}>
               <Tooltip>
-                <TooltipTrigger asChild>
+                <TooltipTrigger>
                   <button
                     onClick={handleCloseClick}
                     className={cn(
@@ -160,9 +160,9 @@ export const DataTabBar = memo(
         </div>
         {onOpenSidebar && (
           <div className="flex items-center border-l">
-            <TooltipProvider delayDuration={300}>
+            <TooltipProvider delay={300}>
               <Tooltip>
-                <TooltipTrigger asChild>
+                <TooltipTrigger>
                   <Button
                     variant="ghost"
                     size="icon"

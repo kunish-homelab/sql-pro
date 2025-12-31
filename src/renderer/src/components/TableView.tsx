@@ -169,7 +169,8 @@ export function TableView({ tableOverride }: TableViewProps) {
 
   // Handle page size change (global setting)
   const handlePageSizeChange = useCallback(
-    (value: string) => {
+    (value: string | null) => {
+      if (!value) return;
       const newSize = value === 'all' ? 'all' : Number.parseInt(value, 10);
       setPageSize(newSize as PageSizeOption);
       setPage(1); // Reset to first page when changing page size
@@ -480,7 +481,7 @@ export function TableView({ tableOverride }: TableViewProps) {
               {pageSizeOption === 'all' && totalRows > 10000 && (
                 <TooltipProvider>
                   <Tooltip>
-                    <TooltipTrigger asChild>
+                    <TooltipTrigger>
                       <AlertTriangle className="text-warning h-4 w-4 text-amber-500" />
                     </TooltipTrigger>
                     <TooltipContent>

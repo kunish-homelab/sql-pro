@@ -320,7 +320,9 @@ export const ChartBuilder = memo(
                   <Label>X-Axis (Category)</Label>
                   <Select
                     value={config.xAxis}
-                    onValueChange={(v) => setConfig({ ...config, xAxis: v })}
+                    onValueChange={(v) =>
+                      v && setConfig({ ...config, xAxis: v })
+                    }
                   >
                     <SelectTrigger>
                       <SelectValue placeholder="Select column..." />
@@ -340,7 +342,9 @@ export const ChartBuilder = memo(
                   <Label>Y-Axis (Value)</Label>
                   <Select
                     value={config.yAxis}
-                    onValueChange={(v) => setConfig({ ...config, yAxis: v })}
+                    onValueChange={(v) =>
+                      v && setConfig({ ...config, yAxis: v })
+                    }
                   >
                     <SelectTrigger>
                       <SelectValue placeholder="Select column..." />
@@ -362,6 +366,7 @@ export const ChartBuilder = memo(
                   <Select
                     value={config.aggregation}
                     onValueChange={(v) =>
+                      v &&
                       setConfig({
                         ...config,
                         aggregation: v as ChartConfig['aggregation'],

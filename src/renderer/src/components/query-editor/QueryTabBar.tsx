@@ -97,7 +97,7 @@ const TabItem = memo(
 
     return (
       <ContextMenu>
-        <ContextMenuTrigger asChild>
+        <ContextMenuTrigger>
           <div
             role="tab"
             aria-selected={isActive}
@@ -128,9 +128,9 @@ const TabItem = memo(
             {tab.isDirty && (
               <span className="text-primary h-1.5 w-1.5 shrink-0 rounded-full bg-current" />
             )}
-            <TooltipProvider delayDuration={300}>
+            <TooltipProvider delay={300}>
               <Tooltip>
-                <TooltipTrigger asChild>
+                <TooltipTrigger>
                   <button
                     onClick={handleCloseClick}
                     className={cn(
@@ -238,9 +238,9 @@ export const QueryTabBar = memo(({ className }: QueryTabBarProps) => {
         ))}
       </div>
       <div className="flex items-center border-l">
-        <TooltipProvider delayDuration={300}>
+        <TooltipProvider delay={300}>
           <Tooltip>
-            <TooltipTrigger asChild>
+            <TooltipTrigger>
               <Button
                 variant="ghost"
                 size="icon"
@@ -258,9 +258,9 @@ export const QueryTabBar = memo(({ className }: QueryTabBarProps) => {
 
         {/* Split View Controls */}
         {isSplitView ? (
-          <TooltipProvider delayDuration={300}>
+          <TooltipProvider delay={300}>
             <Tooltip>
-              <TooltipTrigger asChild>
+              <TooltipTrigger>
                 <Button
                   variant="ghost"
                   size="icon"
@@ -277,10 +277,10 @@ export const QueryTabBar = memo(({ className }: QueryTabBarProps) => {
           </TooltipProvider>
         ) : (
           <DropdownMenu>
-            <TooltipProvider delayDuration={300}>
+            <TooltipProvider delay={300}>
               <Tooltip>
-                <TooltipTrigger asChild>
-                  <DropdownMenuTrigger asChild>
+                <TooltipTrigger>
+                  <DropdownMenuTrigger>
                     <Button
                       variant="ghost"
                       size="icon"
