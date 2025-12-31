@@ -1,4 +1,9 @@
 import type { QueryPlanNode, QueryPlanStats } from '../../../../shared/types';
+import type { ColorMode } from '@xyflow/react';
+import type {
+  ExecutionPlanFlowEdge,
+  ExecutionPlanFlowNode,
+} from '@/lib/query-plan-analyzer';
 import {
   AlertCircle,
   ChevronDown,
@@ -6,13 +11,23 @@ import {
   Clock,
   Database,
   HardDrive,
+  LayoutList,
   Lightbulb,
   Loader2,
+  Network,
   Search,
   Table,
   Zap,
 } from 'lucide-react';
-import { memo, useCallback, useState } from 'react';
+import { useTheme } from 'next-themes';
+import { memo, useCallback, useMemo, useState } from 'react';
+import {
+  Background,
+  Controls,
+  ReactFlow,
+  useEdgesState,
+  useNodesState,
+} from '@xyflow/react';
 import { Badge } from '@/components/ui/badge';
 import { Button } from '@/components/ui/button';
 import {
@@ -25,6 +40,14 @@ import {
 import { ScrollArea } from '@/components/ui/scroll-area';
 import { SqlHighlight } from '@/components/ui/sql-highlight';
 import { cn } from '@/lib/utils';
+import { convertPlanToFlow } from '@/lib/query-plan-analyzer';
+import { ExecutionPlanNode as ExecutionPlanNodeComponent } from './ExecutionPlanNode';
+import '@xyflow/react/dist/style.css';
+
+// Register custom node types for execution plan
+const nodeTypes = {
+  executionPlan: ExecutionPlanNodeComponent,
+};
 
 interface Suggestion {
   type: 'index' | 'rewrite' | 'warning';
@@ -32,6 +55,8 @@ interface Suggestion {
   description: string;
   impact: 'high' | 'medium' | 'low';
 }
+
+type ViewMode = 'tree' | 'diagram';
 
 interface QueryOptimizerPanelProps {
   open: boolean;
@@ -122,11 +147,13 @@ const PlanNode = memo(function PlanNode({
 
 export const QueryOptimizerPanel = memo(
   ({ open, onOpenChange, query = '', onAnalyze }: QueryOptimizerPanelProps) => {
+    const { resolvedTheme } = useTheme();
     const [isAnalyzing, setIsAnalyzing] = useState(false);
     const [plan, setPlan] = useState<QueryPlanNode[]>([]);
     const [stats, setStats] = useState<QueryPlanStats | null>(null);
     const [suggestions, setSuggestions] = useState<Suggestion[]>([]);
     const [error, setError] = useState<string | null>(null);
+    const [viewMode, setViewMode] = useState<ViewMode>('tree');
 
     const handleAnalyze = useCallback(async () => {
       if (!onAnalyze || !query.trim()) return;
@@ -160,6 +187,28 @@ export const QueryOptimizerPanel = memo(
 
     const tree = buildTree(plan);
     const rootNodes = tree.get(0) || [];
+
+    // Convert plan to React Flow nodes and edges
+    const { flowNodes, flowEdges } = useMemo(() => {
+      if (plan.length === 0 || viewMode !== 'diagram') {
+        return { flowNodes: [], flowEdges: [] };
+      }
+      const { nodes, edges } = convertPlanToFlow(plan);
+      return { flowNodes: nodes, flowEdges: edges };
+    }, [plan, viewMode]);
+
+    const [nodes, setNodes, onNodesChange] =
+      useNodesState<ExecutionPlanFlowNode>(flowNodes);
+    const [edges, setEdges, onEdgesChange] =
+      useEdgesState<ExecutionPlanFlowEdge>(flowEdges);
+
+    // Update nodes when flow changes
+    useMemo(() => {
+      if (flowNodes.length > 0) {
+        setNodes(flowNodes);
+        setEdges(flowEdges);
+      }
+    }, [flowNodes, flowEdges, setNodes, setEdges]);
 
     return (
       <Dialog open={open} onOpenChange={onOpenChange}>
@@ -247,17 +296,61 @@ export const QueryOptimizerPanel = memo(
           {/* Execution Plan Tree */}
           {plan.length > 0 && (
             <div className="space-y-2">
-              <h3 className="font-medium">Execution Plan</h3>
-              <ScrollArea className="bg-muted/30 h-48 rounded-lg border p-2">
-                {rootNodes.map((node) => (
-                  <PlanNode
-                    key={node.id}
-                    node={node}
-                    depth={0}
-                    children={tree.get(node.id)}
-                  />
-                ))}
-              </ScrollArea>
+              <div className="flex items-center justify-between">
+                <h3 className="font-medium">Execution Plan</h3>
+                <div className="flex gap-1">
+                  <Button
+                    variant={viewMode === 'tree' ? 'default' : 'ghost'}
+                    size="sm"
+                    onClick={() => setViewMode('tree')}
+                    className="h-8 px-2"
+                  >
+                    <LayoutList className="h-4 w-4" />
+                  </Button>
+                  <Button
+                    variant={viewMode === 'diagram' ? 'default' : 'ghost'}
+                    size="sm"
+                    onClick={() => setViewMode('diagram')}
+                    className="h-8 px-2"
+                  >
+                    <Network className="h-4 w-4" />
+                  </Button>
+                </div>
+              </div>
+
+              {viewMode === 'tree' && (
+                <ScrollArea className="bg-muted/30 h-48 rounded-lg border p-2">
+                  {rootNodes.map((node) => (
+                    <PlanNode
+                      key={node.id}
+                      node={node}
+                      depth={0}
+                      children={tree.get(node.id)}
+                    />
+                  ))}
+                </ScrollArea>
+              )}
+
+              {viewMode === 'diagram' && (
+                <div className="bg-muted/30 h-96 rounded-lg border">
+                  <ReactFlow
+                    nodes={nodes}
+                    edges={edges}
+                    onNodesChange={onNodesChange}
+                    onEdgesChange={onEdgesChange}
+                    nodeTypes={nodeTypes}
+                    colorMode={resolvedTheme as ColorMode}
+                    fitView
+                    fitViewOptions={{ padding: 0.2 }}
+                    minZoom={0.1}
+                    maxZoom={2}
+                    proOptions={{ hideAttribution: true }}
+                  >
+                    <Background />
+                    <Controls showInteractive={false} />
+                  </ReactFlow>
+                </div>
+              )}
             </div>
           )}
 
