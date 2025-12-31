@@ -493,3 +493,107 @@ export function convertPlanToFlow(planNodes: QueryPlanNode[]): {
 
   return { nodes: layoutedNodes, edges };
 }
+
+// ============ Text Export Utilities ============
+
+/**
+ * Renders a single plan node as formatted text with proper indentation
+ */
+function renderPlanNodeAsText(node: QueryPlanNode, depth: number): string[] {
+  const lines: string[] = [];
+  const indent = '  '.repeat(depth);
+  const prefix = depth > 0 ? '└─ ' : '';
+
+  // Main operation line
+  lines.push(`${indent}${prefix}${node.detail}`);
+
+  // Add metrics if available
+  if (node.estimatedCost || node.estimatedRows) {
+    const metrics: string[] = [];
+    if (node.estimatedCost) {
+      metrics.push(`Cost: ${node.estimatedCost}`);
+    }
+    if (node.estimatedRows) {
+      metrics.push(`Rows: ~${node.estimatedRows}`);
+    }
+    lines.push(`${indent}   ${metrics.join(' | ')}`);
+  }
+
+  return lines;
+}
+
+/**
+ * Recursively renders plan tree nodes as formatted text
+ */
+function renderPlanTreeAsText(nodes: QueryPlanNode[], depth: number = 0): string[] {
+  const lines: string[] = [];
+
+  nodes.forEach((node, index) => {
+    // Render current node
+    lines.push(...renderPlanNodeAsText(node, depth));
+
+    // Render children if any
+    if (node.children && node.children.length > 0) {
+      lines.push(...renderPlanTreeAsText(node.children, depth + 1));
+    }
+
+    // Add spacing between root-level nodes (but not after the last one)
+    if (depth === 0 && index < nodes.length - 1) {
+      lines.push('');
+    }
+  });
+
+  return lines;
+}
+
+/**
+ * Exports query execution plan as formatted text
+ */
+export function exportPlanAsText(
+  plan: QueryPlanNode[],
+  stats: QueryPlanStats,
+  query?: string
+): string {
+  const lines: string[] = [];
+
+  // Header
+  lines.push('=== Query Execution Plan ===');
+  lines.push('');
+
+  // Query (if provided)
+  if (query && query.trim()) {
+    lines.push('Query:');
+    lines.push(query.trim());
+    lines.push('');
+  }
+
+  // Statistics
+  lines.push('Statistics:');
+  lines.push(`  Execution Time: ${(stats.executionTime ?? 0).toFixed(2)}ms`);
+  lines.push(`  Rows Examined: ${stats.rowsExamined ?? 0}`);
+  lines.push(`  Rows Returned: ${stats.rowsReturned ?? 0}`);
+  lines.push(`  Indexes Used: ${stats.indexesUsed?.join(', ') || 'None'}`);
+
+  if (stats.tablesAccessed && stats.tablesAccessed.length > 0) {
+    lines.push(`  Tables Accessed: ${stats.tablesAccessed.join(', ')}`);
+  }
+
+  lines.push('');
+
+  // Execution steps
+  lines.push('=== Execution Steps ===');
+  lines.push('');
+
+  if (plan.length === 0) {
+    lines.push('No execution plan available');
+  } else {
+    // Build tree structure and render
+    const planTree = buildPlanTree(plan);
+    lines.push(...renderPlanTreeAsText(planTree));
+  }
+
+  lines.push('');
+  lines.push('=== End of Plan ===');
+
+  return lines.join('\n');
+}

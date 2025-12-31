@@ -12,6 +12,7 @@ import {
   Clock,
   Database,
   Download,
+  FileText,
   HardDrive,
   LayoutList,
   Lightbulb,
@@ -51,7 +52,7 @@ import {
 } from '@/components/ui/sheet';
 import { SqlHighlight } from '@/components/ui/sql-highlight';
 import { cn } from '@/lib/utils';
-import { convertPlanToFlow } from '@/lib/query-plan-analyzer';
+import { convertPlanToFlow, exportPlanAsText } from '@/lib/query-plan-analyzer';
 import { ExecutionPlanNode as ExecutionPlanNodeComponent } from './ExecutionPlanNode';
 import { exportDiagramAsPng } from '../er-diagram/utils/export-diagram';
 import '@xyflow/react/dist/style.css';
@@ -255,6 +256,26 @@ export const QueryOptimizerPanel = memo(
       }
     }, []);
 
+    // Handle text export
+    const handleExportText = useCallback(() => {
+      if (!stats || plan.length === 0) {
+        return;
+      }
+
+      try {
+        const textContent = exportPlanAsText(plan, stats, query);
+        const blob = new Blob([textContent], { type: 'text/plain' });
+        const url = URL.createObjectURL(blob);
+        const link = document.createElement('a');
+        link.download = `query-execution-plan-${Date.now()}.txt`;
+        link.href = url;
+        link.click();
+        URL.revokeObjectURL(url);
+      } catch (error) {
+        // Silent error handling
+      }
+    }, [plan, stats, query]);
+
     return (
       <Dialog open={open} onOpenChange={onOpenChange}>
         <DialogContent className="flex max-h-[80vh] max-w-3xl flex-col">
@@ -359,6 +380,16 @@ export const QueryOptimizerPanel = memo(
                     className="h-8 px-2"
                   >
                     <Network className="h-4 w-4" />
+                  </Button>
+                  <Button
+                    variant="ghost"
+                    size="sm"
+                    onClick={handleExportText}
+                    disabled={!stats || plan.length === 0}
+                    className="h-8 px-2"
+                    title="Export as Text"
+                  >
+                    <FileText className="h-4 w-4" />
                   </Button>
                   {viewMode === 'diagram' && (
                     <Button
