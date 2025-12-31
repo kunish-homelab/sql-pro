@@ -115,8 +115,8 @@ export const RowHoverCard = memo(
     };
 
     return (
-      <HoverCard openDelay={400} closeDelay={100}>
-        <HoverCardTrigger asChild>{children}</HoverCardTrigger>
+      <HoverCard>
+        <HoverCardTrigger>{children}</HoverCardTrigger>
         <HoverCardContent
           className="w-80 p-0"
           side="right"

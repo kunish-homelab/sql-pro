@@ -116,21 +116,18 @@ export const KeyboardShortcutsOverlay = memo(
 
     return (
       <Popover open={isOpen} onOpenChange={setIsOpen}>
-        <PopoverTrigger asChild>
-          <Button
-            variant="ghost"
-            size="icon-sm"
-            className={cn(
-              'fixed right-4 bottom-4 z-50 rounded-full shadow-lg',
-              'bg-background/80 border backdrop-blur-sm',
-              'hover:bg-muted transition-all duration-200 hover:scale-105',
-              'opacity-50 hover:opacity-100',
-              className
-            )}
-            title="Keyboard shortcuts (?)"
-          >
-            <Keyboard className="h-4 w-4" />
-          </Button>
+        <PopoverTrigger
+          className={cn(
+            'fixed right-4 bottom-4 z-50 rounded-full shadow-lg',
+            'bg-background/80 border backdrop-blur-sm',
+            'hover:bg-muted transition-all duration-200 hover:scale-105',
+            'opacity-50 hover:opacity-100',
+            'flex h-8 w-8 items-center justify-center',
+            className
+          )}
+          title="Keyboard shortcuts (?)"
+        >
+          <Keyboard className="h-4 w-4" />
         </PopoverTrigger>
         <PopoverContent
           className="w-80 p-0"
@@ -166,18 +163,18 @@ export const KeyboardShortcutsOverlay = memo(
                 </div>
                 {/* Shortcuts list */}
                 <div className="divide-border/50 divide-y">
-                  {items.map((shortcut, idx) => (
+                  {items.map((shortcut) => (
                     <div
-                      key={idx}
+                      key={shortcut.description}
                       className="hover:bg-muted/30 flex items-center justify-between px-3 py-1.5 transition-colors"
                     >
                       <span className="text-muted-foreground text-xs">
                         {shortcut.description}
                       </span>
                       <div className="flex items-center gap-0.5">
-                        {shortcut.keys.map((key, keyIdx) => (
+                        {shortcut.keys.map((key) => (
                           <kbd
-                            key={keyIdx}
+                            key={key}
                             className={cn(
                               'rounded px-1.5 py-0.5 font-mono text-[10px]',
                               'bg-muted border shadow-sm',
@@ -225,9 +222,9 @@ export const InlineShortcutHint = memo(
   ({ keys, className }: InlineShortcutHintProps) => {
     return (
       <span className={cn('inline-flex items-center gap-0.5', className)}>
-        {keys.map((key, idx) => (
+        {keys.map((key) => (
           <kbd
-            key={idx}
+            key={key}
             className={cn(
               'rounded px-1 py-0.5 font-mono text-[9px]',
               'bg-muted/50 text-muted-foreground',
