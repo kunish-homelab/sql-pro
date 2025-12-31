@@ -53,6 +53,9 @@ interface SettingsState {
   // Data browser settings
   pageSize: PageSizeOption;
 
+  // Session settings
+  restoreSession: boolean;
+
   // Actions
   setEditorVimMode: (enabled: boolean) => void;
   setAppVimMode: (enabled: boolean) => void;
@@ -60,6 +63,7 @@ interface SettingsState {
   setSyncAll: (sync: boolean) => void;
   setTabSize: (size: number) => void;
   setPageSize: (size: PageSizeOption) => void;
+  setRestoreSession: (enabled: boolean) => void;
 }
 
 const DEFAULT_FONT_CONFIG: FontConfig = {
@@ -125,6 +129,8 @@ export const useSettingsStore = create<SettingsState>()(
 
       pageSize: 100,
 
+      restoreSession: true,
+
       setEditorVimMode: (enabled) => set({ editorVimMode: enabled }),
 
       setAppVimMode: (enabled) => set({ appVimMode: enabled }),
@@ -180,6 +186,8 @@ export const useSettingsStore = create<SettingsState>()(
       setTabSize: (size) => set({ tabSize: size }),
 
       setPageSize: (size) => set({ pageSize: size }),
+
+      setRestoreSession: (enabled) => set({ restoreSession: enabled }),
     }),
     {
       name: 'sql-pro-settings',
