@@ -172,12 +172,12 @@ export const RowHoverCard = memo(
                     key={col.name}
                     className="hover:bg-muted/50 flex items-start gap-2 px-3 py-1.5 transition-colors"
                   >
-                    <span className="text-muted-foreground min-w-[80px] truncate text-xs font-medium">
+                    <span className="text-muted-foreground min-w-20 truncate text-xs font-medium">
                       {col.name}
                     </span>
                     <span
                       className={cn(
-                        'flex-1 text-xs break-words',
+                        'flex-1 text-xs wrap-break-word',
                         getValueStyle(value, col.type)
                       )}
                     >

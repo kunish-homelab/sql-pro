@@ -239,7 +239,7 @@ export const QuickFilterTags = memo(
                     )}
                   >
                     {getIcon(suggestion)}
-                    <span className="max-w-[100px] truncate">
+                    <span className="max-w-25 truncate">
                       {suggestion.column}
                     </span>
                     <span
