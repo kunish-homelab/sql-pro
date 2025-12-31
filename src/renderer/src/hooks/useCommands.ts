@@ -19,6 +19,7 @@ import {
 } from 'lucide-react';
 import { useEffect, useRef } from 'react';
 import { sqlPro } from '@/lib/api';
+import { queryClient } from '@/lib/query-client';
 import {
   formatShortcut,
   useChangesStore,
@@ -73,13 +74,25 @@ export function useCommands() {
     };
   }, []);
 
-  // Global keyboard shortcut for command palette
+  // Global keyboard shortcuts
   useEffect(() => {
     const handleKeyDown = (e: KeyboardEvent) => {
       // Cmd/Ctrl + K to toggle command palette
       if ((e.metaKey || e.ctrlKey) && e.key === 'k') {
         e.preventDefault();
         toggle();
+      }
+
+      // Cmd/Ctrl + R to refresh table (prevent browser refresh)
+      if ((e.metaKey || e.ctrlKey) && e.key === 'r' && !e.shiftKey) {
+        e.preventDefault();
+        const { activeConnectionId } = connectionStoreRef.current;
+        if (activeConnectionId) {
+          // Invalidate table data queries to trigger refetch
+          queryClient.invalidateQueries({
+            queryKey: ['tableData', activeConnectionId],
+          });
+        }
       }
     };
 
@@ -204,6 +217,24 @@ export function useCommands() {
           setIsLoadingSchema(false);
         },
         disabled: () => !connectionStoreRef.current.connection,
+      },
+      {
+        id: 'action.refresh-table',
+        label: 'Refresh Table',
+        shortcut: formatShortcut('R', { cmd: true }),
+        icon: RefreshCw,
+        category: 'actions',
+        keywords: ['refresh', 'table', 'reload', 'data'],
+        action: () => {
+          const { activeConnectionId } = connectionStoreRef.current;
+          if (activeConnectionId) {
+            // Invalidate table data queries to trigger refetch
+            queryClient.invalidateQueries({
+              queryKey: ['tableData', activeConnectionId],
+            });
+          }
+        },
+        disabled: () => !connectionStoreRef.current.activeConnectionId,
       },
       {
         id: 'action.execute-query',

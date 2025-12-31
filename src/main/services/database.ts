@@ -17,6 +17,7 @@ import { Buffer } from 'node:buffer';
 import { readFileSync } from 'node:fs';
 import Database from 'better-sqlite3-multiple-ciphers';
 import { enhanceConnectionError, enhanceQueryError } from '../lib/error-parser';
+import { sqlLogger } from './sql-logger';
 
 interface ConnectionInfo {
   id: string;
@@ -189,6 +190,13 @@ class DatabaseService {
 
             this.connections.set(id, connectionInfo);
 
+            // Log successful open
+            sqlLogger.logOpen({
+              connectionId: id,
+              dbPath: path,
+              success: true,
+            });
+
             return {
               success: true,
               connection: {
@@ -251,6 +259,13 @@ class DatabaseService {
 
       this.connections.set(id, connectionInfo);
 
+      // Log successful open
+      sqlLogger.logOpen({
+        connectionId: id,
+        dbPath: path,
+        success: true,
+      });
+
       return {
         success: true,
         connection: {
@@ -264,6 +279,14 @@ class DatabaseService {
     } catch (error) {
       const errorMessage =
         error instanceof Error ? error.message : 'Failed to open database';
+
+      // Log failed open
+      sqlLogger.logOpen({
+        connectionId: 'unknown',
+        dbPath: path,
+        success: false,
+        error: errorMessage,
+      });
 
       // Check if error suggests encryption
       if (
@@ -306,12 +329,30 @@ class DatabaseService {
     try {
       conn.db.close();
       this.connections.delete(connectionId);
+
+      // Log successful close
+      sqlLogger.logClose({
+        connectionId,
+        dbPath: conn.path,
+        success: true,
+      });
+
       return { success: true };
     } catch (error) {
+      const errorMessage =
+        error instanceof Error ? error.message : 'Failed to close database';
+
+      // Log failed close
+      sqlLogger.logClose({
+        connectionId,
+        dbPath: conn.path,
+        success: false,
+        error: errorMessage,
+      });
+
       return {
         success: false,
-        error:
-          error instanceof Error ? error.message : 'Failed to close database',
+        error: errorMessage,
       };
     }
   }
@@ -332,9 +373,21 @@ class DatabaseService {
     try {
       // Get all attached databases/schemas using PRAGMA database_list
       // Returns: seq, name, file (e.g., 0, main, /path/to/db.sqlite)
+      const startTime = performance.now();
       const databaseList = conn.db
         .prepare('PRAGMA database_list')
         .all() as Array<{ seq: number; name: string; file: string }>;
+      const durationMs = performance.now() - startTime;
+
+      // Log schema query
+      sqlLogger.logQuery({
+        connectionId,
+        dbPath: conn.path,
+        sql: 'PRAGMA database_list',
+        durationMs,
+        success: true,
+        rowCount: databaseList.length,
+      });
 
       const schemas: SchemaInfo[] = [];
       const allTables: TableInfo[] = [];
@@ -344,8 +397,20 @@ class DatabaseService {
         const schemaName = dbInfo.name;
 
         // Get tables and views for this schema
-        const tables = this.getTablesAndViews(conn.db, 'table', schemaName);
-        const views = this.getTablesAndViews(conn.db, 'view', schemaName);
+        const tables = this.getTablesAndViews(
+          conn.db,
+          'table',
+          schemaName,
+          connectionId,
+          conn.path
+        );
+        const views = this.getTablesAndViews(
+          conn.db,
+          'view',
+          schemaName,
+          connectionId,
+          conn.path
+        );
 
         // Only add schema if it has tables or views (skip empty temp schema)
         if (tables.length > 0 || views.length > 0 || schemaName === 'main') {
@@ -372,15 +437,31 @@ class DatabaseService {
   private getTablesAndViews(
     db: Database.Database,
     type: 'table' | 'view',
-    schema: string = 'main'
+    schema: string = 'main',
+    connectionId?: string,
+    dbPath?: string
   ): TableInfo[] {
     const sqliteType = type === 'table' ? 'table' : 'view';
     // Query the schema-specific sqlite_master table
-    const items = db
-      .prepare(
-        `SELECT name, sql FROM "${schema}".sqlite_master WHERE type = ? AND name NOT LIKE 'sqlite_%' ORDER BY name`
-      )
-      .all(sqliteType) as Array<{ name: string; sql: string }>;
+    const sql = `SELECT name, sql FROM "${schema}".sqlite_master WHERE type = ? AND name NOT LIKE 'sqlite_%' ORDER BY name`;
+    const startTime = performance.now();
+    const items = db.prepare(sql).all(sqliteType) as Array<{
+      name: string;
+      sql: string;
+    }>;
+    const durationMs = performance.now() - startTime;
+
+    // Log the query if connectionId is provided
+    if (connectionId) {
+      sqlLogger.logQuery({
+        connectionId,
+        dbPath,
+        sql: sql.replace('?', `'${sqliteType}'`),
+        durationMs,
+        success: true,
+        rowCount: items.length,
+      });
+    }
 
     return items.map((item) => {
       const columns = this.getColumns(db, item.name, schema);
@@ -582,9 +663,21 @@ class DatabaseService {
       return { success: false, error: 'Connection not found' };
     }
 
+    const startTime = performance.now();
     try {
       const stmt = conn.db.prepare(sql);
       const result = stmt.run(...(params || []));
+      const durationMs = performance.now() - startTime;
+
+      // Log successful execute
+      sqlLogger.logExecute({
+        connectionId,
+        dbPath: conn.path,
+        sql,
+        durationMs,
+        success: true,
+        rowCount: result.changes,
+      });
 
       return {
         success: true,
@@ -595,9 +688,20 @@ class DatabaseService {
             : result.lastInsertRowid,
       };
     } catch (error) {
+      const durationMs = performance.now() - startTime;
       const errorMessage =
         error instanceof Error ? error.message : 'Unknown error';
       const enhanced = enhanceQueryError(errorMessage, sql);
+
+      // Log failed execute
+      sqlLogger.logExecute({
+        connectionId,
+        dbPath: conn.path,
+        sql,
+        durationMs,
+        success: false,
+        error: enhanced.error,
+      });
 
       return {
         success: false,
@@ -633,13 +737,25 @@ class DatabaseService {
       return { success: false, error: 'Connection not found' };
     }
 
+    const startTime = performance.now();
     try {
       const stmt = conn.db.prepare(sql);
       const rows = stmt.all(...(params || [])) as Array<
         Record<string, unknown>
       >;
+      const durationMs = performance.now() - startTime;
 
       if (rows.length === 0) {
+        // Log successful query with no results
+        sqlLogger.logQuery({
+          connectionId,
+          dbPath: conn.path,
+          sql,
+          durationMs,
+          success: true,
+          rowCount: 0,
+        });
+
         return {
           success: true,
           columns: [],
@@ -650,15 +766,36 @@ class DatabaseService {
       const columns = Object.keys(rows[0]);
       const rowsArray = rows.map((row) => columns.map((col) => row[col]));
 
+      // Log successful query
+      sqlLogger.logQuery({
+        connectionId,
+        dbPath: conn.path,
+        sql,
+        durationMs,
+        success: true,
+        rowCount: rows.length,
+      });
+
       return {
         success: true,
         columns,
         rows: rowsArray,
       };
     } catch (error) {
+      const durationMs = performance.now() - startTime;
       const errorMessage =
         error instanceof Error ? error.message : 'Unknown error';
       const enhanced = enhanceQueryError(errorMessage, sql);
+
+      // Log failed query
+      sqlLogger.logQuery({
+        connectionId,
+        dbPath: conn.path,
+        sql,
+        durationMs,
+        success: false,
+        error: enhanced.error,
+      });
 
       return {
         success: false,
@@ -817,11 +954,11 @@ class DatabaseService {
       return { success: false, error: 'Connection not found' };
     }
 
-    try {
-      const schemaPrefix = schema ? `"${schema}".` : '';
-      let sql = `SELECT * FROM ${schemaPrefix}"${table}"`;
-      const params: unknown[] = [];
+    const schemaPrefix = schema ? `"${schema}".` : '';
+    let sql = `SELECT * FROM ${schemaPrefix}"${table}"`;
+    const params: unknown[] = [];
 
+    try {
       // Apply filters
       if (filters && filters.length > 0) {
         const conditions = filters.map((f) => {
@@ -866,19 +1003,43 @@ class DatabaseService {
 
       // Get total count
       const countSql = sql.replace(/SELECT \*/, 'SELECT COUNT(*) as count');
+      const countStartTime = performance.now();
       const countResult = conn.db.prepare(countSql).get(...params) as {
         count: number;
       };
+      const countDurationMs = performance.now() - countStartTime;
       const totalRows = countResult.count;
+
+      // Log count query
+      sqlLogger.logQuery({
+        connectionId,
+        dbPath: conn.path,
+        sql: countSql,
+        durationMs: countDurationMs,
+        success: true,
+        rowCount: 1,
+      });
 
       // Apply pagination
       const offset = (page - 1) * pageSize;
       sql += ` LIMIT ? OFFSET ?`;
       params.push(pageSize, offset);
 
+      const dataStartTime = performance.now();
       const rows = conn.db.prepare(sql).all(...params) as Array<
         Record<string, unknown>
       >;
+      const dataDurationMs = performance.now() - dataStartTime;
+
+      // Log data query
+      sqlLogger.logQuery({
+        connectionId,
+        dbPath: conn.path,
+        sql,
+        durationMs: dataDurationMs,
+        success: true,
+        rowCount: rows.length,
+      });
 
       // Get column info
       const columns = this.getColumns(conn.db, table, schema || 'main');
@@ -890,10 +1051,22 @@ class DatabaseService {
         totalRows,
       };
     } catch (error) {
+      const errorMessage =
+        error instanceof Error ? error.message : 'Failed to get table data';
+
+      // Log failed query
+      sqlLogger.logQuery({
+        connectionId,
+        dbPath: conn.path,
+        sql,
+        durationMs: 0,
+        success: false,
+        error: errorMessage,
+      });
+
       return {
         success: false,
-        error:
-          error instanceof Error ? error.message : 'Failed to get table data',
+        error: errorMessage,
       };
     }
   }

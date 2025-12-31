@@ -341,7 +341,7 @@ export function QueryEditor() {
                 )}
               </Button>
             </DropdownMenuTrigger>
-            <DropdownMenuContent align="end" className="min-w-[200px]">
+            <DropdownMenuContent align="end" className="min-w-50">
               <DropdownMenuItem onClick={() => setShowNLToSQL(true)}>
                 <Wand2 className="mr-2 h-4 w-4" />
                 Natural Language to SQL

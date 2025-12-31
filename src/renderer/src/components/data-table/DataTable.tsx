@@ -37,6 +37,11 @@ export interface DataTableProps {
   onGroupingChange?: (grouping: string[]) => void;
   aggregations?: Record<string, AggregationType>;
 
+  // Selection
+  enableSelection?: boolean;
+  selectedRowIds?: string[];
+  onSelectionChange?: (selectedIds: string[]) => void;
+
   // Editing
   editable?: boolean;
   onCellChange?: (
@@ -87,6 +92,9 @@ export const DataTable = function DataTable({
   grouping: externalGrouping,
   onGroupingChange,
   aggregations,
+  enableSelection = false,
+  selectedRowIds: _selectedRowIds,
+  onSelectionChange,
   editable = false,
   onCellChange,
   onRowDelete,
@@ -117,6 +125,7 @@ export const DataTable = function DataTable({
     resetAllColumnSizes,
     pinnedColumns,
     toggleColumnPin,
+    selectedRowIds,
   } = useTableCore({
     columns,
     data,
@@ -127,6 +136,13 @@ export const DataTable = function DataTable({
     aggregations,
     primaryKeyColumn,
   });
+
+  // Notify parent of selection changes
+  useEffect(() => {
+    if (enableSelection && onSelectionChange) {
+      onSelectionChange(selectedRowIds);
+    }
+  }, [enableSelection, selectedRowIds, onSelectionChange]);
 
   // Calculate column size CSS variables for performance
   // This recalculates when columnSizing or columnSizingInfo changes
@@ -267,6 +283,10 @@ export const DataTable = function DataTable({
       >
         {/* Column group for width control - use CSS variables for dynamic sizing */}
         <colgroup>
+          {/* Selection column */}
+          {enableSelection && (
+            <col style={{ width: 40, minWidth: 40, maxWidth: 40 }} />
+          )}
           {table.getVisibleLeafColumns().map((column) => (
             <col
               key={column.id}
@@ -292,6 +312,7 @@ export const DataTable = function DataTable({
           onFilterAdd={onFilterAdd}
           onFilterRemove={onFilterRemove}
           pinnedColumns={pinnedColumns}
+          enableSelection={enableSelection}
         />
 
         {/* Table body */}
@@ -309,6 +330,7 @@ export const DataTable = function DataTable({
           getColumnSize={(columnId) =>
             table.getColumn(columnId)?.getSize() ?? 150
           }
+          enableSelection={enableSelection}
         />
       </table>
 

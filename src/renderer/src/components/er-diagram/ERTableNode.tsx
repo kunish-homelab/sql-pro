@@ -23,7 +23,7 @@ function ERTableNodeComponent({ data, selected }: ERTableNodeProps) {
   return (
     <div
       className={cn(
-        'bg-card text-card-foreground min-w-[200px] rounded-lg border shadow-sm',
+        'bg-card text-card-foreground min-w-50 rounded-lg border shadow-sm',
         'dark:border-zinc-700 dark:bg-zinc-900',
         selected && 'ring-primary ring-2'
       )}
@@ -96,7 +96,7 @@ function ERTableNodeComponent({ data, selected }: ERTableNodeProps) {
                   type="source"
                   position={Position.Right}
                   id={column.name}
-                  className="!h-2 !w-2 !border-blue-600 !bg-blue-500"
+                  className="h-2! w-2! border-blue-600! bg-blue-500!"
                 />
               )}
 
@@ -106,7 +106,7 @@ function ERTableNodeComponent({ data, selected }: ERTableNodeProps) {
                   type="target"
                   position={Position.Left}
                   id={column.name}
-                  className="!h-2 !w-2 !border-amber-600 !bg-amber-500"
+                  className="h-2! w-2! border-amber-600! bg-amber-500!"
                 />
               )}
             </div>

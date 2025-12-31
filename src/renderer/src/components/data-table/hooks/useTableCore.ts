@@ -5,6 +5,7 @@ import type {
   ExpandedState,
   GroupingState,
   Row,
+  RowSelectionState,
   SortingState,
 } from '@tanstack/react-table';
 import type {
@@ -115,6 +116,9 @@ export function useTableCore({
   // Pinned columns (left only)
   const [pinnedColumns, setPinnedColumns] = useState<string[]>([]);
 
+  // Row selection state
+  const [rowSelection, setRowSelection] = useState<RowSelectionState>({});
+
   // Convert external sort to TanStack sorting state
   const sorting = useMemo<SortingState>(() => {
     if (!sort) return [];
@@ -182,6 +186,7 @@ export function useTableCore({
       columnSizing,
       columnSizingInfo,
       columnPinning: { left: pinnedColumns, right: [] },
+      rowSelection,
     },
     onGroupingChange: (updater) => {
       const newGrouping =
@@ -199,6 +204,7 @@ export function useTableCore({
           : updater;
       setPinnedColumns(newPinning.left ?? []);
     },
+    onRowSelectionChange: setRowSelection,
     getCoreRowModel: getCoreRowModel(),
     getGroupedRowModel: getGroupedRowModel(),
     getExpandedRowModel: getExpandedRowModel(),
@@ -209,6 +215,8 @@ export function useTableCore({
     enableSorting: true,
     enableColumnResizing: true,
     enableColumnPinning: true,
+    enableRowSelection: true,
+    enableMultiRowSelection: true,
     getRowId: (row, index) => {
       if (row.__rowId !== undefined) return String(row.__rowId);
       if (primaryKeyColumn && row[primaryKeyColumn] !== undefined) {
@@ -253,6 +261,16 @@ export function useTableCore({
     });
   }, []);
 
+  // Clear row selection
+  const clearRowSelection = useCallback(() => {
+    setRowSelection({});
+  }, []);
+
+  // Get selected row IDs
+  const selectedRowIds = useMemo(() => {
+    return Object.keys(rowSelection).filter((id) => rowSelection[id]);
+  }, [rowSelection]);
+
   return {
     table,
     toggleGrouping,
@@ -264,5 +282,8 @@ export function useTableCore({
     resetAllColumnSizes,
     pinnedColumns,
     toggleColumnPin,
+    rowSelection,
+    selectedRowIds,
+    clearRowSelection,
   };
 }

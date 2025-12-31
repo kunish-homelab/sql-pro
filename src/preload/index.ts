@@ -36,6 +36,8 @@ import type {
   ApplyChangesResponse,
   ClearQueryHistoryRequest,
   ClearQueryHistoryResponse,
+  ClearSqlLogsRequest,
+  ClearSqlLogsResponse,
   CloseDatabaseRequest,
   CloseDatabaseResponse,
   CloseWindowRequest,
@@ -61,6 +63,8 @@ import type {
   GetRecentConnectionsResponse,
   GetSchemaRequest,
   GetSchemaResponse,
+  GetSqlLogsRequest,
+  GetSqlLogsResponse,
   GetTableDataRequest,
   GetTableDataResponse,
   HasPasswordRequest,
@@ -89,6 +93,7 @@ import type {
   SaveQueryHistoryResponse,
   SetPreferencesRequest,
   SetPreferencesResponse,
+  SqlLogEntry,
   UpdateConnectionRequest,
   UpdateConnectionResponse,
   UpdateStatus,
@@ -209,6 +214,20 @@ const sqlProAPI = {
       request: ClearQueryHistoryRequest
     ): Promise<ClearQueryHistoryResponse> =>
       ipcRenderer.invoke(IPC_CHANNELS.HISTORY_CLEAR, request),
+  },
+
+  // SQL log operations
+  sqlLog: {
+    get: (request: GetSqlLogsRequest): Promise<GetSqlLogsResponse> =>
+      ipcRenderer.invoke(IPC_CHANNELS.SQL_LOG_GET, request),
+    clear: (request: ClearSqlLogsRequest): Promise<ClearSqlLogsResponse> =>
+      ipcRenderer.invoke(IPC_CHANNELS.SQL_LOG_CLEAR, request),
+    onEntry: (callback: (entry: SqlLogEntry) => void): (() => void) => {
+      const handler = (_event: Electron.IpcRendererEvent, entry: SqlLogEntry) =>
+        callback(entry);
+      ipcRenderer.on(IPC_CHANNELS.SQL_LOG_ENTRY, handler);
+      return () => ipcRenderer.off(IPC_CHANNELS.SQL_LOG_ENTRY, handler);
+    },
   },
 
   // Menu action listener

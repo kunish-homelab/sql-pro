@@ -13,6 +13,7 @@ import {
   PinOff,
 } from 'lucide-react';
 import { memo, useRef, useState } from 'react';
+import { Checkbox } from '@/components/ui/checkbox';
 import { getColumnTypeCategory } from '@/lib/filter-utils';
 import { cn } from '@/lib/utils';
 import { ColumnFilterPopover } from './ColumnFilterPopover';
@@ -322,6 +323,8 @@ interface TableHeaderProps {
   onFilterRemove?: (columnId: string) => void;
   /** Pinned column IDs (left only) */
   pinnedColumns?: string[];
+  /** Enable row selection */
+  enableSelection?: boolean;
 }
 
 export const TableHeader = memo(
@@ -337,6 +340,7 @@ export const TableHeader = memo(
     onFilterAdd,
     onFilterRemove,
     pinnedColumns = [],
+    enableSelection = false,
   }: TableHeaderProps) => {
     // Create a map of column id to existing filter for quick lookup
     const filtersByColumn = filters.reduce<Record<string, UIFilterState>>(
@@ -349,7 +353,7 @@ export const TableHeader = memo(
 
     // Calculate pinned offsets
     const pinnedOffsets: Record<string, number> = {};
-    let offset = 0;
+    let offset = enableSelection ? 40 : 0; // Account for selection column
     for (const colId of pinnedColumns) {
       pinnedOffsets[colId] = offset;
       const col = table.getColumn(colId);
@@ -362,6 +366,24 @@ export const TableHeader = memo(
       <thead className="bg-background after:bg-border sticky top-0 z-20 after:pointer-events-none after:absolute after:inset-x-0 after:bottom-0 after:h-px">
         {table.getHeaderGroups().map((headerGroup) => (
           <tr key={headerGroup.id}>
+            {/* Selection column header */}
+            {enableSelection && (
+              <th
+                className="bg-background sticky left-0 z-10 h-9 w-10 border-r px-2"
+                style={{ width: 40, minWidth: 40, maxWidth: 40 }}
+              >
+                <Checkbox
+                  checked={
+                    table.getIsAllPageRowsSelected() ||
+                    (table.getIsSomePageRowsSelected() && 'indeterminate')
+                  }
+                  onCheckedChange={(checked) =>
+                    table.toggleAllPageRowsSelected(!!checked)
+                  }
+                  aria-label="Select all"
+                />
+              </th>
+            )}
             {headerGroup.headers.map((header) => {
               const isPinned = pinnedColumns.includes(header.column.id);
               const isLastPinned =

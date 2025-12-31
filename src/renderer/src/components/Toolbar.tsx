@@ -5,6 +5,7 @@ import {
   Monitor,
   Moon,
   RefreshCw,
+  ScrollText,
   Sun,
   X,
 } from 'lucide-react';
@@ -22,6 +23,7 @@ import {
   useTableDataStore,
   useThemeStore,
 } from '@/stores';
+import { useSqlLogStore } from '@/stores/sql-log-store';
 
 interface ToolbarProps {
   onOpenChanges?: () => void;
@@ -40,6 +42,7 @@ export function Toolbar({ onOpenChanges }: ToolbarProps) {
   const { hasChanges, clearChangesForConnection, changes } = useChangesStore();
   const { resetConnection } = useTableDataStore();
   const { theme, setTheme } = useThemeStore();
+  const { toggleVisible: toggleSqlLog } = useSqlLogStore();
 
   const handleDisconnect = async () => {
     if (connection && activeConnectionId) {
@@ -167,6 +170,16 @@ export function Toolbar({ onOpenChanges }: ToolbarProps) {
           </Button>
         </TooltipTrigger>
         <TooltipContent>{getThemeLabel()}</TooltipContent>
+      </Tooltip>
+
+      {/* SQL Log Toggle */}
+      <Tooltip>
+        <TooltipTrigger>
+          <Button variant="ghost" size="icon" onClick={toggleSqlLog}>
+            <ScrollText className="h-4 w-4" />
+          </Button>
+        </TooltipTrigger>
+        <TooltipContent>SQL Log</TooltipContent>
       </Tooltip>
 
       {/* Command Palette Hint */}

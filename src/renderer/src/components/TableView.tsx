@@ -14,7 +14,9 @@ import {
   FileText,
   Info,
   Plus,
+  RefreshCw,
   Search,
+  Trash2,
   X,
 } from 'lucide-react';
 import { useCallback, useEffect, useMemo, useRef, useState } from 'react';
@@ -103,6 +105,7 @@ export function TableView({
   const [showDiffPreview, setShowDiffPreview] = useState(false);
   const [showExportDialog, setShowExportDialog] = useState(false);
   const [filters, setFilters] = useState<UIFilterState[]>([]);
+  const [selectedRowIds, setSelectedRowIds] = useState<string[]>([]);
 
   // Use search term from store (persisted per tab)
   const searchTerm = activeTab?.searchTerm ?? '';
@@ -289,6 +292,25 @@ export function TableView({
     [deleteRow]
   );
 
+  // Handle bulk delete of selected rows
+  const handleBulkDelete = useCallback(() => {
+    if (selectedRowIds.length === 0) return;
+    selectedRowIds.forEach((rowId) => {
+      deleteRow(rowId);
+    });
+    setSelectedRowIds([]);
+  }, [selectedRowIds, deleteRow]);
+
+  // Handle selection change
+  const handleSelectionChange = useCallback((ids: string[]) => {
+    setSelectedRowIds(ids);
+  }, []);
+
+  // Clear selection
+  const clearSelection = useCallback(() => {
+    setSelectedRowIds([]);
+  }, []);
+
   // Handle adding a new row
   const handleAddRow = useCallback(() => {
     if (!selectedTable || selectedTable.type === 'view') return;
@@ -357,11 +379,44 @@ export function TableView({
     <div className="flex h-full min-h-0 min-w-0 overflow-hidden">
       {/* Main Content */}
       <div className="flex min-h-0 min-w-0 flex-1 flex-col overflow-hidden">
+        {/* Selection Toolbar */}
+        {selectedRowIds.length > 0 && (
+          <div className="bg-primary/5 border-primary/20 flex items-center justify-between gap-4 border-b px-4 py-2">
+            <div className="flex items-center gap-3">
+              <span className="text-primary text-sm font-medium">
+                {selectedRowIds.length} row
+                {selectedRowIds.length > 1 ? 's' : ''} selected
+              </span>
+              <Button
+                variant="ghost"
+                size="sm"
+                onClick={clearSelection}
+                className="h-7 text-xs"
+              >
+                <X className="mr-1 h-3 w-3" />
+                Clear selection
+              </Button>
+            </div>
+            <div className="flex items-center gap-2">
+              <Button
+                variant="destructive"
+                size="sm"
+                onClick={handleBulkDelete}
+                className="h-7 gap-1"
+              >
+                <Trash2 className="h-3.5 w-3.5" />
+                Delete{' '}
+                {selectedRowIds.length > 1 ? `(${selectedRowIds.length})` : ''}
+              </Button>
+            </div>
+          </div>
+        )}
+
         {/* Table Header */}
-        <div className="flex items-center justify-between border-b px-4 py-2">
-          <div className="flex items-center gap-2">
-            <h2 className="font-medium">{selectedTable.name}</h2>
-            <span className="text-muted-foreground text-sm">
+        <div className="flex flex-wrap items-center justify-between gap-2 border-b px-4 py-2">
+          <div className="flex min-w-0 items-center gap-2">
+            <h2 className="truncate font-medium">{selectedTable.name}</h2>
+            <span className="text-muted-foreground shrink-0 text-sm">
               {searchStats.isSearching ? (
                 <>
                   ({searchStats.matchedRows.toLocaleString()} of{' '}
@@ -372,12 +427,12 @@ export function TableView({
               )}
             </span>
             {searchStats.isSearching && (
-              <span className="bg-primary/10 text-primary rounded px-1.5 py-0.5 text-xs font-medium">
+              <span className="bg-primary/10 text-primary shrink-0 rounded px-1.5 py-0.5 text-xs font-medium">
                 Filtered
               </span>
             )}
             {selectedTable.type === 'view' && (
-              <span className="bg-secondary text-muted-foreground flex items-center gap-1 rounded px-1.5 py-0.5 text-xs">
+              <span className="bg-secondary text-muted-foreground flex shrink-0 items-center gap-1 rounded px-1.5 py-0.5 text-xs">
                 <Eye className="h-3 w-3" />
                 View
               </span>
@@ -388,7 +443,7 @@ export function TableView({
             )}
           </div>
 
-          <div className="flex items-center gap-2">
+          <div className="flex shrink-0 flex-wrap items-center gap-2">
             {/* Search Input */}
             <div className="relative">
               <Search className="text-muted-foreground absolute top-1/2 left-2.5 h-4 w-4 -translate-y-1/2" />
@@ -411,6 +466,17 @@ export function TableView({
                 </button>
               )}
             </div>
+
+            {/* Refresh button */}
+            <Button
+              variant="outline"
+              size="sm"
+              onClick={() => refetch()}
+              className="gap-2"
+              title="Refresh table data (⌘R)"
+            >
+              <RefreshCw className="h-4 w-4" />
+            </Button>
 
             {/* Export button */}
             <Button
@@ -515,6 +581,9 @@ export function TableView({
               onSortChange={handleSortChange}
               grouping={grouping}
               onGroupingChange={setGrouping}
+              enableSelection={selectedTable.type !== 'view'}
+              selectedRowIds={selectedRowIds}
+              onSelectionChange={handleSelectionChange}
               editable={selectedTable.type !== 'view'}
               onCellChange={handleCellChange}
               onRowDelete={handleRowDelete}
@@ -543,8 +612,8 @@ export function TableView({
         )}
 
         {/* Pagination */}
-        <div className="bg-background flex shrink-0 items-center justify-between border-t px-4 py-2">
-          <div className="flex items-center gap-4">
+        <div className="bg-background flex shrink-0 flex-wrap items-center justify-between gap-2 border-t px-4 py-2">
+          <div className="flex flex-wrap items-center gap-4">
             <div className="text-muted-foreground text-sm">
               {pageSizeOption === 'all' ? (
                 <>Showing all {totalRows.toLocaleString()} rows</>
