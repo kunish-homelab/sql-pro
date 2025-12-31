@@ -37,6 +37,7 @@
   --sidebar-accent-foreground: oklch(0.205 0 0);
   --sidebar-border: oklch(0.922 0 0);
   --sidebar-ring: oklch(0.708 0 0);
+  --grid-color: oklch(0 0 0 / 6%);
 }
 
 .dark {
@@ -71,6 +72,7 @@
   --sidebar-accent-foreground: oklch(0.985 0 0);
   --sidebar-border: oklch(1 0 0 / 10%);
   --sidebar-ring: oklch(0.556 0 0);
+  --grid-color: oklch(1 0 0 / 8%);
 }
 
 @theme inline {
@@ -161,6 +163,42 @@ textarea,
     linear-gradient(var(--grid-color) 1px, transparent 1px),
     linear-gradient(to right, var(--grid-color) 1px, transparent 1px);
   background-size: 24px 24px;
+}
+
+/* Subtle grid for content areas */
+.bg-grid-subtle {
+  background-image:
+    linear-gradient(to right, var(--grid-color) 1px, transparent 1px),
+    linear-gradient(to bottom, var(--grid-color) 1px, transparent 1px);
+  background-size: 48px 48px;
+  background-position: -1px -1px;
+}
+
+/* Small grid for data areas */
+.bg-grid-small {
+  background-image:
+    linear-gradient(to right, var(--grid-color) 1px, transparent 1px),
+    linear-gradient(to bottom, var(--grid-color) 1px, transparent 1px);
+  background-size: 16px 16px;
+  background-position: -1px -1px;
+}
+
+/* Grid mask for fade effect */
+.bg-grid-mask {
+  mask-image: linear-gradient(
+    to bottom,
+    transparent,
+    black 20%,
+    black 80%,
+    transparent
+  );
+  -webkit-mask-image: linear-gradient(
+    to bottom,
+    transparent,
+    black 20%,
+    black 80%,
+    transparent
+  );
 }
 
 /* React Flow theme customization */
