@@ -179,9 +179,9 @@ export const DataDistribution = memo(
 
     return (
       <div className={cn('flex flex-col gap-0.5', className)}>
-        {data.slice(0, 3).map(([valueKey, count], i) => (
+        {data.slice(0, 3).map(([valueKey, count]) => (
           <MiniBar
-            key={`${valueKey}-${i}`}
+            key={`dist-${String(valueKey)}`}
             value={count}
             max={total}
             color="default"

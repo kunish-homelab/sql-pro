@@ -208,8 +208,8 @@ export const DataQualityIndicator = memo(
 
     return (
       <Tooltip>
-        <TooltipTrigger asChild>
-          <button
+        <TooltipTrigger>
+          <div
             className={cn(
               'flex items-center gap-1.5 rounded-md px-2 py-1',
               'hover:bg-muted transition-colors',
@@ -224,7 +224,7 @@ export const DataQualityIndicator = memo(
             <span className="text-muted-foreground text-[10px]">
               ({quality.score}%)
             </span>
-          </button>
+          </div>
         </TooltipTrigger>
         <TooltipContent side="bottom" className="w-64 p-0">
           <div className="border-b p-2">
