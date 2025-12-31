@@ -144,7 +144,7 @@ const HeaderCell = memo(
         className={cn(
           'group border-border relative border-r border-b',
           'bg-background whitespace-nowrap select-none',
-          canSort && 'hover:bg-muted/50 cursor-pointer',
+          canSort && 'hover:bg-muted cursor-pointer',
           columnSchema ? 'min-h-14' : 'h-9',
           // Pinned column styles
           isPinned && 'z-20',

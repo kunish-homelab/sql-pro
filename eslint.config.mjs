@@ -20,6 +20,7 @@ export default antfu({
     'out/**',
     'dist/**',
     'plugin-sdk/**',
+    'pnpm-workspace.yaml',
     'node_modules/**',
   ],
 });

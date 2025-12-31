@@ -1,8 +1,11 @@
 import type {
   AISettings,
+  ProFeatureType,
   ProStatus,
   QueryHistoryEntry,
 } from '../../shared/types';
+import process from 'node:process';
+import { app } from 'electron';
 import Store from 'electron-store';
 
 // ============ Type Definitions ============
@@ -233,7 +236,25 @@ export function clearAISettings(): void {
 
 // ============ Pro Status ============
 
+// All Pro features
+const ALL_PRO_FEATURES = [
+  'ai_assistant',
+  'advanced_analytics',
+  'export_formats',
+  'batch_operations',
+  'performance_monitoring',
+] as ProFeatureType[];
+
 export function getProStatus(): ProStatus | null {
+  // In development mode, always return Pro status with all features enabled
+  if (process.env.NODE_ENV === 'development' || !app.isPackaged) {
+    return {
+      isPro: true,
+      licenseKey: 'dev-license',
+      activatedAt: new Date().toISOString(),
+      features: [...ALL_PRO_FEATURES],
+    };
+  }
   return store.get('proStatus', null);
 }
 

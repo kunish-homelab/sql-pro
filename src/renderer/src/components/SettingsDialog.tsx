@@ -38,7 +38,6 @@ import {
   PopoverContent,
   PopoverTrigger,
 } from '@/components/ui/popover';
-import { ScrollArea } from '@/components/ui/scroll-area';
 import {
   Select,
   SelectContent,
@@ -212,8 +211,8 @@ export function SettingsDialog({ open, onOpenChange }: SettingsDialogProps) {
           <DialogTitle>Settings</DialogTitle>
         </DialogHeader>
 
-        <ScrollArea className="min-h-0 flex-1">
-          <div className="space-y-6 px-6 pb-6">
+        <div className="min-h-0 flex-1 overflow-y-auto px-6 pb-6">
+          <div className="space-y-6">
             {/* Theme Section */}
             <div className="space-y-3">
               <Label className="text-sm font-medium">Theme</Label>
@@ -417,7 +416,7 @@ export function SettingsDialog({ open, onOpenChange }: SettingsDialogProps) {
             {/* AI Settings Section */}
             <AISettingsSection />
           </div>
-        </ScrollArea>
+        </div>
       </DialogContent>
 
       {/* Pro Activation Dialog */}

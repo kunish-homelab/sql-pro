@@ -1,6 +1,8 @@
+import { existsSync, readdirSync } from 'node:fs';
+import { homedir } from 'node:os';
 import { join } from 'node:path';
 import process from 'node:process';
-import { app, BrowserWindow, nativeImage, shell } from 'electron';
+import { app, BrowserWindow, nativeImage, session, shell } from 'electron';
 import { cleanupIpcHandlers, setupIpcHandlers } from './services/ipc-handlers';
 import { createApplicationMenu } from './services/menu';
 import { pluginService } from './services/plugin/PluginService';
@@ -14,6 +16,74 @@ const is = {
     return !app.isPackaged;
   },
 };
+
+// React DevTools extension ID from Chrome Web Store
+const REACT_DEVTOOLS_ID = 'fmkadmapgofadopljbjfkapdkoienihi';
+
+// Get Chrome extensions directory based on platform
+function getChromeExtensionsPath(): string | null {
+  const home = homedir();
+
+  if (process.platform === 'darwin') {
+    return join(
+      home,
+      'Library/Application Support/Google/Chrome/Default/Extensions'
+    );
+  } else if (process.platform === 'win32') {
+    return join(
+      home,
+      'AppData/Local/Google/Chrome/User Data/Default/Extensions'
+    );
+  } else if (process.platform === 'linux') {
+    return join(home, '.config/google-chrome/Default/Extensions');
+  }
+  return null;
+}
+
+// Find the latest version of an extension
+function findLatestExtensionVersion(extensionPath: string): string | null {
+  if (!existsSync(extensionPath)) return null;
+
+  const versions = readdirSync(extensionPath).filter(
+    (name) => !name.startsWith('.')
+  );
+  if (versions.length === 0) return null;
+
+  // Sort versions and get the latest
+  versions.sort((a, b) => b.localeCompare(a, undefined, { numeric: true }));
+  return versions[0];
+}
+
+// Install Chrome DevTools extensions (React, etc.) in development mode
+async function installDevToolsExtensions(): Promise<void> {
+  if (!is.dev) return;
+
+  const extensionsPath = getChromeExtensionsPath();
+  if (!extensionsPath) {
+    console.warn('Chrome extensions path not found for this platform');
+    return;
+  }
+
+  const reactDevToolsPath = join(extensionsPath, REACT_DEVTOOLS_ID);
+  const latestVersion = findLatestExtensionVersion(reactDevToolsPath);
+
+  if (!latestVersion) {
+    console.warn(
+      'React DevTools not found in Chrome. Please install it from Chrome Web Store first.'
+    );
+    return;
+  }
+
+  const extensionFullPath = join(reactDevToolsPath, latestVersion);
+
+  try {
+    await session.defaultSession.extensions.loadExtension(extensionFullPath, {
+      allowFileAccess: true,
+    });
+  } catch (err) {
+    console.warn('Failed to load React DevTools:', err);
+  }
+}
 
 function setAppUserModelId(id: string): void {
   if (process.platform === 'win32') {
@@ -94,6 +164,9 @@ if (is.dev) {
 
 app.whenReady().then(async () => {
   setAppUserModelId('com.sqlpro.app');
+
+  // Install DevTools extensions in development mode
+  await installDevToolsExtensions();
 
   // Setup IPC handlers for database operations
   setupIpcHandlers();

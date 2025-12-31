@@ -482,7 +482,7 @@ export function Sidebar({ onOpenDatabase }: SidebarProps) {
               variant="ghost"
               size="sm"
               onClick={() => setSettingsOpen(true)}
-              className="w-full justify-start"
+              className="flex w-full justify-start"
               data-action="open-settings"
             >
               <Settings className="mr-2 h-4 w-4" />

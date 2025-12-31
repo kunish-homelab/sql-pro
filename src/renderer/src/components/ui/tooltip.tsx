@@ -1,5 +1,6 @@
 'use client';
 
+import type React from 'react';
 import { Tooltip as TooltipPrimitive } from '@base-ui/react/tooltip';
 
 import { cn } from '@/lib/utils';
@@ -25,8 +26,21 @@ function Tooltip({ ...props }: TooltipPrimitive.Root.Props) {
   );
 }
 
-function TooltipTrigger({ ...props }: TooltipPrimitive.Trigger.Props) {
-  return <TooltipPrimitive.Trigger data-slot="tooltip-trigger" {...props} />;
+function TooltipTrigger({
+  render,
+  children,
+  ...props
+}: TooltipPrimitive.Trigger.Props) {
+  // If render is provided, use it; otherwise use children as render
+  // This allows: <TooltipTrigger><Button>...</Button></TooltipTrigger>
+  // to work without nesting buttons
+  return (
+    <TooltipPrimitive.Trigger
+      data-slot="tooltip-trigger"
+      render={render ?? (children as React.ReactElement)}
+      {...props}
+    />
+  );
 }
 
 function TooltipContent({
