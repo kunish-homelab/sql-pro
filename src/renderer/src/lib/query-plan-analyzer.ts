@@ -25,6 +25,46 @@ export interface ExecutionPlanNodeData {
   indexName?: string; // Extracted index name if applicable
 }
 
+/**
+ * Gets a human-readable description for each warning type
+ */
+export function getWarningMessage(warningType: WarningType): {
+  title: string;
+  description: string;
+} {
+  switch (warningType) {
+    case 'full-scan':
+      return {
+        title: 'Full Table Scan',
+        description:
+          'This operation scans all rows in the table. Consider adding an index to improve performance.',
+      };
+    case 'temp-btree':
+      return {
+        title: 'Temporary B-Tree',
+        description:
+          'A temporary structure is used for sorting. Consider adding an index on the ORDER BY columns.',
+      };
+    case 'subquery':
+      return {
+        title: 'Subquery Detected',
+        description:
+          'Subqueries can be expensive. Consider rewriting as a JOIN for better performance.',
+      };
+    case 'missing-index':
+      return {
+        title: 'Missing Index',
+        description:
+          'No index is available for this operation. Adding an index could significantly improve performance.',
+      };
+    default:
+      return {
+        title: 'Performance Warning',
+        description: 'This operation may have performance implications.',
+      };
+  }
+}
+
 export type ExecutionPlanFlowNode = Node<ExecutionPlanNodeData, 'executionPlan'>;
 export type ExecutionPlanFlowEdge = Edge;
 

@@ -1,4 +1,5 @@
 import type { ExecutionPlanNodeData } from '@/lib/query-plan-analyzer';
+import { getWarningMessage } from '@/lib/query-plan-analyzer';
 import { Handle, Position } from '@xyflow/react';
 import {
   AlertTriangle,
@@ -10,6 +11,7 @@ import {
 } from 'lucide-react';
 import { memo } from 'react';
 import { cn } from '@/lib/utils';
+import { Tooltip, TooltipContent, TooltipTrigger } from '@/components/ui/tooltip';
 
 interface ExecutionPlanNodeProps {
   data: ExecutionPlanNodeData;
@@ -75,6 +77,7 @@ function ExecutionPlanNodeComponent({
   const warningStyle = warningType
     ? WARNING_COLORS[warningType]
     : WARNING_COLORS['full-scan'];
+  const warningMessage = warningType ? getWarningMessage(warningType) : null;
 
   return (
     <div
@@ -102,10 +105,22 @@ function ExecutionPlanNodeComponent({
       >
         <Icon className="h-4 w-4 shrink-0" />
         <span className="truncate font-medium">{operation}</span>
-        {hasWarning && (
-          <AlertTriangle
-            className={cn('ml-auto h-4 w-4 shrink-0', warningStyle.text)}
-          />
+        {hasWarning && warningMessage && (
+          <Tooltip>
+            <TooltipTrigger>
+              <AlertTriangle
+                className={cn('ml-auto h-4 w-4 shrink-0', warningStyle.text)}
+              />
+            </TooltipTrigger>
+            <TooltipContent side="right">
+              <div className="space-y-1">
+                <div className="font-semibold">{warningMessage.title}</div>
+                <div className="text-xs opacity-90">
+                  {warningMessage.description}
+                </div>
+              </div>
+            </TooltipContent>
+          </Tooltip>
         )}
       </div>
 
