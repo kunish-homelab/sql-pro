@@ -38,6 +38,7 @@ import {
   PopoverContent,
   PopoverTrigger,
 } from '@/components/ui/popover';
+import { ScrollArea } from '@/components/ui/scroll-area';
 import {
   Select,
   SelectContent,
@@ -206,13 +207,13 @@ export function SettingsDialog({ open, onOpenChange }: SettingsDialogProps) {
 
   return (
     <Dialog open={open} onOpenChange={onOpenChange}>
-      <DialogContent className="flex max-h-[85vh] flex-col overflow-hidden sm:max-w-lg">
-        <DialogHeader>
+      <DialogContent className="flex max-h-[85vh] flex-col gap-0 overflow-hidden p-0 sm:max-w-lg">
+        <DialogHeader className="shrink-0 px-6 pt-6 pb-4">
           <DialogTitle>Settings</DialogTitle>
         </DialogHeader>
 
-        <div className="flex-1 overflow-y-auto pr-4">
-          <div className="space-y-6 py-4">
+        <ScrollArea className="min-h-0 flex-1">
+          <div className="space-y-6 px-6 pb-6">
             {/* Theme Section */}
             <div className="space-y-3">
               <Label className="text-sm font-medium">Theme</Label>
@@ -358,7 +359,7 @@ export function SettingsDialog({ open, onOpenChange }: SettingsDialogProps) {
                 className={cn(
                   'rounded-lg border p-4 transition-colors',
                   isPro
-                    ? 'border-amber-500/20 bg-gradient-to-r from-amber-500/10 to-yellow-500/10'
+                    ? 'border-amber-500/20 bg-linear-to-r from-amber-500/10 to-yellow-500/10'
                     : 'border-border'
                 )}
               >
@@ -402,7 +403,7 @@ export function SettingsDialog({ open, onOpenChange }: SettingsDialogProps) {
                     className={
                       isPro
                         ? ''
-                        : 'bg-gradient-to-r from-amber-500 to-yellow-500 text-white hover:from-amber-600 hover:to-yellow-600'
+                        : 'bg-linear-to-r from-amber-500 to-yellow-500 text-white hover:from-amber-600 hover:to-yellow-600'
                     }
                   >
                     {isPro ? 'Manage' : 'Upgrade'}
@@ -416,7 +417,7 @@ export function SettingsDialog({ open, onOpenChange }: SettingsDialogProps) {
             {/* AI Settings Section */}
             <AISettingsSection />
           </div>
-        </div>
+        </ScrollArea>
       </DialogContent>
 
       {/* Pro Activation Dialog */}
@@ -552,7 +553,7 @@ function FontSettingsSection({
           <PopoverContent className="w-72 p-0" align="start" sideOffset={4}>
             <Command className="flex flex-col">
               <CommandInput placeholder="Search fonts..." className="h-9" />
-              <CommandList className="max-h-[300px]">
+              <CommandList className="max-h-75">
                 <CommandEmpty>No font found.</CommandEmpty>
                 {/* System Default option */}
                 <CommandGroup>
@@ -760,7 +761,11 @@ function AISettingsSection() {
       {/* Model Selection */}
       <div className="space-y-2">
         <Label className="text-xs font-medium">Model</Label>
-        <Popover open={modelPopoverOpen} onOpenChange={setModelPopoverOpen}>
+        <Popover
+          open={modelPopoverOpen}
+          onOpenChange={setModelPopoverOpen}
+          modal
+        >
           <PopoverTrigger asChild>
             <Button
               variant="outline"

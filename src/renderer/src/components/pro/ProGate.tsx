@@ -105,7 +105,7 @@ export function ProGate({
     >
       {/* Pro Badge with Lock Icon */}
       <div className="relative">
-        <div className="flex h-16 w-16 items-center justify-center rounded-full bg-gradient-to-br from-amber-500/20 to-yellow-500/20">
+        <div className="flex h-16 w-16 items-center justify-center rounded-full bg-linear-to-br from-amber-500/20 to-yellow-500/20">
           <Crown className="h-8 w-8 text-amber-500" />
         </div>
         <div className="bg-background absolute -right-1 -bottom-1 rounded-full border p-1">
@@ -128,7 +128,7 @@ export function ProGate({
       <div className="flex flex-col items-center gap-2">
         <Button
           onClick={onUpgrade}
-          className="bg-gradient-to-r from-amber-500 to-yellow-500 text-white hover:from-amber-600 hover:to-yellow-600"
+          className="bg-linear-to-r from-amber-500 to-yellow-500 text-white hover:from-amber-600 hover:to-yellow-600"
         >
           <Sparkles className="mr-2 h-4 w-4" />
           Upgrade to Pro
