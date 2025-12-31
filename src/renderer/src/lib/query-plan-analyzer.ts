@@ -1,3 +1,5 @@
+import type { Edge, Node } from '@xyflow/react';
+import dagre from 'dagre';
 import type { QueryPlanNode, QueryPlanStats } from '../../../shared/types';
 
 export interface Suggestion {
@@ -6,6 +8,32 @@ export interface Suggestion {
   description: string;
   impact: 'high' | 'medium' | 'low';
 }
+
+// ============ Flow Diagram Types ============
+
+export type WarningType = 'full-scan' | 'missing-index' | 'temp-btree' | 'subquery';
+
+export interface ExecutionPlanNodeData {
+  [key: string]: unknown;
+  operation: string; // e.g., "SCAN TABLE", "SEARCH INDEX"
+  detail: string; // Full detail string
+  estimatedCost?: number;
+  estimatedRows?: number;
+  hasWarning: boolean;
+  warningType?: WarningType;
+  tableName?: string; // Extracted table name if applicable
+  indexName?: string; // Extracted index name if applicable
+}
+
+export type ExecutionPlanFlowNode = Node<ExecutionPlanNodeData, 'executionPlan'>;
+export type ExecutionPlanFlowEdge = Edge;
+
+// Layout configuration
+const NODE_WIDTH = 280;
+const NODE_HEIGHT = 120;
+const NODE_SEPARATION = 80; // Horizontal space between nodes
+const RANK_SEPARATION = 100; // Vertical space between levels
+const MARGIN = 40;
 
 /**
  * Generates optimization suggestions based on query execution plan
@@ -144,4 +172,284 @@ export function generateSuggestions(
   }
 
   return suggestions;
+}
+
+// ============ Tree-to-Flow Conversion Utilities ============
+
+/**
+ * Detects if a query plan node has performance warnings
+ */
+export function detectWarning(node: QueryPlanNode): {
+  hasWarning: boolean;
+  warningType?: WarningType;
+} {
+  const detailUpper = node.detail.toUpperCase();
+
+  // Check for full table scan
+  if (detailUpper.includes('SCAN TABLE')) {
+    return { hasWarning: true, warningType: 'full-scan' };
+  }
+
+  // Check for temp B-tree (sorting without index)
+  if (
+    detailUpper.includes('TEMP B-TREE') ||
+    detailUpper.includes('USE TEMP B-TREE FOR ORDER BY')
+  ) {
+    return { hasWarning: true, warningType: 'temp-btree' };
+  }
+
+  // Check for subqueries
+  if (
+    detailUpper.includes('SCALAR SUBQUERY') ||
+    detailUpper.includes('CORRELATED')
+  ) {
+    return { hasWarning: true, warningType: 'subquery' };
+  }
+
+  return { hasWarning: false };
+}
+
+/**
+ * Extracts operation type from detail string
+ * Examples: "SCAN TABLE users" -> "SCAN TABLE"
+ *           "SEARCH TABLE users USING INDEX idx_email" -> "SEARCH INDEX"
+ */
+export function extractOperation(detail: string): string {
+  const detailUpper = detail.toUpperCase();
+
+  if (detailUpper.includes('SCAN TABLE')) {
+    return 'SCAN TABLE';
+  }
+  if (detailUpper.includes('SEARCH') && detailUpper.includes('INDEX')) {
+    return 'SEARCH INDEX';
+  }
+  if (detailUpper.includes('USE TEMP B-TREE')) {
+    return 'TEMP B-TREE';
+  }
+  if (detailUpper.includes('SCALAR SUBQUERY')) {
+    return 'SUBQUERY';
+  }
+  if (detailUpper.includes('COMPOUND')) {
+    return 'COMPOUND';
+  }
+  if (detailUpper.includes('EXECUTE')) {
+    return 'EXECUTE';
+  }
+
+  // Default: use first word or phrase
+  const match = detail.match(/^([A-Z\s]+)/);
+  return match ? match[1].trim() : 'OPERATION';
+}
+
+/**
+ * Extracts table name from detail string
+ */
+export function extractTableName(detail: string): string | undefined {
+  const tableMatch = detail.match(/TABLE\s+(\w+)/i);
+  return tableMatch ? tableMatch[1] : undefined;
+}
+
+/**
+ * Extracts index name from detail string
+ */
+export function extractIndexName(detail: string): string | undefined {
+  const indexMatch = detail.match(/INDEX\s+(\w+)/i);
+  return indexMatch ? indexMatch[1] : undefined;
+}
+
+/**
+ * Converts a flat array of QueryPlanNode to a tree structure
+ * SQLite returns flat array with parent references - this builds hierarchy
+ */
+export function buildPlanTree(nodes: QueryPlanNode[]): QueryPlanNode[] {
+  if (nodes.length === 0) return [];
+
+  // Create a map of id -> node for quick lookup
+  const nodeMap = new Map<number, QueryPlanNode>();
+  const roots: QueryPlanNode[] = [];
+
+  // First pass: create map with copies of nodes
+  nodes.forEach((node) => {
+    nodeMap.set(node.id, { ...node, children: [] });
+  });
+
+  // Second pass: build tree structure
+  nodes.forEach((node) => {
+    const current = nodeMap.get(node.id);
+    if (!current) return;
+
+    if (node.parent === 0) {
+      // Root node
+      roots.push(current);
+    } else {
+      // Child node - add to parent's children
+      const parent = nodeMap.get(node.parent);
+      if (parent) {
+        parent.children = parent.children || [];
+        parent.children.push(current);
+      }
+    }
+  });
+
+  return roots;
+}
+
+/**
+ * Converts QueryPlanNode tree to React Flow nodes and edges
+ */
+export function planTreeToFlowNodes(
+  planRoots: QueryPlanNode[]
+): {
+  nodes: ExecutionPlanFlowNode[];
+  edges: ExecutionPlanFlowEdge[];
+} {
+  const nodes: ExecutionPlanFlowNode[] = [];
+  const edges: ExecutionPlanFlowEdge[] = [];
+
+  function traverse(node: QueryPlanNode, depth: number = 0): void {
+    const { hasWarning, warningType } = detectWarning(node);
+    const operation = extractOperation(node.detail);
+    const tableName = extractTableName(node.detail);
+    const indexName = extractIndexName(node.detail);
+
+    // Create flow node
+    const flowNode: ExecutionPlanFlowNode = {
+      id: `plan-node-${node.id}`,
+      type: 'executionPlan',
+      position: { x: 0, y: 0 }, // Will be set by layout algorithm
+      data: {
+        operation,
+        detail: node.detail,
+        estimatedCost: node.estimatedCost,
+        estimatedRows: node.estimatedRows,
+        hasWarning,
+        warningType,
+        tableName,
+        indexName,
+      },
+    };
+
+    nodes.push(flowNode);
+
+    // Create edges from parent to children
+    if (node.children && node.children.length > 0) {
+      node.children.forEach((child) => {
+        edges.push({
+          id: `edge-${node.id}-${child.id}`,
+          source: `plan-node-${node.id}`,
+          target: `plan-node-${child.id}`,
+          type: 'smoothstep',
+          animated: false,
+        });
+
+        // Recursively process children
+        traverse(child, depth + 1);
+      });
+    }
+  }
+
+  // Process all root nodes
+  planRoots.forEach((root) => traverse(root, 0));
+
+  return { nodes, edges };
+}
+
+/**
+ * Applies dagre layout to execution plan nodes
+ */
+export function applyExecutionPlanLayout(
+  nodes: ExecutionPlanFlowNode[],
+  edges: ExecutionPlanFlowEdge[]
+): ExecutionPlanFlowNode[] {
+  if (nodes.length === 0) {
+    return nodes;
+  }
+
+  // Single node - just position it
+  if (nodes.length === 1) {
+    return [{ ...nodes[0], position: { x: MARGIN, y: MARGIN } }];
+  }
+
+  const g = new dagre.graphlib.Graph();
+
+  // Set graph options - top to bottom flow for execution plan
+  g.setGraph({
+    rankdir: 'TB', // Top to bottom
+    nodesep: NODE_SEPARATION,
+    ranksep: RANK_SEPARATION,
+    marginx: MARGIN,
+    marginy: MARGIN,
+    ranker: 'network-simplex',
+  });
+
+  // Required for dagre
+  g.setDefaultEdgeLabel(() => ({}));
+
+  // Add nodes with their dimensions
+  nodes.forEach((node) => {
+    g.setNode(node.id, {
+      width: NODE_WIDTH,
+      height: NODE_HEIGHT,
+    });
+  });
+
+  // Add edges
+  edges.forEach((edge) => {
+    if (g.hasNode(edge.source) && g.hasNode(edge.target)) {
+      g.setEdge(edge.source, edge.target, {
+        weight: 1,
+        minlen: 1,
+      });
+    }
+  });
+
+  // Run the layout algorithm
+  try {
+    dagre.layout(g);
+  } catch (error) {
+    // On error, use simple vertical layout
+    return nodes.map((node, index) => ({
+      ...node,
+      position: {
+        x: MARGIN,
+        y: MARGIN + index * (NODE_HEIGHT + RANK_SEPARATION),
+      },
+    }));
+  }
+
+  // Apply computed positions to nodes
+  return nodes.map((node) => {
+    const nodeWithPosition = g.node(node.id);
+
+    if (!nodeWithPosition) {
+      return node;
+    }
+
+    return {
+      ...node,
+      position: {
+        x: nodeWithPosition.x - NODE_WIDTH / 2,
+        y: nodeWithPosition.y - NODE_HEIGHT / 2,
+      },
+    };
+  });
+}
+
+/**
+ * Main conversion function: QueryPlanNode[] -> positioned flow nodes/edges
+ */
+export function convertPlanToFlow(planNodes: QueryPlanNode[]): {
+  nodes: ExecutionPlanFlowNode[];
+  edges: ExecutionPlanFlowEdge[];
+} {
+  // Build tree from flat array
+  const planTree = buildPlanTree(planNodes);
+
+  // Convert tree to flow nodes and edges
+  const { nodes: rawNodes, edges } = planTreeToFlowNodes(planTree);
+
+  // Apply layout
+  const layoutedNodes = applyExecutionPlanLayout(rawNodes, edges);
+
+  return { nodes: layoutedNodes, edges };
 }
