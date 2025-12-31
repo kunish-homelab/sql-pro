@@ -1,5 +1,38 @@
 # Changelog
 
+## [1.7.0](https://github.com/kunish-homelab/sql-pro/compare/v1.6.0...v1.7.0) (2025-12-31)
+
+
+### Features
+
+* add Claude Code path support for Anthropic provider ([de7b3f3](https://github.com/kunish-homelab/sql-pro/commit/de7b3f3885364f5cd365ce80c58249faf6e6a3e5))
+* auto updater ([9280a68](https://github.com/kunish-homelab/sql-pro/commit/9280a682b5b00ae0f8850c6f7ab9e6e8499ca242))
+* electron-builder identity ([433fcf4](https://github.com/kunish-homelab/sql-pro/commit/433fcf4734bf24c981d125b1a987d12593886709))
+* enhance column resizing functionality and improve layout handling ([b2acff1](https://github.com/kunish-homelab/sql-pro/commit/b2acff185c82b1e789ede51b1131a82938962430))
+* error handling ([a3e1194](https://github.com/kunish-homelab/sql-pro/commit/a3e11944b38bb297b2b303a91fe932f22329369c))
+* export ([dc7c909](https://github.com/kunish-homelab/sql-pro/commit/dc7c9090824b1b223fd704e962baf4b8d11483f3))
+* integrate table font settings ([a342a41](https://github.com/kunish-homelab/sql-pro/commit/a342a41c490dd5693886274e365167fa14a6f0d3))
+* multiple connections ([0bf08fa](https://github.com/kunish-homelab/sql-pro/commit/0bf08fa4f7461689dab092f5ba1f98aedf2697a6))
+* multiple tabs support ([ed71fb6](https://github.com/kunish-homelab/sql-pro/commit/ed71fb6f0d2d926e18444a086479e9ca47bce0bd))
+* optimize data table layout ([1012a43](https://github.com/kunish-homelab/sql-pro/commit/1012a43ec2c5c6faa235530c98704575cc60d7f2))
+* plugin-sdk ([5882a81](https://github.com/kunish-homelab/sql-pro/commit/5882a81655b369013707137e5a5809e0477268fe))
+* refactor CommandPalette with shadcn ([a65b4f9](https://github.com/kunish-homelab/sql-pro/commit/a65b4f991dce7e0dbef366cecb8b969684134c1e))
+* replace AISettingsDialog with SettingsDialog ([9cb4c7e](https://github.com/kunish-homelab/sql-pro/commit/9cb4c7e72c0edfcff3fa496053c77f8614298314))
+* update ai-powered features ([d5642a6](https://github.com/kunish-homelab/sql-pro/commit/d5642a68cdde3045503d2aafdc4b2d99e902e874))
+* update electron-builder configurations ([c95ea70](https://github.com/kunish-homelab/sql-pro/commit/c95ea70c038d677c3a622ffa3f397e3f4283ee00))
+
+
+### Bug Fixes
+
+* build ([abb7e52](https://github.com/kunish-homelab/sql-pro/commit/abb7e527607d2f2c06dca9fa5631a0b06afe6d18))
+* lint ([2fbcc26](https://github.com/kunish-homelab/sql-pro/commit/2fbcc26b48679f09cc08ecc1b96d4261c4b2fef8))
+* multi-tab table view ([a7389e1](https://github.com/kunish-homelab/sql-pro/commit/a7389e19604a43d6c4236e66727e0739dcfb7f50))
+* open connection settings dialog z-index ([0bcc8d1](https://github.com/kunish-homelab/sql-pro/commit/0bcc8d1b515cc4c550b668d277ce76535e02522d))
+* remove unnecessary class from rowCount ([6d20d38](https://github.com/kunish-homelab/sql-pro/commit/6d20d3801c0f355d731927601985cfb6dd30bf81))
+* sql editor and history ([01d8132](https://github.com/kunish-homelab/sql-pro/commit/01d8132bb3d12687dcd3220c483d061c593e4745))
+* system fonts ([681beea](https://github.com/kunish-homelab/sql-pro/commit/681beea16fcedae405221010d99d7445e5bfe90e))
+* update kbd component styles to use text-muted-foreground for better visibility ([4e0518c](https://github.com/kunish-homelab/sql-pro/commit/4e0518c2bd4279626e18950d0eef0023d87075b0))
+
 ## [1.6.0](https://github.com/kunish-homelab/sql-pro/compare/v1.5.0...v1.6.0) (2025-12-29)
 
 
