@@ -1,12 +1,6 @@
-import { Code, GitFork, Info, Table } from 'lucide-react';
+import { Code, GitFork, Table } from 'lucide-react';
 import { useCallback, useEffect, useRef, useState } from 'react';
-import { Button } from '@/components/ui/button';
 import { Tabs, TabsContent, TabsList, TabsTrigger } from '@/components/ui/tabs';
-import {
-  Tooltip,
-  TooltipContent,
-  TooltipTrigger,
-} from '@/components/ui/tooltip';
 import { cn } from '@/lib/utils';
 import {
   useChangesStore,
@@ -202,32 +196,6 @@ export function DatabaseView({ onOpenDatabase }: DatabaseViewProps) {
                 ⌘3
               </kbd>
             </TabsTrigger>
-
-            {/* Schema Details Toggle */}
-            <div className="ml-auto flex items-center px-2">
-              <Tooltip>
-                <TooltipTrigger>
-                  <Button
-                    variant={showDetailsPanel ? 'secondary' : 'ghost'}
-                    size="sm"
-                    onClick={() => setShowDetailsPanel((prev) => !prev)}
-                    disabled={!displayTable}
-                    className="gap-1.5"
-                  >
-                    <Info className="h-4 w-4" />
-                    <span className="hidden sm:inline">Schema</span>
-                    <kbd className="bg-muted text-muted-foreground hidden rounded px-1 py-0.5 font-mono text-[10px] sm:inline-block">
-                      ⌘4
-                    </kbd>
-                  </Button>
-                </TooltipTrigger>
-                <TooltipContent>
-                  {displayTable
-                    ? 'View schema details'
-                    : 'Select a table to view schema details'}
-                </TooltipContent>
-              </Tooltip>
-            </div>
           </TabsList>
 
           {/* Tab Content */}
@@ -245,9 +213,14 @@ export function DatabaseView({ onOpenDatabase }: DatabaseViewProps) {
               <TableView
                 key={activeDataTab.id}
                 tableOverride={activeDataTab.table}
+                showDetailsPanel={showDetailsPanel}
+                onDetailsToggle={setShowDetailsPanel}
               />
             ) : displayTable ? (
-              <TableView />
+              <TableView
+                showDetailsPanel={showDetailsPanel}
+                onDetailsToggle={setShowDetailsPanel}
+              />
             ) : (
               <div className="bg-grid-dot text-muted-foreground flex h-full items-center justify-center">
                 <p>Select a table from the sidebar to view its data</p>
