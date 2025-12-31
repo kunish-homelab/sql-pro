@@ -24,7 +24,8 @@ import {
   Zap,
 } from 'lucide-react';
 import { useTheme } from 'next-themes';
-import { memo, useCallback, useMemo, useState } from 'react';
+import { Component, memo, useCallback, useMemo, useState } from 'react';
+import type { ErrorInfo, ReactNode } from 'react';
 import {
   Background,
   Controls,
@@ -56,6 +57,44 @@ import { convertPlanToFlow, exportPlanAsText } from '@/lib/query-plan-analyzer';
 import { ExecutionPlanNode as ExecutionPlanNodeComponent } from './ExecutionPlanNode';
 import { exportDiagramAsPng } from '../er-diagram/utils/export-diagram';
 import '@xyflow/react/dist/style.css';
+
+// Error Boundary for graceful error handling
+class DiagramErrorBoundary extends Component<
+  { children: ReactNode },
+  { hasError: boolean; error: Error | null }
+> {
+  constructor(props: { children: ReactNode }) {
+    super(props);
+    this.state = { hasError: false, error: null };
+  }
+
+  static getDerivedStateFromError(error: Error) {
+    return { hasError: true, error };
+  }
+
+  componentDidCatch(error: Error, errorInfo: ErrorInfo) {
+    // Error logged for debugging
+    console.error('Diagram rendering error:', error, errorInfo);
+  }
+
+  render() {
+    if (this.state.hasError) {
+      return (
+        <div className="flex h-full flex-col items-center justify-center p-8">
+          <AlertCircle className="text-destructive mb-4 h-12 w-12" />
+          <p className="text-destructive mb-2 font-medium">
+            Failed to render diagram
+          </p>
+          <p className="text-muted-foreground text-center text-sm">
+            {this.state.error?.message || 'An unexpected error occurred'}
+          </p>
+        </div>
+      );
+    }
+
+    return this.props.children;
+  }
+}
 
 // Register custom node types for execution plan
 const nodeTypes = {
@@ -111,6 +150,12 @@ const PlanNode = memo(function PlanNode({
   children = [],
 }: PlanNodeProps) {
   const [isExpanded, setIsExpanded] = useState(true);
+
+  // Defensive checks for node data
+  if (!node || !node.detail) {
+    return null;
+  }
+
   const Icon = getOperationIcon(node.detail);
   const hasChildren = children.length > 0;
 
@@ -209,8 +254,13 @@ export const QueryOptimizerPanel = memo(
       if (plan.length === 0 || viewMode !== 'diagram') {
         return { flowNodes: [], flowEdges: [] };
       }
-      const { nodes, edges } = convertPlanToFlow(plan);
-      return { flowNodes: nodes, flowEdges: edges };
+      try {
+        const { nodes, edges } = convertPlanToFlow(plan);
+        return { flowNodes: nodes || [], flowEdges: edges || [] };
+      } catch (error) {
+        console.error('Error converting plan to flow:', error);
+        return { flowNodes: [], flowEdges: [] };
+      }
     }, [plan, viewMode]);
 
     const [nodes, setNodes, onNodesChange] =
@@ -407,38 +457,54 @@ export const QueryOptimizerPanel = memo(
               </div>
 
               {viewMode === 'tree' && (
-                <ScrollArea className="bg-muted/30 h-48 rounded-lg border p-2">
-                  {rootNodes.map((node) => (
-                    <PlanNode
-                      key={node.id}
-                      node={node}
-                      depth={0}
-                      children={tree.get(node.id)}
-                    />
-                  ))}
-                </ScrollArea>
+                <DiagramErrorBoundary>
+                  <ScrollArea className="bg-muted/30 h-48 rounded-lg border p-2">
+                    {rootNodes.length === 0 ? (
+                      <div className="text-muted-foreground flex h-full items-center justify-center py-8">
+                        No execution plan to display
+                      </div>
+                    ) : (
+                      rootNodes.map((node) => (
+                        <PlanNode
+                          key={node.id}
+                          node={node}
+                          depth={0}
+                          children={tree.get(node.id)}
+                        />
+                      ))
+                    )}
+                  </ScrollArea>
+                </DiagramErrorBoundary>
               )}
 
               {viewMode === 'diagram' && (
-                <div className="bg-muted/30 query-optimizer-flow h-96 rounded-lg border">
-                  <ReactFlow
-                    nodes={nodes}
-                    edges={edges}
-                    onNodesChange={onNodesChange}
-                    onEdgesChange={onEdgesChange}
-                    onNodeClick={handleNodeClick}
-                    nodeTypes={nodeTypes}
-                    colorMode={resolvedTheme as ColorMode}
-                    fitView
-                    fitViewOptions={{ padding: 0.2 }}
-                    minZoom={0.1}
-                    maxZoom={2}
-                    proOptions={{ hideAttribution: true }}
-                  >
-                    <Background />
-                    <Controls showInteractive={false} />
-                  </ReactFlow>
-                </div>
+                <DiagramErrorBoundary>
+                  <div className="bg-muted/30 query-optimizer-flow h-96 rounded-lg border">
+                    {flowNodes.length === 0 ? (
+                      <div className="text-muted-foreground flex h-full items-center justify-center">
+                        No execution plan to display
+                      </div>
+                    ) : (
+                      <ReactFlow
+                        nodes={nodes}
+                        edges={edges}
+                        onNodesChange={onNodesChange}
+                        onEdgesChange={onEdgesChange}
+                        onNodeClick={handleNodeClick}
+                        nodeTypes={nodeTypes}
+                        colorMode={resolvedTheme as ColorMode}
+                        fitView
+                        fitViewOptions={{ padding: 0.2 }}
+                        minZoom={0.1}
+                        maxZoom={2}
+                        proOptions={{ hideAttribution: true }}
+                      >
+                        <Background />
+                        <Controls showInteractive={false} />
+                      </ReactFlow>
+                    )}
+                  </div>
+                </DiagramErrorBoundary>
               )}
             </div>
           )}
