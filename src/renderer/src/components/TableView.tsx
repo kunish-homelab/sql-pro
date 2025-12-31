@@ -12,7 +12,6 @@ import {
   Download,
   Eye,
   FileText,
-  Loader2,
   Plus,
   Search,
   X,
@@ -45,7 +44,15 @@ import {
   usePageSize,
   useSettingsStore,
 } from '@/stores';
-import { DataTable } from './data-table';
+import {
+  AnimatedLoader,
+  ColumnStats,
+  DataQualityIndicator,
+  DataTable,
+  KeyboardShortcutsOverlay,
+  QuickFilterTags,
+  SkeletonTable,
+} from './data-table';
 import { ActiveFilters } from './data-table/ActiveFilters';
 import { DiffPreview } from './DiffPreview';
 import { ExportDialog } from './ExportDialog';
@@ -351,6 +358,10 @@ export function TableView({ tableOverride }: TableViewProps) {
                 View
               </span>
             )}
+            {/* Data Quality Indicator */}
+            {rows.length > 0 && (
+              <DataQualityIndicator columns={columns} data={rows} />
+            )}
           </div>
 
           <div className="flex items-center gap-2">
@@ -423,11 +434,25 @@ export function TableView({ tableOverride }: TableViewProps) {
           onFiltersClear={handleFiltersClear}
         />
 
+        {/* Quick Filter Tags - AI-powered suggestions */}
+        {rows.length > 0 && (
+          <QuickFilterTags
+            columns={columns}
+            data={rows}
+            activeFilters={filters}
+            onFilterAdd={handleFilterAdd}
+            onFilterRemove={handleFilterRemove}
+          />
+        )}
+
         {/* Data Grid */}
         <div className="min-h-0 min-w-0 flex-1 overflow-hidden">
           {isLoading ? (
-            <div className="flex h-full items-center justify-center">
-              <Loader2 className="text-muted-foreground h-8 w-8 animate-spin" />
+            <div className="flex h-full flex-col">
+              <SkeletonTable columns={columns.length || 5} rows={10} />
+              <div className="flex flex-1 items-center justify-center">
+                <AnimatedLoader text="Loading table data..." size="md" />
+              </div>
             </div>
           ) : error ? (
             <div className="text-destructive flex h-full items-center justify-center">
@@ -463,6 +488,11 @@ export function TableView({ tableOverride }: TableViewProps) {
             />
           )}
         </div>
+
+        {/* Column Statistics Panel - Collapsible */}
+        {!isLoading && rows.length > 0 && (
+          <ColumnStats columns={columns} data={rows} />
+        )}
 
         {/* Pagination */}
         <div className="bg-background flex shrink-0 items-center justify-between border-t px-4 py-2">
@@ -581,6 +611,9 @@ export function TableView({ tableOverride }: TableViewProps) {
         connectionId={connection?.id || ''}
         onExport={handleExport}
       />
+
+      {/* Keyboard Shortcuts Overlay - Floating button */}
+      <KeyboardShortcutsOverlay />
     </div>
   );
 }
