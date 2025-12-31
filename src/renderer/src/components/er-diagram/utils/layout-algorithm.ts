@@ -2,16 +2,16 @@ import type { ERRelationshipEdge, ERTableNode } from '@/types/er-diagram';
 import dagre from 'dagre';
 
 // Estimated dimensions for table nodes
-const NODE_WIDTH = 280; // Increased for wider tables
+const NODE_WIDTH = 300; // Width for table nodes
 const COLUMN_HEIGHT = 26;
 const HEADER_HEIGHT = 44;
 const MIN_NODE_HEIGHT = 100;
 const PADDING = 20;
 
-// Layout spacing - increased for better readability
-const NODE_SEPARATION = 100; // Horizontal space between nodes
-const RANK_SEPARATION = 150; // Space between ranks (levels)
-const MARGIN = 60; // Margin around the entire graph
+// Layout spacing - generous spacing for readability
+const NODE_SEPARATION = 180; // Horizontal space between nodes
+const RANK_SEPARATION = 200; // Space between ranks (levels)
+const MARGIN = 80; // Margin around the entire graph
 
 /**
  * Calculates the height of a table node based on column count
@@ -33,7 +33,7 @@ function applyGridLayout(nodes: ERTableNode[]): ERTableNode[] {
 
   // Calculate optimal grid dimensions
   // Prefer wider layouts (more columns than rows)
-  const aspectRatio = 1.5; // Prefer 1.5:1 width to height ratio
+  const aspectRatio = 2.0; // Prefer 2:1 width to height ratio for wider layouts
   const cols = Math.ceil(Math.sqrt(nodes.length * aspectRatio));
   const rows = Math.ceil(nodes.length / cols);
 
@@ -50,26 +50,26 @@ function applyGridLayout(nodes: ERTableNode[]): ERTableNode[] {
     rowHeights.push(maxHeight);
   }
 
+  // Pre-calculate Y positions for each row
+  const rowYPositions: number[] = [MARGIN];
+  for (let row = 1; row < rows; row++) {
+    rowYPositions.push(
+      rowYPositions[row - 1] + rowHeights[row - 1] + NODE_SEPARATION
+    );
+  }
+
   // Position nodes
   const GAP_X = NODE_WIDTH + NODE_SEPARATION;
-  let currentY = MARGIN;
 
   return nodes.map((node, index) => {
     const col = index % cols;
     const row = Math.floor(index / cols);
 
-    // Calculate Y position based on previous rows
-    if (col === 0 && row > 0) {
-      currentY += rowHeights[row - 1] + NODE_SEPARATION;
-    }
-
-    const y = row === 0 ? MARGIN : currentY;
-
     return {
       ...node,
       position: {
         x: MARGIN + col * GAP_X,
-        y,
+        y: rowYPositions[row],
       },
     };
   });
