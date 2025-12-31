@@ -54,6 +54,13 @@ interface MonacoSqlEditorProps {
   maxHeight?: number;
   /** Error info from query execution for highlighting in editor */
   executionError?: ExecutionErrorInfo | null;
+  /** Callback when cursor position changes */
+  onCursorPositionChange?: (position: {
+    line: number;
+    column: number;
+  }) => void;
+  /** Callback when scroll position changes */
+  onScrollPositionChange?: (scrollTop: number) => void;
 }
 
 /**
@@ -74,6 +81,8 @@ export function MonacoSqlEditor({
   minHeight = 100,
   maxHeight = 500,
   executionError,
+  onCursorPositionChange,
+  onScrollPositionChange,
 }: MonacoSqlEditorProps) {
   const { theme } = useThemeStore();
   const { editorVimMode, tabSize } = useSettingsStore();
@@ -81,6 +90,8 @@ export function MonacoSqlEditor({
   const editorRef = useRef<Monaco.editor.IStandaloneCodeEditor | null>(null);
   const monacoRef = useRef<typeof Monaco | null>(null);
   const onExecuteRef = useRef(onExecute);
+  const onCursorPositionChangeRef = useRef(onCursorPositionChange);
+  const onScrollPositionChangeRef = useRef(onScrollPositionChange);
   const completionDisposableRef = useRef<Monaco.IDisposable | null>(null);
   const hoverDisposableRef = useRef<Monaco.IDisposable | null>(null);
   const validatorRef = useRef<{
@@ -88,6 +99,8 @@ export function MonacoSqlEditor({
     dispose: () => void;
   } | null>(null);
   const modelChangeListenerRef = useRef<Monaco.IDisposable | null>(null);
+  const blurListenerRef = useRef<Monaco.IDisposable | null>(null);
+  const scrollListenerRef = useRef<Monaco.IDisposable | null>(null);
   const containerRef = useRef<HTMLDivElement | null>(null);
   const vimModeRef = useRef<VimMode | null>(null);
   const vimStatusRef = useRef<HTMLDivElement | null>(null);
@@ -113,10 +126,18 @@ export function MonacoSqlEditor({
       window.matchMedia('(prefers-color-scheme: dark)').matches);
   const editorTheme = isDark ? 'sql-pro-dark' : 'sql-pro-light';
 
-  // Keep onExecute ref up to date
+  // Keep callback refs up to date
   useEffect(() => {
     onExecuteRef.current = onExecute;
   }, [onExecute]);
+
+  useEffect(() => {
+    onCursorPositionChangeRef.current = onCursorPositionChange;
+  }, [onCursorPositionChange]);
+
+  useEffect(() => {
+    onScrollPositionChangeRef.current = onScrollPositionChange;
+  }, [onScrollPositionChange]);
 
   // Configure Monaco before mount - define custom themes (US2, US3)
   const handleBeforeMount: BeforeMount = useCallback((monacoInstance) => {
@@ -218,6 +239,53 @@ export function MonacoSqlEditor({
     },
     [schema]
   );
+
+  // Capture and save cursor position when editor loses focus
+  useEffect(() => {
+    if (!editorRef.current) return;
+
+    // Listen for editor blur events
+    blurListenerRef.current = editorRef.current.onDidBlurEditorText(() => {
+      if (!editorRef.current) return;
+
+      const position = editorRef.current.getPosition();
+      if (position && onCursorPositionChangeRef.current) {
+        onCursorPositionChangeRef.current({
+          line: position.lineNumber,
+          column: position.column,
+        });
+      }
+    });
+
+    return () => {
+      if (blurListenerRef.current) {
+        blurListenerRef.current.dispose();
+        blurListenerRef.current = null;
+      }
+    };
+  }, [editorReady]);
+
+  // Capture and save scroll position when editor scrolls
+  useEffect(() => {
+    if (!editorRef.current) return;
+
+    // Listen for scroll change events
+    scrollListenerRef.current = editorRef.current.onDidScrollChange(() => {
+      if (!editorRef.current) return;
+
+      const scrollTop = editorRef.current.getScrollTop();
+      if (onScrollPositionChangeRef.current) {
+        onScrollPositionChangeRef.current(scrollTop);
+      }
+    });
+
+    return () => {
+      if (scrollListenerRef.current) {
+        scrollListenerRef.current.dispose();
+        scrollListenerRef.current = null;
+      }
+    };
+  }, [editorReady]);
 
   // US1: Update completion provider when schema changes
   useEffect(() => {
@@ -329,6 +397,12 @@ export function MonacoSqlEditor({
       }
       if (modelChangeListenerRef.current) {
         modelChangeListenerRef.current.dispose();
+      }
+      if (blurListenerRef.current) {
+        blurListenerRef.current.dispose();
+      }
+      if (scrollListenerRef.current) {
+        scrollListenerRef.current.dispose();
       }
       if (validatorRef.current) {
         validatorRef.current.dispose();
