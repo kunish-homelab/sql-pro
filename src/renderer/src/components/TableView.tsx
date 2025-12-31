@@ -3,6 +3,7 @@ import type { ExportOptions } from './ExportDialog';
 import type { UIFilterState } from '@/lib/filter-utils';
 import type { PendingChange, SortState, TableSchema } from '@/types/database';
 import {
+  AlertTriangle,
   ChevronLeft,
   ChevronRight,
   ChevronsLeft,
@@ -18,6 +19,19 @@ import {
 import { useCallback, useMemo, useRef, useState } from 'react';
 import { Button } from '@/components/ui/button';
 import { Input } from '@/components/ui/input';
+import {
+  Select,
+  SelectContent,
+  SelectItem,
+  SelectTrigger,
+  SelectValue,
+} from '@/components/ui/select';
+import {
+  Tooltip,
+  TooltipContent,
+  TooltipProvider,
+  TooltipTrigger,
+} from '@/components/ui/tooltip';
 import { useClientSearch } from '@/hooks/useClientSearch';
 import { useExport } from '@/hooks/useExport';
 import { usePendingChanges } from '@/hooks/usePendingChanges';
@@ -42,9 +56,16 @@ export function TableView({ tableOverride }: TableViewProps) {
   const selectedTable = tableOverride || storeSelectedTable;
   const dataTableRef = useRef<DataTableRef>(null);
 
+  // Page size options - 'all' means show all rows
+  const PAGE_SIZE_OPTIONS = [50, 100, 200, 500, 1000, 'all'] as const;
+  type PageSizeOption = (typeof PAGE_SIZE_OPTIONS)[number];
+
   // Pagination state (local since TanStack Query handles the data)
   const [page, setPage] = useState(1);
-  const [pageSize] = useState(100);
+  const [pageSizeOption, setPageSizeOption] = useState<PageSizeOption>(100);
+
+  // Calculate actual page size - use a very large number for 'all'
+  const pageSize = pageSizeOption === 'all' ? 1000000 : pageSizeOption;
   const [sort, setSort] = useState<SortState | null>(null);
   const [grouping, setGrouping] = useState<string[]>([]);
   const [showDiffPreview, setShowDiffPreview] = useState(false);
@@ -139,6 +160,13 @@ export function TableView({ tableOverride }: TableViewProps) {
   // Handle page change
   const handlePageChange = useCallback((newPage: number) => {
     setPage(newPage);
+  }, []);
+
+  // Handle page size change
+  const handlePageSizeChange = useCallback((value: string) => {
+    const newSize = value === 'all' ? 'all' : Number.parseInt(value, 10);
+    setPageSizeOption(newSize as PageSizeOption);
+    setPage(1); // Reset to first page when changing page size
   }, []);
 
   // Handle sort change from DataTable
@@ -409,47 +437,94 @@ export function TableView({ tableOverride }: TableViewProps) {
 
         {/* Pagination */}
         <div className="bg-background flex shrink-0 items-center justify-between border-t px-4 py-2">
-          <div className="text-muted-foreground text-sm">
-            Page {page} of {totalPages || 1}
+          <div className="flex items-center gap-4">
+            <div className="text-muted-foreground text-sm">
+              {pageSizeOption === 'all' ? (
+                <>Showing all {totalRows.toLocaleString()} rows</>
+              ) : (
+                <>
+                  Page {page} of {totalPages || 1}
+                  <span className="text-muted-foreground/70 ml-1">
+                    ({totalRows.toLocaleString()} total)
+                  </span>
+                </>
+              )}
+            </div>
+
+            {/* Page Size Selector */}
+            <div className="flex items-center gap-2">
+              <span className="text-muted-foreground text-sm">Rows:</span>
+              <Select
+                value={String(pageSizeOption)}
+                onValueChange={handlePageSizeChange}
+              >
+                <SelectTrigger size="sm" className="h-7 w-20">
+                  <SelectValue />
+                </SelectTrigger>
+                <SelectContent align="center">
+                  {PAGE_SIZE_OPTIONS.map((size) => (
+                    <SelectItem key={size} value={String(size)}>
+                      {size === 'all' ? 'All' : size.toLocaleString()}
+                    </SelectItem>
+                  ))}
+                </SelectContent>
+              </Select>
+              {pageSizeOption === 'all' && totalRows > 10000 && (
+                <TooltipProvider>
+                  <Tooltip>
+                    <TooltipTrigger asChild>
+                      <AlertTriangle className="text-warning h-4 w-4 text-amber-500" />
+                    </TooltipTrigger>
+                    <TooltipContent>
+                      <p>Loading all rows may be slow for large tables</p>
+                    </TooltipContent>
+                  </Tooltip>
+                </TooltipProvider>
+              )}
+            </div>
           </div>
-          <div className="flex items-center gap-1">
-            <Button
-              variant="outline"
-              size="icon"
-              className="h-8 w-8"
-              onClick={() => handlePageChange(1)}
-              disabled={page <= 1 || isLoading}
-            >
-              <ChevronsLeft className="h-4 w-4" />
-            </Button>
-            <Button
-              variant="outline"
-              size="icon"
-              className="h-8 w-8"
-              onClick={() => handlePageChange(page - 1)}
-              disabled={page <= 1 || isLoading}
-            >
-              <ChevronLeft className="h-4 w-4" />
-            </Button>
-            <Button
-              variant="outline"
-              size="icon"
-              className="h-8 w-8"
-              onClick={() => handlePageChange(page + 1)}
-              disabled={page >= totalPages || isLoading}
-            >
-              <ChevronRight className="h-4 w-4" />
-            </Button>
-            <Button
-              variant="outline"
-              size="icon"
-              className="h-8 w-8"
-              onClick={() => handlePageChange(totalPages)}
-              disabled={page >= totalPages || isLoading}
-            >
-              <ChevronsRight className="h-4 w-4" />
-            </Button>
-          </div>
+
+          {/* Pagination Controls - hidden when showing all */}
+          {pageSizeOption !== 'all' && (
+            <div className="flex items-center gap-1">
+              <Button
+                variant="outline"
+                size="icon"
+                className="h-8 w-8"
+                onClick={() => handlePageChange(1)}
+                disabled={page <= 1 || isLoading}
+              >
+                <ChevronsLeft className="h-4 w-4" />
+              </Button>
+              <Button
+                variant="outline"
+                size="icon"
+                className="h-8 w-8"
+                onClick={() => handlePageChange(page - 1)}
+                disabled={page <= 1 || isLoading}
+              >
+                <ChevronLeft className="h-4 w-4" />
+              </Button>
+              <Button
+                variant="outline"
+                size="icon"
+                className="h-8 w-8"
+                onClick={() => handlePageChange(page + 1)}
+                disabled={page >= totalPages || isLoading}
+              >
+                <ChevronRight className="h-4 w-4" />
+              </Button>
+              <Button
+                variant="outline"
+                size="icon"
+                className="h-8 w-8"
+                onClick={() => handlePageChange(totalPages)}
+                disabled={page >= totalPages || isLoading}
+              >
+                <ChevronsRight className="h-4 w-4" />
+              </Button>
+            </div>
+          )}
         </div>
       </div>
 

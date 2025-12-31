@@ -30,6 +30,7 @@ coverage
 *.bak
 *.tmp
 
+docs/.vitepress/cache
 .worktrees
 .auto-claude/
 .claude_settings.json

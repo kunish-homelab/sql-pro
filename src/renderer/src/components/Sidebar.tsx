@@ -22,6 +22,7 @@ import { sqlPro } from '@/lib/api';
 import { cn } from '@/lib/utils';
 import {
   useConnectionStore,
+  useDataTabsStore,
   useSettingsStore,
   useTableDataStore,
   useTableFont,
@@ -44,6 +45,7 @@ export function Sidebar({ onOpenDatabase }: SidebarProps) {
   } = useConnectionStore();
   const { setTableData, setIsLoading, setError, resetConnection } =
     useTableDataStore();
+  const { openTable } = useDataTabsStore();
 
   // Expansion state for schemas (key is schema name)
   const [expandedSchemas, setExpandedSchemas] = useState<
@@ -150,6 +152,8 @@ export function Sidebar({ onOpenDatabase }: SidebarProps) {
       if (!connection || !activeConnectionId) return;
 
       setSelectedTable(table);
+      // Open the table in a data tab (or switch to existing tab)
+      openTable(activeConnectionId, table);
       resetConnection(activeConnectionId);
       setIsLoading(activeConnectionId, true);
 
@@ -189,6 +193,7 @@ export function Sidebar({ onOpenDatabase }: SidebarProps) {
       connection,
       activeConnectionId,
       setSelectedTable,
+      openTable,
       resetConnection,
       setIsLoading,
       setTableData,

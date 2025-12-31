@@ -34,7 +34,6 @@ export function DatabaseView({ onOpenDatabase }: DatabaseViewProps) {
     useConnectionStore();
   const { hasChanges } = useChangesStore();
   const {
-    openTable,
     getActiveTab,
     tabsByConnection,
     setActiveConnectionId: setDataTabsActiveConnection,
@@ -52,10 +51,6 @@ export function DatabaseView({ onOpenDatabase }: DatabaseViewProps) {
     ? tabsByConnection[activeConnectionId]?.tabs || []
     : [];
 
-  // Track last opened table to prevent infinite loops
-  const lastOpenedTableRef = useRef<string | null>(null);
-  const isUpdatingFromTabRef = useRef(false);
-
   // Sync data tabs store with connection
   useEffect(() => {
     if (activeConnectionId) {
@@ -63,44 +58,21 @@ export function DatabaseView({ onOpenDatabase }: DatabaseViewProps) {
     }
   }, [activeConnectionId, setDataTabsActiveConnection]);
 
-  // When a table is selected from the sidebar, open it in a new tab
+  // When active data tab changes (user clicks a tab), sync the selected table for schema details panel
+  const prevActiveDataTabIdRef = useRef<string | null>(null);
   useEffect(() => {
-    if (selectedTable && activeConnectionId && !isUpdatingFromTabRef.current) {
-      const tableKey = `${selectedTable.schema || 'main'}.${selectedTable.name}`;
-      // Only open if this is a different table than we last opened
-      if (lastOpenedTableRef.current !== tableKey) {
-        lastOpenedTableRef.current = tableKey;
-        openTable(activeConnectionId, selectedTable);
-      }
-    }
-  }, [selectedTable, activeConnectionId, openTable]);
-
-  // When active data tab changes, update selected table for schema details
-  useEffect(() => {
-    let timeoutId: ReturnType<typeof setTimeout> | null = null;
-
-    if (activeDataTab) {
+    if (activeDataTab && activeDataTab.id !== prevActiveDataTabIdRef.current) {
+      prevActiveDataTabIdRef.current = activeDataTab.id;
+      // Update selectedTable to match the active tab (for schema panel)
       const activeTableKey = `${activeDataTab.table.schema || 'main'}.${activeDataTab.table.name}`;
       const selectedTableKey = selectedTable
         ? `${selectedTable.schema || 'main'}.${selectedTable.name}`
         : null;
 
       if (activeTableKey !== selectedTableKey) {
-        isUpdatingFromTabRef.current = true;
-        lastOpenedTableRef.current = activeTableKey;
         setSelectedTable(activeDataTab.table);
-        // Reset the flag after the state update
-        timeoutId = setTimeout(() => {
-          isUpdatingFromTabRef.current = false;
-        }, 0);
       }
     }
-
-    return () => {
-      if (timeoutId) {
-        clearTimeout(timeoutId);
-      }
-    };
   }, [activeDataTab, selectedTable, setSelectedTable]);
 
   // The table to display - from active data tab or selected table
