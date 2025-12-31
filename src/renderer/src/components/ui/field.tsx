@@ -199,6 +199,7 @@ function FieldError({
       return uniqueErrors[0]?.message;
     }
 
+    /* eslint-disable react/no-array-index-key -- Error messages may be duplicated, index is stable for static list */
     return (
       <ul className="ml-4 flex list-disc flex-col gap-1">
         {uniqueErrors.map(
@@ -207,6 +208,7 @@ function FieldError({
         )}
       </ul>
     );
+    /* eslint-enable react/no-array-index-key */
   }, [children, errors]);
 
   if (!content) {

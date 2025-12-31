@@ -50,4 +50,5 @@ function Badge({
   });
 }
 
+/* eslint-disable react-refresh/only-export-components -- Intentional: exports variant utility */
 export { Badge, badgeVariants };

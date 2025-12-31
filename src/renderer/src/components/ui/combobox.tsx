@@ -280,6 +280,7 @@ function useComboboxAnchor() {
   return React.useRef<HTMLDivElement | null>(null);
 }
 
+/* eslint-disable react-refresh/only-export-components -- Intentional: exports useComboboxAnchor hook for anchor positioning */
 export {
   Combobox,
   ComboboxChip,

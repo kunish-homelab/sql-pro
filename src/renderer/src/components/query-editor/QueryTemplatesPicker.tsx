@@ -30,6 +30,7 @@ import {
   SelectTrigger,
   SelectValue,
 } from '@/components/ui/select';
+import { SqlHighlight } from '@/components/ui/sql-highlight';
 import { Textarea } from '@/components/ui/textarea';
 import {
   Tooltip,
@@ -97,9 +98,11 @@ const TemplateCard = memo(
         <p className="text-muted-foreground line-clamp-2 text-sm">
           {template.description}
         </p>
-        <pre className="bg-muted line-clamp-3 overflow-hidden rounded p-2 font-mono text-xs">
-          {template.query}
-        </pre>
+        <SqlHighlight
+          code={template.query}
+          maxLines={3}
+          className="bg-muted rounded p-2"
+        />
         <div className="flex items-center justify-end gap-1 opacity-0 transition-opacity group-hover:opacity-100">
           <TooltipProvider delay={200}>
             <Tooltip>

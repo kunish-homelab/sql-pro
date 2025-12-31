@@ -694,6 +694,7 @@ function SidebarMenuSubButton({
   });
 }
 
+/* eslint-disable react-refresh/only-export-components -- Intentional: exports useSidebar hook for sidebar state management */
 export {
   Sidebar,
   SidebarContent,

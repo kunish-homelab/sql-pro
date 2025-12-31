@@ -60,7 +60,9 @@ function Carousel({
 
   const onSelect = React.useCallback((api: CarouselApi) => {
     if (!api) return;
+    // eslint-disable-next-line react-hooks-extra/no-direct-set-state-in-use-effect -- Intentional: sync state with embla-carousel events
     setCanScrollPrev(api.canScrollPrev());
+    // eslint-disable-next-line react-hooks-extra/no-direct-set-state-in-use-effect -- Intentional: sync state with embla-carousel events
     setCanScrollNext(api.canScrollNext());
   }, []);
 
@@ -228,6 +230,7 @@ function CarouselNext({
   );
 }
 
+/* eslint-disable react-refresh/only-export-components -- Intentional: exports useCarousel hook for external control */
 export {
   Carousel,
   type CarouselApi,

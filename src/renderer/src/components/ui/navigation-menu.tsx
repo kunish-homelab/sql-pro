@@ -156,6 +156,7 @@ function NavigationMenuIndicator({
   );
 }
 
+/* eslint-disable react-refresh/only-export-components -- Intentional: exports navigationMenuTriggerStyle for external styling */
 export {
   NavigationMenu,
   NavigationMenuContent,

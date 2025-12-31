@@ -56,4 +56,5 @@ function Button({
   );
 }
 
+/* eslint-disable react-refresh/only-export-components -- Intentional: exports variant utility */
 export { Button, buttonVariants };

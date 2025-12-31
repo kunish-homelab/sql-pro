@@ -40,4 +40,5 @@ function Toggle({
   );
 }
 
+/* eslint-disable react-refresh/only-export-components -- Intentional: exports toggleVariants for external styling */
 export { Toggle, toggleVariants };

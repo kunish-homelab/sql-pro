@@ -80,6 +80,7 @@ function ButtonGroupSeparator({
   );
 }
 
+/* eslint-disable react-refresh/only-export-components -- Intentional: exports variant utility */
 export {
   ButtonGroup,
   ButtonGroupSeparator,

@@ -359,7 +359,7 @@ export const TableHeader = memo(
     }
 
     return (
-      <thead className="bg-background sticky top-0 z-10">
+      <thead className="bg-background after:bg-border sticky top-0 z-20 after:pointer-events-none after:absolute after:inset-x-0 after:bottom-0 after:h-px">
         {table.getHeaderGroups().map((headerGroup) => (
           <tr key={headerGroup.id}>
             {headerGroup.headers.map((header) => {

@@ -80,4 +80,5 @@ function TabsContent({ className, ...props }: TabsPrimitive.Panel.Props) {
   );
 }
 
+/* eslint-disable react-refresh/only-export-components -- Intentional: exports tabsListVariants for external styling */
 export { Tabs, TabsContent, TabsList, tabsListVariants, TabsTrigger };

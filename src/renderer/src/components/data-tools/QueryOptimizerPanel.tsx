@@ -23,6 +23,7 @@ import {
   DialogTitle,
 } from '@/components/ui/dialog';
 import { ScrollArea } from '@/components/ui/scroll-area';
+import { SqlHighlight } from '@/components/ui/sql-highlight';
 import { cn } from '@/lib/utils';
 
 interface Suggestion {
@@ -190,9 +191,17 @@ export const QueryOptimizerPanel = memo(
                 Analyze
               </Button>
             </div>
-            <pre className="bg-muted line-clamp-3 overflow-hidden rounded-lg p-3 font-mono text-sm">
-              {query || 'No query to analyze'}
-            </pre>
+            {query ? (
+              <SqlHighlight
+                code={query}
+                maxLines={3}
+                className="bg-muted rounded-lg p-3 text-sm"
+              />
+            ) : (
+              <pre className="bg-muted text-muted-foreground rounded-lg p-3 font-mono text-sm">
+                No query to analyze
+              </pre>
+            )}
           </div>
 
           {/* Error */}

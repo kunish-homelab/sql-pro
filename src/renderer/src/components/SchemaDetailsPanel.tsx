@@ -20,6 +20,7 @@ import {
 import { useState } from 'react';
 import { Button } from '@/components/ui/button';
 import { ScrollArea } from '@/components/ui/scroll-area';
+import { SqlHighlight } from '@/components/ui/sql-highlight';
 import { cn } from '@/lib/utils';
 
 interface SchemaDetailsPanelProps {
@@ -301,9 +302,7 @@ function IndexesList({ indexes }: IndexesListProps) {
           </div>
           {index.sql && (
             <div className="mt-2">
-              <code className="bg-muted block overflow-x-auto rounded p-2 font-mono text-xs whitespace-pre-wrap">
-                {index.sql}
-              </code>
+              <SqlHighlight code={index.sql} className="bg-muted rounded p-2" />
             </div>
           )}
         </div>
@@ -371,9 +370,10 @@ function TriggersList({ triggers }: TriggersListProps) {
           </div>
           {trigger.sql && (
             <div className="mt-2">
-              <code className="bg-muted block overflow-x-auto rounded p-2 font-mono text-xs whitespace-pre-wrap">
-                {trigger.sql}
-              </code>
+              <SqlHighlight
+                code={trigger.sql}
+                className="bg-muted rounded p-2"
+              />
             </div>
           )}
         </div>
@@ -387,9 +387,5 @@ interface SqlBlockProps {
 }
 
 function SqlBlock({ sql }: SqlBlockProps) {
-  return (
-    <code className="bg-muted block overflow-x-auto rounded p-3 font-mono text-xs whitespace-pre-wrap">
-      {sql}
-    </code>
-  );
+  return <SqlHighlight code={sql} className="bg-muted rounded p-3" />;
 }

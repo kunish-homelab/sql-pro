@@ -45,6 +45,7 @@ import {
   ResizablePanel as ResizablePanelUI,
 } from '@/components/ui/resizable';
 import { ScrollArea } from '@/components/ui/scroll-area';
+import { SqlHighlight } from '@/components/ui/sql-highlight';
 import { sqlPro } from '@/lib/api';
 import { generateSuggestions } from '@/lib/query-plan-analyzer';
 import { cn } from '@/lib/utils';
@@ -606,9 +607,11 @@ export function QueryEditor() {
                               {new Date(item.executedAt).toLocaleTimeString()}
                             </span>
                           </div>
-                          <p className="mt-1 line-clamp-3 pr-6 font-mono text-xs break-all">
-                            {item.queryText}
-                          </p>
+                          <SqlHighlight
+                            code={item.queryText}
+                            maxLines={3}
+                            className="mt-1 pr-6"
+                          />
                         </button>
                         <Button
                           variant="ghost"

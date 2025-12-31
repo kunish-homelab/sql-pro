@@ -18,9 +18,9 @@ import {
   DialogHeader,
   DialogTitle,
 } from '@/components/ui/dialog';
+import { SqlHighlight } from '@/components/ui/sql-highlight';
 import { Textarea } from '@/components/ui/textarea';
 import { useNLToSQL } from '@/hooks/useAI';
-import { cn } from '@/lib/utils';
 
 interface NLToSQLDialogProps {
   open: boolean;
@@ -160,14 +160,9 @@ export function NLToSQLDialog({
                       <ArrowRight className="ml-2 h-4 w-4" />
                     </Button>
                   </div>
-                  <pre
-                    className={cn(
-                      'bg-muted overflow-x-auto rounded-lg p-4 font-mono text-sm',
-                      'max-h-[200px] overflow-y-auto'
-                    )}
-                  >
-                    {generatedSQL}
-                  </pre>
+                  <div className="bg-muted max-h-[200px] overflow-auto rounded-lg p-4">
+                    <SqlHighlight code={generatedSQL} className="text-sm" />
+                  </div>
                 </div>
               )}
 
