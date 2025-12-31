@@ -72,6 +72,16 @@ interface QueryTabsState {
     tabId: string,
     isExecuting: boolean
   ) => void;
+  updateTabCursorPosition: (
+    connectionId: string,
+    tabId: string,
+    cursorPosition: { line: number; column: number }
+  ) => void;
+  updateTabScrollTop: (
+    connectionId: string,
+    tabId: string,
+    scrollTop: number
+  ) => void;
   duplicateTab: (connectionId: string, tabId: string) => string;
   reorderTabs: (
     connectionId: string,
@@ -467,6 +477,44 @@ export const useQueryTabsStore = create<QueryTabsState>()(
                 ...connState,
                 tabs: connState.tabs.map((tab) =>
                   tab.id === tabId ? { ...tab, isExecuting } : tab
+                ),
+              },
+            },
+          };
+        });
+      },
+
+      updateTabCursorPosition: (connectionId, tabId, cursorPosition) => {
+        set((state) => {
+          const connState = state.tabsByConnection[connectionId];
+          if (!connState) return state;
+
+          return {
+            tabsByConnection: {
+              ...state.tabsByConnection,
+              [connectionId]: {
+                ...connState,
+                tabs: connState.tabs.map((tab) =>
+                  tab.id === tabId ? { ...tab, cursorPosition } : tab
+                ),
+              },
+            },
+          };
+        });
+      },
+
+      updateTabScrollTop: (connectionId, tabId, scrollTop) => {
+        set((state) => {
+          const connState = state.tabsByConnection[connectionId];
+          if (!connState) return state;
+
+          return {
+            tabsByConnection: {
+              ...state.tabsByConnection,
+              [connectionId]: {
+                ...connState,
+                tabs: connState.tabs.map((tab) =>
+                  tab.id === tabId ? { ...tab, scrollTop } : tab
                 ),
               },
             },
