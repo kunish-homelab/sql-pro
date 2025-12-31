@@ -1,6 +1,7 @@
 import type { QueryResult } from '@/types/database';
 import { create } from 'zustand';
 import { persist } from 'zustand/middleware';
+import { useSettingsStore } from './settings-store';
 
 export interface QueryTab {
   id: string;
@@ -768,6 +769,18 @@ export const useQueryTabsStore = create<QueryTabsState>()(
         ),
         activeConnectionId: state.activeConnectionId,
       }),
+      merge: (persistedState, currentState) => {
+        // Check if session restoration is enabled
+        const restoreSession = useSettingsStore.getState().restoreSession;
+
+        // If session restoration is disabled, return default state
+        if (!restoreSession) {
+          return currentState;
+        }
+
+        // Otherwise, merge the persisted state
+        return { ...currentState, ...(persistedState as object) };
+      },
     }
   )
 );
