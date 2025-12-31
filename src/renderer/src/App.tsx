@@ -8,6 +8,7 @@ import { initMockMode, isMockMode } from '@/lib/mock-api';
 import { queryClient } from '@/lib/query-client';
 import { router } from '@/routes';
 import {
+  useAIStore,
   useConnectionStore,
   useQueryTabsStore,
   useTableDataStore,
@@ -22,11 +23,13 @@ function App(): React.JSX.Element {
   const { setActiveConnectionId: setTableDataActiveConnection } =
     useTableDataStore();
   const { loadTheme } = useThemeStore();
+  const { loadSettings: loadAISettings } = useAIStore();
 
-  // Load theme from main process on mount
+  // Load theme and AI settings from main process on mount
   useEffect(() => {
     loadTheme();
-  }, [loadTheme]);
+    loadAISettings();
+  }, [loadTheme, loadAISettings]);
 
   // Sync active connection across stores
   useEffect(() => {
