@@ -11,6 +11,7 @@ import {
   ChevronRight,
   Clock,
   Database,
+  Download,
   HardDrive,
   LayoutList,
   Lightbulb,
@@ -52,6 +53,7 @@ import { SqlHighlight } from '@/components/ui/sql-highlight';
 import { cn } from '@/lib/utils';
 import { convertPlanToFlow } from '@/lib/query-plan-analyzer';
 import { ExecutionPlanNode as ExecutionPlanNodeComponent } from './ExecutionPlanNode';
+import { exportDiagramAsPng } from '../er-diagram/utils/export-diagram';
 import '@xyflow/react/dist/style.css';
 
 // Register custom node types for execution plan
@@ -166,6 +168,7 @@ export const QueryOptimizerPanel = memo(
     const [viewMode, setViewMode] = useState<ViewMode>('tree');
     const [selectedNode, setSelectedNode] =
       useState<ExecutionPlanFlowNode | null>(null);
+    const [isExporting, setIsExporting] = useState(false);
 
     const handleAnalyze = useCallback(async () => {
       if (!onAnalyze || !query.trim()) return;
@@ -229,6 +232,28 @@ export const QueryOptimizerPanel = memo(
       },
       []
     );
+
+    // Handle PNG export
+    const handleExportPng = useCallback(async () => {
+      setIsExporting(true);
+      try {
+        const container = document.querySelector(
+          '.query-optimizer-flow'
+        ) as HTMLElement;
+
+        if (!container) {
+          return;
+        }
+
+        await exportDiagramAsPng(container, {
+          filename: `query-execution-plan-${Date.now()}.png`,
+        });
+      } catch (error) {
+        // Error is logged by exportDiagramAsPng
+      } finally {
+        setIsExporting(false);
+      }
+    }, []);
 
     return (
       <Dialog open={open} onOpenChange={onOpenChange}>
@@ -335,6 +360,18 @@ export const QueryOptimizerPanel = memo(
                   >
                     <Network className="h-4 w-4" />
                   </Button>
+                  {viewMode === 'diagram' && (
+                    <Button
+                      variant="ghost"
+                      size="sm"
+                      onClick={handleExportPng}
+                      disabled={isExporting}
+                      className="h-8 px-2"
+                      title="Export as PNG"
+                    >
+                      <Download className="h-4 w-4" />
+                    </Button>
+                  )}
                 </div>
               </div>
 
@@ -352,7 +389,7 @@ export const QueryOptimizerPanel = memo(
               )}
 
               {viewMode === 'diagram' && (
-                <div className="bg-muted/30 h-96 rounded-lg border">
+                <div className="bg-muted/30 query-optimizer-flow h-96 rounded-lg border">
                   <ReactFlow
                     nodes={nodes}
                     edges={edges}
