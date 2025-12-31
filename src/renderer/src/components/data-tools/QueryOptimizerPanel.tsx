@@ -29,6 +29,7 @@ import type { ErrorInfo, ReactNode } from 'react';
 import {
   Background,
   Controls,
+  MiniMap,
   ReactFlow,
   useEdgesState,
   useNodesState,
@@ -494,13 +495,19 @@ export const QueryOptimizerPanel = memo(
                         nodeTypes={nodeTypes}
                         colorMode={resolvedTheme as ColorMode}
                         fitView
-                        fitViewOptions={{ padding: 0.2 }}
-                        minZoom={0.1}
-                        maxZoom={2}
+                        fitViewOptions={{ padding: 0.3, maxZoom: 1 }}
+                        minZoom={0.05}
+                        maxZoom={1.5}
                         proOptions={{ hideAttribution: true }}
                       >
                         <Background />
                         <Controls showInteractive={false} />
+                        <MiniMap
+                          nodeStrokeWidth={3}
+                          zoomable
+                          pannable
+                          className="bg-background! border-border!"
+                        />
                       </ReactFlow>
                     )}
                   </div>
