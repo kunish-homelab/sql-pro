@@ -11,5 +11,6 @@
     { "path": "./src/preload/tsconfig.json" },
     { "path": "./src/renderer/tsconfig.json" }
   ],
-  "files": []
+  "files": [],
+  "exclude": ["plugin-sdk"]
 }
