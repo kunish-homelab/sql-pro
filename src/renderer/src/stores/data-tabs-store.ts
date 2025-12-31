@@ -12,6 +12,8 @@ export interface DataTab {
   createdAt: number;
   /** Connection ID this tab belongs to */
   connectionId: string;
+  /** Search term for filtering results in this tab */
+  searchTerm: string;
 }
 
 interface ConnectionDataTabState {
@@ -85,6 +87,15 @@ interface DataTabsState {
   updateTabTitle: (connectionId: string, tabId: string, title: string) => void;
 
   /**
+   * Update tab search term
+   */
+  updateTabSearchTerm: (
+    connectionId: string,
+    tabId: string,
+    searchTerm: string
+  ) => void;
+
+  /**
    * Check if a table is already open in a tab
    */
   findTabByTable: (
@@ -113,6 +124,7 @@ const createDataTab = (connectionId: string, table: TableSchema): DataTab => ({
   table,
   title: table.name,
   createdAt: Date.now(),
+  searchTerm: '',
 });
 
 const createDefaultConnectionState = (): ConnectionDataTabState => ({
@@ -372,6 +384,24 @@ export const useDataTabsStore = create<DataTabsState>()(
             tab.table.name === tableName &&
             (schema === undefined || tab.table.schema === schema)
         );
+      },
+
+      updateTabSearchTerm: (connectionId, tabId, searchTerm) => {
+        const state = get();
+        const connState = state.tabsByConnection[connectionId];
+        if (!connState) return;
+
+        set({
+          tabsByConnection: {
+            ...state.tabsByConnection,
+            [connectionId]: {
+              ...connState,
+              tabs: connState.tabs.map((tab) =>
+                tab.id === tabId ? { ...tab, searchTerm } : tab
+              ),
+            },
+          },
+        });
       },
 
       reset: () => {

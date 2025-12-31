@@ -41,6 +41,7 @@ import { convertUIFiltersToAPIFilters } from '@/lib/filter-utils';
 import {
   PAGE_SIZE_OPTIONS,
   useConnectionStore,
+  useDataTabsStore,
   usePageSize,
   useSettingsStore,
 } from '@/stores';
@@ -55,12 +56,21 @@ interface TableViewProps {
 }
 
 export function TableView({ tableOverride }: TableViewProps) {
-  const { connection, selectedTable: storeSelectedTable } =
-    useConnectionStore();
+  const {
+    connection,
+    selectedTable: storeSelectedTable,
+    activeConnectionId,
+  } = useConnectionStore();
+  const { getActiveTab, updateTabSearchTerm } = useDataTabsStore();
 
   // Use tableOverride if provided, otherwise fall back to store's selectedTable
   const selectedTable = tableOverride || storeSelectedTable;
   const dataTableRef = useRef<DataTableRef>(null);
+
+  // Get active tab for search term
+  const activeTab = activeConnectionId
+    ? getActiveTab(activeConnectionId)
+    : undefined;
 
   // Global page size setting
   const pageSizeOption = usePageSize();
@@ -76,7 +86,17 @@ export function TableView({ tableOverride }: TableViewProps) {
   const [showDiffPreview, setShowDiffPreview] = useState(false);
   const [showExportDialog, setShowExportDialog] = useState(false);
   const [filters, setFilters] = useState<UIFilterState[]>([]);
-  const [searchTerm, setSearchTerm] = useState('');
+
+  // Use search term from store (persisted per tab)
+  const searchTerm = activeTab?.searchTerm ?? '';
+  const setSearchTerm = useCallback(
+    (term: string) => {
+      if (activeConnectionId && activeTab?.id) {
+        updateTabSearchTerm(activeConnectionId, activeTab.id, term);
+      }
+    },
+    [activeConnectionId, activeTab?.id, updateTabSearchTerm]
+  );
 
   // Track the newly inserted row ID for auto-focus
   const [newRowId, setNewRowId] = useState<string | number | null>(null);
