@@ -46,6 +46,7 @@ import {
   SelectValue,
 } from '@/components/ui/select';
 import { Separator } from '@/components/ui/separator';
+import { Switch } from '@/components/ui/switch';
 import { cn } from '@/lib/utils';
 import {
   DEFAULT_MODELS,
@@ -95,6 +96,8 @@ export function SettingsDialog({ open, onOpenChange }: SettingsDialogProps) {
     setSyncAll,
     tabSize,
     setTabSize,
+    restoreSession,
+    setRestoreSession,
   } = useSettingsStore();
   const { isPro, activatedAt, features } = useProStore();
 
@@ -346,6 +349,30 @@ export function SettingsDialog({ open, onOpenChange }: SettingsDialogProps) {
                     {size}
                   </Button>
                 ))}
+              </div>
+            </div>
+
+            {/* Session Section */}
+            <div className="space-y-3">
+              <Label className="text-sm font-medium">Session</Label>
+              <div className="flex items-center justify-between rounded-lg border p-3">
+                <div className="space-y-0.5">
+                  <Label
+                    htmlFor="restore-session"
+                    className="text-sm font-medium cursor-pointer"
+                  >
+                    Restore session on startup
+                  </Label>
+                  <p className="text-muted-foreground text-xs">
+                    Automatically restore tabs and queries when you reopen the
+                    app
+                  </p>
+                </div>
+                <Switch
+                  id="restore-session"
+                  checked={restoreSession}
+                  onCheckedChange={setRestoreSession}
+                />
               </div>
             </div>
 
