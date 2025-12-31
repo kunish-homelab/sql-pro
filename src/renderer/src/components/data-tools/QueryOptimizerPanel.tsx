@@ -6,6 +6,7 @@ import type {
 } from '@/lib/query-plan-analyzer';
 import {
   AlertCircle,
+  AlertTriangle,
   ChevronDown,
   ChevronRight,
   Clock,
@@ -17,6 +18,7 @@ import {
   Network,
   Search,
   Table,
+  X,
   Zap,
 } from 'lucide-react';
 import { useTheme } from 'next-themes';
@@ -38,6 +40,14 @@ import {
   DialogTitle,
 } from '@/components/ui/dialog';
 import { ScrollArea } from '@/components/ui/scroll-area';
+import {
+  Sheet,
+  SheetClose,
+  SheetContent,
+  SheetDescription,
+  SheetHeader,
+  SheetTitle,
+} from '@/components/ui/sheet';
 import { SqlHighlight } from '@/components/ui/sql-highlight';
 import { cn } from '@/lib/utils';
 import { convertPlanToFlow } from '@/lib/query-plan-analyzer';
@@ -154,6 +164,8 @@ export const QueryOptimizerPanel = memo(
     const [suggestions, setSuggestions] = useState<Suggestion[]>([]);
     const [error, setError] = useState<string | null>(null);
     const [viewMode, setViewMode] = useState<ViewMode>('tree');
+    const [selectedNode, setSelectedNode] =
+      useState<ExecutionPlanFlowNode | null>(null);
 
     const handleAnalyze = useCallback(async () => {
       if (!onAnalyze || !query.trim()) return;
@@ -209,6 +221,14 @@ export const QueryOptimizerPanel = memo(
         setEdges(flowEdges);
       }
     }, [flowNodes, flowEdges, setNodes, setEdges]);
+
+    // Handle node click - show detail panel
+    const handleNodeClick = useCallback(
+      (_event: React.MouseEvent, node: ExecutionPlanFlowNode) => {
+        setSelectedNode(node);
+      },
+      []
+    );
 
     return (
       <Dialog open={open} onOpenChange={onOpenChange}>
@@ -338,6 +358,7 @@ export const QueryOptimizerPanel = memo(
                     edges={edges}
                     onNodesChange={onNodesChange}
                     onEdgesChange={onEdgesChange}
+                    onNodeClick={handleNodeClick}
                     nodeTypes={nodeTypes}
                     colorMode={resolvedTheme as ColorMode}
                     fitView
@@ -419,6 +440,170 @@ export const QueryOptimizerPanel = memo(
             </div>
           )}
         </DialogContent>
+
+        {/* Node Detail Panel */}
+        <Sheet
+          open={!!selectedNode}
+          onOpenChange={(open) => !open && setSelectedNode(null)}
+        >
+          <SheetContent className="w-[400px] sm:w-[540px]">
+            {selectedNode && (
+              <>
+                <SheetHeader>
+                  <SheetTitle className="flex items-center gap-2">
+                    {selectedNode.data.hasWarning && (
+                      <AlertTriangle className="text-amber-600 h-5 w-5" />
+                    )}
+                    {selectedNode.data.operation}
+                  </SheetTitle>
+                  <SheetDescription>
+                    Execution plan node details
+                  </SheetDescription>
+                </SheetHeader>
+
+                <div className="mt-6 space-y-6">
+                  {/* Operation Details */}
+                  <div className="space-y-2">
+                    <h3 className="text-sm font-medium">Operation</h3>
+                    <div className="bg-muted rounded-lg p-3">
+                      <p className="font-mono text-sm">
+                        {selectedNode.data.detail}
+                      </p>
+                    </div>
+                  </div>
+
+                  {/* Table/Index Info */}
+                  {(selectedNode.data.tableName ||
+                    selectedNode.data.indexName) && (
+                    <div className="space-y-2">
+                      <h3 className="text-sm font-medium">
+                        Table &amp; Index
+                      </h3>
+                      <div className="space-y-2">
+                        {selectedNode.data.tableName && (
+                          <div className="flex items-center gap-2">
+                            <Table className="text-muted-foreground h-4 w-4" />
+                            <span className="text-muted-foreground text-sm">
+                              Table:
+                            </span>
+                            <span className="font-mono text-sm font-medium">
+                              {selectedNode.data.tableName}
+                            </span>
+                          </div>
+                        )}
+                        {selectedNode.data.indexName && (
+                          <div className="flex items-center gap-2">
+                            <Zap className="text-muted-foreground h-4 w-4" />
+                            <span className="text-muted-foreground text-sm">
+                              Index:
+                            </span>
+                            <span className="font-mono text-sm font-medium">
+                              {selectedNode.data.indexName}
+                            </span>
+                          </div>
+                        )}
+                      </div>
+                    </div>
+                  )}
+
+                  {/* Performance Metrics */}
+                  {(selectedNode.data.estimatedCost !== undefined ||
+                    selectedNode.data.estimatedRows !== undefined) && (
+                    <div className="space-y-2">
+                      <h3 className="text-sm font-medium">
+                        Performance Metrics
+                      </h3>
+                      <div className="bg-muted/50 grid grid-cols-2 gap-4 rounded-lg p-4">
+                        {selectedNode.data.estimatedCost !== undefined && (
+                          <div className="text-center">
+                            <p className="text-2xl font-bold">
+                              {selectedNode.data.estimatedCost}
+                            </p>
+                            <p className="text-muted-foreground text-xs">
+                              Estimated Cost
+                            </p>
+                          </div>
+                        )}
+                        {selectedNode.data.estimatedRows !== undefined && (
+                          <div className="text-center">
+                            <p className="text-2xl font-bold">
+                              ~{selectedNode.data.estimatedRows}
+                            </p>
+                            <p className="text-muted-foreground text-xs">
+                              Estimated Rows
+                            </p>
+                          </div>
+                        )}
+                      </div>
+                    </div>
+                  )}
+
+                  {/* Warnings */}
+                  {selectedNode.data.hasWarning && (
+                    <div className="space-y-2">
+                      <h3 className="text-sm font-medium">Performance Warning</h3>
+                      <div
+                        className={cn(
+                          'flex items-start gap-3 rounded-lg border p-4',
+                          selectedNode.data.warningType === 'full-scan' &&
+                            'border-red-200 bg-red-50 dark:border-red-900 dark:bg-red-950/30',
+                          selectedNode.data.warningType === 'temp-btree' &&
+                            'border-amber-200 bg-amber-50 dark:border-amber-900 dark:bg-amber-950/30',
+                          selectedNode.data.warningType === 'subquery' &&
+                            'border-blue-200 bg-blue-50 dark:border-blue-900 dark:bg-blue-950/30',
+                          selectedNode.data.warningType === 'missing-index' &&
+                            'border-orange-200 bg-orange-50 dark:border-orange-900 dark:bg-orange-950/30'
+                        )}
+                      >
+                        <AlertTriangle
+                          className={cn(
+                            'h-5 w-5 shrink-0',
+                            selectedNode.data.warningType === 'full-scan' &&
+                              'text-red-600 dark:text-red-400',
+                            selectedNode.data.warningType === 'temp-btree' &&
+                              'text-amber-600 dark:text-amber-400',
+                            selectedNode.data.warningType === 'subquery' &&
+                              'text-blue-600 dark:text-blue-400',
+                            selectedNode.data.warningType === 'missing-index' &&
+                              'text-orange-600 dark:text-orange-400'
+                          )}
+                        />
+                        <div className="flex-1 space-y-1">
+                          <p className="font-medium">
+                            {selectedNode.data.warningType === 'full-scan' &&
+                              'Full Table Scan'}
+                            {selectedNode.data.warningType === 'temp-btree' &&
+                              'Temporary B-Tree'}
+                            {selectedNode.data.warningType === 'subquery' &&
+                              'Subquery Operation'}
+                            {selectedNode.data.warningType === 'missing-index' &&
+                              'Missing Index'}
+                          </p>
+                          <p className="text-muted-foreground text-sm">
+                            {selectedNode.data.warningType === 'full-scan' &&
+                              'This operation scans all rows in the table. Consider adding an index to improve performance.'}
+                            {selectedNode.data.warningType === 'temp-btree' &&
+                              'A temporary structure is created for sorting. Adding an index on sort columns may help.'}
+                            {selectedNode.data.warningType === 'subquery' &&
+                              'Subqueries can be expensive. Consider rewriting as a JOIN if possible.'}
+                            {selectedNode.data.warningType === 'missing-index' &&
+                              'An index could improve performance for this operation.'}
+                          </p>
+                        </div>
+                      </div>
+                    </div>
+                  )}
+                </div>
+
+                <SheetClose className="absolute right-4 top-4">
+                  <Button variant="ghost" size="icon">
+                    <X className="h-4 w-4" />
+                  </Button>
+                </SheetClose>
+              </>
+            )}
+          </SheetContent>
+        </Sheet>
       </Dialog>
     );
   }
