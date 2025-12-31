@@ -10,7 +10,6 @@ import {
   TrendingUp,
 } from 'lucide-react';
 import { memo, useMemo, useState } from 'react';
-import { Button } from '@/components/ui/button';
 import {
   Collapsible,
   CollapsibleContent,
@@ -159,29 +158,25 @@ export const ColumnStats = memo(
 
     return (
       <Collapsible open={isOpen} onOpenChange={setIsOpen}>
-        <CollapsibleTrigger asChild>
-          <Button
-            variant="ghost"
-            size="sm"
-            className={cn(
-              'h-8 w-full justify-between rounded-none border-t px-4',
-              'hover:bg-muted/50 transition-all duration-200',
-              className
-            )}
-          >
-            <div className="flex items-center gap-2">
-              <BarChart3 className="text-muted-foreground h-3.5 w-3.5" />
-              <span className="text-xs font-medium">Column Statistics</span>
-              <span className="text-muted-foreground text-[10px]">
-                ({columns.length} columns, {data.length} rows)
-              </span>
-            </div>
-            {isOpen ? (
-              <ChevronDown className="text-muted-foreground h-3.5 w-3.5 transition-transform" />
-            ) : (
-              <ChevronUp className="text-muted-foreground h-3.5 w-3.5 transition-transform" />
-            )}
-          </Button>
+        <CollapsibleTrigger
+          className={cn(
+            'flex h-8 w-full items-center justify-between rounded-none border-t px-4',
+            'hover:bg-muted/50 transition-all duration-200',
+            className
+          )}
+        >
+          <div className="flex items-center gap-2">
+            <BarChart3 className="text-muted-foreground h-3.5 w-3.5" />
+            <span className="text-xs font-medium">Column Statistics</span>
+            <span className="text-muted-foreground text-[10px]">
+              ({columns.length} columns, {data.length} rows)
+            </span>
+          </div>
+          {isOpen ? (
+            <ChevronDown className="text-muted-foreground h-3.5 w-3.5 transition-transform" />
+          ) : (
+            <ChevronUp className="text-muted-foreground h-3.5 w-3.5 transition-transform" />
+          )}
         </CollapsibleTrigger>
 
         <CollapsibleContent className="animate-in slide-in-from-top-2 duration-200">
@@ -289,9 +284,9 @@ export const ColumnStats = memo(
                       Top Values
                     </span>
                     <div className="space-y-1">
-                      {selectedStats.topValues.map((item, idx) => (
+                      {selectedStats.topValues.map((item) => (
                         <div
-                          key={idx}
+                          key={`${String(item.value)}-${item.count}`}
                           className="flex items-center gap-2 text-xs"
                         >
                           <div className="min-w-0 flex-1">

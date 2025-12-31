@@ -1,3 +1,4 @@
+/* eslint-disable react/no-array-index-key -- Skeleton components use static generated lists where index keys are safe */
 import { Database } from 'lucide-react';
 import { cn } from '@/lib/utils';
 
@@ -69,15 +70,17 @@ export function AnimatedLoader({
 interface SkeletonRowProps {
   columns: number;
   className?: string;
+  style?: React.CSSProperties;
 }
 
 /**
  * Animated skeleton row for table loading states
  */
-export function SkeletonRow({ columns, className }: SkeletonRowProps) {
+export function SkeletonRow({ columns, className, style }: SkeletonRowProps) {
   return (
     <div
       className={cn('flex h-9 animate-pulse items-center border-b', className)}
+      style={style}
     >
       {/* Checkbox skeleton */}
       <div className="w-10 shrink-0 px-2">
@@ -86,7 +89,7 @@ export function SkeletonRow({ columns, className }: SkeletonRowProps) {
       {/* Column skeletons */}
       {Array.from({ length: columns }).map((_, i) => (
         <div
-          key={i}
+          key={`skeleton-col-${i}`}
           className="flex-1 px-2"
           style={{
             animationDelay: `${i * 50}ms`,
@@ -126,7 +129,7 @@ export function SkeletonTable({
           <div className="bg-muted-foreground/20 h-4 w-4 rounded" />
         </div>
         {Array.from({ length: columns }).map((_, i) => (
-          <div key={i} className="flex-1 px-2">
+          <div key={`skeleton-header-${i}`} className="flex-1 px-2">
             <div
               className="bg-muted-foreground/20 h-4 rounded"
               style={{ width: `${Math.random() * 30 + 50}%` }}
@@ -137,7 +140,7 @@ export function SkeletonTable({
       {/* Row skeletons */}
       {Array.from({ length: rows }).map((_, i) => (
         <SkeletonRow
-          key={i}
+          key={`skeleton-row-${i}`}
           columns={columns}
           className="animate-in fade-in duration-300"
           style={

@@ -2,7 +2,6 @@ import type { UIFilterState } from '@/lib/filter-utils';
 import type { ColumnSchema } from '@/types/database';
 import { Hash, Sparkles, Tag, X } from 'lucide-react';
 import { memo, useMemo } from 'react';
-import { Button } from '@/components/ui/button';
 import {
   Tooltip,
   TooltipContent,
@@ -153,8 +152,8 @@ export const QuickFilterTags = memo(
         (f) =>
           f.column === suggestion.column &&
           (suggestion.value === null
-            ? f.operator === 'is_null'
-            : f.value === suggestion.value)
+            ? f.uiOperator === 'is_null'
+            : f.value === String(suggestion.value))
       );
     };
 
@@ -166,14 +165,18 @@ export const QuickFilterTags = memo(
         const filter: UIFilterState =
           suggestion.value === null
             ? {
+                id: `quick-${suggestion.column}-null`,
                 column: suggestion.column,
-                operator: 'is_null',
-                value: null,
+                columnType: 'text',
+                uiOperator: 'is_null',
+                value: '',
               }
             : {
+                id: `quick-${suggestion.column}-${String(suggestion.value)}`,
                 column: suggestion.column,
-                operator: 'equals',
-                value: suggestion.value as string | number,
+                columnType: 'text',
+                uiOperator: 'equals',
+                value: String(suggestion.value),
               };
         onFilterAdd(filter);
       }
@@ -219,19 +222,19 @@ export const QuickFilterTags = memo(
         </div>
 
         <div className="flex flex-wrap items-center gap-1.5">
-          {suggestions.map((suggestion, idx) => {
+          {suggestions.map((suggestion) => {
             const isActive = isFilterActive(suggestion);
 
             return (
-              <Tooltip key={idx}>
-                <TooltipTrigger asChild>
-                  <Button
-                    variant={isActive ? 'default' : 'outline'}
-                    size="xs"
+              <Tooltip key={`${suggestion.column}-${String(suggestion.value)}`}>
+                <TooltipTrigger>
+                  <button
                     onClick={() => handleToggle(suggestion)}
                     className={cn(
-                      'h-6 gap-1 transition-all duration-150',
-                      isActive && 'shadow-sm',
+                      'inline-flex h-6 items-center gap-1 rounded-md border px-2 text-xs font-medium transition-all duration-150',
+                      isActive
+                        ? 'bg-primary text-primary-foreground shadow-sm'
+                        : 'bg-background hover:bg-muted',
                       suggestion.type === 'null' && !isActive && 'border-dashed'
                     )}
                   >
@@ -249,7 +252,7 @@ export const QuickFilterTags = memo(
                         ? 'is null'
                         : `= ${formatValue(suggestion.value)}`}
                     </span>
-                  </Button>
+                  </button>
                 </TooltipTrigger>
                 <TooltipContent side="bottom" className="text-xs">
                   <div className="space-y-1">
