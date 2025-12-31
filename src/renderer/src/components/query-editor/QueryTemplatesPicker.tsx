@@ -243,7 +243,7 @@ function NewTemplateDialog({
               value={query}
               onChange={(e) => setQuery(e.target.value)}
               placeholder="SELECT * FROM table_name;"
-              className="min-h-[120px] font-mono"
+              className="min-h-30 font-mono"
             />
           </div>
         </div>
@@ -346,7 +346,7 @@ export const QueryTemplatesPicker = memo(
                     setSelectedCategory(value as TemplateCategory | 'all')
                   }
                 >
-                  <SelectTrigger className="w-[120px]">
+                  <SelectTrigger className="w-30">
                     <SelectValue />
                   </SelectTrigger>
                   <SelectContent>

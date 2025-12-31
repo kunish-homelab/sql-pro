@@ -113,6 +113,7 @@ Global action shortcuts available throughout the application.
 | Action                  | macOS                                            | Windows/Linux                                     |
 | ----------------------- | ------------------------------------------------ | ------------------------------------------------- |
 | Refresh Schema          | <kbd>Cmd</kbd> + <kbd>Shift</kbd> + <kbd>R</kbd> | <kbd>Ctrl</kbd> + <kbd>Shift</kbd> + <kbd>R</kbd> |
+| Refresh Table           | <kbd>Cmd</kbd> + <kbd>R</kbd>                    | <kbd>Ctrl</kbd> + <kbd>R</kbd>                    |
 | View Unsaved Changes    | <kbd>Cmd</kbd> + <kbd>Shift</kbd> + <kbd>S</kbd> | <kbd>Ctrl</kbd> + <kbd>Shift</kbd> + <kbd>S</kbd> |
 | Open Database           | <kbd>Cmd</kbd> + <kbd>O</kbd>                    | <kbd>Ctrl</kbd> + <kbd>O</kbd>                    |
 | Open Settings           | <kbd>Cmd</kbd> + <kbd>,</kbd>                    | <kbd>Ctrl</kbd> + <kbd>,</kbd>                    |
@@ -204,6 +205,7 @@ The following table lists all commands available in the Command Palette, organiz
 | -------------------- | ----------------------------------------------------- | ------------------------------------- |
 | Execute Query        | <kbd>Cmd/Ctrl</kbd> + <kbd>Enter</kbd>                | Run the current SQL query             |
 | Refresh Schema       | <kbd>Cmd/Ctrl</kbd> + <kbd>Shift</kbd> + <kbd>R</kbd> | Reload the database schema            |
+| Refresh Table        | <kbd>Cmd/Ctrl</kbd> + <kbd>R</kbd>                    | Reload the current table data         |
 | View Unsaved Changes | <kbd>Cmd/Ctrl</kbd> + <kbd>Shift</kbd> + <kbd>S</kbd> | Open the pending changes diff preview |
 | Open Database        | <kbd>Cmd/Ctrl</kbd> + <kbd>O</kbd>                    | Open a database file                  |
 | Close Database       | —                                                     | Disconnect from the current database  |

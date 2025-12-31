@@ -2,6 +2,7 @@ import { QueryClientProvider } from '@tanstack/react-query';
 import { RouterProvider } from '@tanstack/react-router';
 import { useEffect } from 'react';
 import { ErrorBoundary } from '@/components/ErrorBoundary';
+import { SqlLogPanel } from '@/components/SqlLogPanel';
 import { TooltipProvider } from '@/components/ui/tooltip';
 import { sqlPro } from '@/lib/api';
 import { initMockMode, isMockMode } from '@/lib/mock-api';
@@ -88,6 +89,7 @@ function App(): React.JSX.Element {
       <QueryClientProvider client={queryClient}>
         <TooltipProvider>
           <RouterProvider router={router} />
+          <SqlLogPanel />
         </TooltipProvider>
       </QueryClientProvider>
     </ErrorBoundary>

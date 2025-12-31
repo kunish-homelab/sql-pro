@@ -2,6 +2,7 @@ import type { GetSchemaResponse } from '../../../shared/types';
 import { useNavigate } from '@tanstack/react-router';
 import { useEffect } from 'react';
 import { sqlPro } from '@/lib/api';
+import { queryClient } from '@/lib/query-client';
 import {
   useChangesStore,
   useCommandPaletteStore,
@@ -110,6 +111,17 @@ export function useMenuActions() {
               .finally(() => {
                 setIsLoadingSchema(false);
               });
+          }
+          break;
+        }
+
+        case 'refresh-table': {
+          const { activeConnectionId } = connectionStore;
+          if (activeConnectionId) {
+            // Invalidate table data queries to trigger refetch
+            queryClient.invalidateQueries({
+              queryKey: ['tableData', activeConnectionId],
+            });
           }
           break;
         }

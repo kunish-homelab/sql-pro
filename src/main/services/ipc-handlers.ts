@@ -49,6 +49,7 @@ import {
 } from '../lib/export-generators';
 import { databaseService } from './database';
 import { passwordStorageService } from './password-storage';
+import { sqlLogger } from './sql-logger';
 import {
   addRecentConnection,
   clearProStatus,
@@ -1323,4 +1324,45 @@ export function setupIpcHandlers(): void {
       };
     }
   });
+
+  // SQL Logs: Get logs
+  ipcMain.handle(
+    IPC_CHANNELS.SQL_LOG_GET,
+    async (
+      _event,
+      request: { limit?: number; connectionId?: string; level?: string }
+    ) => {
+      try {
+        const logs = sqlLogger.getLogs({
+          limit: request.limit,
+          connectionId: request.connectionId,
+          level: request.level as 'info' | 'warn' | 'error' | 'debug',
+        });
+        return { success: true, logs };
+      } catch (error) {
+        return {
+          success: false,
+          error:
+            error instanceof Error ? error.message : 'Failed to get SQL logs',
+        };
+      }
+    }
+  );
+
+  // SQL Logs: Clear logs
+  ipcMain.handle(
+    IPC_CHANNELS.SQL_LOG_CLEAR,
+    async (_event, request: { connectionId?: string }) => {
+      try {
+        sqlLogger.clearLogs(request.connectionId);
+        return { success: true };
+      } catch (error) {
+        return {
+          success: false,
+          error:
+            error instanceof Error ? error.message : 'Failed to clear SQL logs',
+        };
+      }
+    }
+  );
 }

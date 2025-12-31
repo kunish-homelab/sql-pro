@@ -541,6 +541,68 @@ export interface ClearQueryHistoryResponse {
   error?: string;
 }
 
+// ============ SQL Log Types ============
+
+/**
+ * Log level for SQL operations
+ */
+export type SqlLogLevel = 'info' | 'warn' | 'error' | 'debug';
+
+/**
+ * SQL log entry for tracking database operations
+ */
+export interface SqlLogEntry {
+  /** Unique identifier for the log entry */
+  id: string;
+  /** Timestamp when the operation occurred (ISO string) */
+  timestamp: string;
+  /** Connection ID that executed the query */
+  connectionId: string;
+  /** Database file path */
+  dbPath?: string;
+  /** Operation type */
+  operation: 'query' | 'execute' | 'open' | 'close' | 'schema' | 'other';
+  /** SQL statement (if applicable) */
+  sql?: string;
+  /** Execution duration in milliseconds */
+  durationMs?: number;
+  /** Whether the operation was successful */
+  success: boolean;
+  /** Error message if failed */
+  error?: string;
+  /** Number of rows affected/returned */
+  rowCount?: number;
+  /** Log level */
+  level: SqlLogLevel;
+  /** Additional context */
+  context?: Record<string, unknown>;
+}
+
+export interface GetSqlLogsRequest {
+  /** Maximum number of logs to return */
+  limit?: number;
+  /** Filter by connection ID */
+  connectionId?: string;
+  /** Filter by log level */
+  level?: SqlLogLevel;
+}
+
+export interface GetSqlLogsResponse {
+  success: boolean;
+  logs?: SqlLogEntry[];
+  error?: string;
+}
+
+export interface ClearSqlLogsRequest {
+  /** Clear logs for specific connection, or all if not provided */
+  connectionId?: string;
+}
+
+export interface ClearSqlLogsResponse {
+  success: boolean;
+  error?: string;
+}
+
 // ============ Query Plan Analysis Types ============
 
 export interface QueryPlanNode {
@@ -784,6 +846,7 @@ export type MenuAction =
   | 'open-database'
   | 'close-database'
   | 'refresh-schema'
+  | 'refresh-table'
   | 'open-settings'
   | 'open-plugins'
   | 'toggle-command-palette'
@@ -983,6 +1046,11 @@ export interface IPCChannels {
   ];
   'query-history:clear': [ClearQueryHistoryRequest, ClearQueryHistoryResponse];
 
+  // SQL Logs
+  'sql-log:get': [GetSqlLogsRequest, GetSqlLogsResponse];
+  'sql-log:clear': [ClearSqlLogsRequest, ClearSqlLogsResponse];
+  'sql-log:entry': SqlLogEntry; // Event pushed from main to renderer
+
   // Window Management
   'window:create': void;
   'window:close': [CloseWindowRequest, CloseWindowResponse];
@@ -1046,6 +1114,11 @@ export const IPC_CHANNELS = {
   HISTORY_SAVE: 'history:save',
   HISTORY_DELETE: 'history:delete',
   HISTORY_CLEAR: 'history:clear',
+
+  // SQL Logs
+  SQL_LOG_GET: 'sql-log:get',
+  SQL_LOG_CLEAR: 'sql-log:clear',
+  SQL_LOG_ENTRY: 'sql-log:entry',
 
   // AI
   AI_GET_SETTINGS: 'ai:get-settings',

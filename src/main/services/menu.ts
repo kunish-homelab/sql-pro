@@ -75,6 +75,11 @@ export function createApplicationMenu(): void {
           accelerator: 'CmdOrCtrl+Shift+R',
           click: () => sendMenuAction('refresh-schema'),
         },
+        {
+          label: 'Refresh Table',
+          accelerator: 'CmdOrCtrl+R',
+          click: () => sendMenuAction('refresh-table'),
+        },
         { type: 'separator' },
         ...(isMac
           ? []

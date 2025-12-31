@@ -2,6 +2,7 @@ import type { Row } from '@tanstack/react-table';
 import type { TableRowData } from './hooks/useTableCore';
 import type { PendingChange } from '@/types/database';
 import { memo, useMemo } from 'react';
+import { Checkbox } from '@/components/ui/checkbox';
 import { cn } from '@/lib/utils';
 import { GroupRow } from './GroupRow';
 import { TableCell } from './TableCell';
@@ -23,6 +24,8 @@ interface DataRowProps {
   pinnedColumns?: string[];
   /** Pinned column offsets */
   pinnedOffsets?: Record<string, number>;
+  /** Enable row selection */
+  enableSelection?: boolean;
 }
 
 const DataRow = memo(
@@ -41,8 +44,10 @@ const DataRow = memo(
     isCellEditing,
     pinnedColumns = [],
     pinnedOffsets = {},
+    enableSelection = false,
   }: DataRowProps) => {
     const isEven = rowIndex % 2 === 0;
+    const isSelected = row.getIsSelected();
 
     return (
       <tr
@@ -50,11 +55,26 @@ const DataRow = memo(
           'border-border border-b',
           isEven ? 'bg-background' : 'bg-muted/20',
           isDeleted && 'bg-destructive/10 line-through opacity-50',
-          isNewRow && 'bg-green-500/10'
+          isNewRow && 'bg-green-500/10',
+          isSelected && 'bg-primary/10'
         )}
         data-row-id={row.id}
         data-row-index={rowIndex}
       >
+        {/* Selection cell */}
+        {enableSelection && (
+          <td
+            className="bg-background sticky left-0 z-10 w-10 border-r px-2"
+            style={{ width: 40, minWidth: 40, maxWidth: 40 }}
+            onClick={(e) => e.stopPropagation()}
+          >
+            <Checkbox
+              checked={isSelected}
+              onCheckedChange={(checked) => row.toggleSelected(!!checked)}
+              aria-label="Select row"
+            />
+          </td>
+        )}
         {row.getVisibleCells().map((cell) => {
           const columnId = cell.column.id;
           const isFocused = isCellFocused?.(row.id, columnId) ?? false;
@@ -124,6 +144,8 @@ interface TableBodyProps {
   pinnedColumns?: string[];
   /** Get column size by id */
   getColumnSize?: (columnId: string) => number;
+  /** Enable row selection */
+  enableSelection?: boolean;
 }
 
 export const TableBody = memo(
@@ -139,17 +161,18 @@ export const TableBody = memo(
     changes,
     pinnedColumns = [],
     getColumnSize,
+    enableSelection = false,
   }: TableBodyProps) => {
     // Calculate pinned offsets
     const pinnedOffsets = useMemo(() => {
       const offsets: Record<string, number> = {};
-      let offset = 0;
+      let offset = enableSelection ? 40 : 0; // Account for selection column
       for (const colId of pinnedColumns) {
         offsets[colId] = offset;
         offset += getColumnSize?.(colId) ?? 150;
       }
       return offsets;
-    }, [pinnedColumns, getColumnSize]);
+    }, [pinnedColumns, getColumnSize, enableSelection]);
 
     return (
       <tbody>
@@ -184,6 +207,7 @@ export const TableBody = memo(
               isCellEditing={isCellEditing}
               pinnedColumns={pinnedColumns}
               pinnedOffsets={pinnedOffsets}
+              enableSelection={enableSelection}
             />
           );
         })}
