@@ -179,7 +179,7 @@ export const ColumnStats = memo(
           )}
         </CollapsibleTrigger>
 
-        <CollapsibleContent className="animate-in slide-in-from-top-2 duration-200">
+        <CollapsibleContent>
           <div className="bg-muted/30 border-t">
             {/* Column selector */}
             <div className="flex gap-1 overflow-x-auto border-b p-2">
