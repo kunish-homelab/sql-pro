@@ -26,12 +26,18 @@ export {
 export type { QueryTemplate, TemplateCategory } from './query-templates-store';
 export {
   MONOSPACE_FONTS,
+  PAGE_SIZE_OPTIONS,
   useEditorFont,
+  usePageSize,
   useSettingsStore,
   useTableFont,
   useUIFont,
 } from './settings-store';
-export type { FontCategory, FontConfig } from './settings-store';
+export type {
+  FontCategory,
+  FontConfig,
+  PageSizeOption,
+} from './settings-store';
 export { useTableDataStore } from './table-data-store';
 export { useThemeStore } from './theme-store';
 export { useUndoRedoStore } from './undo-redo-store';

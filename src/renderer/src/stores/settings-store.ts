@@ -35,6 +35,10 @@ interface FontSettings {
   syncAll: boolean;
 }
 
+// Page size options for data browser
+export const PAGE_SIZE_OPTIONS = [50, 100, 200, 500, 1000, 'all'] as const;
+export type PageSizeOption = (typeof PAGE_SIZE_OPTIONS)[number];
+
 interface SettingsState {
   // Vim modes (independent)
   editorVimMode: boolean; // Monaco editor vim mode
@@ -46,12 +50,16 @@ interface SettingsState {
   // Tab settings
   tabSize: number;
 
+  // Data browser settings
+  pageSize: PageSizeOption;
+
   // Actions
   setEditorVimMode: (enabled: boolean) => void;
   setAppVimMode: (enabled: boolean) => void;
   setFont: (category: FontCategory, config: Partial<FontConfig>) => void;
   setSyncAll: (sync: boolean) => void;
   setTabSize: (size: number) => void;
+  setPageSize: (size: PageSizeOption) => void;
 }
 
 const DEFAULT_FONT_CONFIG: FontConfig = {
@@ -115,6 +123,8 @@ export const useSettingsStore = create<SettingsState>()(
 
       tabSize: 2,
 
+      pageSize: 100,
+
       setEditorVimMode: (enabled) => set({ editorVimMode: enabled }),
 
       setAppVimMode: (enabled) => set({ appVimMode: enabled }),
@@ -168,6 +178,8 @@ export const useSettingsStore = create<SettingsState>()(
       },
 
       setTabSize: (size) => set({ tabSize: size }),
+
+      setPageSize: (size) => set({ pageSize: size }),
     }),
     {
       name: 'sql-pro-settings',
@@ -181,3 +193,4 @@ export const useSettingsStore = create<SettingsState>()(
 export const useEditorFont = () => useSettingsStore((s) => s.fonts.editor);
 export const useTableFont = () => useSettingsStore((s) => s.fonts.table);
 export const useUIFont = () => useSettingsStore((s) => s.fonts.ui);
+export const usePageSize = () => useSettingsStore((s) => s.pageSize);

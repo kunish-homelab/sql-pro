@@ -1,6 +1,7 @@
 import type { DataTableRef, TableRowData } from './data-table';
 import type { ExportOptions } from './ExportDialog';
 import type { UIFilterState } from '@/lib/filter-utils';
+import type { PageSizeOption } from '@/stores';
 import type { PendingChange, SortState, TableSchema } from '@/types/database';
 import {
   AlertTriangle,
@@ -37,7 +38,12 @@ import { useExport } from '@/hooks/useExport';
 import { usePendingChanges } from '@/hooks/usePendingChanges';
 import { useTableData } from '@/hooks/useTableData';
 import { convertUIFiltersToAPIFilters } from '@/lib/filter-utils';
-import { useConnectionStore } from '@/stores';
+import {
+  PAGE_SIZE_OPTIONS,
+  useConnectionStore,
+  usePageSize,
+  useSettingsStore,
+} from '@/stores';
 import { DataTable } from './data-table';
 import { ActiveFilters } from './data-table/ActiveFilters';
 import { DiffPreview } from './DiffPreview';
@@ -56,16 +62,15 @@ export function TableView({ tableOverride }: TableViewProps) {
   const selectedTable = tableOverride || storeSelectedTable;
   const dataTableRef = useRef<DataTableRef>(null);
 
-  // Page size options - 'all' means show all rows
-  const PAGE_SIZE_OPTIONS = [50, 100, 200, 500, 1000, 'all'] as const;
-  type PageSizeOption = (typeof PAGE_SIZE_OPTIONS)[number];
-
-  // Pagination state (local since TanStack Query handles the data)
-  const [page, setPage] = useState(1);
-  const [pageSizeOption, setPageSizeOption] = useState<PageSizeOption>(100);
+  // Global page size setting
+  const pageSizeOption = usePageSize();
+  const setPageSize = useSettingsStore((s) => s.setPageSize);
 
   // Calculate actual page size - use a very large number for 'all'
   const pageSize = pageSizeOption === 'all' ? 1000000 : pageSizeOption;
+
+  // Pagination state (local since TanStack Query handles the data)
+  const [page, setPage] = useState(1);
   const [sort, setSort] = useState<SortState | null>(null);
   const [grouping, setGrouping] = useState<string[]>([]);
   const [showDiffPreview, setShowDiffPreview] = useState(false);
@@ -162,12 +167,15 @@ export function TableView({ tableOverride }: TableViewProps) {
     setPage(newPage);
   }, []);
 
-  // Handle page size change
-  const handlePageSizeChange = useCallback((value: string) => {
-    const newSize = value === 'all' ? 'all' : Number.parseInt(value, 10);
-    setPageSizeOption(newSize as PageSizeOption);
-    setPage(1); // Reset to first page when changing page size
-  }, []);
+  // Handle page size change (global setting)
+  const handlePageSizeChange = useCallback(
+    (value: string) => {
+      const newSize = value === 'all' ? 'all' : Number.parseInt(value, 10);
+      setPageSize(newSize as PageSizeOption);
+      setPage(1); // Reset to first page when changing page size
+    },
+    [setPageSize]
+  );
 
   // Handle sort change from DataTable
   const handleSortChange = useCallback((newSort: SortState | null) => {
