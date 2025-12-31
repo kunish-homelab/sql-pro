@@ -151,7 +151,7 @@ export const KeyboardShortcutsOverlay = memo(
           </div>
 
           {/* Content */}
-          <div className="max-h-[400px] overflow-y-auto">
+          <div className="max-h-100 overflow-y-auto">
             {Object.entries(groupedShortcuts).map(([category, items]) => (
               <div key={category} className="border-b last:border-b-0">
                 {/* Category header */}
@@ -178,7 +178,7 @@ export const KeyboardShortcutsOverlay = memo(
                             className={cn(
                               'rounded px-1.5 py-0.5 font-mono text-[10px]',
                               'bg-muted border shadow-sm',
-                              'min-w-[20px] text-center'
+                              'min-w-5 text-center'
                             )}
                           >
                             {key}
@@ -228,7 +228,7 @@ export const InlineShortcutHint = memo(
             className={cn(
               'rounded px-1 py-0.5 font-mono text-[9px]',
               'bg-muted/50 text-muted-foreground',
-              'min-w-[14px] text-center'
+              'min-w-3.5 text-center'
             )}
           >
             {key}

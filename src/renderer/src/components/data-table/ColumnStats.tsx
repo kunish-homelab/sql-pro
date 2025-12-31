@@ -204,7 +204,7 @@ export const ColumnStats = memo(
                         : 'hover:bg-muted bg-background border'
                     )}
                   >
-                    <span className="max-w-[100px] truncate font-medium">
+                    <span className="max-w-25 truncate font-medium">
                       {col.name}
                     </span>
                     {nullPercentage > 0 && (
