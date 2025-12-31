@@ -1,6 +1,6 @@
 import type { DataTab } from '@/stores';
 import { Eye, Plus, Table, X } from 'lucide-react';
-import { memo, useCallback } from 'react';
+import { memo, useCallback, useEffect } from 'react';
 import { Button } from '@/components/ui/button';
 import {
   ContextMenu,
@@ -17,6 +17,83 @@ import {
 } from '@/components/ui/tooltip';
 import { cn } from '@/lib/utils';
 import { useConnectionStore, useDataTabsStore } from '@/stores';
+
+/**
+ * Hook for keyboard shortcuts to navigate between tabs
+ * - Ctrl + Tab: Switch to next tab
+ * - Ctrl + Shift + Tab: Switch to previous tab
+ * - Cmd/Ctrl + 1-9: Switch to tab by index
+ * - Cmd + W: Close current tab
+ * - Cmd + Alt + T: Close other tabs
+ */
+function useTabKeyboardNavigation(
+  tabs: DataTab[],
+  activeTabId: string | null,
+  connectionId: string | null,
+  setActiveTab: (connectionId: string, tabId: string) => void,
+  closeTab: (connectionId: string, tabId: string) => void,
+  closeOtherTabs: (connectionId: string, tabId: string) => void
+) {
+  useEffect(() => {
+    if (!connectionId || tabs.length === 0) return;
+
+    const handleKeyDown = (e: KeyboardEvent) => {
+      // Ctrl + Tab / Ctrl + Shift + Tab: Navigate between tabs
+      if (e.ctrlKey && e.key === 'Tab') {
+        e.preventDefault();
+        const currentIndex = tabs.findIndex((t) => t.id === activeTabId);
+        if (currentIndex === -1) return;
+
+        let newIndex: number;
+        if (e.shiftKey) {
+          // Ctrl + Shift + Tab: Previous tab
+          newIndex = currentIndex > 0 ? currentIndex - 1 : tabs.length - 1;
+        } else {
+          // Ctrl + Tab: Next tab
+          newIndex = currentIndex < tabs.length - 1 ? currentIndex + 1 : 0;
+        }
+
+        setActiveTab(connectionId, tabs[newIndex].id);
+        return;
+      }
+
+      const isMod = e.metaKey || e.ctrlKey;
+
+      // Cmd/Ctrl + W: Close current tab
+      if (isMod && (e.key === 'w' || e.code === 'KeyW') && activeTabId) {
+        e.preventDefault();
+        closeTab(connectionId, activeTabId);
+        return;
+      }
+
+      // Cmd/Ctrl + Alt + T: Close other tabs
+      // Use e.code because Alt+T produces special character on macOS
+      if (
+        isMod &&
+        e.altKey &&
+        e.code === 'KeyT' &&
+        activeTabId &&
+        tabs.length > 1
+      ) {
+        e.preventDefault();
+        closeOtherTabs(connectionId, activeTabId);
+        return;
+      }
+
+      // Cmd/Ctrl + 1-9: Switch to tab by index
+      if (isMod && !e.altKey && e.key >= '1' && e.key <= '9') {
+        const index = Number.parseInt(e.key, 10) - 1;
+        if (index < tabs.length) {
+          e.preventDefault();
+          setActiveTab(connectionId, tabs[index].id);
+        }
+      }
+    };
+
+    window.addEventListener('keydown', handleKeyDown);
+    return () => window.removeEventListener('keydown', handleKeyDown);
+  }, [tabs, activeTabId, connectionId, setActiveTab, closeTab, closeOtherTabs]);
+}
 
 interface DataTabBarProps {
   className?: string;
@@ -134,6 +211,16 @@ export const DataTabBar = memo(
       : null;
     const tabs = connectionTabState?.tabs || [];
     const activeTabId = connectionTabState?.activeTabId || null;
+
+    // Enable keyboard navigation between tabs
+    useTabKeyboardNavigation(
+      tabs,
+      activeTabId,
+      activeConnectionId,
+      setActiveTab,
+      closeTab,
+      closeOtherTabs
+    );
 
     if (!activeConnectionId || tabs.length === 0) {
       return null;

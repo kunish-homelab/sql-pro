@@ -2,16 +2,16 @@ import type { ERRelationshipEdge, ERTableNode } from '@/types/er-diagram';
 import dagre from 'dagre';
 
 // Estimated dimensions for table nodes
-const NODE_WIDTH = 240;
+const NODE_WIDTH = 280; // Increased for wider tables
 const COLUMN_HEIGHT = 26;
 const HEADER_HEIGHT = 44;
 const MIN_NODE_HEIGHT = 100;
 const PADDING = 20;
 
-// Layout spacing
-const NODE_SEPARATION = 60; // Horizontal space between nodes
-const RANK_SEPARATION = 80; // Space between ranks (levels)
-const MARGIN = 40; // Margin around the entire graph
+// Layout spacing - increased for better readability
+const NODE_SEPARATION = 100; // Horizontal space between nodes
+const RANK_SEPARATION = 150; // Space between ranks (levels)
+const MARGIN = 60; // Margin around the entire graph
 
 /**
  * Calculates the height of a table node based on column count

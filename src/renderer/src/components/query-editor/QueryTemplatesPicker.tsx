@@ -307,7 +307,7 @@ export const QueryTemplatesPicker = memo(
     return (
       <>
         <Dialog open={open} onOpenChange={onOpenChange}>
-          <DialogContent className="max-w-3xl p-0">
+          <DialogContent className="max-w-4xl p-0">
             <DialogHeader className="border-b px-6 py-4">
               <DialogTitle className="flex items-center gap-2">
                 <Code className="h-5 w-5" />
@@ -319,11 +319,11 @@ export const QueryTemplatesPicker = memo(
             </DialogHeader>
 
             {/* Search and Filter */}
-            <div className="flex items-center gap-3 border-b px-6 py-3">
-              <div className="relative min-w-0 flex-1">
+            <div className="flex flex-col gap-3 border-b px-6 py-4 sm:flex-row sm:items-center">
+              <div className="relative flex-1">
                 <Search className="text-muted-foreground absolute top-1/2 left-3 h-4 w-4 -translate-y-1/2" />
                 <Input
-                  placeholder="Search..."
+                  placeholder="Search templates..."
                   value={searchQuery}
                   onChange={(e) => setSearchQuery(e.target.value)}
                   className="w-full pl-9"
@@ -339,27 +339,29 @@ export const QueryTemplatesPicker = memo(
                   </Button>
                 )}
               </div>
-              <Select
-                value={selectedCategory}
-                onValueChange={(value) =>
-                  setSelectedCategory(value as TemplateCategory | 'all')
-                }
-              >
-                <SelectTrigger className="w-[140px]">
-                  <SelectValue />
-                </SelectTrigger>
-                <SelectContent>
-                  {TEMPLATE_CATEGORIES.map((cat) => (
-                    <SelectItem key={cat.value} value={cat.value}>
-                      {cat.label}
-                    </SelectItem>
-                  ))}
-                </SelectContent>
-              </Select>
-              <Button onClick={() => setShowNewDialog(true)}>
-                <Plus className="mr-1.5 h-4 w-4" />
-                New Template
-              </Button>
+              <div className="flex items-center gap-2">
+                <Select
+                  value={selectedCategory}
+                  onValueChange={(value) =>
+                    setSelectedCategory(value as TemplateCategory | 'all')
+                  }
+                >
+                  <SelectTrigger className="w-[120px]">
+                    <SelectValue />
+                  </SelectTrigger>
+                  <SelectContent>
+                    {TEMPLATE_CATEGORIES.map((cat) => (
+                      <SelectItem key={cat.value} value={cat.value}>
+                        {cat.label}
+                      </SelectItem>
+                    ))}
+                  </SelectContent>
+                </Select>
+                <Button onClick={() => setShowNewDialog(true)} size="sm">
+                  <Plus className="mr-1 h-4 w-4" />
+                  New
+                </Button>
+              </div>
             </div>
 
             {/* Template Grid */}

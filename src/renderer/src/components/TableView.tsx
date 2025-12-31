@@ -17,7 +17,7 @@ import {
   Search,
   X,
 } from 'lucide-react';
-import { useCallback, useMemo, useRef, useState } from 'react';
+import { useCallback, useEffect, useMemo, useRef, useState } from 'react';
 import { Button } from '@/components/ui/button';
 import { Input } from '@/components/ui/input';
 import {
@@ -82,6 +82,7 @@ export function TableView({
   // Use tableOverride if provided, otherwise fall back to store's selectedTable
   const selectedTable = tableOverride || storeSelectedTable;
   const dataTableRef = useRef<DataTableRef>(null);
+  const searchInputRef = useRef<HTMLInputElement>(null);
 
   // Get active tab for search term
   const activeTab = activeConnectionId
@@ -116,6 +117,20 @@ export function TableView({
 
   // Track the newly inserted row ID for auto-focus
   const [newRowId, setNewRowId] = useState<string | number | null>(null);
+
+  // Keyboard shortcut to focus search (Cmd+F / Ctrl+F)
+  useEffect(() => {
+    const handleKeyDown = (e: KeyboardEvent) => {
+      if ((e.metaKey || e.ctrlKey) && e.key === 'f') {
+        e.preventDefault();
+        searchInputRef.current?.focus();
+        searchInputRef.current?.select();
+      }
+    };
+
+    window.addEventListener('keydown', handleKeyDown);
+    return () => window.removeEventListener('keydown', handleKeyDown);
+  }, []);
 
   // Find primary key column
   const primaryKeyColumn = selectedTable?.primaryKey[0];
@@ -378,8 +393,9 @@ export function TableView({
             <div className="relative">
               <Search className="text-muted-foreground absolute top-1/2 left-2.5 h-4 w-4 -translate-y-1/2" />
               <Input
+                ref={searchInputRef}
                 type="text"
-                placeholder="Search in results..."
+                placeholder="Search in results... (⌘F)"
                 value={searchTerm}
                 onChange={(e) => setSearchTerm(e.target.value)}
                 className="h-8 w-56 pr-8 pl-8 text-sm"
