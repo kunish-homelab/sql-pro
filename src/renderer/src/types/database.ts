@@ -111,6 +111,8 @@ export interface QueryResult {
   rows: Record<string, unknown>[];
   rowsAffected: number;
   lastInsertRowId?: number;
+  /** Number of statements executed (for multi-statement queries) */
+  executedStatements?: number;
 }
 
 // Pagination

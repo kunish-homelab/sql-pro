@@ -229,6 +229,10 @@ export interface ExecuteQueryResponse {
   rowsAffected?: number;
   lastInsertRowId?: number;
   executionTime?: number;
+  /** Number of statements executed (for multi-statement queries) */
+  executedStatements?: number;
+  /** Total changes across all statements (for multi-statement queries) */
+  totalChanges?: number;
   error?: string;
   /** Categorized error code for programmatic handling */
   errorCode?: ErrorCode;

@@ -201,8 +201,9 @@ export function QueryEditor() {
         const queryResult = {
           columns: result.columns || [],
           rows: result.rows || [],
-          rowsAffected: result.rowsAffected || 0,
+          rowsAffected: result.rowsAffected || result.totalChanges || 0,
           lastInsertRowId: result.lastInsertRowId,
+          executedStatements: result.executedStatements,
         };
         setResults(queryResult);
         setExecutionTime(result.executionTime || 0);
@@ -472,18 +473,34 @@ export function QueryEditor() {
                   <div className="flex h-full flex-col">
                     {/* Results Header */}
                     <div className="text-muted-foreground flex items-center gap-4 border-b px-4 py-2 text-sm">
-                      <span>{tabResults.rowsAffected} rows</span>
+                      {tabResults.executedStatements &&
+                      tabResults.executedStatements > 1 ? (
+                        <span>
+                          {tabResults.executedStatements} statements executed
+                          {tabResults.rowsAffected > 0 &&
+                            ` (${tabResults.rowsAffected} rows affected)`}
+                        </span>
+                      ) : (
+                        <span>
+                          {tabResults.rows.length > 0
+                            ? `${tabResults.rows.length} rows`
+                            : tabResults.rowsAffected > 0
+                              ? `${tabResults.rowsAffected} rows affected`
+                              : 'Query executed'}
+                        </span>
+                      )}
                       {tabExecutionTime !== null && (
                         <span className="flex items-center gap-1">
                           <Clock className="h-3 w-3" />
                           {tabExecutionTime.toFixed(2)}ms
                         </span>
                       )}
-                      {tabResults.lastInsertRowId !== undefined && (
-                        <span>
-                          Last Insert ID: {tabResults.lastInsertRowId}
-                        </span>
-                      )}
+                      {tabResults.lastInsertRowId !== undefined &&
+                        tabResults.lastInsertRowId > 0 && (
+                          <span>
+                            Last Insert ID: {tabResults.lastInsertRowId}
+                          </span>
+                        )}
                     </div>
                     {/* Results Table */}
                     <div className="h-0 min-w-0 flex-1 overflow-hidden">

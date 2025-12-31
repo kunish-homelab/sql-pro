@@ -898,13 +898,242 @@ class DatabaseService {
     }
   }
 
+  /**
+   * Split SQL string into individual statements.
+   * Handles semicolons inside strings and comments.
+   */
+  private splitStatements(sql: string): string[] {
+    const statements: string[] = [];
+    let current = '';
+    let inString: string | null = null;
+    let inLineComment = false;
+    let inBlockComment = false;
+
+    for (let i = 0; i < sql.length; i++) {
+      const char = sql[i];
+      const nextChar = sql[i + 1];
+
+      // Handle line comments
+      if (!inString && !inBlockComment && char === '-' && nextChar === '-') {
+        inLineComment = true;
+        current += char;
+        continue;
+      }
+
+      if (inLineComment && char === '\n') {
+        inLineComment = false;
+        current += char;
+        continue;
+      }
+
+      // Handle block comments
+      if (!inString && !inLineComment && char === '/' && nextChar === '*') {
+        inBlockComment = true;
+        current += char;
+        continue;
+      }
+
+      if (inBlockComment && char === '*' && nextChar === '/') {
+        inBlockComment = false;
+        current += char + nextChar;
+        i++;
+        continue;
+      }
+
+      // Handle strings
+      if (!inLineComment && !inBlockComment) {
+        if (!inString && (char === "'" || char === '"')) {
+          inString = char;
+        } else if (inString === char) {
+          // Check for escaped quote
+          if (nextChar === char) {
+            current += char + nextChar;
+            i++;
+            continue;
+          }
+          inString = null;
+        }
+      }
+
+      // Handle statement separator
+      if (!inString && !inLineComment && !inBlockComment && char === ';') {
+        const stmt = current.trim();
+        if (stmt) {
+          statements.push(stmt);
+        }
+        current = '';
+        continue;
+      }
+
+      current += char;
+    }
+
+    // Add the last statement if it doesn't end with semicolon
+    const lastStmt = current.trim();
+    if (lastStmt) {
+      statements.push(lastStmt);
+    }
+
+    return statements;
+  }
+
   executeQuery(connectionId: string, query: string) {
+    const conn = this.connections.get(connectionId);
+    if (!conn) {
+      return { success: false, error: 'Connection not found' };
+    }
+
+    // Split into individual statements
+    const statements = this.splitStatements(query);
+
+    if (statements.length === 0) {
+      return { success: false, error: 'No SQL statements to execute' };
+    }
+
+    // For single statement, use the original logic
+    if (statements.length === 1) {
+      return this.executeSingleStatement(connectionId, statements[0]);
+    }
+
+    // For multiple statements, execute them sequentially
+    // Return the result of the last SELECT or summary of modifications
+    let lastSelectResult: {
+      success: true;
+      columns: string[];
+      rows: Record<string, unknown>[];
+    } | null = null;
+    let totalChanges = 0;
+    let lastInsertRowid = 0;
+    let executedCount = 0;
+
+    // Check if user is managing their own transaction
+    const hasUserTransaction = statements.some((stmt) => {
+      const upper = stmt.trim().toUpperCase();
+      return (
+        upper.startsWith('BEGIN') ||
+        upper.startsWith('COMMIT') ||
+        upper.startsWith('ROLLBACK') ||
+        upper.startsWith('END')
+      );
+    });
+
+    // Only wrap in transaction if user isn't managing their own
+    const useAutoTransaction = !hasUserTransaction;
+
+    try {
+      if (useAutoTransaction) {
+        conn.db.exec('BEGIN TRANSACTION');
+      }
+
+      for (const stmt of statements) {
+        const result = this.executeSingleStatement(connectionId, stmt);
+
+        if (!result.success) {
+          if (useAutoTransaction) {
+            try {
+              conn.db.exec('ROLLBACK');
+            } catch {
+              // Ignore rollback errors
+            }
+          }
+          return {
+            success: false as const,
+            error: `Error in statement ${executedCount + 1}: ${result.error}`,
+            errorCode: 'errorCode' in result ? result.errorCode : undefined,
+            errorPosition:
+              'errorPosition' in result ? result.errorPosition : undefined,
+            troubleshootingSteps:
+              'troubleshootingSteps' in result
+                ? result.troubleshootingSteps
+                : undefined,
+            documentationUrl:
+              'documentationUrl' in result
+                ? result.documentationUrl
+                : undefined,
+          };
+        }
+
+        executedCount++;
+
+        // Track results
+        if ('rows' in result && result.success) {
+          lastSelectResult = {
+            success: true as const,
+            columns: result.columns,
+            rows: result.rows,
+          };
+        } else if ('changes' in result && result.success) {
+          totalChanges += result.changes;
+          lastInsertRowid = result.lastInsertRowid;
+        }
+      }
+
+      if (useAutoTransaction) {
+        conn.db.exec('COMMIT');
+      }
+
+      // Return the last SELECT result if any, otherwise return modification summary
+      if (lastSelectResult) {
+        return {
+          ...lastSelectResult,
+          executedStatements: executedCount,
+          totalChanges,
+        };
+      }
+
+      return {
+        success: true,
+        changes: totalChanges,
+        lastInsertRowid,
+        executedStatements: executedCount,
+      };
+    } catch (error) {
+      if (useAutoTransaction) {
+        try {
+          conn.db.exec('ROLLBACK');
+        } catch {
+          // Ignore rollback errors
+        }
+      }
+      return {
+        success: false,
+        error: error instanceof Error ? error.message : 'Unknown error',
+      };
+    }
+  }
+
+  /**
+   * Execute a single SQL statement
+   */
+  private executeSingleStatement(
+    connectionId: string,
+    query: string
+  ):
+    | {
+        success: true;
+        columns: string[];
+        rows: Record<string, unknown>[];
+      }
+    | {
+        success: true;
+        changes: number;
+        lastInsertRowid: number;
+      }
+    | {
+        success: false;
+        error: string;
+        errorCode?: ErrorCode;
+        errorPosition?: ErrorPosition;
+        troubleshootingSteps?: string[];
+        documentationUrl?: string;
+      } {
     // Determine if it's a SELECT or a modification query
     const trimmed = query.trim().toUpperCase();
     if (
       trimmed.startsWith('SELECT') ||
       trimmed.startsWith('PRAGMA') ||
-      trimmed.startsWith('EXPLAIN')
+      trimmed.startsWith('EXPLAIN') ||
+      trimmed.startsWith('WITH')
     ) {
       const result = this.query(connectionId, query);
       if (result.success) {
@@ -917,7 +1146,7 @@ class DatabaseService {
           return record;
         });
         return {
-          success: true,
+          success: true as const,
           columns: result.columns,
           rows,
         };
