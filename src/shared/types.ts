@@ -222,10 +222,20 @@ export interface ExecuteQueryRequest {
   query: string;
 }
 
+/** Single result set from a SELECT query */
+export interface QueryResultSet {
+  columns: string[];
+  rows: Record<string, unknown>[];
+}
+
 export interface ExecuteQueryResponse {
   success: boolean;
+  /** Columns for single result (backward compatibility) */
   columns?: string[];
+  /** Rows for single result (backward compatibility) */
   rows?: Record<string, unknown>[];
+  /** Multiple result sets (for multi-SELECT queries) */
+  resultSets?: QueryResultSet[];
   rowsAffected?: number;
   lastInsertRowId?: number;
   executionTime?: number;

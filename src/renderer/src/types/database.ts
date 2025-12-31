@@ -106,6 +106,12 @@ export interface QuerySession {
 }
 
 // Query result
+/** Single result set from a SELECT query */
+export interface QueryResultSet {
+  columns: string[];
+  rows: Record<string, unknown>[];
+}
+
 export interface QueryResult {
   columns: string[];
   rows: Record<string, unknown>[];
@@ -113,6 +119,8 @@ export interface QueryResult {
   lastInsertRowId?: number;
   /** Number of statements executed (for multi-statement queries) */
   executedStatements?: number;
+  /** Multiple result sets (for multi-SELECT queries) */
+  resultSets?: QueryResultSet[];
 }
 
 // Pagination

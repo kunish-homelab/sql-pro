@@ -996,12 +996,11 @@ class DatabaseService {
     }
 
     // For multiple statements, execute them sequentially
-    // Return the result of the last SELECT or summary of modifications
-    let lastSelectResult: {
-      success: true;
+    // Collect all results (SELECT results as separate result sets)
+    const resultSets: Array<{
       columns: string[];
       rows: Record<string, unknown>[];
-    } | null = null;
+    }> = [];
     let totalChanges = 0;
     let lastInsertRowid = 0;
     let executedCount = 0;
@@ -1057,11 +1056,10 @@ class DatabaseService {
 
         // Track results
         if ('rows' in result && result.success) {
-          lastSelectResult = {
-            success: true as const,
+          resultSets.push({
             columns: result.columns,
             rows: result.rows,
-          };
+          });
         } else if ('changes' in result && result.success) {
           totalChanges += result.changes;
           lastInsertRowid = result.lastInsertRowid;
@@ -1072,10 +1070,24 @@ class DatabaseService {
         conn.db.exec('COMMIT');
       }
 
-      // Return the last SELECT result if any, otherwise return modification summary
-      if (lastSelectResult) {
+      // Return results based on what was executed
+      if (resultSets.length > 0) {
+        // Return all result sets for multiple SELECTs
+        // For single result set, return in flat format for backward compatibility
+        if (resultSets.length === 1) {
+          return {
+            success: true as const,
+            columns: resultSets[0].columns,
+            rows: resultSets[0].rows,
+            executedStatements: executedCount,
+            totalChanges,
+          };
+        }
+
+        // Multiple result sets - return as array
         return {
-          ...lastSelectResult,
+          success: true as const,
+          resultSets,
           executedStatements: executedCount,
           totalChanges,
         };

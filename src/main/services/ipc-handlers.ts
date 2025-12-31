@@ -212,6 +212,7 @@ export function setupIpcHandlers(): void {
           success: true,
           columns: 'columns' in result ? result.columns : undefined,
           rows: 'rows' in result ? result.rows : undefined,
+          resultSets: 'resultSets' in result ? result.resultSets : undefined,
           rowsAffected: 'changes' in result ? result.changes : undefined,
           lastInsertRowId:
             'lastInsertRowid' in result ? result.lastInsertRowid : undefined,

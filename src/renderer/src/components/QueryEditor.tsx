@@ -204,6 +204,7 @@ export function QueryEditor() {
           rowsAffected: result.rowsAffected || result.totalChanges || 0,
           lastInsertRowId: result.lastInsertRowId,
           executedStatements: result.executedStatements,
+          resultSets: result.resultSets,
         };
         setResults(queryResult);
         setExecutionTime(result.executionTime || 0);
@@ -473,8 +474,15 @@ export function QueryEditor() {
                   <div className="flex h-full flex-col">
                     {/* Results Header */}
                     <div className="text-muted-foreground flex items-center gap-4 border-b px-4 py-2 text-sm">
-                      {tabResults.executedStatements &&
-                      tabResults.executedStatements > 1 ? (
+                      {tabResults.resultSets &&
+                      tabResults.resultSets.length > 1 ? (
+                        <span>
+                          {tabResults.resultSets.length} result sets
+                          {tabResults.executedStatements &&
+                            ` (${tabResults.executedStatements} statements)`}
+                        </span>
+                      ) : tabResults.executedStatements &&
+                        tabResults.executedStatements > 1 ? (
                         <span>
                           {tabResults.executedStatements} statements executed
                           {tabResults.rowsAffected > 0 &&
