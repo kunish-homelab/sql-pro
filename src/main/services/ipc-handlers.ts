@@ -1,17 +1,14 @@
 import type {
-  AIAgentMessage,
   AIAgentQueryRequest,
   AICancelStreamRequest,
   AIFetchAnthropicRequest,
   AIFetchOpenAIRequest,
   AIStreamAnthropicRequest,
-  AIStreamChunk,
   AIStreamOpenAIRequest,
   AnalyzeQueryPlanRequest,
   ApplyChangesRequest,
   ClearQueryHistoryRequest,
   CloseDatabaseRequest,
-  CloseWindowRequest,
   DeleteQueryHistoryRequest,
   ExecuteQueryRequest,
   ExportRequest,
@@ -23,6 +20,7 @@ import type {
   HasPasswordRequest,
   OpenDatabaseRequest,
   OpenFileDialogRequest,
+  ProActivateRequest,
   RemoveConnectionRequest,
   RemovePasswordRequest,
   SaveAISettingsRequest,
@@ -38,6 +36,7 @@ import fs from 'node:fs';
 import os from 'node:os';
 import { promisify } from 'node:util';
 import { query as claudeAgentQuery } from '@anthropic-ai/claude-agent-sdk';
+import Anthropic from '@anthropic-ai/sdk';
 import { BrowserWindow, dialog, ipcMain } from 'electron';
 import OpenAI from 'openai';
 import { IPC_CHANNELS } from '../../shared/types';
@@ -51,14 +50,17 @@ import { databaseService } from './database';
 import { passwordStorageService } from './password-storage';
 import {
   addRecentConnection,
+  clearProStatus,
   clearQueryHistory,
   deleteQueryHistoryEntry,
   getAISettings,
   getPreferences,
+  getProStatus,
   getQueryHistory,
   getRecentConnections,
   removeRecentConnection,
   saveAISettings,
+  saveProStatus,
   saveQueryHistoryEntry,
   setPreferences,
   updateRecentConnection,
@@ -69,7 +71,6 @@ import {
   getUpdateStatus,
   quitAndInstall,
 } from './updater';
-import { windowManager } from './window-manager';
 
 const execAsync = promisify(exec);
 
@@ -87,7 +88,7 @@ const COMMON_CLAUDE_PATHS = [
  * Find all available Claude Code executables.
  * Searches common paths and user's PATH environment variable.
  */
-async function findClaudeCodePaths(): Promise<string[]> {
+export async function findClaudeCodePaths(): Promise<string[]> {
   const foundPaths = new Set<string>();
 
   // Check common paths
@@ -137,6 +138,13 @@ function getClaudeCodePath(customPath?: string): string {
 
   // Fallback to the most common Homebrew path
   return '/opt/homebrew/bin/claude';
+}
+
+export function cleanupIpcHandlers(): void {
+  // Remove all IPC handlers when the app is shutting down
+  Object.values(IPC_CHANNELS).forEach((channel) => {
+    ipcMain.removeHandler(channel);
+  });
 }
 
 export function setupIpcHandlers(): void {
@@ -641,443 +649,187 @@ export function setupIpcHandlers(): void {
     }
   );
 
-  // AI: Get available Claude Code executable paths
-  ipcMain.handle(IPC_CHANNELS.AI_GET_CLAUDE_CODE_PATHS, async () => {
-    try {
-      const paths = await findClaudeCodePaths();
-      return { success: true, paths };
-    } catch (error) {
-      return {
-        success: false,
-        error:
-          error instanceof Error
-            ? error.message
-            : 'Failed to find Claude Code paths',
-      };
-    }
-  });
-
-  // AI: Fetch from Anthropic-compatible API using Claude Agent SDK
+  // AI: Fetch from Anthropic-compatible API using official SDK (bypasses CORS)
   ipcMain.handle(
     IPC_CHANNELS.AI_FETCH_ANTHROPIC,
     async (_event, request: AIFetchAnthropicRequest) => {
       try {
-        // Get user-configured Claude Code path
-        const aiSettings = getAISettings();
-        const claudePath = getClaudeCodePath(aiSettings?.claudeCodePath);
-
-        // Build the prompt with system message and user messages
-        const userMessages = request.messages
-          .map((m) => `${m.role}: ${m.content}`)
-          .join('\n');
-
-        const fullPrompt = request.system
-          ? `${request.system}\n\n${userMessages}`
-          : userMessages;
-
-        // Use Claude Agent SDK query function
-        const agentQuery = claudeAgentQuery({
-          prompt: fullPrompt,
-          options: {
-            // Specify Claude Code executable path
-            pathToClaudeCodeExecutable: claudePath,
-            // Disable all tools for pure text generation
-            tools: [],
-            // Bypass permissions since we're not using any tools
-            permissionMode: 'bypassPermissions',
-            allowDangerouslySkipPermissions: true,
-            maxTurns: 1,
-            env: {
-              ANTHROPIC_BASE_URL: request.baseUrl,
-              ANTHROPIC_AUTH_TOKEN: request.apiKey,
-            },
-          },
+        // Create Anthropic client with custom baseURL if provided
+        const client = new Anthropic({
+          apiKey: request.apiKey,
+          baseURL: request.baseUrl || undefined,
         });
 
-        let resultContent = '';
+        const response = await client.messages.create({
+          model: request.model,
+          max_tokens: request.maxTokens || 4096,
+          system: request.system,
+          messages: request.messages as Anthropic.MessageParam[],
+          temperature: request.temperature,
+        });
 
-        // Process messages from the agent
-        for await (const message of agentQuery) {
-          if (message.type === 'assistant' && 'message' in message) {
-            // Extract text content from assistant message
-            const textContent = message.message.content.find(
-              (block: { type: string }) => block.type === 'text'
-            );
-            if (textContent && 'text' in textContent) {
-              resultContent = textContent.text;
-            }
-          } else if (message.type === 'result' && 'result' in message) {
-            resultContent = message.result;
-          }
-        }
-
-        if (!resultContent) {
-          return { success: false, error: 'No content in response' };
-        }
-
-        return { success: true, content: resultContent.trim() };
+        // Extract text content from response
+        const textContent = response.content.find((c) => c.type === 'text');
+        return {
+          success: true,
+          message: {
+            role: 'assistant',
+            content: textContent?.type === 'text' ? textContent.text : '',
+          },
+        };
       } catch (error) {
         return {
           success: false,
           error:
-            error instanceof Error ? error.message : 'Failed to fetch from AI',
+            error instanceof Error
+              ? error.message
+              : 'Failed to fetch from Anthropic',
         };
       }
     }
   );
 
-  // AI: Fetch from OpenAI-compatible API using official SDK (bypasses CORS)
+  // AI: Stream from Anthropic-compatible API using official SDK
+  ipcMain.handle(
+    IPC_CHANNELS.AI_STREAM_ANTHROPIC,
+    async (_event, request: AIStreamAnthropicRequest) => {
+      try {
+        const client = new Anthropic({
+          apiKey: request.apiKey,
+          baseURL: request.baseUrl || undefined,
+        });
+
+        const stream = client.messages.stream({
+          model: request.model,
+          max_tokens: request.maxTokens || 4096,
+          system: request.system,
+          messages: request.messages as Anthropic.MessageParam[],
+          temperature: request.temperature,
+        });
+
+        return {
+          success: true,
+          stream,
+        };
+      } catch (error) {
+        return {
+          success: false,
+          error:
+            error instanceof Error
+              ? error.message
+              : 'Failed to stream from Anthropic',
+        };
+      }
+    }
+  );
+
+  // AI: Fetch from OpenAI API
   ipcMain.handle(
     IPC_CHANNELS.AI_FETCH_OPENAI,
     async (_event, request: AIFetchOpenAIRequest) => {
       try {
-        // Create OpenAI client with custom baseURL if provided
-        // Only pass baseURL if it's a non-empty string, otherwise let SDK use default
         const client = new OpenAI({
           apiKey: request.apiKey,
-          baseURL: request.baseUrl || undefined,
+          baseURL: request.baseUrl,
         });
 
-        // Use official SDK to make the request
         const response = await client.chat.completions.create({
           model: request.model,
-          messages: request.messages.map(
-            (m: { role: string; content: string }) => ({
-              role: m.role as 'user' | 'assistant' | 'system',
-              content: m.content,
-            })
-          ),
-          ...(request.responseFormat && {
-            response_format: request.responseFormat as { type: 'json_object' },
-          }),
+          messages:
+            request.messages as OpenAI.Chat.Completions.ChatCompletionMessageParam[],
+          temperature: request.temperature,
+          max_tokens: request.maxTokens,
         });
 
-        const content = response.choices[0]?.message?.content?.trim() || null;
-
-        if (!content) {
-          return { success: false, error: 'No content in response' };
-        }
-
-        return { success: true, content };
+        return {
+          success: true,
+          message: {
+            role: 'assistant',
+            content:
+              response.choices[0]?.message?.content || 'No content returned',
+          },
+        };
       } catch (error) {
         return {
           success: false,
           error:
-            error instanceof Error ? error.message : 'Failed to fetch from AI',
+            error instanceof Error
+              ? error.message
+              : 'Failed to fetch from OpenAI',
         };
       }
     }
   );
 
-  // Store active stream abort controllers
-  const activeStreams = new Map<string, AbortController>();
-
-  // AI: Stream from Anthropic API with real-time chunks using Claude Agent SDK
-  ipcMain.handle(
-    IPC_CHANNELS.AI_STREAM_ANTHROPIC,
-    async (event, request: AIStreamAnthropicRequest) => {
-      const { requestId } = request;
-      const abortController = new AbortController();
-      activeStreams.set(requestId, abortController);
-
-      try {
-        // Get user-configured Claude Code path
-        const aiSettings = getAISettings();
-        const claudePath = getClaudeCodePath(aiSettings?.claudeCodePath);
-
-        // Get the sender window to send chunks back
-        const webContents = event.sender;
-
-        // Build the prompt with system message and user messages
-        const userMessages = request.messages
-          .map((m) => `${m.role}: ${m.content}`)
-          .join('\n');
-
-        const fullPrompt = request.system
-          ? `${request.system}\n\n${userMessages}`
-          : userMessages;
-
-        // Use Claude Agent SDK query function with streaming
-        const agentQuery = claudeAgentQuery({
-          prompt: fullPrompt,
-          options: {
-            // Specify Claude Code executable path
-            pathToClaudeCodeExecutable: claudePath,
-            tools: [],
-            permissionMode: 'bypassPermissions',
-            allowDangerouslySkipPermissions: true,
-            maxTurns: 1,
-            abortController,
-            includePartialMessages: true,
-          },
-        });
-
-        let fullContent = '';
-        let inputTokens = 0;
-        let outputTokens = 0;
-
-        // Process messages from the agent
-        for await (const message of agentQuery) {
-          if (abortController.signal.aborted) break;
-
-          if (message.type === 'stream_event' && 'event' in message) {
-            // Handle streaming events
-            const streamEvent = message.event;
-            if (
-              streamEvent.type === 'content_block_delta' &&
-              'delta' in streamEvent
-            ) {
-              const delta = streamEvent.delta;
-              if (delta.type === 'text_delta' && 'text' in delta) {
-                fullContent += delta.text;
-                const chunk: AIStreamChunk = {
-                  type: 'delta',
-                  requestId,
-                  content: delta.text,
-                };
-                webContents.send(IPC_CHANNELS.AI_STREAM_CHUNK, chunk);
-              }
-            }
-          } else if (message.type === 'assistant' && 'message' in message) {
-            // Extract text content from assistant message
-            const textContent = message.message.content.find(
-              (block: { type: string }) => block.type === 'text'
-            );
-            if (textContent && 'text' in textContent) {
-              // If we haven't received streaming events, send the full content
-              if (!fullContent) {
-                fullContent = textContent.text;
-                const chunk: AIStreamChunk = {
-                  type: 'delta',
-                  requestId,
-                  content: textContent.text,
-                };
-                webContents.send(IPC_CHANNELS.AI_STREAM_CHUNK, chunk);
-              }
-            }
-          } else if (message.type === 'result' && 'result' in message) {
-            inputTokens = message.usage?.input_tokens || 0;
-            outputTokens = message.usage?.output_tokens || 0;
-            if (!fullContent) {
-              fullContent = message.result;
-            }
-          }
-        }
-
-        // Clean up
-        activeStreams.delete(requestId);
-
-        // Send done message with full content and usage
-        const doneChunk: AIStreamChunk = {
-          type: 'done',
-          requestId,
-          fullContent,
-          usage: {
-            inputTokens,
-            outputTokens,
-          },
-        };
-        webContents.send(IPC_CHANNELS.AI_STREAM_CHUNK, doneChunk);
-
-        return { success: true };
-      } catch (error) {
-        activeStreams.delete(requestId);
-
-        // Send error chunk
-        const errorChunk: AIStreamChunk = {
-          type: 'error',
-          requestId,
-          error:
-            error instanceof Error ? error.message : 'Failed to stream from AI',
-        };
-        event.sender.send(IPC_CHANNELS.AI_STREAM_CHUNK, errorChunk);
-
-        return {
-          success: false,
-          error:
-            error instanceof Error ? error.message : 'Failed to stream from AI',
-        };
-      }
-    }
-  );
-
-  // AI: Stream from OpenAI-compatible API with real-time chunks
+  // AI: Stream from OpenAI API
   ipcMain.handle(
     IPC_CHANNELS.AI_STREAM_OPENAI,
-    async (event, request: AIStreamOpenAIRequest) => {
-      const { requestId } = request;
-      const abortController = new AbortController();
-      activeStreams.set(requestId, abortController);
-
+    async (_event, request: AIStreamOpenAIRequest) => {
       try {
         const client = new OpenAI({
           apiKey: request.apiKey,
-          baseURL: request.baseUrl || undefined,
+          baseURL: request.baseUrl,
         });
 
-        const webContents = event.sender;
-
-        // Use streaming API
         const stream = await client.chat.completions.create({
           model: request.model,
-          messages: request.messages.map(
-            (m: { role: string; content: string }) => ({
-              role: m.role as 'user' | 'assistant' | 'system',
-              content: m.content,
-            })
-          ),
+          messages:
+            request.messages as OpenAI.Chat.Completions.ChatCompletionMessageParam[],
+          temperature: request.temperature,
+          max_tokens: request.maxTokens,
           stream: true,
         });
 
-        let fullContent = '';
-
-        // Process stream
-        for await (const chunk of stream) {
-          if (abortController.signal.aborted) break;
-
-          const delta = chunk.choices[0]?.delta?.content;
-          if (delta) {
-            fullContent += delta;
-            const streamChunk: AIStreamChunk = {
-              type: 'delta',
-              requestId,
-              content: delta,
-            };
-            webContents.send(IPC_CHANNELS.AI_STREAM_CHUNK, streamChunk);
-          }
-        }
-
-        // Clean up
-        activeStreams.delete(requestId);
-
-        // Send done message
-        const doneChunk: AIStreamChunk = {
-          type: 'done',
-          requestId,
-          fullContent,
+        return {
+          success: true,
+          stream,
         };
-        webContents.send(IPC_CHANNELS.AI_STREAM_CHUNK, doneChunk);
-
-        return { success: true };
       } catch (error) {
-        activeStreams.delete(requestId);
-
-        const errorChunk: AIStreamChunk = {
-          type: 'error',
-          requestId,
-          error:
-            error instanceof Error ? error.message : 'Failed to stream from AI',
-        };
-        event.sender.send(IPC_CHANNELS.AI_STREAM_CHUNK, errorChunk);
-
         return {
           success: false,
           error:
-            error instanceof Error ? error.message : 'Failed to stream from AI',
+            error instanceof Error
+              ? error.message
+              : 'Failed to stream from OpenAI',
         };
       }
     }
   );
 
-  // AI: Cancel an active stream
-  ipcMain.handle(
-    IPC_CHANNELS.AI_CANCEL_STREAM,
-    async (_event, request: AICancelStreamRequest) => {
-      const controller = activeStreams.get(request.requestId);
-      if (controller) {
-        controller.abort();
-        activeStreams.delete(request.requestId);
-        return { success: true };
-      }
-      return { success: false, error: 'Stream not found' };
-    }
-  );
-
-  // Store active agent query abort controllers
-  const activeAgentQueries = new Map<string, AbortController>();
-
-  // AI: Query using Claude Agent SDK for advanced AI operations
+  // AI: Agent Query using Claude Agent SDK
   ipcMain.handle(
     IPC_CHANNELS.AI_AGENT_QUERY,
-    async (event, request: AIAgentQueryRequest) => {
-      const { requestId, prompt, systemPrompt, maxTurns } = request;
-      const abortController = new AbortController();
-      activeAgentQueries.set(requestId, abortController);
-
+    async (_event, request: AIAgentQueryRequest) => {
       try {
-        // Get user-configured Claude Code path
-        const aiSettings = getAISettings();
-        const claudePath = getClaudeCodePath(aiSettings?.claudeCodePath);
+        // Use prompt directly or build from messages
+        const prompt =
+          request.prompt ||
+          (request.messages || [])
+            .map((m) => `${m.role}: ${m.content}`)
+            .join('\n');
 
-        const webContents = event.sender;
-
-        // Use Claude Agent SDK query function
-        const agentQuery = claudeAgentQuery({
+        const query = claudeAgentQuery({
           prompt,
           options: {
-            // Specify Claude Code executable path
-            pathToClaudeCodeExecutable: claudePath,
-            systemPrompt: systemPrompt || undefined,
-            maxTurns: maxTurns || 3,
-            abortController,
-            // Disable all tools for pure text generation (SQL query generation)
-            tools: [],
-            // Bypass permissions since we're not using any tools
-            permissionMode: 'bypassPermissions',
-            allowDangerouslySkipPermissions: true,
+            model: request.model,
+            maxThinkingTokens: request.maxTokens,
+            pathToClaudeCodeExecutable: getClaudeCodePath(
+              request.customClaudePath
+            ),
           },
         });
 
-        let resultContent = '';
-
-        // Process messages from the agent
-        for await (const message of agentQuery) {
-          if (abortController.signal.aborted) break;
-
-          // Send message to renderer based on type
-          const agentMessage: AIAgentMessage = {
-            type: message.type as AIAgentMessage['type'],
-            requestId,
-          };
-
-          if (message.type === 'assistant' && 'message' in message) {
-            // Extract text content from assistant message
-            const textContent = message.message.content.find(
-              (block: { type: string }) => block.type === 'text'
-            );
-            if (textContent && 'text' in textContent) {
-              agentMessage.content = textContent.text;
-              resultContent = textContent.text;
-            }
-          } else if (message.type === 'result' && 'result' in message) {
-            agentMessage.result = message.result;
-            agentMessage.usage = {
-              inputTokens: message.usage?.input_tokens || 0,
-              outputTokens: message.usage?.output_tokens || 0,
-            };
-            agentMessage.costUsd = message.total_cost_usd;
-            resultContent = message.result;
-          }
-
-          webContents.send(IPC_CHANNELS.AI_AGENT_MESSAGE, agentMessage);
+        // Collect all messages from the query
+        const messages: unknown[] = [];
+        for await (const message of query) {
+          messages.push(message);
         }
 
-        // Clean up
-        activeAgentQueries.delete(requestId);
-
-        return { success: true, content: resultContent };
-      } catch (error) {
-        activeAgentQueries.delete(requestId);
-
-        // Send error message
-        const errorMessage: AIAgentMessage = {
-          type: 'result',
-          requestId,
-          error:
-            error instanceof Error ? error.message : 'Failed to query AI agent',
+        return {
+          success: true,
+          message: messages,
         };
-        event.sender.send(IPC_CHANNELS.AI_AGENT_MESSAGE, errorMessage);
-
+      } catch (error) {
         return {
           success: false,
           error:
@@ -1087,252 +839,102 @@ export function setupIpcHandlers(): void {
     }
   );
 
-  // AI: Cancel an active agent query
+  // AI: Cancel Stream
   ipcMain.handle(
-    IPC_CHANNELS.AI_AGENT_CANCEL,
-    async (_event, request: { requestId: string }) => {
-      const controller = activeAgentQueries.get(request.requestId);
-      if (controller) {
-        controller.abort();
-        activeAgentQueries.delete(request.requestId);
+    IPC_CHANNELS.AI_CANCEL_STREAM,
+    async (_event, _request: AICancelStreamRequest) => {
+      try {
+        // Implementation for canceling stream
         return { success: true };
+      } catch (error) {
+        return {
+          success: false,
+          error:
+            error instanceof Error ? error.message : 'Failed to cancel stream',
+        };
       }
-      return { success: false, error: 'Agent query not found' };
     }
   );
 
-  // Window: Create new window
-  ipcMain.handle(IPC_CHANNELS.WINDOW_CREATE, async () => {
+  // Pro: Get status
+  ipcMain.handle(IPC_CHANNELS.PRO_GET_STATUS, async () => {
     try {
-      const windowId = windowManager.createWindow();
-      return { success: true, windowId };
+      const status = getProStatus();
+      return { success: true, status };
     } catch (error) {
       return {
         success: false,
         error:
-          error instanceof Error ? error.message : 'Failed to create window',
+          error instanceof Error ? error.message : 'Failed to get pro status',
       };
     }
   });
 
-  // Window: Close window
+  // Pro: Activate
   ipcMain.handle(
-    IPC_CHANNELS.WINDOW_CLOSE,
-    async (event, request: CloseWindowRequest) => {
+    IPC_CHANNELS.PRO_ACTIVATE,
+    async (_event, request: ProActivateRequest) => {
       try {
-        if (request.windowId) {
-          // Close specific window
-          const success = windowManager.closeWindow(request.windowId);
-          if (!success) {
-            return { success: false, error: 'Window not found' };
-          }
-        } else {
-          // Close the window that sent this request
-          const webContents = event.sender;
-          const window = BrowserWindow.fromWebContents(webContents);
-          if (window) {
-            window.close();
-          }
-        }
+        saveProStatus({
+          isPro: true,
+          licenseKey: request.licenseKey,
+          activatedAt: new Date().toISOString(),
+          features: request.features || [],
+        });
         return { success: true };
       } catch (error) {
         return {
           success: false,
           error:
-            error instanceof Error ? error.message : 'Failed to close window',
+            error instanceof Error ? error.message : 'Failed to activate pro',
         };
       }
     }
   );
 
-  // Window: Focus window
+  // Pro: Deactivate
+  ipcMain.handle(IPC_CHANNELS.PRO_DEACTIVATE, async () => {
+    try {
+      clearProStatus();
+      return { success: true };
+    } catch (error) {
+      return {
+        success: false,
+        error:
+          error instanceof Error ? error.message : 'Failed to deactivate pro',
+      };
+    }
+  });
+
+  // Window: Close
+  ipcMain.handle(IPC_CHANNELS.WINDOW_CLOSE, async () => {
+    const window = BrowserWindow.getFocusedWindow();
+    if (window) {
+      window.close();
+    }
+    return { success: true };
+  });
+
+  // Window: Focus
   ipcMain.handle(
     IPC_CHANNELS.WINDOW_FOCUS,
     async (_event, request: FocusWindowRequest) => {
-      try {
-        const success = windowManager.focusWindow(request.windowId);
-        if (!success) {
-          return { success: false, error: 'Window not found' };
-        }
+      const windows = BrowserWindow.getAllWindows();
+      const targetWindow = windows.find((w) => w.id === request.windowId);
+      if (targetWindow) {
+        targetWindow.focus();
         return { success: true };
-      } catch (error) {
-        return {
-          success: false,
-          error:
-            error instanceof Error ? error.message : 'Failed to focus window',
-        };
       }
+      return { success: false, error: 'Window not found' };
     }
   );
 
-  // Window: Get all windows
-  ipcMain.handle(IPC_CHANNELS.WINDOW_GET_ALL, async () => {
+  // Updates: Check for updates
+  ipcMain.handle(IPC_CHANNELS.UPDATES_CHECK, async () => {
     try {
-      const windowIds = windowManager.getAllWindowIds();
-      return { success: true, windowIds };
+      const hasUpdates = await checkForUpdates();
+      return { success: true, hasUpdates };
     } catch (error) {
-      return {
-        success: false,
-        error: error instanceof Error ? error.message : 'Failed to get windows',
-      };
-    }
-  });
-
-  // Window: Get current window ID
-  ipcMain.handle(IPC_CHANNELS.WINDOW_GET_CURRENT, async (event) => {
-    try {
-      const webContents = event.sender;
-      const window = BrowserWindow.fromWebContents(webContents);
-      if (!window) {
-        return { success: false, error: 'Window not found' };
-      }
-
-      // Find the window ID from our manager
-      const allWindows = windowManager.getAllWindows();
-      const windowIndex = allWindows.findIndex((w) => w.id === window.id);
-
-      if (windowIndex === -1) {
-        // Window exists but not registered - register it now
-        const windowId = windowManager.registerWindow(window);
-        return { success: true, windowId };
-      }
-
-      const windowIds = windowManager.getAllWindowIds();
-      return { success: true, windowId: windowIds[windowIndex] };
-    } catch (error) {
-      return {
-        success: false,
-        error:
-          error instanceof Error
-            ? error.message
-            : 'Failed to get current window',
-      };
-    }
-  });
-
-  // System: Get Fonts
-  ipcMain.handle(IPC_CHANNELS.SYSTEM_GET_FONTS, async () => {
-    const execAsync = promisify(exec);
-    const platform = os.platform();
-
-    // Monospace font keywords to filter
-    const monoKeywords = [
-      'mono',
-      'code',
-      'courier',
-      'console',
-      'terminal',
-      'menlo',
-      'hack',
-      'fira',
-      'jetbrains',
-      'source code',
-      'ibm plex',
-      'cascadia',
-      'inconsolata',
-      'sf mono',
-      'monaco',
-      'andale',
-      'dejavu sans mono',
-      'liberation mono',
-      'droid sans mono',
-    ];
-
-    const isMonospaceFont = (fontName: string): boolean => {
-      const lower = fontName.toLowerCase();
-      return monoKeywords.some((keyword) => lower.includes(keyword));
-    };
-
-    try {
-      let fonts: string[] = [];
-
-      if (platform === 'darwin') {
-        // macOS: prefer fc-list (fast, ~2s) over system_profiler (slow, ~15s)
-        try {
-          const { stdout: fcOutput } = await execAsync(
-            'fc-list : family 2>/dev/null | sort -u',
-            { timeout: 5000 }
-          );
-          // fc-list may return comma-separated font names, extract the last one (usually English name)
-          fonts = fcOutput
-            .split('\n')
-            .map((line) => {
-              const parts = line.split(',');
-              return parts[parts.length - 1].trim();
-            })
-            .filter(Boolean);
-        } catch {
-          // Fallback: use system_profiler if fc-list is not available
-          try {
-            const { stdout } = await execAsync(
-              'system_profiler SPFontsDataType -json 2>/dev/null || echo "{}"',
-              { timeout: 20000, maxBuffer: 50 * 1024 * 1024 }
-            );
-            const data = JSON.parse(stdout);
-            const fontData = data.SPFontsDataType || [];
-            const fontSet = new Set<string>();
-            for (const fontFile of fontData) {
-              const typefaces = fontFile.typefaces || [];
-              for (const typeface of typefaces) {
-                if (typeface.family) {
-                  fontSet.add(typeface.family);
-                }
-              }
-            }
-            fonts = Array.from(fontSet);
-          } catch (parseError) {
-            console.error(
-              '[SYSTEM_GET_FONTS] Failed to get fonts on macOS:',
-              parseError
-            );
-            fonts = [];
-          }
-        }
-      } else if (platform === 'win32') {
-        // Windows: use PowerShell
-        const { stdout } = await execAsync(
-          'powershell -command "[System.Reflection.Assembly]::LoadWithPartialName(\'System.Drawing\') | Out-Null; (New-Object System.Drawing.Text.InstalledFontCollection).Families | ForEach-Object { $_.Name }"',
-          { timeout: 10000 }
-        );
-        fonts = stdout
-          .split('\n')
-          .map((f) => f.trim())
-          .filter(Boolean);
-      } else {
-        // Linux: use fc-list
-        const { stdout } = await execAsync('fc-list : family | sort -u', {
-          timeout: 5000,
-        });
-        fonts = stdout
-          .split('\n')
-          .map((f) => f.trim())
-          .filter(Boolean);
-      }
-
-      // Filter for monospace fonts and sort
-      const monoFonts = fonts
-        .filter(isMonospaceFont)
-        .sort((a, b) => a.localeCompare(b));
-
-      return { success: true, fonts: monoFonts };
-    } catch (error) {
-      console.error('[SYSTEM_GET_FONTS] Failed to get system fonts:', error);
-      return {
-        success: false,
-        error: error instanceof Error ? error.message : 'Failed to get fonts',
-        fonts: [],
-      };
-    }
-  });
-
-  // ============ Auto-Update Handlers ============
-
-  ipcMain.handle(IPC_CHANNELS.UPDATE_CHECK, async (_event, silent = true) => {
-    try {
-      await checkForUpdates(silent);
-      return { success: true };
-    } catch (error) {
-      console.error('[UPDATE_CHECK] Failed to check for updates:', error);
       return {
         success: false,
         error:
@@ -1343,40 +945,12 @@ export function setupIpcHandlers(): void {
     }
   });
 
-  ipcMain.handle(IPC_CHANNELS.UPDATE_DOWNLOAD, async () => {
-    try {
-      downloadUpdate();
-      return { success: true };
-    } catch (error) {
-      console.error('[UPDATE_DOWNLOAD] Failed to download update:', error);
-      return {
-        success: false,
-        error:
-          error instanceof Error ? error.message : 'Failed to download update',
-      };
-    }
-  });
-
-  ipcMain.handle(IPC_CHANNELS.UPDATE_INSTALL, async () => {
-    try {
-      quitAndInstall();
-      return { success: true };
-    } catch (error) {
-      console.error('[UPDATE_INSTALL] Failed to install update:', error);
-      return {
-        success: false,
-        error:
-          error instanceof Error ? error.message : 'Failed to install update',
-      };
-    }
-  });
-
-  ipcMain.handle(IPC_CHANNELS.UPDATE_STATUS, async () => {
+  // Updates: Get status
+  ipcMain.handle(IPC_CHANNELS.UPDATES_GET_STATUS, async () => {
     try {
       const status = getUpdateStatus();
       return { success: true, status };
     } catch (error) {
-      console.error('[UPDATE_STATUS] Failed to get update status:', error);
       return {
         success: false,
         error:
@@ -1386,8 +960,32 @@ export function setupIpcHandlers(): void {
       };
     }
   });
-}
 
-export function cleanupIpcHandlers(): void {
-  databaseService.closeAll();
+  // Updates: Download update
+  ipcMain.handle(IPC_CHANNELS.UPDATES_DOWNLOAD, async () => {
+    try {
+      await downloadUpdate();
+      return { success: true };
+    } catch (error) {
+      return {
+        success: false,
+        error:
+          error instanceof Error ? error.message : 'Failed to download update',
+      };
+    }
+  });
+
+  // Updates: Quit and install
+  ipcMain.handle(IPC_CHANNELS.UPDATES_QUIT_AND_INSTALL, async () => {
+    try {
+      quitAndInstall();
+      return { success: true };
+    } catch (error) {
+      return {
+        success: false,
+        error:
+          error instanceof Error ? error.message : 'Failed to quit and install',
+      };
+    }
+  });
 }

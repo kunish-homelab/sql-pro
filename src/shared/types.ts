@@ -613,7 +613,7 @@ export interface CloseWindowResponse {
 }
 
 export interface FocusWindowRequest {
-  windowId: string;
+  windowId: number;
 }
 
 export interface FocusWindowResponse {
@@ -635,454 +635,151 @@ export interface GetCurrentWindowResponse {
 
 // ============ AI Types ============
 
-export type AIProvider = 'openai' | 'anthropic';
+export type AIModelProvider = 'openai' | 'anthropic' | 'local';
 
-/** Default API endpoints for AI providers */
+export interface AIModelConfig {
+  provider: AIModelProvider;
+  modelId: string;
+  apiKey?: string;
+  baseUrl?: string;
+  maxTokens?: number;
+  temperature?: number;
+}
+
+export interface GetAIModelConfigResponse {
+  success: boolean;
+  config?: AIModelConfig;
+  error?: string;
+}
+
+export interface SetAIModelConfigRequest {
+  config: AIModelConfig;
+}
+
+export interface SetAIModelConfigResponse {
+  success: boolean;
+  error?: string;
+}
+
+export interface GenerateAISuggestionsRequest {
+  connectionId: string;
+  context: string;
+  query?: string;
+  type: 'query' | 'schema' | 'optimization' | 'documentation';
+}
+
+export interface GenerateAISuggestionsResponse {
+  success: boolean;
+  suggestions?: string[];
+  explanation?: string;
+  error?: string;
+}
+
+export interface ExplainQueryRequest {
+  connectionId: string;
+  query: string;
+}
+
+export interface ExplainQueryResponse {
+  success: boolean;
+  explanation?: string;
+  suggestedOptimizations?: string[];
+  error?: string;
+}
+
+// ============ AI Settings Types ============
+
+export type AIProvider = 'openai' | 'anthropic' | 'custom';
+
+// Default base URLs for AI providers
 export const DEFAULT_AI_BASE_URLS: Record<AIProvider, string> = {
   openai: 'https://api.openai.com/v1',
   anthropic: 'https://api.anthropic.com',
+  custom: '',
 };
 
 export interface AISettings {
   provider: AIProvider;
-  apiKey: string;
-  model: string;
-  /** Custom base URL for API calls (optional, uses default if empty) */
+  apiKey?: string;
   baseUrl?: string;
-  /** Path to Claude Code executable (for Anthropic provider with claude-agent-sdk) */
+  model?: string;
+  maxTokens?: number;
+  temperature?: number;
+  customClaudePath?: string;
   claudeCodePath?: string;
 }
 
-export interface GetClaudeCodePathsResponse {
-  success: boolean;
-  paths?: string[];
-  error?: string;
+// ============ Data Analysis Types ============
+
+export interface DataInsight {
+  type: 'trend' | 'anomaly' | 'pattern' | 'summary' | 'suggestion';
+  title: string;
+  description: string;
+  confidence: number;
+  data?: unknown;
+  severity?: 'info' | 'warning' | 'error' | 'low' | 'medium' | 'high';
+  column?: string;
+  message?: string;
+  details?: string;
 }
 
 export interface SaveAISettingsRequest {
   settings: AISettings;
 }
 
-export interface SaveAISettingsResponse {
-  success: boolean;
-  error?: string;
-}
+// ============ AI Request Types ============
 
-export interface GetAISettingsResponse {
-  success: boolean;
-  settings?: AISettings;
-  error?: string;
-}
-
-export interface NLToSQLRequest {
-  prompt: string;
-  schema: SchemaInfo[];
-  context?: {
-    currentTable?: string;
-    recentQueries?: string[];
-  };
-}
-
-export interface NLToSQLResponse {
-  success: boolean;
-  sql?: string;
-  explanation?: string;
-  error?: string;
-}
-
-export interface OptimizeQueryRequest {
-  query: string;
-  schema: SchemaInfo[];
-  queryPlan?: QueryPlanNode[];
-}
-
-export interface OptimizeQueryResponse {
-  success: boolean;
-  optimizedQuery?: string;
-  suggestions?: string[];
-  explanation?: string;
-  error?: string;
-}
-
-export interface AnalyzeDataRequest {
-  columns: ColumnInfo[];
-  rows: Record<string, unknown>[];
-  analysisType: 'anomaly' | 'suggestions' | 'patterns';
-}
-
-export interface DataInsight {
-  type: 'anomaly' | 'suggestion' | 'pattern';
-  column?: string;
-  message: string;
-  severity: 'info' | 'warning' | 'error';
-  details?: Record<string, unknown>;
-}
-
-export interface AnalyzeDataResponse {
-  success: boolean;
-  insights?: DataInsight[];
-  summary?: string;
-  error?: string;
-}
-
-// AI Fetch Request/Response types (for IPC-based API calls)
 export interface AIFetchAnthropicRequest {
-  baseUrl?: string;
   apiKey: string;
+  baseUrl?: string;
   model: string;
-  system: string;
+  system?: string;
   messages: Array<{ role: string; content: string }>;
   maxTokens?: number;
+  temperature?: number;
 }
 
-export interface AIFetchAnthropicResponse {
-  success: boolean;
-  content?: string;
-  error?: string;
+export interface AIStreamAnthropicRequest extends AIFetchAnthropicRequest {
+  stream?: boolean;
+  requestId?: string;
 }
 
-// Streaming AI request/response types
-export interface AIStreamAnthropicRequest {
-  baseUrl?: string;
+export interface AIFetchOpenAIRequest {
   apiKey: string;
-  model: string;
-  system: string;
-  messages: Array<{ role: string; content: string }>;
-  maxTokens?: number;
-  requestId: string; // Unique ID to identify the stream
-}
-
-export interface AIStreamChunk {
-  type: 'delta' | 'done' | 'error';
-  requestId: string;
-  content?: string; // Text delta for 'delta' type
-  fullContent?: string; // Full accumulated content for 'done' type
-  error?: string; // Error message for 'error' type
-  usage?: {
-    inputTokens: number;
-    outputTokens: number;
-  };
-}
-
-export interface AIStreamOpenAIRequest {
   baseUrl?: string;
-  apiKey: string;
   model: string;
   messages: Array<{ role: string; content: string }>;
   maxTokens?: number;
-  requestId: string;
+  temperature?: number;
+  responseFormat?: unknown;
 }
 
-export interface AICancelStreamRequest {
-  requestId: string;
+export interface AIStreamOpenAIRequest extends AIFetchOpenAIRequest {
+  stream?: boolean;
+  requestId?: string;
 }
 
-// Claude Agent SDK types for advanced AI operations
 export interface AIAgentQueryRequest {
+  apiKey?: string;
+  model?: string;
+  system?: string;
+  messages?: Array<{ role: string; content: string }>;
+  maxTokens?: number;
+  temperature?: number;
+  tools?: unknown[];
+  customClaudePath?: string;
   prompt: string;
-  systemPrompt?: string;
   requestId: string;
   maxTurns?: number;
 }
 
-export interface AIAgentMessage {
-  type: 'system' | 'assistant' | 'result' | 'stream_event';
-  requestId: string;
-  content?: string;
-  result?: string;
-  error?: string;
-  usage?: {
-    inputTokens: number;
-    outputTokens: number;
-  };
-  costUsd?: number;
+export interface AICancelStreamRequest {
+  streamId?: string;
+  requestId?: string;
 }
 
-export interface AIFetchOpenAIRequest {
-  baseUrl?: string;
-  apiKey: string;
-  model: string;
-  messages: Array<{ role: string; content: string }>;
-  maxTokens?: number;
-  responseFormat?: { type: string };
-}
+// ============ Menu Types ============
 
-export interface AIFetchOpenAIResponse {
-  success: boolean;
-  content?: string;
-  error?: string;
-}
-
-// ============ Plugin Types ============
-
-export interface PluginManifest {
-  /** Unique identifier for the plugin (e.g., 'com.example.my-plugin') */
-  id: string;
-  /** Human-readable plugin name */
-  name: string;
-  /** Plugin version (semver) */
-  version: string;
-  /** Plugin description */
-  description: string;
-  /** Author name */
-  author: string;
-  /** Minimum app version required (semver) */
-  minAppVersion?: string;
-  /** Plugin entry point (path to main file) */
-  main: string;
-  /** Plugin repository URL */
-  repository?: string;
-  /** Plugin home page URL */
-  homepage?: string;
-  /** License type (e.g., 'MIT', 'Apache-2.0') */
-  license?: string;
-  /** Plugin permissions required */
-  permissions?: string[];
-  /** Plugin configuration schema (JSON schema) */
-  configSchema?: Record<string, unknown>;
-  /** Whether the plugin can be disabled */
-  canDisable?: boolean;
-}
-
-export interface PluginInfo {
-  manifest: PluginManifest;
-  /** Absolute path to plugin directory */
-  pluginPath: string;
-  /** Whether the plugin is enabled */
-  enabled: boolean;
-  /** Whether the plugin has updates available */
-  hasUpdates?: boolean;
-  /** Available version if hasUpdates is true */
-  availableVersion?: string;
-}
-
-export interface ListPluginsRequest {
-  /** Filter plugins by enabled status */
-  enabled?: boolean;
-}
-
-export interface ListPluginsResponse {
-  success: boolean;
-  plugins?: PluginInfo[];
-  error?: string;
-}
-
-export interface GetPluginRequest {
-  /** Plugin ID */
-  id: string;
-}
-
-export interface GetPluginResponse {
-  success: boolean;
-  plugin?: PluginInfo;
-  error?: string;
-}
-
-export interface InstallPluginRequest {
-  /** Plugin ID from marketplace or local path */
-  pluginId: string;
-  /** Version to install (defaults to latest) */
-  version?: string;
-}
-
-export interface InstallPluginResponse {
-  success: boolean;
-  plugin?: PluginInfo;
-  error?: string;
-}
-
-export interface UninstallPluginRequest {
-  /** Plugin ID */
-  id: string;
-}
-
-export interface UninstallPluginResponse {
-  success: boolean;
-  error?: string;
-}
-
-export interface EnablePluginRequest {
-  /** Plugin ID */
-  id: string;
-}
-
-export interface EnablePluginResponse {
-  success: boolean;
-  error?: string;
-}
-
-export interface DisablePluginRequest {
-  /** Plugin ID */
-  id: string;
-}
-
-export interface DisablePluginResponse {
-  success: boolean;
-  error?: string;
-}
-
-export interface UpdatePluginRequest {
-  /** Plugin ID */
-  id: string;
-  /** Version to update to (defaults to latest) */
-  version?: string;
-}
-
-export interface UpdatePluginResponse {
-  success: boolean;
-  plugin?: PluginInfo;
-  error?: string;
-}
-
-export interface CheckPluginUpdatesRequest {
-  /** Plugin IDs to check (defaults to all) */
-  pluginIds?: string[];
-}
-
-export interface CheckPluginUpdatesResponse {
-  success: boolean;
-  updates?: Array<{
-    pluginId: string;
-    currentVersion: string;
-    availableVersion: string;
-  }>;
-  error?: string;
-}
-
-export interface PluginMarketplaceFetchRequest {
-  /** Search query */
-  query?: string;
-  /** Filter by category */
-  category?: string;
-  /** Pagination offset */
-  offset?: number;
-  /** Pagination limit */
-  limit?: number;
-}
-
-export interface MarketplacePluginInfo {
-  id: string;
-  name: string;
-  version: string;
-  description: string;
-  author: string;
-  downloads: number;
-  rating: number;
-  /** URL to plugin icon/image */
-  icon?: string;
-  /** URL to repository */
-  repository?: string;
-  /** URL to documentation */
-  documentation?: string;
-}
-
-export interface PluginMarketplaceFetchResponse {
-  success: boolean;
-  plugins?: MarketplacePluginInfo[];
-  total?: number;
-  error?: string;
-}
-
-/** System fonts available on the platform */
-export interface GetSystemFontsResponse {
-  success: boolean;
-  fonts?: string[];
-  error?: string;
-}
-
-// ============ IPC Channel Names ============
-
-export const IPC_CHANNELS = {
-  // Database operations
-  DB_OPEN: 'db:open',
-  DB_CLOSE: 'db:close',
-  DB_GET_SCHEMA: 'db:getSchema',
-  DB_GET_TABLE_DATA: 'db:getTableData',
-  DB_EXECUTE_QUERY: 'db:executeQuery',
-  DB_VALIDATE_CHANGES: 'db:validateChanges',
-  DB_APPLY_CHANGES: 'db:applyChanges',
-  DB_ANALYZE_PLAN: 'db:analyzeQueryPlan',
-
-  // Dialogs
-  DIALOG_OPEN_FILE: 'dialog:openFile',
-  DIALOG_SAVE_FILE: 'dialog:saveFile',
-
-  // Export
-  EXPORT_DATA: 'export:data',
-
-  // Preferences
-  APP_GET_RECENT_CONNECTIONS: 'app:getRecentConnections',
-  APP_GET_PREFERENCES: 'app:getPreferences',
-  APP_SET_PREFERENCES: 'app:setPreferences',
-
-  // Password storage
-  PASSWORD_SAVE: 'password:save',
-  PASSWORD_GET: 'password:get',
-  PASSWORD_HAS: 'password:has',
-  PASSWORD_REMOVE: 'password:remove',
-  PASSWORD_IS_AVAILABLE: 'password:isAvailable',
-
-  // Connection profile operations
-  CONNECTION_UPDATE: 'connection:update',
-  CONNECTION_REMOVE: 'connection:remove',
-
-  // Query history operations
-  HISTORY_GET: 'history:get',
-  HISTORY_SAVE: 'history:save',
-  HISTORY_DELETE: 'history:delete',
-  HISTORY_CLEAR: 'history:clear',
-
-  // Window operations
-  WINDOW_CREATE: 'window:create',
-  WINDOW_CLOSE: 'window:close',
-  WINDOW_FOCUS: 'window:focus',
-  WINDOW_GET_ALL: 'window:getAll',
-  WINDOW_GET_CURRENT: 'window:getCurrent',
-
-  // Menu actions (main -> renderer)
-  MENU_ACTION: 'menu:action',
-
-  // AI operations
-  AI_GET_SETTINGS: 'ai:getSettings',
-  AI_SAVE_SETTINGS: 'ai:saveSettings',
-  AI_GET_CLAUDE_CODE_PATHS: 'ai:getClaudeCodePaths',
-  AI_FETCH_ANTHROPIC: 'ai:fetchAnthropic',
-  AI_FETCH_OPENAI: 'ai:fetchOpenAI',
-  AI_STREAM_ANTHROPIC: 'ai:streamAnthropic',
-  AI_STREAM_OPENAI: 'ai:streamOpenAI',
-  AI_STREAM_CHUNK: 'ai:streamChunk',
-  AI_CANCEL_STREAM: 'ai:cancelStream',
-  AI_AGENT_QUERY: 'ai:agentQuery',
-  AI_AGENT_MESSAGE: 'ai:agentMessage',
-  AI_AGENT_CANCEL: 'ai:agentCancel',
-
-  // System operations
-  SYSTEM_GET_FONTS: 'system:getFonts',
-
-  // Auto-update operations
-  UPDATE_CHECK: 'update:check',
-  UPDATE_DOWNLOAD: 'update:download',
-  UPDATE_INSTALL: 'update:install',
-  UPDATE_STATUS: 'update:status',
-
-  // Plugin operations
-  PLUGIN_LIST: 'plugin:list',
-  PLUGIN_GET: 'plugin:get',
-  PLUGIN_INSTALL: 'plugin:install',
-  PLUGIN_UNINSTALL: 'plugin:uninstall',
-  PLUGIN_ENABLE: 'plugin:enable',
-  PLUGIN_DISABLE: 'plugin:disable',
-  PLUGIN_UPDATE: 'plugin:update',
-  PLUGIN_CHECK_UPDATES: 'plugin:checkUpdates',
-
-  // Plugin marketplace operations
-  PLUGIN_MARKETPLACE_FETCH: 'plugin:marketplace:fetch',
-
-  // Plugin events (main -> renderer)
-  PLUGIN_EVENT: 'plugin:event',
-} as const;
-
-// Menu action types
 export type MenuAction =
   | 'open-database'
   | 'close-database'
@@ -1092,6 +789,321 @@ export type MenuAction =
   | 'toggle-command-palette'
   | 'switch-to-data'
   | 'switch-to-query'
-  | 'execute-query'
   | 'toggle-history'
+  | 'execute-query'
   | 'new-window';
+
+// ============ Pro Features Types ============
+
+export type ProFeatureType =
+  | 'ai_assistant'
+  | 'advanced_analytics'
+  | 'export_formats'
+  | 'batch_operations'
+  | 'performance_monitoring';
+
+/** String identifier for Pro features used in UI components */
+export type ProFeature =
+  | 'ai-nl-to-sql'
+  | 'ai-data-analysis'
+  | 'advanced-export'
+  | 'plugin-system'
+  | 'query-optimizer';
+
+export interface ProFeatureInfo {
+  id: ProFeatureType;
+  name: string;
+  description: string;
+  enabled: boolean;
+}
+
+export interface ProStatus {
+  isPro: boolean;
+  licenseKey?: string;
+  activatedAt?: string;
+  expiresAt?: string;
+  features: ProFeatureType[];
+}
+
+export interface GetProFeaturesResponse {
+  success: boolean;
+  features?: ProFeatureInfo[];
+  isPro?: boolean;
+  licenseKey?: string;
+  licenseExpiresAt?: string;
+  error?: string;
+}
+
+export interface ActivateProFeatureRequest {
+  licenseKey: string;
+}
+
+export interface ActivateProFeatureResponse {
+  success: boolean;
+  features?: ProFeatureInfo[];
+  expiresAt?: string;
+  error?: string;
+}
+
+export interface CheckProStatusResponse {
+  success: boolean;
+  isPro: boolean;
+  features?: ProFeatureInfo[];
+  expiresAt?: string;
+  error?: string;
+}
+
+export interface ProActivateRequest {
+  licenseKey: string;
+  features?: ProFeatureType[];
+}
+
+export interface ProActivateResponse {
+  success: boolean;
+  error?: string;
+}
+
+export interface ProDeactivateResponse {
+  success: boolean;
+  error?: string;
+}
+
+export interface ProGetStatusResponse {
+  success: boolean;
+  status?: ProStatus | null;
+  error?: string;
+}
+
+// ============ AI Response Types ============
+
+export interface AIFetchAnthropicResponse {
+  success: boolean;
+  message?: { role: string; content: string };
+  content?: string;
+  error?: string;
+}
+
+export interface AIFetchOpenAIResponse {
+  success: boolean;
+  message?: { role: string; content: string };
+  content?: string;
+  error?: string;
+}
+
+export interface AIStreamChunk {
+  type: 'content' | 'done' | 'error' | 'delta';
+  content?: string;
+  error?: string;
+  requestId?: string;
+  fullContent?: string;
+  usage?: {
+    inputTokens?: number;
+    outputTokens?: number;
+  };
+}
+
+export interface AIAgentMessage {
+  type: string;
+  content?: unknown;
+  requestId?: string;
+  error?: string;
+  result?: string;
+}
+
+export interface GetAISettingsResponse {
+  success: boolean;
+  settings?: AISettings | null;
+  error?: string;
+}
+
+export interface SaveAISettingsResponse {
+  success: boolean;
+  error?: string;
+}
+
+export interface GetClaudeCodePathsResponse {
+  success: boolean;
+  paths?: string[];
+  error?: string;
+}
+
+// ============ IPC Channel Definitions ============
+
+export interface IPCChannels {
+  // Auto-Update
+  'auto-update:check-for-updates': void;
+  'auto-update:install-update': void;
+  'auto-update:status': UpdateStatus;
+
+  // Database Connection
+  'database:open': [OpenDatabaseRequest, OpenDatabaseResponse];
+  'database:close': [CloseDatabaseRequest, CloseDatabaseResponse];
+  'database:get-schema': [GetSchemaRequest, GetSchemaResponse];
+
+  // Table Data
+  'table:get-data': [GetTableDataRequest, GetTableDataResponse];
+
+  // Query Execution
+  'query:execute': [ExecuteQueryRequest, ExecuteQueryResponse];
+  'query:analyze-plan': [AnalyzeQueryPlanRequest, AnalyzeQueryPlanResponse];
+
+  // Changes
+  'changes:validate': [ValidateChangesRequest, ValidateChangesResponse];
+  'changes:apply': [ApplyChangesRequest, ApplyChangesResponse];
+
+  // File Dialog
+  'dialog:open-file': [OpenFileDialogRequest, OpenFileDialogResponse];
+  'dialog:save-file': [SaveFileDialogRequest, SaveFileDialogResponse];
+
+  // Export
+  'export:data': [ExportRequest, ExportResponse];
+
+  // Preferences
+  'preferences:get': void;
+  'preferences:get-recent-connections': void;
+  'preferences:set': [SetPreferencesRequest, SetPreferencesResponse];
+
+  // Password Storage
+  'password:save': [SavePasswordRequest, SavePasswordResponse];
+  'password:get': [GetPasswordRequest, GetPasswordResponse];
+  'password:has': [HasPasswordRequest, HasPasswordResponse];
+  'password:remove': [RemovePasswordRequest, RemovePasswordResponse];
+  'password:is-storage-available': void;
+
+  // Connection Profiles
+  'connection:update': [UpdateConnectionRequest, UpdateConnectionResponse];
+  'connection:remove': [RemoveConnectionRequest, RemoveConnectionResponse];
+
+  // Query History
+  'query-history:get': [GetQueryHistoryRequest, GetQueryHistoryResponse];
+  'query-history:save': [SaveQueryHistoryRequest, SaveQueryHistoryResponse];
+  'query-history:delete': [
+    DeleteQueryHistoryRequest,
+    DeleteQueryHistoryResponse,
+  ];
+  'query-history:clear': [ClearQueryHistoryRequest, ClearQueryHistoryResponse];
+
+  // Window Management
+  'window:create': void;
+  'window:close': [CloseWindowRequest, CloseWindowResponse];
+  'window:focus': [FocusWindowRequest, FocusWindowResponse];
+  'window:get-all': void;
+  'window:get-current': void;
+
+  // AI Features
+  'ai:get-model-config': void;
+  'ai:set-model-config': [SetAIModelConfigRequest, SetAIModelConfigResponse];
+  'ai:generate-suggestions': [
+    GenerateAISuggestionsRequest,
+    GenerateAISuggestionsResponse,
+  ];
+  'ai:explain-query': [ExplainQueryRequest, ExplainQueryResponse];
+
+  // Pro Features
+  'pro:get-features': void;
+  'pro:activate': [ActivateProFeatureRequest, ActivateProFeatureResponse];
+  'pro:check-status': void;
+}
+
+// ============ IPC Channel Constants ============
+
+export const IPC_CHANNELS = {
+  // Database
+  DB_OPEN: 'db:open',
+  DB_CLOSE: 'db:close',
+  DB_GET_SCHEMA: 'db:get-schema',
+  DB_GET_TABLE_DATA: 'db:get-table-data',
+  DB_EXECUTE_QUERY: 'db:execute-query',
+  DB_VALIDATE_CHANGES: 'db:validate-changes',
+  DB_APPLY_CHANGES: 'db:apply-changes',
+  DB_ANALYZE_PLAN: 'db:analyze-plan',
+
+  // Dialog
+  DIALOG_OPEN_FILE: 'dialog:open-file',
+  DIALOG_SAVE_FILE: 'dialog:save-file',
+
+  // Export
+  EXPORT_DATA: 'export:data',
+
+  // App
+  APP_GET_RECENT_CONNECTIONS: 'app:get-recent-connections',
+  APP_GET_PREFERENCES: 'app:get-preferences',
+  APP_SET_PREFERENCES: 'app:set-preferences',
+
+  // Password
+  PASSWORD_IS_AVAILABLE: 'password:is-available',
+  PASSWORD_SAVE: 'password:save',
+  PASSWORD_GET: 'password:get',
+  PASSWORD_HAS: 'password:has',
+  PASSWORD_REMOVE: 'password:remove',
+
+  // Connection
+  CONNECTION_UPDATE: 'connection:update',
+  CONNECTION_REMOVE: 'connection:remove',
+
+  // History
+  HISTORY_GET: 'history:get',
+  HISTORY_SAVE: 'history:save',
+  HISTORY_DELETE: 'history:delete',
+  HISTORY_CLEAR: 'history:clear',
+
+  // AI
+  AI_GET_SETTINGS: 'ai:get-settings',
+  AI_SAVE_SETTINGS: 'ai:save-settings',
+  AI_FETCH_ANTHROPIC: 'ai:fetch-anthropic',
+  AI_STREAM_ANTHROPIC: 'ai:stream-anthropic',
+  AI_FETCH_OPENAI: 'ai:fetch-openai',
+  AI_STREAM_OPENAI: 'ai:stream-openai',
+  AI_AGENT_QUERY: 'ai:agent-query',
+  AI_CANCEL_STREAM: 'ai:cancel-stream',
+
+  // Pro
+  PRO_GET_STATUS: 'pro:get-status',
+  PRO_ACTIVATE: 'pro:activate',
+  PRO_DEACTIVATE: 'pro:deactivate',
+
+  // Window
+  WINDOW_CLOSE: 'window:close',
+  WINDOW_FOCUS: 'window:focus',
+
+  // Updates
+  UPDATES_CHECK: 'updates:check',
+  UPDATES_GET_STATUS: 'updates:get-status',
+  UPDATES_DOWNLOAD: 'updates:download',
+  UPDATES_QUIT_AND_INSTALL: 'updates:quit-and-install',
+
+  // Menu
+  MENU_ACTION: 'menu:action',
+
+  // Plugin
+  PLUGIN_EVENT: 'plugin:event',
+  PLUGIN_LIST: 'plugin:list',
+  PLUGIN_GET: 'plugin:get',
+  PLUGIN_INSTALL: 'plugin:install',
+  PLUGIN_UNINSTALL: 'plugin:uninstall',
+  PLUGIN_ENABLE: 'plugin:enable',
+  PLUGIN_DISABLE: 'plugin:disable',
+  PLUGIN_UPDATE: 'plugin:update',
+  PLUGIN_CHECK_UPDATES: 'plugin:check-updates',
+  PLUGIN_MARKETPLACE_FETCH: 'plugin:marketplace-fetch',
+
+  // AI additional channels
+  AI_GET_CLAUDE_CODE_PATHS: 'ai:get-claude-code-paths',
+  AI_STREAM_CHUNK: 'ai:stream-chunk',
+  AI_AGENT_CANCEL: 'ai:agent-cancel',
+  AI_AGENT_MESSAGE: 'ai:agent-message',
+
+  // System
+  SYSTEM_GET_FONTS: 'system:get-fonts',
+
+  // Window additional channels
+  WINDOW_CREATE: 'window:create',
+  WINDOW_GET_ALL: 'window:get-all',
+  WINDOW_GET_CURRENT: 'window:get-current',
+
+  // Update aliases (for compatibility)
+  UPDATE_CHECK: 'updates:check',
+  UPDATE_DOWNLOAD: 'updates:download',
+  UPDATE_INSTALL: 'updates:quit-and-install',
+  UPDATE_STATUS: 'updates:get-status',
+} as const;

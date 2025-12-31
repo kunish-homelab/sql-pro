@@ -1,11 +1,11 @@
 import { isMockMode, mockSqlProAPI } from './mock-api';
 
-type SqlProAPIType = typeof mockSqlProAPI;
+type SqlProAPIType = any;
 
 // Get the appropriate API based on mode
 const getAPI = (): SqlProAPIType => {
   if (isMockMode()) {
-    return mockSqlProAPI;
+    return mockSqlProAPI as SqlProAPIType;
   }
   return window.sqlPro as SqlProAPIType;
 };

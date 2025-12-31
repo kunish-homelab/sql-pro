@@ -42,6 +42,7 @@ export const DEFAULT_MODELS: Record<AIProvider, string[]> = {
     'claude-3-5-sonnet-20241022',
     'claude-3-5-haiku-20241022',
   ],
+  custom: [],
 };
 
 export const useAIStore = create<AIState>((set, get) => ({

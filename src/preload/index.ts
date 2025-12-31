@@ -71,6 +71,10 @@ import type {
   OpenDatabaseResponse,
   OpenFileDialogRequest,
   OpenFileDialogResponse,
+  ProActivateRequest,
+  ProActivateResponse,
+  ProDeactivateResponse,
+  ProGetStatusResponse,
   RemoveConnectionRequest,
   RemoveConnectionResponse,
   RemovePasswordRequest,
@@ -275,6 +279,16 @@ const sqlProAPI = {
       ipcRenderer.on(IPC_CHANNELS.AI_AGENT_MESSAGE, handler);
       return () => ipcRenderer.off(IPC_CHANNELS.AI_AGENT_MESSAGE, handler);
     },
+  },
+
+  // Pro tier operations
+  pro: {
+    getStatus: (): Promise<ProGetStatusResponse> =>
+      ipcRenderer.invoke(IPC_CHANNELS.PRO_GET_STATUS),
+    activate: (request: ProActivateRequest): Promise<ProActivateResponse> =>
+      ipcRenderer.invoke(IPC_CHANNELS.PRO_ACTIVATE, request),
+    deactivate: (): Promise<ProDeactivateResponse> =>
+      ipcRenderer.invoke(IPC_CHANNELS.PRO_DEACTIVATE),
   },
 
   // System operations

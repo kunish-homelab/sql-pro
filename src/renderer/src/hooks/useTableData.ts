@@ -117,17 +117,19 @@ export function useTableData(options: UseTableDataOptions): UseTableDataResult {
 
       // Transform rows to include __rowId for identification
       const columns = response.columns || [];
-      const pkColumn = columns.find((c) => c.isPrimaryKey)?.name;
-      const rows = (response.rows || []).map((row, index) => {
-        const rowId = pkColumn
-          ? row[pkColumn]
-          : (row.rowid ?? `__index_${index}`);
+      const pkColumn = columns.find((c: ColumnInfo) => c.isPrimaryKey)?.name;
+      const rows = (response.rows || []).map(
+        (row: Record<string, unknown>, index: number) => {
+          const rowId = pkColumn
+            ? row[pkColumn]
+            : (row.rowid ?? `__index_${index}`);
 
-        return {
-          ...row,
-          __rowId: rowId as string | number,
-        } as TableRow;
-      });
+          return {
+            ...row,
+            __rowId: rowId as string | number,
+          } as TableRow;
+        }
+      );
 
       return {
         columns,
@@ -156,7 +158,9 @@ export function useTableData(options: UseTableDataOptions): UseTableDataResult {
     }
 
     // Apply pending changes to display
-    const rowMap = new Map(baseRows.map((r) => [r.__rowId, { ...r }]));
+    const rowMap = new Map(
+      baseRows.map((r: TableRow) => [r.__rowId, { ...r }])
+    );
 
     for (const change of pendingChanges) {
       if (change.type === 'insert' && change.newValues) {
@@ -188,7 +192,7 @@ export function useTableData(options: UseTableDataOptions): UseTableDataResult {
     }
 
     // Sort: new rows first, then existing rows
-    const result = Array.from(rowMap.values());
+    const result = Array.from(rowMap.values()) as TableRow[];
     result.sort((a, b) => {
       if (a.__isNew && !b.__isNew) return -1;
       if (!a.__isNew && b.__isNew) return 1;
@@ -204,7 +208,7 @@ export function useTableData(options: UseTableDataOptions): UseTableDataResult {
       if (!table) return;
 
       const baseRows = dataQuery.data?.rows || [];
-      const existingRow = baseRows.find((r) => r.__rowId === rowId);
+      const existingRow = baseRows.find((r: TableRow) => r.__rowId === rowId);
       addPendingChange({
         table,
         schema,
@@ -242,7 +246,7 @@ export function useTableData(options: UseTableDataOptions): UseTableDataResult {
       if (!table) return;
 
       const baseRows = dataQuery.data?.rows || [];
-      const existingRow = baseRows.find((r) => r.__rowId === rowId);
+      const existingRow = baseRows.find((r: TableRow) => r.__rowId === rowId);
       addPendingChange({
         table,
         schema,

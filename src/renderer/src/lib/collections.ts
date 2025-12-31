@@ -83,19 +83,21 @@ export function createTableRowsCollection(params: TableDataQueryParams) {
 
         // Transform rows to include __rowId for identification
         const columns = response.columns || [];
-        const pkColumn = columns.find((c) => c.isPrimaryKey)?.name;
+        const pkColumn = columns.find((c: ColumnInfo) => c.isPrimaryKey)?.name;
 
-        return response.rows.map((row, index) => {
-          // Use primary key if available, otherwise use rowid or index
-          const rowId = pkColumn
-            ? row[pkColumn]
-            : (row.rowid ?? `__index_${index}`);
+        return response.rows.map(
+          (row: Record<string, unknown>, index: number) => {
+            // Use primary key if available, otherwise use rowid or index
+            const rowId = pkColumn
+              ? row[pkColumn]
+              : (row.rowid ?? `__index_${index}`);
 
-          return {
-            ...row,
-            __rowId: rowId as string | number,
-          };
-        });
+            return {
+              ...row,
+              __rowId: rowId as string | number,
+            };
+          }
+        );
       },
       queryClient,
       getKey: (row) => row.__rowId,

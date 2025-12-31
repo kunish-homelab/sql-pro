@@ -1,58 +1,30 @@
+// Mock API for development and testing
 import type {
-  AISettings,
   AnalyzeQueryPlanRequest,
-  AnalyzeQueryPlanResponse,
   ApplyChangesRequest,
-  ApplyChangesResponse,
   ClearQueryHistoryRequest,
-  ClearQueryHistoryResponse,
   CloseDatabaseRequest,
-  CloseDatabaseResponse,
   DeleteQueryHistoryRequest,
-  DeleteQueryHistoryResponse,
   ExecuteQueryRequest,
-  ExecuteQueryResponse,
   ExportRequest,
-  ExportResponse,
-  GetAISettingsResponse,
-  GetClaudeCodePathsResponse,
   GetPasswordRequest,
-  GetPasswordResponse,
-  GetPreferencesResponse,
   GetQueryHistoryRequest,
-  GetQueryHistoryResponse,
-  GetRecentConnectionsResponse,
   GetSchemaRequest,
-  GetSchemaResponse,
   GetTableDataRequest,
-  GetTableDataResponse,
   HasPasswordRequest,
-  HasPasswordResponse,
-  IsPasswordStorageAvailableResponse,
   OpenDatabaseRequest,
-  OpenDatabaseResponse,
   OpenFileDialogRequest,
-  OpenFileDialogResponse,
-  QueryHistoryEntry,
+  ProActivateRequest,
   RemoveConnectionRequest,
-  RemoveConnectionResponse,
   RemovePasswordRequest,
-  RemovePasswordResponse,
   SaveAISettingsRequest,
-  SaveAISettingsResponse,
   SaveFileDialogRequest,
-  SaveFileDialogResponse,
   SavePasswordRequest,
-  SavePasswordResponse,
   SaveQueryHistoryRequest,
-  SaveQueryHistoryResponse,
   SetPreferencesRequest,
-  SetPreferencesResponse,
   TableInfo,
   UpdateConnectionRequest,
-  UpdateConnectionResponse,
   ValidateChangesRequest,
-  ValidateChangesResponse,
 } from '../../../shared/types';
 
 // Mock tables schema
@@ -642,12 +614,43 @@ const mockTableData: Record<string, Record<string, unknown>[]> = {
 // Simulated delay for realistic feel
 const delay = (ms: number) => new Promise((resolve) => setTimeout(resolve, ms));
 
+// Mock mode state
+let _isMockMode = false;
+
+// Mock connection data for initialization
+const mockConnectionData = {
+  connection: {
+    id: 'mock-connection-1',
+    path: '/Users/demo/databases/shop.db',
+    filename: 'shop.db',
+    isEncrypted: false,
+    isReadOnly: false,
+    status: 'connected' as const,
+    connectedAt: new Date(),
+  },
+  schema: {
+    schemas: [],
+    tables: mockTables,
+    views: mockViews,
+  },
+};
+
+export async function initMockMode(): Promise<
+  typeof mockConnectionData | null
+> {
+  _isMockMode = true;
+  return mockConnectionData;
+}
+
+export function isMockMode(): boolean {
+  return _isMockMode;
+}
+
 // Mock SQL Pro API
-export const mockSqlProAPI = {
+
+export const mockSqlProAPI: any = {
   db: {
-    open: async (
-      _request: OpenDatabaseRequest
-    ): Promise<OpenDatabaseResponse> => {
+    open: async (_request: OpenDatabaseRequest): Promise<any> => {
       await delay(300);
       return {
         success: true,
@@ -660,365 +663,240 @@ export const mockSqlProAPI = {
         },
       };
     },
-    close: async (
-      _request: CloseDatabaseRequest
-    ): Promise<CloseDatabaseResponse> => {
-      await delay(100);
+    close: async (_request: CloseDatabaseRequest): Promise<any> => {
+      await delay(200);
       return { success: true };
     },
-    getSchema: async (
-      _request: GetSchemaRequest
-    ): Promise<GetSchemaResponse> => {
-      await delay(200);
+    getSchema: async (_request: GetSchemaRequest): Promise<any> => {
+      await delay(400);
       return {
-        success: true,
-        schemas: [
-          {
-            name: 'main',
-            tables: mockTables,
-            views: mockViews,
-          },
-        ],
         tables: mockTables,
         views: mockViews,
       };
     },
-    getTableData: async (
-      request: GetTableDataRequest
-    ): Promise<GetTableDataResponse> => {
-      await delay(150);
-      const rows = mockTableData[request.table] || [];
-      const { page, pageSize } = request;
-      const start = (page - 1) * pageSize;
-      const end = start + pageSize;
-      const paginatedRows = rows.slice(start, end);
-
-      // Get columns from schema
-      const table =
-        mockTables.find((t) => t.name === request.table) ||
-        mockViews.find((v) => v.name === request.table);
-      const columns = table?.columns || [];
-
+    getTableData: async (_request: GetTableDataRequest): Promise<any> => {
+      await delay(300);
+      const tableName = _request.table;
+      const data = mockTableData[tableName] || [];
+      const pageSize = _request.pageSize || 100;
+      const page = _request.page || 1;
+      const offset = (page - 1) * pageSize;
       return {
-        success: true,
-        columns,
-        rows: paginatedRows,
-        totalRows: rows.length,
+        rows: data.slice(offset, offset + pageSize),
+        totalCount: data.length,
       };
     },
-    executeQuery: async (
-      request: ExecuteQueryRequest
-    ): Promise<ExecuteQueryResponse> => {
-      await delay(200);
-      // Simple mock query execution
-      const query = request.query.toLowerCase().trim();
-      if (query.startsWith('select')) {
-        // Return some mock results
-        return {
-          success: true,
-          columns: ['id', 'name', 'email'],
-          rows: mockTableData.users?.slice(0, 5) || [],
-          rowsAffected: 0,
-          executionTime: 12,
-        };
-      }
+  },
+  query: {
+    execute: async (_request: ExecuteQueryRequest): Promise<any> => {
+      await delay(400);
       return {
-        success: true,
-        columns: [],
         rows: [],
-        rowsAffected: 1,
-        executionTime: 5,
+        columns: [],
+        affectedRows: 0,
+        executionTime: 45,
       };
     },
-    validateChanges: async (
-      _request: ValidateChangesRequest
-    ): Promise<ValidateChangesResponse> => {
-      await delay(100);
-      return {
-        success: true,
-        results: [],
-      };
-    },
-    applyChanges: async (
-      _request: ApplyChangesRequest
-    ): Promise<ApplyChangesResponse> => {
+    validateChanges: async (_request: ValidateChangesRequest): Promise<any> => {
       await delay(300);
       return {
+        isValid: true,
+        errors: [],
+      };
+    },
+    applyChanges: async (_request: ApplyChangesRequest): Promise<any> => {
+      await delay(500);
+      return {
         success: true,
-        appliedCount: 1,
+        affectedRows: 1,
       };
     },
     analyzeQueryPlan: async (
       _request: AnalyzeQueryPlanRequest
-    ): Promise<AnalyzeQueryPlanResponse> => {
+    ): Promise<any> => {
+      await delay(300);
+      return {
+        plan: [
+          {
+            id: 0,
+            parent: -1,
+            notused: 0,
+            detail: 'SCAN TABLE users',
+          },
+        ],
+        executionTime: 0.5,
+      };
+    },
+  },
+  history: {
+    getQueryHistory: async (_request: GetQueryHistoryRequest): Promise<any> => {
+      await delay(200);
+      return {
+        entries: [],
+        total: 0,
+      };
+    },
+    saveQueryHistory: async (
+      _request: SaveQueryHistoryRequest
+    ): Promise<any> => {
       await delay(200);
       return {
         success: true,
-        plan: [{ id: 2, parent: 0, notUsed: 0, detail: 'SCAN TABLE users' }],
-        stats: {
-          executionTime: 1.5,
-          rowsExamined: 100,
-          rowsReturned: 10,
-          indexesUsed: [],
-          tablesAccessed: ['users'],
-        },
+        id: 'mock-history-1',
+      };
+    },
+    deleteQueryHistory: async (
+      _request: DeleteQueryHistoryRequest
+    ): Promise<any> => {
+      await delay(200);
+      return {
+        success: true,
+      };
+    },
+    clearQueryHistory: async (
+      _request: ClearQueryHistoryRequest
+    ): Promise<any> => {
+      await delay(200);
+      return {
+        success: true,
       };
     },
   },
-
-  dialog: {
-    openFile: async (
-      _request?: OpenFileDialogRequest
-    ): Promise<OpenFileDialogResponse> => {
+  export: {
+    export: async (_request: ExportRequest): Promise<any> => {
+      await delay(500);
       return {
         success: true,
+        data: 'mock-export-data',
+      };
+    },
+  },
+  file: {
+    openFileDialog: async (_request: OpenFileDialogRequest): Promise<any> => {
+      await delay(200);
+      return {
         filePath: '/Users/demo/databases/shop.db',
       };
     },
-    saveFile: async (
-      _request?: SaveFileDialogRequest
-    ): Promise<SaveFileDialogResponse> => {
+    saveFileDialog: async (_request: SaveFileDialogRequest): Promise<any> => {
+      await delay(200);
       return {
-        success: true,
-        filePath: '/Users/demo/exports/data.csv',
+        filePath: '/Users/demo/databases/export.csv',
       };
     },
   },
-
-  export: {
-    data: async (_request: ExportRequest): Promise<ExportResponse> => {
-      await delay(500);
-      return { success: true, rowsExported: 10 };
-    },
-  },
-
-  app: {
-    getRecentConnections: async (): Promise<GetRecentConnectionsResponse> => {
-      return {
-        success: true,
-        connections: [
-          {
-            path: '/Users/demo/databases/shop.db',
-            filename: 'shop.db',
-            lastOpened: new Date('2024-06-25T10:30:00').toISOString(),
-            isEncrypted: false,
-          },
-          {
-            path: '/Users/demo/databases/analytics.db',
-            filename: 'analytics.db',
-            lastOpened: new Date('2024-06-20T14:15:00').toISOString(),
-            isEncrypted: true,
-          },
-          {
-            path: '/Users/demo/databases/users.db',
-            filename: 'users.db',
-            lastOpened: new Date('2024-06-15T09:00:00').toISOString(),
-            isEncrypted: false,
-          },
-        ],
-      };
-    },
-    getPreferences: async (): Promise<GetPreferencesResponse> => {
-      return {
-        success: true,
-        preferences: {
-          theme: 'system',
-          defaultPageSize: 100,
-          confirmBeforeApply: true,
-          recentConnectionsLimit: 10,
-        },
-      };
-    },
-    setPreferences: async (
-      _request: SetPreferencesRequest
-    ): Promise<SetPreferencesResponse> => {
-      return { success: true };
-    },
-  },
-
-  password: {
-    isAvailable: async (): Promise<IsPasswordStorageAvailableResponse> => {
-      return { success: true, available: true };
-    },
-    save: async (
-      _request: SavePasswordRequest
-    ): Promise<SavePasswordResponse> => {
-      return { success: true };
-    },
-    get: async (_request: GetPasswordRequest): Promise<GetPasswordResponse> => {
-      return { success: true, password: undefined };
-    },
-    has: async (_request: HasPasswordRequest): Promise<HasPasswordResponse> => {
-      return { success: true, hasPassword: false };
-    },
-    remove: async (
-      _request: RemovePasswordRequest
-    ): Promise<RemovePasswordResponse> => {
-      return { success: true };
-    },
-  },
-
   connection: {
-    update: async (
-      _request: UpdateConnectionRequest
-    ): Promise<UpdateConnectionResponse> => {
-      return { success: true };
-    },
-    remove: async (
-      _request: RemoveConnectionRequest
-    ): Promise<RemoveConnectionResponse> => {
-      return { success: true };
-    },
-  },
-
-  file: {
-    getPathForFile: (file: File): string => file.name,
-  },
-
-  history: {
-    get: async (
-      _request: GetQueryHistoryRequest
-    ): Promise<GetQueryHistoryResponse> => {
-      // Return mock history entries for testing
-      const mockHistory: QueryHistoryEntry[] = [
-        {
-          id: 'mock-history-1',
-          dbPath: '/Users/demo/databases/shop.db',
-          queryText: 'SELECT * FROM users LIMIT 10',
-          executedAt: new Date(Date.now() - 3600000).toISOString(), // 1 hour ago
-          durationMs: 45,
-          success: true,
-        },
-        {
-          id: 'mock-history-2',
-          dbPath: '/Users/demo/databases/shop.db',
-          queryText: 'SELECT COUNT(*) FROM orders WHERE status = "pending"',
-          executedAt: new Date(Date.now() - 7200000).toISOString(), // 2 hours ago
-          durationMs: 12,
-          success: true,
-        },
-        {
-          id: 'mock-history-3',
-          dbPath: '/Users/demo/databases/shop.db',
-          queryText: 'UPDATE users SET is_active = 1 WHERE id = 5',
-          executedAt: new Date(Date.now() - 86400000).toISOString(), // 1 day ago
-          durationMs: 8,
-          success: true,
-        },
-      ];
-      return { success: true, history: mockHistory };
-    },
-    save: async (
-      _request: SaveQueryHistoryRequest
-    ): Promise<SaveQueryHistoryResponse> => {
-      return { success: true };
-    },
-    delete: async (
-      _request: DeleteQueryHistoryRequest
-    ): Promise<DeleteQueryHistoryResponse> => {
-      return { success: true };
-    },
-    clear: async (
-      _request: ClearQueryHistoryRequest
-    ): Promise<ClearQueryHistoryResponse> => {
-      return { success: true };
-    },
-  },
-
-  ai: {
-    getSettings: async (): Promise<GetAISettingsResponse> => {
-      // Return mock AI settings
-      const mockSettings: AISettings = {
-        provider: 'openai',
-        apiKey: '',
-        model: 'gpt-4o',
-        baseUrl: '',
-        claudeCodePath: '',
+    getRecentConnections: async (): Promise<any> => {
+      await delay(200);
+      return {
+        connections: [],
       };
-      return { success: true, settings: mockSettings };
     },
-    saveSettings: async (
-      _request: SaveAISettingsRequest
-    ): Promise<SaveAISettingsResponse> => {
-      return { success: true };
-    },
-    getClaudeCodePaths: async (): Promise<GetClaudeCodePathsResponse> => {
-      // Return mock Claude Code paths
+    updateConnection: async (
+      _request: UpdateConnectionRequest
+    ): Promise<any> => {
+      await delay(200);
       return {
         success: true,
-        paths: ['/opt/homebrew/bin/claude', '/usr/local/bin/claude'],
+      };
+    },
+    removeConnection: async (
+      _request: RemoveConnectionRequest
+    ): Promise<any> => {
+      await delay(200);
+      return {
+        success: true,
       };
     },
   },
-
-  window: {
-    create: async () => {
-      // In mock mode, we can't actually create windows
-      return { success: true, windowId: `mock-window-${Date.now()}` };
+  preferences: {
+    getPreferences: async (): Promise<any> => {
+      await delay(200);
+      return {
+        theme: 'dark',
+        fontSize: 14,
+      };
     },
-    close: async () => {
-      return { success: true };
-    },
-    focus: async (_request: { windowId: string }) => {
-      return { success: true };
-    },
-    getAll: async () => {
-      return { success: true, windowIds: ['mock-window-1'] };
-    },
-    getCurrent: async () => {
-      return { success: true, windowId: 'mock-window-1' };
+    setPreferences: async (_request: SetPreferencesRequest): Promise<any> => {
+      await delay(200);
+      return {
+        success: true,
+      };
     },
   },
-};
-
-// Check if running in mock mode
-export const isMockMode = (): boolean => {
-  // Check environment variable first (set via Vite define)
-  if (import.meta.env.VITE_MOCK_MODE === 'true') {
-    return true;
-  }
-  // Enable mock mode via URL parameter
-  if (typeof window !== 'undefined') {
-    const params = new URLSearchParams(window.location.search);
-    if (params.get('mock') === 'true') {
-      return true;
-    }
-    // Also check hash params for Electron
-    const hashParams = new URLSearchParams(
-      window.location.hash.split('?')[1] || ''
-    );
-    if (hashParams.get('mock') === 'true') {
-      return true;
-    }
-  }
-  return false;
-};
-
-// Initialize mock mode - auto-connect with mock data
-export const initMockMode = async () => {
-  if (!isMockMode()) return null;
-
-  // Return mock connection data
-  return {
-    connection: {
-      id: 'mock-connection-1',
-      path: '/Users/demo/databases/shop.db',
-      filename: 'shop.db',
-      isEncrypted: false,
-      isReadOnly: false,
-      status: 'connected' as const,
-      connectedAt: new Date(),
+  password: {
+    getPassword: async (_request: GetPasswordRequest): Promise<any> => {
+      await delay(200);
+      return {
+        password: 'mock-password',
+      };
     },
-    schema: {
-      schemas: [
-        {
-          name: 'main',
-          tables: mockTables,
-          views: mockViews,
+    hasPassword: async (_request: HasPasswordRequest): Promise<any> => {
+      await delay(200);
+      return {
+        hasPassword: false,
+      };
+    },
+    savePassword: async (_request: SavePasswordRequest): Promise<any> => {
+      await delay(200);
+      return {
+        success: true,
+      };
+    },
+    removePassword: async (_request: RemovePasswordRequest): Promise<any> => {
+      await delay(200);
+      return {
+        success: true,
+      };
+    },
+    isPasswordStorageAvailable: async (): Promise<any> => {
+      await delay(200);
+      return {
+        available: true,
+      };
+    },
+  },
+  ai: {
+    getAISettings: async (): Promise<any> => {
+      await delay(200);
+      return {
+        settings: {
+          apiKey: 'mock-api-key',
+          model: 'gpt-4',
+          enabled: true,
         },
-      ],
-      tables: mockTables,
-      views: mockViews,
+      };
     },
-  };
+    saveAISettings: async (_request: SaveAISettingsRequest): Promise<any> => {
+      await delay(200);
+      return {
+        success: true,
+      };
+    },
+  },
+  pro: {
+    getStatus: async (): Promise<any> => {
+      await delay(200);
+      return {
+        isActive: false,
+        expiresAt: null,
+        licenseKey: null,
+      };
+    },
+    activate: async (_request: ProActivateRequest): Promise<any> => {
+      await delay(300);
+      return {
+        success: true,
+        expiresAt: new Date(
+          Date.now() + 365 * 24 * 60 * 60 * 1000
+        ).toISOString(),
+      };
+    },
+    deactivate: async (): Promise<any> => {
+      await delay(200);
+      return {
+        success: true,
+      };
+    },
+  },
 };

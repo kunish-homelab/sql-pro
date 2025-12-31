@@ -3,6 +3,7 @@ import type { FontConfig } from '@/stores/settings-store';
 import {
   Check,
   ChevronsUpDown,
+  Crown,
   Eye,
   EyeOff,
   FolderSearch,
@@ -10,7 +11,6 @@ import {
   Loader2,
   Monitor,
   Moon,
-  RefreshCw,
   Sparkles,
   Sun,
   Unlink,
@@ -50,9 +50,12 @@ import { cn } from '@/lib/utils';
 import {
   DEFAULT_MODELS,
   useAIStore,
+  useProStore,
   useSettingsStore,
   useThemeStore,
 } from '@/stores';
+import { ProActivationDialog } from './pro/ProActivation';
+import { ProBadge } from './pro/ProBadge';
 
 interface SettingsDialogProps {
   open: boolean;
@@ -77,6 +80,10 @@ export function SettingsDialog({ open, onOpenChange }: SettingsDialogProps) {
     tabSize,
     setTabSize,
   } = useSettingsStore();
+  const { isPro, activatedAt, features } = useProStore();
+
+  // Pro activation dialog state
+  const [proDialogOpen, setProDialogOpen] = useState(false);
 
   // System fonts state
   const [systemFonts, setSystemFonts] = useState<string[]>([]);
@@ -292,10 +299,78 @@ export function SettingsDialog({ open, onOpenChange }: SettingsDialogProps) {
 
           <Separator />
 
+          {/* Pro Section */}
+          <div className="space-y-3">
+            <Label className="text-sm font-medium">SQL Pro</Label>
+            <div
+              className={cn(
+                'rounded-lg border p-4 transition-colors',
+                isPro
+                  ? 'border-amber-500/20 bg-gradient-to-r from-amber-500/10 to-yellow-500/10'
+                  : 'border-border'
+              )}
+            >
+              <div className="flex items-center justify-between">
+                <div className="flex items-center gap-3">
+                  <div
+                    className={cn(
+                      'flex h-10 w-10 items-center justify-center rounded-full',
+                      isPro ? 'bg-amber-500/20' : 'bg-muted'
+                    )}
+                  >
+                    <Crown
+                      className={cn(
+                        'h-5 w-5',
+                        isPro ? 'text-amber-500' : 'text-muted-foreground'
+                      )}
+                    />
+                  </div>
+                  <div>
+                    <div className="flex items-center gap-2">
+                      <span className="font-medium">
+                        {isPro ? 'Pro Active' : 'Free Plan'}
+                      </span>
+                      {isPro && <ProBadge size="sm" />}
+                    </div>
+                    <p className="text-muted-foreground text-xs">
+                      {isPro
+                        ? `${features.length} features unlocked${
+                            activatedAt
+                              ? ` • Activated ${new Date(activatedAt).toLocaleDateString()}`
+                              : ''
+                          }`
+                        : 'Unlock AI features and advanced tools'}
+                    </p>
+                  </div>
+                </div>
+                <Button
+                  variant={isPro ? 'outline' : 'default'}
+                  size="sm"
+                  onClick={() => setProDialogOpen(true)}
+                  className={
+                    isPro
+                      ? ''
+                      : 'bg-gradient-to-r from-amber-500 to-yellow-500 text-white hover:from-amber-600 hover:to-yellow-600'
+                  }
+                >
+                  {isPro ? 'Manage' : 'Upgrade'}
+                </Button>
+              </div>
+            </div>
+          </div>
+
+          <Separator />
+
           {/* AI Settings Section */}
           <AISettingsSection />
         </div>
       </DialogContent>
+
+      {/* Pro Activation Dialog */}
+      <ProActivationDialog
+        open={proDialogOpen}
+        onOpenChange={setProDialogOpen}
+      />
     </Dialog>
   );
 }
@@ -524,8 +599,8 @@ function AISettingsSection() {
           <Sparkles className="h-4 w-4" />
           <Label className="text-sm font-medium">AI Settings</Label>
         </div>
-        <div className="flex items-center justify-center py-4">
-          <Loader2 className="h-5 w-5 animate-spin" />
+        <div className="flex items-center justify-center py-8">
+          <Loader2 className="h-4 w-4 animate-spin" />
         </div>
       </div>
     );
@@ -533,63 +608,60 @@ function AISettingsSection() {
 
   return (
     <div className="space-y-4">
-      <div>
-        <div className="flex items-center gap-2">
-          <Sparkles className="h-4 w-4" />
-          <Label className="text-sm font-medium">AI Settings</Label>
-        </div>
-        <p className="text-muted-foreground mt-1 text-xs">
-          Configure AI provider for natural language to SQL conversion
-        </p>
+      <div className="flex items-center gap-2">
+        <Sparkles className="h-4 w-4" />
+        <Label className="text-sm font-medium">AI Settings</Label>
       </div>
 
       {/* Provider Selection */}
       <div className="space-y-2">
-        <Label className="text-xs">Provider</Label>
+        <Label htmlFor="provider-select" className="text-xs font-medium">
+          AI Provider
+        </Label>
         <Select value={provider} onValueChange={handleProviderChange}>
-          <SelectTrigger className="h-8 text-xs">
-            <SelectValue placeholder="Select provider" />
+          <SelectTrigger id="provider-select" className="h-8">
+            <SelectValue />
           </SelectTrigger>
           <SelectContent>
+            <SelectItem value="anthropic">Anthropic (Claude)</SelectItem>
             <SelectItem value="openai">OpenAI</SelectItem>
-            <SelectItem value="anthropic">Anthropic</SelectItem>
+            <SelectItem value="custom">Custom</SelectItem>
           </SelectContent>
         </Select>
       </div>
 
       {/* API Key Input */}
       <div className="space-y-2">
-        <Label className="text-xs">API Key</Label>
-        <div className="relative">
-          <Input
-            type={showApiKey ? 'text' : 'password'}
-            value={apiKey}
-            onChange={(e) => handleApiKeyChange(e.target.value)}
-            placeholder={provider === 'openai' ? 'sk-...' : 'sk-ant-...'}
-            className="h-8 pr-10 text-xs"
-          />
-          <Button
-            type="button"
-            variant="ghost"
-            size="icon"
-            className="absolute top-0 right-0 h-8 w-8"
-            onClick={() => setShowApiKey(!showApiKey)}
-          >
-            {showApiKey ? (
-              <EyeOff className="h-3.5 w-3.5" />
-            ) : (
-              <Eye className="h-3.5 w-3.5" />
-            )}
-          </Button>
+        <Label htmlFor="api-key-input" className="text-xs font-medium">
+          API Key
+        </Label>
+        <div className="flex gap-2">
+          <div className="relative flex-1">
+            <Input
+              id="api-key-input"
+              type={showApiKey ? 'text' : 'password'}
+              value={apiKey}
+              onChange={(e) => handleApiKeyChange(e.target.value)}
+              placeholder="Enter your API key"
+              className="h-8 pr-10 text-xs"
+            />
+            <button
+              onClick={() => setShowApiKey(!showApiKey)}
+              className="text-muted-foreground hover:text-foreground absolute top-1/2 right-3 -translate-y-1/2"
+            >
+              {showApiKey ? (
+                <EyeOff className="h-4 w-4" />
+              ) : (
+                <Eye className="h-4 w-4" />
+              )}
+            </button>
+          </div>
         </div>
-        <p className="text-muted-foreground text-xs">
-          Your API key is stored securely and never shared.
-        </p>
       </div>
 
       {/* Model Selection */}
       <div className="space-y-2">
-        <Label className="text-xs">Model</Label>
+        <Label className="text-xs font-medium">Model</Label>
         <Popover open={modelPopoverOpen} onOpenChange={setModelPopoverOpen}>
           <PopoverTrigger asChild>
             <Button
@@ -599,175 +671,117 @@ function AISettingsSection() {
               className="h-8 w-full justify-between text-xs font-normal"
             >
               {model || 'Select model...'}
-              <ChevronsUpDown className="ml-2 h-3.5 w-3.5 shrink-0 opacity-50" />
+              <ChevronsUpDown className="ml-2 h-4 w-4 shrink-0 opacity-50" />
             </Button>
           </PopoverTrigger>
-          <PopoverContent
-            className="w-(--radix-popover-trigger-width) p-0"
-            align="start"
-          >
+          <PopoverContent className="w-full p-0" align="start">
             <Command>
               <CommandInput
-                placeholder="Search or enter custom model..."
-                value={model}
-                onValueChange={handleModelChange}
+                placeholder="Search models..."
+                className="h-8 text-xs"
               />
-              <CommandList>
-                <CommandEmpty>
-                  <div className="py-2 text-xs">
-                    Press Enter to use "{model}"
-                  </div>
-                </CommandEmpty>
-                <CommandGroup heading="Suggested Models">
+              <CommandEmpty>No model found.</CommandEmpty>
+              <CommandGroup>
+                <CommandList>
                   {availableModels.map((m) => (
                     <CommandItem
                       key={m}
                       value={m}
-                      onSelect={(currentValue) => {
-                        handleModelChange(currentValue);
-                        setModelPopoverOpen(false);
-                      }}
+                      onSelect={handleModelChange}
+                      className="text-xs"
                     >
                       <Check
                         className={cn(
-                          'mr-2 h-3.5 w-3.5',
+                          'mr-2 h-4 w-4',
                           model === m ? 'opacity-100' : 'opacity-0'
                         )}
                       />
                       {m}
                     </CommandItem>
                   ))}
-                </CommandGroup>
-              </CommandList>
+                </CommandList>
+              </CommandGroup>
             </Command>
           </PopoverContent>
         </Popover>
       </div>
 
-      {/* Base URL Input */}
-      <div className="space-y-2">
-        <Label className="text-xs">Base URL (Optional)</Label>
-        <Input
-          type="text"
-          value={baseUrl}
-          onChange={(e) => handleBaseUrlChange(e.target.value)}
-          placeholder={
-            provider === 'openai'
-              ? 'https://api.openai.com/v1'
-              : 'https://api.anthropic.com'
-          }
-          className="h-8 text-xs"
-        />
-        <p className="text-muted-foreground text-xs">
-          Custom API endpoint. Leave empty for official API.
-        </p>
-      </div>
-
-      {/* Claude Code Path (only for Anthropic) */}
-      {provider === 'anthropic' && (
+      {/* Base URL (for custom provider) */}
+      {provider === 'custom' && (
         <div className="space-y-2">
-          <div className="flex items-center justify-between">
-            <Label className="text-xs">Claude Code Path</Label>
+          <Label htmlFor="base-url-input" className="text-xs font-medium">
+            Base URL
+          </Label>
+          <Input
+            id="base-url-input"
+            type="text"
+            value={baseUrl}
+            onChange={(e) => handleBaseUrlChange(e.target.value)}
+            placeholder="https://api.custom.com"
+            className="h-8 text-xs"
+          />
+        </div>
+      )}
+
+      {/* Claude Code Path */}
+      <div className="space-y-2">
+        <Label className="text-xs font-medium">Claude Code Path</Label>
+        <Popover
+          open={claudeCodePathPopoverOpen}
+          onOpenChange={setClaudeCodePathPopoverOpen}
+        >
+          <PopoverTrigger asChild>
             <Button
-              type="button"
-              variant="ghost"
-              size="sm"
-              onClick={loadClaudeCodePaths}
+              variant="outline"
+              role="combobox"
+              aria-expanded={claudeCodePathPopoverOpen}
+              className="h-8 w-full justify-between text-xs font-normal"
               disabled={isLoadingClaudeCodePaths}
-              className="h-6 px-2"
             >
-              {isLoadingClaudeCodePaths ? (
-                <Loader2 className="h-3 w-3 animate-spin" />
+              {claudeCodePath ? (
+                <span className="truncate">{claudeCodePath}</span>
               ) : (
-                <RefreshCw className="h-3 w-3" />
+                'Select path...'
               )}
-              <span className="ml-1 text-xs">Scan</span>
+              {isLoadingClaudeCodePaths ? (
+                <Loader2 className="ml-2 h-4 w-4 shrink-0 animate-spin" />
+              ) : (
+                <ChevronsUpDown className="ml-2 h-4 w-4 shrink-0 opacity-50" />
+              )}
             </Button>
-          </div>
-          <Popover
-            open={claudeCodePathPopoverOpen}
-            onOpenChange={setClaudeCodePathPopoverOpen}
-          >
-            <PopoverTrigger asChild>
-              <Button
-                variant="outline"
-                role="combobox"
-                aria-expanded={claudeCodePathPopoverOpen}
-                className="h-8 w-full justify-between text-xs font-normal"
-              >
-                <span className="flex items-center gap-2 truncate">
-                  <FolderSearch className="h-3.5 w-3.5 shrink-0 opacity-50" />
-                  {claudeCodePath || 'Auto-detect'}
-                </span>
-                <ChevronsUpDown className="ml-2 h-3.5 w-3.5 shrink-0 opacity-50" />
-              </Button>
-            </PopoverTrigger>
-            <PopoverContent
-              className="w-(--radix-popover-trigger-width) p-0"
-              align="start"
-            >
-              <Command>
-                <CommandInput
-                  placeholder="Search or enter custom path..."
-                  value={claudeCodePath}
-                  onValueChange={handleClaudeCodePathChange}
-                />
+          </PopoverTrigger>
+          <PopoverContent className="w-full p-0" align="start">
+            <Command>
+              <CommandInput
+                placeholder="Search paths..."
+                className="h-8 text-xs"
+              />
+              <CommandEmpty>No path found.</CommandEmpty>
+              <CommandGroup>
                 <CommandList>
-                  <CommandEmpty>
-                    <div className="py-2 text-xs">
-                      Press Enter to use "{claudeCodePath}"
-                    </div>
-                  </CommandEmpty>
-                  <CommandGroup heading="Auto-detect">
+                  {availableClaudeCodePaths.map((path) => (
                     <CommandItem
-                      value=""
-                      onSelect={() => {
-                        handleClaudeCodePathChange('');
-                        setClaudeCodePathPopoverOpen(false);
-                      }}
+                      key={path}
+                      value={path}
+                      onSelect={handleClaudeCodePathChange}
+                      className="text-xs"
                     >
                       <Check
                         className={cn(
-                          'mr-2 h-3.5 w-3.5',
-                          !claudeCodePath ? 'opacity-100' : 'opacity-0'
+                          'mr-2 h-4 w-4',
+                          claudeCodePath === path ? 'opacity-100' : 'opacity-0'
                         )}
                       />
-                      Auto-detect (recommended)
+                      <FolderSearch className="mr-2 h-4 w-4" />
+                      <span className="truncate">{path}</span>
                     </CommandItem>
-                  </CommandGroup>
-                  {availableClaudeCodePaths.length > 0 && (
-                    <CommandGroup heading="Found Paths">
-                      {availableClaudeCodePaths.map((path) => (
-                        <CommandItem
-                          key={path}
-                          value={path}
-                          onSelect={(currentValue) => {
-                            handleClaudeCodePathChange(currentValue);
-                            setClaudeCodePathPopoverOpen(false);
-                          }}
-                        >
-                          <Check
-                            className={cn(
-                              'mr-2 h-3.5 w-3.5',
-                              claudeCodePath === path
-                                ? 'opacity-100'
-                                : 'opacity-0'
-                            )}
-                          />
-                          {path}
-                        </CommandItem>
-                      ))}
-                    </CommandGroup>
-                  )}
+                  ))}
                 </CommandList>
-              </Command>
-            </PopoverContent>
-          </Popover>
-          <p className="text-muted-foreground text-xs">
-            Path to Claude Code executable for Agent SDK.
-          </p>
-        </div>
-      )}
+              </CommandGroup>
+            </Command>
+          </PopoverContent>
+        </Popover>
+      </div>
     </div>
   );
 }

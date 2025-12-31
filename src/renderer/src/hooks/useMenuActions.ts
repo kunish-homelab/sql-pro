@@ -1,3 +1,4 @@
+import type { GetSchemaResponse } from '../../../shared/types';
 import { useNavigate } from '@tanstack/react-router';
 import { useEffect } from 'react';
 import { sqlPro } from '@/lib/api';
@@ -42,25 +43,27 @@ export function useMenuActions() {
             openButton.click();
           } else {
             // If no button found, open file dialog directly
-            sqlPro.dialog.openFile().then(async (result) => {
-              if (result.success && result.filePath) {
-                const openResult = await sqlPro.db.open({
-                  path: result.filePath,
-                });
-                if (openResult.success && openResult.connection) {
-                  connectionStore.addConnection({
-                    id: openResult.connection.id,
-                    path: openResult.connection.path,
-                    filename: openResult.connection.filename,
-                    isEncrypted: openResult.connection.isEncrypted,
-                    isReadOnly: openResult.connection.isReadOnly,
-                    status: 'connected',
-                    connectedAt: new Date(),
+            sqlPro.dialog
+              .openFile()
+              .then(async (result: { success: boolean; filePath?: string }) => {
+                if (result.success && result.filePath) {
+                  const openResult = await sqlPro.db.open({
+                    path: result.filePath,
                   });
-                  navigate({ to: '/database' });
+                  if (openResult.success && openResult.connection) {
+                    connectionStore.addConnection({
+                      id: openResult.connection.id,
+                      path: openResult.connection.path,
+                      filename: openResult.connection.filename,
+                      isEncrypted: openResult.connection.isEncrypted,
+                      isReadOnly: openResult.connection.isReadOnly,
+                      status: 'connected',
+                      connectedAt: new Date(),
+                    });
+                    navigate({ to: '/database' });
+                  }
                 }
-              }
-            });
+              });
           }
           break;
         }
@@ -95,7 +98,7 @@ export function useMenuActions() {
             setIsLoadingSchema(true);
             sqlPro.db
               .getSchema({ connectionId: connection.id })
-              .then((result) => {
+              .then((result: GetSchemaResponse) => {
                 if (result.success) {
                   setSchema(activeConnectionId, {
                     schemas: result.schemas || [],

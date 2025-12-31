@@ -10,6 +10,7 @@ import { router } from '@/routes';
 import {
   useAIStore,
   useConnectionStore,
+  useProStore,
   useQueryTabsStore,
   useTableDataStore,
   useThemeStore,
@@ -24,12 +25,18 @@ function App(): React.JSX.Element {
     useTableDataStore();
   const { loadTheme } = useThemeStore();
   const { loadSettings: loadAISettings } = useAIStore();
+  const { loadStatus: loadProStatus } = useProStore();
 
   // Load theme and AI settings from main process on mount
   useEffect(() => {
     loadTheme();
     loadAISettings();
   }, [loadTheme, loadAISettings]);
+
+  // Load Pro status on mount
+  useEffect(() => {
+    loadProStatus();
+  }, [loadProStatus]);
 
   // Sync active connection across stores
   useEffect(() => {

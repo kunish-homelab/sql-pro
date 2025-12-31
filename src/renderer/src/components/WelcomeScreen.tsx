@@ -50,9 +50,11 @@ function HasSavedPasswordIndicator({ path }: { path: string }) {
 
   // Check on mount
   useEffect(() => {
-    sqlPro.password.has({ dbPath: path }).then((result) => {
-      setHasSaved(result.hasPassword);
-    });
+    sqlPro.password
+      .has({ dbPath: path })
+      .then((result: { hasPassword: boolean }) => {
+        setHasSaved(result.hasPassword);
+      });
   }, [path]);
 
   if (!hasSaved) return null;

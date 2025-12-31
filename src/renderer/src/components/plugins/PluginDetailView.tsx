@@ -465,7 +465,7 @@ export function PluginDetailView({
           {/* Plugin Header */}
           <div className="flex items-start gap-4">
             {/* Plugin Icon */}
-            <div className="bg-muted flex size-16 flex-shrink-0 items-center justify-center overflow-hidden rounded-xl">
+            <div className="bg-muted flex size-16 shrink-0 items-center justify-center overflow-hidden rounded-xl">
               {pluginIcon ? (
                 <img
                   src={pluginIcon}

@@ -66,7 +66,7 @@ function DialogFormContent({
   // Check if password storage is available (async operation is fine in useEffect)
   useEffect(() => {
     if (isEncrypted) {
-      sqlPro.password.isAvailable().then((result) => {
+      sqlPro.password.isAvailable().then((result: { available: boolean }) => {
         setIsStorageAvailable(result.available);
         // Default to remember if storage is available and this is a new connection
         if (

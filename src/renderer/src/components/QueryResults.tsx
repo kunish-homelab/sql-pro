@@ -102,7 +102,7 @@ export function QueryResults({ results }: QueryResultsProps) {
       <div className="bg-muted/30 flex items-center gap-1 overflow-x-auto border-b px-2 py-1">
         {resultSets.map((resultSet, index) => (
           <button
-            key={`result-${index}-${resultSet.columns.join(',')}`}
+            key={`result-${resultSet.columns.join(',')}-${resultSet.rows.length}`}
             onClick={() => setActiveResultIndex(index)}
             className={cn(
               'flex items-center gap-1.5 rounded px-3 py-1 text-xs font-medium transition-colors',

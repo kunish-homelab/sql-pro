@@ -32,23 +32,32 @@ interface DataAnalysisPanelProps {
   rows: Record<string, unknown>[];
 }
 
-const INSIGHT_ICONS: Record<DataInsight['type'], React.ElementType> = {
+const INSIGHT_ICONS: Partial<Record<DataInsight['type'], React.ElementType>> = {
   anomaly: AlertTriangle,
   suggestion: Lightbulb,
   pattern: TrendingUp,
+  trend: TrendingUp,
+  summary: Lightbulb,
 };
 
-const SEVERITY_STYLES: Record<DataInsight['severity'], string> = {
+const SEVERITY_STYLES: Record<string, string> = {
   info: 'border-blue-200 bg-blue-50 dark:border-blue-900 dark:bg-blue-950',
   warning:
     'border-amber-200 bg-amber-50 dark:border-amber-900 dark:bg-amber-950',
   error: 'border-red-200 bg-red-50 dark:border-red-900 dark:bg-red-950',
+  low: 'border-blue-200 bg-blue-50 dark:border-blue-900 dark:bg-blue-950',
+  medium:
+    'border-amber-200 bg-amber-50 dark:border-amber-900 dark:bg-amber-950',
+  high: 'border-red-200 bg-red-50 dark:border-red-900 dark:bg-red-950',
 };
 
-const SEVERITY_ICON_STYLES: Record<DataInsight['severity'], string> = {
+const SEVERITY_ICON_STYLES: Record<string, string> = {
   info: 'text-blue-600',
   warning: 'text-amber-600',
   error: 'text-red-600',
+  low: 'text-blue-600',
+  medium: 'text-amber-600',
+  high: 'text-red-600',
 };
 
 export const DataAnalysisPanel = memo(
@@ -176,20 +185,21 @@ export const DataAnalysisPanel = memo(
                 <ScrollArea className="h-75">
                   <div className="space-y-2 pr-4">
                     {insights.map((insight) => {
-                      const Icon = INSIGHT_ICONS[insight.type];
-                      const insightKey = `${insight.type}-${insight.column || 'general'}-${insight.message.slice(0, 20)}`;
+                      const Icon = INSIGHT_ICONS[insight.type] || Lightbulb;
+                      const insightKey = `${insight.type}-${insight.column || 'general'}-${(insight.message || '').slice(0, 20)}`;
+                      const severity = insight.severity || 'info';
                       return (
                         <div
                           key={insightKey}
                           className={cn(
                             'flex items-start gap-3 rounded-lg border p-3',
-                            SEVERITY_STYLES[insight.severity]
+                            SEVERITY_STYLES[severity]
                           )}
                         >
                           <Icon
                             className={cn(
                               'mt-0.5 h-4 w-4 shrink-0',
-                              SEVERITY_ICON_STYLES[insight.severity]
+                              SEVERITY_ICON_STYLES[severity]
                             )}
                           />
                           <div className="flex-1 space-y-1">

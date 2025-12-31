@@ -15,11 +15,11 @@ export default antfu({
 
   // Ignore patterns
   ignores: [
-    'out/**',
-    'dist/**',
-    'node_modules/**',
-    'specs/**',
     '.claude/**',
     '**/*.md',
+    'out/**',
+    'dist/**',
+    'plugin-sdk/**',
+    'node_modules/**',
   ],
 });

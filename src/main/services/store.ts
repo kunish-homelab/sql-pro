@@ -1,4 +1,8 @@
-import type { AISettings, QueryHistoryEntry } from '../../shared/types';
+import type {
+  AISettings,
+  ProStatus,
+  QueryHistoryEntry,
+} from '../../shared/types';
 import Store from 'electron-store';
 
 // ============ Type Definitions ============
@@ -31,6 +35,7 @@ interface StoreSchema {
   recentConnections: StoredRecentConnection[];
   queryHistory: QueryHistoryStore;
   aiSettings: AISettings | null;
+  proStatus: ProStatus | null;
 }
 
 // ============ Default Values ============
@@ -51,6 +56,7 @@ const store = new Store<StoreSchema>({
     recentConnections: [],
     queryHistory: {},
     aiSettings: null,
+    proStatus: null,
   },
   // Enable schema migration
   migrations: {
@@ -223,6 +229,20 @@ export function saveAISettings(settings: AISettings): void {
 
 export function clearAISettings(): void {
   store.set('aiSettings', null);
+}
+
+// ============ Pro Status ============
+
+export function getProStatus(): ProStatus | null {
+  return store.get('proStatus', null);
+}
+
+export function saveProStatus(status: ProStatus): void {
+  store.set('proStatus', status);
+}
+
+export function clearProStatus(): void {
+  store.set('proStatus', null);
 }
 
 // ============ Utility Functions ============

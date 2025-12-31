@@ -523,7 +523,15 @@ export function useStreamingAI({
         case 'done':
           setIsStreaming(false);
           requestIdRef.current = null;
-          onComplete?.(chunk.fullContent || '', chunk.usage);
+          onComplete?.(
+            chunk.fullContent || '',
+            chunk.usage
+              ? {
+                  inputTokens: chunk.usage.inputTokens ?? 0,
+                  outputTokens: chunk.usage.outputTokens ?? 0,
+                }
+              : undefined
+          );
           break;
         case 'error':
           setIsStreaming(false);
@@ -702,7 +710,9 @@ export function useAgentNLToSQL({
 
         if (message.type === 'assistant' && message.content) {
           // Clean up the SQL (remove markdown code blocks if present)
-          const cleanSQL = message.content
+          const contentStr =
+            typeof message.content === 'string' ? message.content : '';
+          const cleanSQL = contentStr
             .replace(/^```sql\n?/i, '')
             .replace(/^```\n?/, '')
             .replace(/\n?```$/, '')
@@ -757,7 +767,7 @@ export function useAgentNLToSQL({
 
       try {
         const schemaContext = formatSchemaForAI(schema);
-        const fullPrompt = `You are an expert SQL query generator for SQLite databases. 
+        const fullPrompt = `You are an expert SQL query generator for SQLite databases.
 
 Given the following database schema:
 ${schemaContext}
