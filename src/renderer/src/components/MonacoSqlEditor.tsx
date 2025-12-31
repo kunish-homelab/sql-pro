@@ -54,6 +54,13 @@ interface MonacoSqlEditorProps {
   maxHeight?: number;
   /** Error info from query execution for highlighting in editor */
   executionError?: ExecutionErrorInfo | null;
+  /** Initial cursor position to restore on mount */
+  initialCursorPosition?: {
+    line: number;
+    column: number;
+  };
+  /** Initial scroll position to restore on mount */
+  initialScrollPosition?: number;
   /** Callback when cursor position changes */
   onCursorPositionChange?: (position: {
     line: number;
@@ -81,6 +88,8 @@ export function MonacoSqlEditor({
   minHeight = 100,
   maxHeight = 500,
   executionError,
+  initialCursorPosition,
+  initialScrollPosition,
   onCursorPositionChange,
   onScrollPositionChange,
 }: MonacoSqlEditorProps) {
@@ -234,10 +243,35 @@ export function MonacoSqlEditor({
       // Focus editor on mount
       editor.focus();
 
+      // Restore cursor position if provided
+      if (initialCursorPosition) {
+        const model = editor.getModel();
+        if (model) {
+          // Clamp position to valid range
+          const lineCount = model.getLineCount();
+          const line = Math.min(
+            Math.max(1, initialCursorPosition.line),
+            lineCount
+          );
+          const column = Math.min(
+            Math.max(1, initialCursorPosition.column),
+            model.getLineMaxColumn(line)
+          );
+
+          editor.setPosition({ lineNumber: line, column });
+          editor.revealPositionInCenter({ lineNumber: line, column });
+        }
+      }
+
+      // Restore scroll position if provided
+      if (initialScrollPosition !== undefined) {
+        editor.setScrollTop(initialScrollPosition);
+      }
+
       // Mark editor as ready for vim mode initialization
       setEditorReady(true);
     },
-    [schema]
+    [schema, initialCursorPosition, initialScrollPosition]
   );
 
   // Capture and save cursor position when editor loses focus
