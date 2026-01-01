@@ -990,6 +990,291 @@ export interface GetClaudeCodePathsResponse {
   error?: string;
 }
 
+// ============ Schema Comparison Types ============
+
+/**
+ * Snapshot of a database schema at a specific point in time.
+ * Used for comparing schemas between different points or databases.
+ */
+export interface SchemaSnapshot {
+  /** Unique identifier for the snapshot */
+  id: string;
+  /** User-provided name for the snapshot */
+  name: string;
+  /** Database file path (optional, may not be present for imported snapshots) */
+  dbPath?: string;
+  /** Database filename (for display) */
+  filename?: string;
+  /** When the snapshot was created (ISO string) */
+  createdAt: string;
+  /** Schema information captured at snapshot time */
+  schemas: SchemaInfo[];
+  /** Total table count (for quick stats) */
+  tableCount: number;
+  /** Total view count (for quick stats) */
+  viewCount: number;
+}
+
+/**
+ * Type of change detected in schema comparison
+ */
+export type DiffType = 'added' | 'removed' | 'modified' | 'unchanged';
+
+/**
+ * Difference in a single column between schemas
+ */
+export interface ColumnDiff {
+  /** Column name */
+  name: string;
+  /** Type of difference */
+  diffType: DiffType;
+  /** Column info in source schema (null if added in target) */
+  source: ColumnInfo | null;
+  /** Column info in target schema (null if removed from source) */
+  target: ColumnInfo | null;
+  /** Specific changes detected (type, nullable, default, pk) */
+  changes?: {
+    type?: { from: string; to: string };
+    nullable?: { from: boolean; to: boolean };
+    defaultValue?: { from: string | null; to: string | null };
+    isPrimaryKey?: { from: boolean; to: boolean };
+  };
+}
+
+/**
+ * Difference in a single index between schemas
+ */
+export interface IndexDiff {
+  /** Index name */
+  name: string;
+  /** Type of difference */
+  diffType: DiffType;
+  /** Index info in source schema (null if added in target) */
+  source: IndexInfo | null;
+  /** Index info in target schema (null if removed from source) */
+  target: IndexInfo | null;
+  /** Specific changes detected */
+  changes?: {
+    columns?: { from: string[]; to: string[] };
+    isUnique?: { from: boolean; to: boolean };
+  };
+}
+
+/**
+ * Difference in a single foreign key between schemas
+ */
+export interface ForeignKeyDiff {
+  /** Column name that has the foreign key */
+  column: string;
+  /** Type of difference */
+  diffType: DiffType;
+  /** Foreign key info in source schema (null if added in target) */
+  source: ForeignKeyInfo | null;
+  /** Foreign key info in target schema (null if removed from source) */
+  target: ForeignKeyInfo | null;
+  /** Specific changes detected */
+  changes?: {
+    referencedTable?: { from: string; to: string };
+    referencedColumn?: { from: string; to: string };
+    onDelete?: { from: string | undefined; to: string | undefined };
+    onUpdate?: { from: string | undefined; to: string | undefined };
+  };
+}
+
+/**
+ * Difference in a single trigger between schemas
+ */
+export interface TriggerDiff {
+  /** Trigger name */
+  name: string;
+  /** Type of difference */
+  diffType: DiffType;
+  /** Trigger info in source schema (null if added in target) */
+  source: TriggerInfo | null;
+  /** Trigger info in target schema (null if removed from source) */
+  target: TriggerInfo | null;
+  /** Specific changes detected */
+  changes?: {
+    timing?: {
+      from: 'BEFORE' | 'AFTER' | 'INSTEAD OF';
+      to: 'BEFORE' | 'AFTER' | 'INSTEAD OF';
+    };
+    event?: {
+      from: 'INSERT' | 'UPDATE' | 'DELETE';
+      to: 'INSERT' | 'UPDATE' | 'DELETE';
+    };
+    sql?: { from: string; to: string };
+  };
+}
+
+/**
+ * Comprehensive difference for a single table between schemas
+ */
+export interface TableDiff {
+  /** Table name */
+  name: string;
+  /** Database schema name (e.g., 'main', 'temp') */
+  schema: string;
+  /** Type of difference */
+  diffType: DiffType;
+  /** Table info in source schema (null if added in target) */
+  source: TableInfo | null;
+  /** Table info in target schema (null if removed from source) */
+  target: TableInfo | null;
+  /** Column-level differences (only for modified tables) */
+  columnDiffs?: ColumnDiff[];
+  /** Index-level differences (only for modified tables) */
+  indexDiffs?: IndexDiff[];
+  /** Foreign key differences (only for modified tables) */
+  foreignKeyDiffs?: ForeignKeyDiff[];
+  /** Trigger differences (only for modified tables) */
+  triggerDiffs?: TriggerDiff[];
+  /** Primary key changes */
+  primaryKeyChanges?: {
+    from: string[];
+    to: string[];
+  };
+}
+
+/**
+ * Complete schema comparison result
+ */
+export interface SchemaComparisonResult {
+  /** Source identifier (connection ID or snapshot ID) */
+  sourceId: string;
+  /** Source name (for display) */
+  sourceName: string;
+  /** Source type */
+  sourceType: 'connection' | 'snapshot';
+  /** Target identifier (connection ID or snapshot ID) */
+  targetId: string;
+  /** Target name (for display) */
+  targetName: string;
+  /** Target type */
+  targetType: 'connection' | 'snapshot';
+  /** When the comparison was performed (ISO string) */
+  comparedAt: string;
+  /** All table differences */
+  tableDiffs: TableDiff[];
+  /** Quick summary statistics */
+  summary: {
+    /** Total tables in source */
+    sourceTables: number;
+    /** Total tables in target */
+    targetTables: number;
+    /** Tables added in target */
+    tablesAdded: number;
+    /** Tables removed from source */
+    tablesRemoved: number;
+    /** Tables modified */
+    tablesModified: number;
+    /** Tables unchanged */
+    tablesUnchanged: number;
+    /** Total column changes across all tables */
+    totalColumnChanges: number;
+    /** Total index changes across all tables */
+    totalIndexChanges: number;
+    /** Total foreign key changes across all tables */
+    totalForeignKeyChanges: number;
+    /** Total trigger changes across all tables */
+    totalTriggerChanges: number;
+  };
+}
+
+// ============ Schema Snapshot IPC Types ============
+
+export interface SaveSchemaSnapshotRequest {
+  connectionId: string;
+  name: string;
+}
+
+export interface SaveSchemaSnapshotResponse {
+  success: boolean;
+  snapshot?: SchemaSnapshot;
+  error?: string;
+}
+
+export interface GetSchemaSnapshotsResponse {
+  success: boolean;
+  snapshots?: SchemaSnapshot[];
+  error?: string;
+}
+
+export interface GetSchemaSnapshotRequest {
+  snapshotId: string;
+}
+
+export interface GetSchemaSnapshotResponse {
+  success: boolean;
+  snapshot?: SchemaSnapshot;
+  error?: string;
+}
+
+export interface DeleteSchemaSnapshotRequest {
+  snapshotId: string;
+}
+
+export interface DeleteSchemaSnapshotResponse {
+  success: boolean;
+  error?: string;
+}
+
+// ============ Schema Comparison IPC Types ============
+
+export interface CompareConnectionsRequest {
+  sourceConnectionId: string;
+  targetConnectionId: string;
+}
+
+export interface CompareConnectionsResponse {
+  success: boolean;
+  result?: SchemaComparisonResult;
+  error?: string;
+}
+
+export interface CompareConnectionToSnapshotRequest {
+  connectionId: string;
+  snapshotId: string;
+  /** If true, connection is target, snapshot is source */
+  reverseComparison?: boolean;
+}
+
+export interface CompareConnectionToSnapshotResponse {
+  success: boolean;
+  result?: SchemaComparisonResult;
+  error?: string;
+}
+
+export interface CompareSnapshotsRequest {
+  sourceSnapshotId: string;
+  targetSnapshotId: string;
+}
+
+export interface CompareSnapshotsResponse {
+  success: boolean;
+  result?: SchemaComparisonResult;
+  error?: string;
+}
+
+export interface GenerateMigrationSQLRequest {
+  comparisonResult: SchemaComparisonResult;
+  /** If true, generate SQL to go from target back to source */
+  reverse?: boolean;
+  /** Include DROP statements for removed tables/columns (default: false for safety) */
+  includeDropStatements?: boolean;
+}
+
+export interface GenerateMigrationSQLResponse {
+  success: boolean;
+  /** Generated SQL statements */
+  sql?: string;
+  /** Individual statements as array (for step-by-step execution) */
+  statements?: string[];
+  /** Warnings about SQLite limitations or potential data loss */
+  warnings?: string[];
+  error?: string;
+}
+
 // ============ IPC Channel Definitions ============
 
 export interface IPCChannels {
@@ -1071,6 +1356,39 @@ export interface IPCChannels {
   'pro:get-features': void;
   'pro:activate': [ActivateProFeatureRequest, ActivateProFeatureResponse];
   'pro:check-status': void;
+
+  // Schema Snapshots
+  'schema-snapshot:save': [
+    SaveSchemaSnapshotRequest,
+    SaveSchemaSnapshotResponse,
+  ];
+  'schema-snapshot:get-all': void;
+  'schema-snapshot:get': [
+    GetSchemaSnapshotRequest,
+    GetSchemaSnapshotResponse,
+  ];
+  'schema-snapshot:delete': [
+    DeleteSchemaSnapshotRequest,
+    DeleteSchemaSnapshotResponse,
+  ];
+
+  // Schema Comparison
+  'schema-comparison:compare-connections': [
+    CompareConnectionsRequest,
+    CompareConnectionsResponse,
+  ];
+  'schema-comparison:compare-connection-to-snapshot': [
+    CompareConnectionToSnapshotRequest,
+    CompareConnectionToSnapshotResponse,
+  ];
+  'schema-comparison:compare-snapshots': [
+    CompareSnapshotsRequest,
+    CompareSnapshotsResponse,
+  ];
+  'schema-comparison:generate-migration-sql': [
+    GenerateMigrationSQLRequest,
+    GenerateMigrationSQLResponse,
+  ];
 }
 
 // ============ IPC Channel Constants ============
@@ -1179,4 +1497,18 @@ export const IPC_CHANNELS = {
   UPDATE_DOWNLOAD: 'updates:download',
   UPDATE_INSTALL: 'updates:quit-and-install',
   UPDATE_STATUS: 'updates:get-status',
+
+  // Schema Snapshots
+  SCHEMA_SNAPSHOT_SAVE: 'schema-snapshot:save',
+  SCHEMA_SNAPSHOT_GET_ALL: 'schema-snapshot:get-all',
+  SCHEMA_SNAPSHOT_GET: 'schema-snapshot:get',
+  SCHEMA_SNAPSHOT_DELETE: 'schema-snapshot:delete',
+
+  // Schema Comparison
+  SCHEMA_COMPARISON_COMPARE_CONNECTIONS: 'schema-comparison:compare-connections',
+  SCHEMA_COMPARISON_COMPARE_CONNECTION_TO_SNAPSHOT:
+    'schema-comparison:compare-connection-to-snapshot',
+  SCHEMA_COMPARISON_COMPARE_SNAPSHOTS: 'schema-comparison:compare-snapshots',
+  SCHEMA_COMPARISON_GENERATE_MIGRATION_SQL:
+    'schema-comparison:generate-migration-sql',
 } as const;
