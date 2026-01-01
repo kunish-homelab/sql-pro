@@ -1,5 +1,5 @@
-import { AlertCircle, ArrowLeftRight, FileDown, GitCompare, Loader2 } from 'lucide-react';
-import { useCallback, useEffect, useState } from 'react';
+import { AlertCircle, ArrowLeftRight, ChevronDown, ChevronUp, FileDown, GitCompare, Keyboard, Loader2 } from 'lucide-react';
+import { useCallback, useEffect, useRef, useState } from 'react';
 import { Alert, AlertDescription, AlertTitle } from '@/components/ui/alert';
 import { Button } from '@/components/ui/button';
 import { Card, CardContent, CardHeader, CardTitle } from '@/components/ui/card';
@@ -31,6 +31,7 @@ export function SchemaComparisonPanel({
     isComparing,
     comparisonError,
     isLoadingSnapshots,
+    filters,
     setSource,
     setTarget,
     setIsComparing,
@@ -38,9 +39,13 @@ export function SchemaComparisonPanel({
     setComparisonError,
     setAvailableSnapshots,
     setIsLoadingSnapshots,
+    setShowOnlyDifferences,
+    resetFilters,
   } = useSchemaComparisonStore();
 
   const [isExportDialogOpen, setIsExportDialogOpen] = useState(false);
+  const [showKeyboardShortcuts, setShowKeyboardShortcuts] = useState(false);
+  const searchInputRef = useRef<HTMLInputElement | null>(null);
 
   // Load available snapshots on mount
   useEffect(() => {
@@ -60,6 +65,93 @@ export function SchemaComparisonPanel({
 
     loadSnapshots();
   }, [setAvailableSnapshots, setIsLoadingSnapshots]);
+
+  // Keyboard shortcuts for common comparison actions
+  useEffect(() => {
+    const handleKeyDown = (e: KeyboardEvent) => {
+      // Skip if user is typing in an input/textarea or editable element
+      const target = e.target as HTMLElement;
+      if (
+        target.tagName === 'INPUT' ||
+        target.tagName === 'TEXTAREA' ||
+        target.isContentEditable
+      ) {
+        // Exception: Cmd/Ctrl+Enter to trigger comparison works even in inputs
+        if ((e.metaKey || e.ctrlKey) && e.key === 'Enter') {
+          e.preventDefault();
+          if (source && target && !isComparing) {
+            handleCompareRef.current?.();
+          }
+        }
+        return;
+      }
+
+      if (e.metaKey || e.ctrlKey) {
+        switch (e.key) {
+          case 'Enter':
+            // Cmd/Ctrl+Enter: Run comparison
+            e.preventDefault();
+            if (source && target && !isComparing) {
+              handleCompareRef.current?.();
+            }
+            break;
+          case 'd':
+          case 'D':
+            // Cmd/Ctrl+D: Toggle "only differences" filter
+            if (comparisonResult) {
+              e.preventDefault();
+              setShowOnlyDifferences(!filters.showOnlyDifferences);
+            }
+            break;
+          case 'e':
+          case 'E':
+            // Cmd/Ctrl+E: Export report
+            if (comparisonResult) {
+              e.preventDefault();
+              setIsExportDialogOpen(true);
+            }
+            break;
+          case 'r':
+          case 'R':
+            // Cmd/Ctrl+R: Reset filters
+            if (comparisonResult) {
+              e.preventDefault();
+              resetFilters();
+            }
+            break;
+          case 'f':
+          case 'F':
+            // Cmd/Ctrl+F: Focus search input
+            if (comparisonResult) {
+              e.preventDefault();
+              // Find and focus the search input in DiffFilterBar
+              const searchInput = document.querySelector(
+                'input[placeholder="Search by name..."]'
+              ) as HTMLInputElement;
+              if (searchInput) {
+                searchInput.focus();
+                searchInput.select();
+              }
+            }
+            break;
+        }
+      }
+    };
+
+    window.addEventListener('keydown', handleKeyDown);
+    return () => window.removeEventListener('keydown', handleKeyDown);
+  }, [
+    source,
+    target,
+    isComparing,
+    comparisonResult,
+    filters.showOnlyDifferences,
+    setShowOnlyDifferences,
+    resetFilters,
+  ]);
+
+  // Ref to hold handleCompare function for keyboard shortcuts
+  const handleCompareRef = useRef<(() => void) | null>(null);
 
   const handleCompare = useCallback(async () => {
     if (!source || !target) {
@@ -140,6 +232,11 @@ export function SchemaComparisonPanel({
     setComparisonError,
   ]);
 
+  // Store handleCompare in ref for keyboard shortcuts
+  useEffect(() => {
+    handleCompareRef.current = handleCompare;
+  }, [handleCompare]);
+
   const canCompare = source && target && !isComparing;
 
   return (
@@ -147,16 +244,85 @@ export function SchemaComparisonPanel({
       <ScrollArea className="h-full">
         <div className="space-y-6 p-6">
           {/* Header */}
-          <div className="flex items-center gap-3">
-            <GitCompare className="text-primary h-6 w-6" />
-            <div>
-              <h1 className="text-2xl font-semibold">Schema Comparison</h1>
-              <p className="text-muted-foreground text-sm">
-                Compare schemas between databases or snapshots to identify
-                differences
-              </p>
+          <div className="flex items-center justify-between">
+            <div className="flex items-center gap-3">
+              <GitCompare className="text-primary h-6 w-6" />
+              <div>
+                <h1 className="text-2xl font-semibold">Schema Comparison</h1>
+                <p className="text-muted-foreground text-sm">
+                  Compare schemas between databases or snapshots to identify
+                  differences
+                </p>
+              </div>
             </div>
+            <Button
+              variant="ghost"
+              size="sm"
+              onClick={() => setShowKeyboardShortcuts(!showKeyboardShortcuts)}
+              className="gap-2"
+              title="Show keyboard shortcuts"
+            >
+              <Keyboard className="h-4 w-4" />
+              <span className="hidden sm:inline">Shortcuts</span>
+              {showKeyboardShortcuts ? (
+                <ChevronUp className="h-4 w-4" />
+              ) : (
+                <ChevronDown className="h-4 w-4" />
+              )}
+            </Button>
           </div>
+
+          {/* Keyboard Shortcuts Help */}
+          {showKeyboardShortcuts && (
+            <Card className="bg-muted/50">
+              <CardHeader className="pb-3">
+                <CardTitle className="text-base flex items-center gap-2">
+                  <Keyboard className="h-4 w-4" />
+                  Keyboard Shortcuts
+                </CardTitle>
+              </CardHeader>
+              <CardContent>
+                <div className="grid gap-2 text-sm sm:grid-cols-2">
+                  <div className="flex items-center justify-between gap-4">
+                    <span className="text-muted-foreground">
+                      Run comparison
+                    </span>
+                    <kbd className="bg-muted rounded border px-2 py-1 text-xs font-mono">
+                      ⌘↵
+                    </kbd>
+                  </div>
+                  <div className="flex items-center justify-between gap-4">
+                    <span className="text-muted-foreground">
+                      Toggle only differences
+                    </span>
+                    <kbd className="bg-muted rounded border px-2 py-1 text-xs font-mono">
+                      ⌘D
+                    </kbd>
+                  </div>
+                  <div className="flex items-center justify-between gap-4">
+                    <span className="text-muted-foreground">Export report</span>
+                    <kbd className="bg-muted rounded border px-2 py-1 text-xs font-mono">
+                      ⌘E
+                    </kbd>
+                  </div>
+                  <div className="flex items-center justify-between gap-4">
+                    <span className="text-muted-foreground">Reset filters</span>
+                    <kbd className="bg-muted rounded border px-2 py-1 text-xs font-mono">
+                      ⌘R
+                    </kbd>
+                  </div>
+                  <div className="flex items-center justify-between gap-4">
+                    <span className="text-muted-foreground">
+                      Focus search
+                    </span>
+                    <kbd className="bg-muted rounded border px-2 py-1 text-xs font-mono">
+                      ⌘F
+                    </kbd>
+                  </div>
+                </div>
+              </CardContent>
+            </Card>
+          )}
 
           {/* Selection Cards */}
           <div className="grid gap-4 md:grid-cols-2">
@@ -201,6 +367,7 @@ export function SchemaComparisonPanel({
               onClick={handleCompare}
               disabled={!canCompare}
               className="min-w-[200px]"
+              title="Compare schemas (⌘↵)"
             >
               {isComparing ? (
                 <>
@@ -244,6 +411,7 @@ export function SchemaComparisonPanel({
                     variant="outline"
                     size="sm"
                     onClick={() => setIsExportDialogOpen(true)}
+                    title="Export comparison report (⌘E)"
                   >
                     <FileDown className="mr-2 h-4 w-4" />
                     Export Report

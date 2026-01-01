@@ -78,6 +78,7 @@ export function DiffFilterBar({ className }: DiffFilterBarProps) {
           variant="outline"
           size="sm"
           aria-label="Show only differences"
+          title="Toggle show only differences (⌘D)"
         >
           Only Differences
         </Toggle>
@@ -216,6 +217,7 @@ export function DiffFilterBar({ className }: DiffFilterBarProps) {
           value={filters.searchText}
           onChange={handleSearchChange}
           className="h-8 w-full pr-8 pl-8 text-sm"
+          title="Search for schema objects (⌘F to focus)"
         />
         {filters.searchText && (
           <button
@@ -238,7 +240,7 @@ export function DiffFilterBar({ className }: DiffFilterBarProps) {
             size="sm"
             onClick={handleResetFilters}
             className="gap-2"
-            title="Reset all filters"
+            title="Reset all filters (⌘R)"
           >
             <RotateCcw className="h-4 w-4" />
             <span className="hidden sm:inline">Reset</span>
