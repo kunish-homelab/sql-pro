@@ -105,8 +105,8 @@ export function schemaToEdges(schema: DatabaseSchema): ERRelationshipEdge[] {
         id: `${sourceId}.${fk.column}->${targetId}.${fk.referencedColumn}`,
         source: sourceId,
         target: targetId,
-        sourceHandle: fk.column,
-        targetHandle: fk.referencedColumn,
+        sourceHandle: `${fk.column}-source`,
+        targetHandle: `${fk.referencedColumn}-target`,
         type: 'erRelationship',
         data: edgeData,
       });

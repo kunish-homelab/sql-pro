@@ -15,11 +15,6 @@ function ERTableNodeComponent({ data, selected }: ERTableNodeProps) {
   // Get set of FK column names for quick lookup
   const fkColumns = new Set(foreignKeys.map((fk) => fk.column));
 
-  // Get set of referenced columns (targets of FKs from other tables)
-  const referencedColumns = new Set(
-    foreignKeys.map((fk) => fk.referencedColumn)
-  );
-
   return (
     <div
       className={cn(
@@ -49,7 +44,6 @@ function ERTableNodeComponent({ data, selected }: ERTableNodeProps) {
         {columns.map((column) => {
           const isPK = primaryKey.includes(column.name);
           const isFK = fkColumns.has(column.name);
-          const isReferenced = referencedColumns.has(column.name);
 
           return (
             <div
@@ -90,25 +84,33 @@ function ERTableNodeComponent({ data, selected }: ERTableNodeProps) {
                 {column.type}
               </span>
 
-              {/* Source handle for FK columns (right side) */}
-              {isFK && (
-                <Handle
-                  type="source"
-                  position={Position.Right}
-                  id={column.name}
-                  className="h-2! w-2! border-blue-600! bg-blue-500!"
-                />
-              )}
+              {/* Source handle (right side) - for FK columns */}
+              <Handle
+                type="source"
+                position={Position.Right}
+                id={`${column.name}-source`}
+                className={cn(
+                  'h-2! w-2!',
+                  isFK
+                    ? 'border-blue-600! bg-blue-500!'
+                    : 'border-transparent! bg-transparent!'
+                )}
+                isConnectable={isFK}
+              />
 
-              {/* Target handle for referenced columns (left side) */}
-              {(isPK || isReferenced) && (
-                <Handle
-                  type="target"
-                  position={Position.Left}
-                  id={column.name}
-                  className="h-2! w-2! border-amber-600! bg-amber-500!"
-                />
-              )}
+              {/* Target handle (left side) - for PK columns */}
+              <Handle
+                type="target"
+                position={Position.Left}
+                id={`${column.name}-target`}
+                className={cn(
+                  'h-2! w-2!',
+                  isPK
+                    ? 'border-amber-600! bg-amber-500!'
+                    : 'border-transparent! bg-transparent!'
+                )}
+                isConnectable={isPK}
+              />
             </div>
           );
         })}
