@@ -1,13 +1,8 @@
-import { aiDevtoolsPlugin } from '@tanstack/react-ai-devtools';
-import { TanStackDevtools } from '@tanstack/react-devtools';
-import { ReactQueryDevtoolsPanel } from '@tanstack/react-query-devtools';
 import { Outlet } from '@tanstack/react-router';
-import { TanStackRouterDevtoolsPanel } from '@tanstack/react-router-devtools';
 import { CommandPalette } from '@/components/CommandPalette';
 import { getFontFamilyCSS, useApplyFont } from '@/hooks/useApplyFont';
 import { useCommands } from '@/hooks/useCommands';
 import { useMenuActions } from '@/hooks/useMenuActions';
-import { isMockMode } from '@/lib/mock-api';
 import { useUIFont } from '@/stores';
 
 /**
@@ -44,25 +39,6 @@ export function RootLayout() {
 
       {/* Command Palette - global keyboard shortcut ⌘K */}
       <CommandPalette />
-
-      {/* TanStack DevTools - only visible in development, hidden in mock mode */}
-      {import.meta.env.DEV && !isMockMode() && (
-        <TanStackDevtools
-          plugins={[
-            aiDevtoolsPlugin(),
-            {
-              name: 'TanStack Query',
-              render: <ReactQueryDevtoolsPanel />,
-              defaultOpen: true,
-            },
-            {
-              name: 'TanStack Router',
-              render: <TanStackRouterDevtoolsPanel />,
-              defaultOpen: false,
-            },
-          ]}
-        />
-      )}
     </div>
   );
 }

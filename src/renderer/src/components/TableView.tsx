@@ -22,6 +22,7 @@ import {
 import { useCallback, useEffect, useMemo, useRef, useState } from 'react';
 import { Button } from '@/components/ui/button';
 import { Input } from '@/components/ui/input';
+import { ShortcutKbd } from '@/components/ui/kbd';
 import {
   Select,
   SelectContent,
@@ -450,7 +451,7 @@ export function TableView({
               <Input
                 ref={searchInputRef}
                 type="text"
-                placeholder="Search in results... (⌘F)"
+                placeholder="Search in results..."
                 value={searchTerm}
                 onChange={(e) => setSearchTerm(e.target.value)}
                 className="h-8 w-56 pr-8 pl-8 text-sm"
@@ -468,15 +469,22 @@ export function TableView({
             </div>
 
             {/* Refresh button */}
-            <Button
-              variant="outline"
-              size="sm"
-              onClick={() => refetch()}
-              className="gap-2"
-              title="Refresh table data (⌘R)"
-            >
-              <RefreshCw className="h-4 w-4" />
-            </Button>
+            <Tooltip>
+              <TooltipTrigger asChild>
+                <Button
+                  variant="outline"
+                  size="sm"
+                  onClick={() => refetch()}
+                  className="gap-2"
+                >
+                  <RefreshCw className="h-4 w-4" />
+                </Button>
+              </TooltipTrigger>
+              <TooltipContent>
+                Refresh table data (
+                <ShortcutKbd action="action.refresh-table" />)
+              </TooltipContent>
+            </Tooltip>
 
             {/* Export button */}
             <Button
@@ -527,9 +535,10 @@ export function TableView({
                 >
                   <Info className="h-4 w-4" />
                   <span className="hidden sm:inline">Schema</span>
-                  <kbd className="bg-muted text-muted-foreground hidden rounded px-1 py-0.5 font-mono text-[10px] sm:inline-block">
-                    ⌘4
-                  </kbd>
+                  <ShortcutKbd
+                    binding={{ key: '4', modifiers: { cmd: true } }}
+                    className="hidden sm:inline-flex"
+                  />
                 </Button>
               </TooltipTrigger>
               <TooltipContent>

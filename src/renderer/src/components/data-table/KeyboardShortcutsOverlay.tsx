@@ -1,3 +1,4 @@
+import type {ShortcutAction} from '@/stores/keyboard-shortcuts-store';
 import {
   ArrowUp,
   Command,
@@ -6,7 +7,7 @@ import {
   Search,
   X,
 } from 'lucide-react';
-import { memo, useEffect, useState } from 'react';
+import { memo, useEffect, useMemo, useState } from 'react';
 import { Button } from '@/components/ui/button';
 import {
   Popover,
@@ -14,14 +15,22 @@ import {
   PopoverTrigger,
 } from '@/components/ui/popover';
 import { cn } from '@/lib/utils';
+import {
+  formatShortcutBinding,
+  isMac,
+  
+  useKeyboardShortcutsStore
+} from '@/stores/keyboard-shortcuts-store';
 
 interface ShortcutItem {
   keys: string[];
   description: string;
   category: 'navigation' | 'editing' | 'search' | 'general';
+  action?: ShortcutAction; // If set, will be fetched from store
 }
 
-const shortcuts: ShortcutItem[] = [
+// Static shortcuts that don't change based on user settings
+const staticShortcuts: ShortcutItem[] = [
   // Navigation
   { keys: ['↑', '↓'], description: 'Navigate rows', category: 'navigation' },
   { keys: ['←', '→'], description: 'Navigate columns', category: 'navigation' },
@@ -49,12 +58,45 @@ const shortcuts: ShortcutItem[] = [
   { keys: ['⌘', 'G'], description: 'Find next', category: 'search' },
   { keys: ['⇧', '⌘', 'G'], description: 'Find previous', category: 'search' },
 
-  // General
-  { keys: ['⌘', 'K'], description: 'Command palette', category: 'general' },
-  { keys: ['⌘', 'R'], description: 'Refresh data', category: 'general' },
+  // General - with action IDs for dynamic shortcuts
+  {
+    keys: [],
+    description: 'Command palette',
+    category: 'general',
+    action: 'action.command-palette',
+  },
+  {
+    keys: [],
+    description: 'Refresh data',
+    category: 'general',
+    action: 'action.refresh-table',
+  },
   { keys: ['⌘', 'E'], description: 'Export data', category: 'general' },
   { keys: ['?'], description: 'Show shortcuts', category: 'general' },
 ];
+
+/**
+ * Convert a formatted shortcut string to an array of keys for display
+ */
+function shortcutToKeys(shortcutStr: string): string[] {
+  if (!shortcutStr || shortcutStr === 'Not set') return [];
+
+  const mac = isMac();
+  const keys: string[] = [];
+
+  // On Mac, symbols are used (⌘⇧⌥), on other platforms words with + separator
+  if (mac) {
+    // Parse Mac-style shortcuts (e.g., "⇧⌘K")
+    for (const char of shortcutStr) {
+      keys.push(char);
+    }
+  } else {
+    // Parse Windows/Linux-style shortcuts (e.g., "Ctrl+Shift+K")
+    keys.push(...shortcutStr.split('+'));
+  }
+
+  return keys;
+}
 
 interface KeyboardShortcutsOverlayProps {
   className?: string;
@@ -66,6 +108,22 @@ interface KeyboardShortcutsOverlayProps {
 export const KeyboardShortcutsOverlay = memo(
   ({ className }: KeyboardShortcutsOverlayProps) => {
     const [isOpen, setIsOpen] = useState(false);
+    const getShortcut = useKeyboardShortcutsStore((s) => s.getShortcut);
+
+    // Resolve dynamic shortcuts from the store
+    const shortcuts = useMemo(() => {
+      return staticShortcuts.map((shortcut) => {
+        if (shortcut.action) {
+          const binding = getShortcut(shortcut.action);
+          const formatted = formatShortcutBinding(binding);
+          return {
+            ...shortcut,
+            keys: shortcutToKeys(formatted),
+          };
+        }
+        return shortcut;
+      });
+    }, [getShortcut]);
 
     // Listen for ? key to toggle shortcuts
     useEffect(() => {

@@ -10,6 +10,7 @@ import {
   X,
 } from 'lucide-react';
 import { Button } from '@/components/ui/button';
+import { ShortcutKbd } from '@/components/ui/kbd';
 import { Separator } from '@/components/ui/separator';
 import {
   Tooltip,
@@ -143,9 +144,7 @@ export function Toolbar({ onOpenChanges }: ToolbarProps) {
         </TooltipTrigger>
         <TooltipContent>
           <span>Refresh Schema</span>
-          <kbd className="bg-muted text-muted-foreground ml-2 rounded px-1 py-0.5 font-mono text-xs">
-            ⇧⌘R
-          </kbd>
+          <ShortcutKbd action="action.refresh-schema" className="ml-2" />
         </TooltipContent>
       </Tooltip>
 
@@ -205,9 +204,7 @@ export function Toolbar({ onOpenChanges }: ToolbarProps) {
               className="text-muted-foreground gap-1.5 text-xs"
             >
               <span>Commands</span>
-              <kbd className="bg-muted text-muted-foreground rounded px-1 py-0.5 font-mono text-[10px]">
-                ⌘K
-              </kbd>
+              <ShortcutKbd action="action.command-palette" />
             </Button>
           </TooltipTrigger>
           <TooltipContent>Open command palette</TooltipContent>

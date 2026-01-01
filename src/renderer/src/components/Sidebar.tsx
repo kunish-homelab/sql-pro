@@ -32,6 +32,7 @@ import {
   ContextMenuSeparator,
   ContextMenuTrigger,
 } from '@/components/ui/context-menu';
+import { ShortcutKbd } from '@/components/ui/kbd';
 import { ScrollArea } from '@/components/ui/scroll-area';
 import {
   Tooltip,
@@ -629,12 +630,12 @@ export function Sidebar({
             >
               <Settings className="mr-2 h-4 w-4" />
               Settings
-              <kbd className="bg-muted text-muted-foreground ml-auto rounded px-1 py-0.5 font-mono text-[10px]">
-                ⌘,
-              </kbd>
+              <ShortcutKbd action="settings.open" className="ml-auto" />
             </Button>
           </TooltipTrigger>
-          <TooltipContent side="right">Open settings (⌘,)</TooltipContent>
+          <TooltipContent side="right">
+            Open settings (<ShortcutKbd action="settings.open" />)
+          </TooltipContent>
         </Tooltip>
       </div>
 

@@ -12,6 +12,7 @@ import { useCallback, useEffect, useRef, useState } from 'react';
 import { Alert, AlertDescription, AlertTitle } from '@/components/ui/alert';
 import { Button } from '@/components/ui/button';
 import { Card, CardContent, CardHeader, CardTitle } from '@/components/ui/card';
+import { ShortcutKbd } from '@/components/ui/kbd';
 import { ScrollArea } from '@/components/ui/scroll-area';
 import { sqlPro } from '@/lib/api';
 import { useSchemaComparisonStore } from '@/stores';
@@ -289,35 +290,35 @@ export function SchemaComparisonPanel({
                     <span className="text-muted-foreground">
                       Run comparison
                     </span>
-                    <kbd className="bg-muted rounded border px-2 py-1 font-mono text-xs">
-                      ⌘↵
-                    </kbd>
+                    <ShortcutKbd
+                      binding={{ key: 'Enter', modifiers: { cmd: true } }}
+                    />
                   </div>
                   <div className="flex items-center justify-between gap-4">
                     <span className="text-muted-foreground">
                       Toggle only differences
                     </span>
-                    <kbd className="bg-muted rounded border px-2 py-1 font-mono text-xs">
-                      ⌘D
-                    </kbd>
+                    <ShortcutKbd
+                      binding={{ key: 'd', modifiers: { cmd: true } }}
+                    />
                   </div>
                   <div className="flex items-center justify-between gap-4">
                     <span className="text-muted-foreground">Export report</span>
-                    <kbd className="bg-muted rounded border px-2 py-1 font-mono text-xs">
-                      ⌘E
-                    </kbd>
+                    <ShortcutKbd
+                      binding={{ key: 'e', modifiers: { cmd: true } }}
+                    />
                   </div>
                   <div className="flex items-center justify-between gap-4">
                     <span className="text-muted-foreground">Reset filters</span>
-                    <kbd className="bg-muted rounded border px-2 py-1 font-mono text-xs">
-                      ⌘R
-                    </kbd>
+                    <ShortcutKbd
+                      binding={{ key: 'r', modifiers: { cmd: true } }}
+                    />
                   </div>
                   <div className="flex items-center justify-between gap-4">
                     <span className="text-muted-foreground">Focus search</span>
-                    <kbd className="bg-muted rounded border px-2 py-1 font-mono text-xs">
-                      ⌘F
-                    </kbd>
+                    <ShortcutKbd
+                      binding={{ key: 'f', modifiers: { cmd: true } }}
+                    />
                   </div>
                 </div>
               </CardContent>

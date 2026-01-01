@@ -39,6 +39,7 @@ import {
   DropdownMenuTrigger,
 } from '@/components/ui/dropdown-menu';
 import { Input } from '@/components/ui/input';
+import { ShortcutKbd } from '@/components/ui/kbd';
 import {
   ResizableHandle,
   ResizablePanelGroup,
@@ -373,9 +374,7 @@ export function QueryEditor() {
           >
             <History className="h-4 w-4" />
             History
-            <kbd className="bg-muted text-muted-foreground ml-1 rounded px-1 py-0.5 font-mono text-[10px]">
-              ⌘H
-            </kbd>
+            <ShortcutKbd action="view.toggle-history" className="ml-1" />
           </Button>
           <Button
             variant="ghost"

@@ -1,5 +1,6 @@
 import { Code, GitCompare, GitFork, Table } from 'lucide-react';
 import { useCallback, useEffect, useRef, useState } from 'react';
+import { ShortcutKbd } from '@/components/ui/kbd';
 import { Tabs, TabsContent, TabsList, TabsTrigger } from '@/components/ui/tabs';
 import { cn } from '@/lib/utils';
 import {
@@ -181,9 +182,10 @@ export function DatabaseView({
                   {dataTabs.length}
                 </span>
               )}
-              <kbd className="bg-muted text-muted-foreground ml-1 hidden rounded px-1 py-0.5 font-mono text-[10px] sm:inline-block">
-                ⌘1
-              </kbd>
+              <ShortcutKbd
+                action="nav.data-browser"
+                className="ml-1 hidden sm:inline-flex"
+              />
             </TabsTrigger>
             <TabsTrigger
               value="query"
@@ -197,9 +199,10 @@ export function DatabaseView({
             >
               <Code className="h-4 w-4" />
               SQL Query
-              <kbd className="bg-muted text-muted-foreground ml-1 hidden rounded px-1 py-0.5 font-mono text-[10px] sm:inline-block">
-                ⌘2
-              </kbd>
+              <ShortcutKbd
+                action="nav.query-editor"
+                className="ml-1 hidden sm:inline-flex"
+              />
             </TabsTrigger>
             <TabsTrigger
               value="diagram"
@@ -213,9 +216,10 @@ export function DatabaseView({
             >
               <GitFork className="h-4 w-4" />
               ER Diagram
-              <kbd className="bg-muted text-muted-foreground ml-1 hidden rounded px-1 py-0.5 font-mono text-[10px] sm:inline-block">
-                ⌘3
-              </kbd>
+              <ShortcutKbd
+                binding={{ key: '3', modifiers: { cmd: true } }}
+                className="ml-1 hidden sm:inline-flex"
+              />
             </TabsTrigger>
             <TabsTrigger
               value="compare"
@@ -229,9 +233,10 @@ export function DatabaseView({
             >
               <GitCompare className="h-4 w-4" />
               Schema Compare
-              <kbd className="bg-muted text-muted-foreground ml-1 hidden rounded px-1 py-0.5 font-mono text-[10px] sm:inline-block">
-                ⌘5
-              </kbd>
+              <ShortcutKbd
+                action="nav.schema-compare"
+                className="ml-1 hidden sm:inline-flex"
+              />
             </TabsTrigger>
           </TabsList>
 
