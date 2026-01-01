@@ -53,7 +53,7 @@ const DataRow = memo(
     return (
       <tr
         className={cn(
-          'border-border border-b',
+          'border-border h-8 border-b',
           isEven ? 'bg-background' : 'bg-muted/20',
           isDeleted && 'bg-destructive/10 line-through opacity-50',
           isNewRow && 'bg-green-500/10',
@@ -228,14 +228,14 @@ export const TableBody = memo(
         })}
 
         {/* Padding row for virtualization - bottom spacer */}
-        {virtualItems.length > 0 && (
-          <tr
-            style={{
-              height:
-                totalSize - (virtualItems[virtualItems.length - 1].end || 0),
-            }}
-          />
-        )}
+        {virtualItems.length > 0 &&
+          totalSize - virtualItems[virtualItems.length - 1].end > 0 && (
+            <tr
+              style={{
+                height: totalSize - virtualItems[virtualItems.length - 1].end,
+              }}
+            />
+          )}
       </tbody>
     );
   }
