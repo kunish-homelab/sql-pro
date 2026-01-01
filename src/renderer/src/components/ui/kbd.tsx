@@ -1,10 +1,11 @@
-import type {ShortcutAction, ShortcutBinding} from '@/stores/keyboard-shortcuts-store';
+import type {
+  ShortcutAction,
+  ShortcutBinding,
+} from '@/stores/keyboard-shortcuts-store';
 import { cn } from '@/lib/utils';
 import {
   formatShortcutBinding,
-  
-  
-  useKeyboardShortcutsStore
+  useKeyboardShortcutsStore,
 } from '@/stores/keyboard-shortcuts-store';
 
 function Kbd({ className, ...props }: React.ComponentProps<'kbd'>) {
