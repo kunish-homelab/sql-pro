@@ -143,6 +143,7 @@ export function DatabaseView({
           <Sidebar
             onOpenDatabase={onOpenDatabase}
             onOpenRecentConnection={onOpenRecentConnection}
+            onSwitchToQuery={() => setActiveTab('query')}
           />
         </ResizablePanel>
 

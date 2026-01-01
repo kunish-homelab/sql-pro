@@ -14,6 +14,16 @@ import {
   Zap,
 } from 'lucide-react';
 import { useCallback, useEffect, useMemo, useRef, useState } from 'react';
+import {
+  AlertDialog,
+  AlertDialogAction,
+  AlertDialogCancel,
+  AlertDialogContent,
+  AlertDialogDescription,
+  AlertDialogFooter,
+  AlertDialogHeader,
+  AlertDialogTitle,
+} from '@/components/ui/alert-dialog';
 import { Button } from '@/components/ui/button';
 import {
   ContextMenu,
@@ -49,11 +59,13 @@ interface SidebarProps {
     isEncrypted: boolean,
     readOnly?: boolean
   ) => void;
+  onSwitchToQuery?: () => void;
 }
 
 export function Sidebar({
   onOpenDatabase,
   onOpenRecentConnection,
+  onSwitchToQuery,
 }: SidebarProps) {
   const {
     schema,
@@ -83,6 +95,12 @@ export function Sidebar({
   });
   const [searchQuery, setSearchQuery] = useState('');
   const [settingsOpen, setSettingsOpen] = useState(false);
+
+  // Confirmation dialogs state
+  const [tableToTruncate, setTableToTruncate] = useState<TableSchema | null>(
+    null
+  );
+  const [tableToDrop, setTableToDrop] = useState<TableSchema | null>(null);
 
   // Font settings for sidebar
   const tableFont = useTableFont();
@@ -241,61 +259,81 @@ export function Sidebar({
         table.schema && table.schema !== 'main' ? `"${table.schema}".` : '';
       const query = `SELECT * FROM ${schemaPrefix}"${table.name}" LIMIT 100;`;
       createTab(activeConnectionId, `SELECT ${table.name}`, query);
+      // Switch to SQL Query tab
+      onSwitchToQuery?.();
     },
-    [activeConnectionId, createTab]
+    [activeConnectionId, createTab, onSwitchToQuery]
   );
 
-  const handleTruncateTable = useCallback(
-    async (table: TableSchema) => {
-      if (!connection || !activeConnectionId) return;
-      const schemaPrefix =
-        table.schema && table.schema !== 'main' ? `"${table.schema}".` : '';
-      const query = `DELETE FROM ${schemaPrefix}"${table.name}";`;
-      try {
-        await sqlPro.db.executeQuery({
-          connectionId: connection.id,
-          query,
-        });
-        // Refresh the table data if it's currently selected
-        if (selectedTable?.name === table.name) {
-          handleSelectTable(table);
-        }
-      } catch (err) {
-        console.error('Failed to truncate table:', err);
-      }
-    },
-    [connection, activeConnectionId, selectedTable, handleSelectTable]
-  );
+  // Show truncate confirmation dialog
+  const handleTruncateTableRequest = useCallback((table: TableSchema) => {
+    setTableToTruncate(table);
+  }, []);
 
-  const handleDropTable = useCallback(
-    async (table: TableSchema) => {
-      if (!connection || !activeConnectionId) return;
-      const schemaPrefix =
-        table.schema && table.schema !== 'main' ? `"${table.schema}".` : '';
-      const objectType = table.type === 'view' ? 'VIEW' : 'TABLE';
-      const query = `DROP ${objectType} ${schemaPrefix}"${table.name}";`;
-      try {
-        await sqlPro.db.executeQuery({
-          connectionId: connection.id,
-          query,
-        });
-        // Refresh schema after dropping
-        const schemaResult = await sqlPro.db.getSchema({
-          connectionId: connection.id,
-        });
-        if (schemaResult.success && schemaResult.schema) {
-          setSchema(activeConnectionId, {
-            schemas: schemaResult.schema,
-            tables: schemaResult.schema.flatMap((s) => s.tables),
-            views: schemaResult.schema.flatMap((s) => s.views),
-          });
-        }
-      } catch (err) {
-        console.error('Failed to drop table:', err);
+  // Execute truncate operation
+  const handleConfirmTruncate = useCallback(async () => {
+    const table = tableToTruncate;
+    if (!table || !connection || !activeConnectionId) return;
+    const schemaPrefix =
+      table.schema && table.schema !== 'main' ? `"${table.schema}".` : '';
+    const query = `DELETE FROM ${schemaPrefix}"${table.name}";`;
+    try {
+      await sqlPro.db.executeQuery({
+        connectionId: connection.id,
+        query,
+      });
+      // Refresh the table data if it's currently selected
+      if (selectedTable?.name === table.name) {
+        handleSelectTable(table);
       }
-    },
-    [connection, activeConnectionId, setSchema]
-  );
+    } catch (err) {
+      console.error('Failed to truncate table:', err);
+    } finally {
+      setTableToTruncate(null);
+    }
+  }, [
+    tableToTruncate,
+    connection,
+    activeConnectionId,
+    selectedTable,
+    handleSelectTable,
+  ]);
+
+  // Show drop confirmation dialog
+  const handleDropTableRequest = useCallback((table: TableSchema) => {
+    setTableToDrop(table);
+  }, []);
+
+  // Execute drop operation
+  const handleConfirmDrop = useCallback(async () => {
+    const table = tableToDrop;
+    if (!table || !connection || !activeConnectionId) return;
+    const schemaPrefix =
+      table.schema && table.schema !== 'main' ? `"${table.schema}".` : '';
+    const objectType = table.type === 'view' ? 'VIEW' : 'TABLE';
+    const query = `DROP ${objectType} ${schemaPrefix}"${table.name}";`;
+    try {
+      await sqlPro.db.executeQuery({
+        connectionId: connection.id,
+        query,
+      });
+      // Refresh schema after dropping
+      const schemaResult = await sqlPro.db.getSchema({
+        connectionId: connection.id,
+      });
+      if (schemaResult.success && schemaResult.schema) {
+        setSchema(activeConnectionId, {
+          schemas: schemaResult.schema,
+          tables: schemaResult.schema.flatMap((s: SchemaInfo) => s.tables),
+          views: schemaResult.schema.flatMap((s: SchemaInfo) => s.views),
+        });
+      }
+    } catch (err) {
+      console.error('Failed to drop table:', err);
+    } finally {
+      setTableToDrop(null);
+    }
+  }, [tableToDrop, connection, activeConnectionId, setSchema]);
 
   // Filter schemas based on search query
   const filteredSchemas = useMemo(() => {
@@ -560,8 +598,8 @@ export function Sidebar({
                   onCopyTableName={handleCopyTableName}
                   onCopyCreateStatement={handleCopyCreateStatement}
                   onOpenInQueryEditor={handleOpenInQueryEditor}
-                  onTruncateTable={handleTruncateTable}
-                  onDropTable={handleDropTable}
+                  onTruncateTable={handleTruncateTableRequest}
+                  onDropTable={handleDropTableRequest}
                 />
               ))}
 
@@ -602,6 +640,62 @@ export function Sidebar({
 
       {/* Settings Dialog */}
       <SettingsDialog open={settingsOpen} onOpenChange={setSettingsOpen} />
+
+      {/* Truncate Table Confirmation Dialog */}
+      <AlertDialog
+        open={!!tableToTruncate}
+        onOpenChange={(open) => !open && setTableToTruncate(null)}
+      >
+        <AlertDialogContent>
+          <AlertDialogHeader>
+            <AlertDialogTitle>Truncate Table</AlertDialogTitle>
+            <AlertDialogDescription>
+              Are you sure you want to delete all rows from{' '}
+              <span className="font-semibold">{tableToTruncate?.name}</span>?
+              This action cannot be undone.
+            </AlertDialogDescription>
+          </AlertDialogHeader>
+          <AlertDialogFooter>
+            <AlertDialogCancel>Cancel</AlertDialogCancel>
+            <AlertDialogAction
+              onClick={handleConfirmTruncate}
+              className="bg-destructive text-destructive-foreground hover:bg-destructive/90"
+            >
+              Truncate
+            </AlertDialogAction>
+          </AlertDialogFooter>
+        </AlertDialogContent>
+      </AlertDialog>
+
+      {/* Drop Table/View Confirmation Dialog */}
+      <AlertDialog
+        open={!!tableToDrop}
+        onOpenChange={(open) => !open && setTableToDrop(null)}
+      >
+        <AlertDialogContent>
+          <AlertDialogHeader>
+            <AlertDialogTitle>
+              Drop {tableToDrop?.type === 'view' ? 'View' : 'Table'}
+            </AlertDialogTitle>
+            <AlertDialogDescription>
+              Are you sure you want to drop{' '}
+              <span className="font-semibold">{tableToDrop?.name}</span>? This
+              will permanently delete the{' '}
+              {tableToDrop?.type === 'view' ? 'view' : 'table'} and cannot be
+              undone.
+            </AlertDialogDescription>
+          </AlertDialogHeader>
+          <AlertDialogFooter>
+            <AlertDialogCancel>Cancel</AlertDialogCancel>
+            <AlertDialogAction
+              onClick={handleConfirmDrop}
+              className="bg-destructive text-destructive-foreground hover:bg-destructive/90"
+            >
+              Drop
+            </AlertDialogAction>
+          </AlertDialogFooter>
+        </AlertDialogContent>
+      </AlertDialog>
     </div>
   );
 }
