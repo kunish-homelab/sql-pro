@@ -186,10 +186,7 @@ export function ConnectionSelector({
             <DropdownMenuItem
               key={conn.id}
               className="group flex cursor-pointer items-center justify-between gap-2 pr-2"
-              onSelect={(e) => {
-                e.preventDefault();
-                handleConnectionSelect(conn.id);
-              }}
+              onClick={() => handleConnectionSelect(conn.id)}
             >
               <div className="flex min-w-0 items-center gap-2">
                 <span
@@ -231,7 +228,7 @@ export function ConnectionSelector({
           {/* Open new database */}
           <DropdownMenuItem
             className="cursor-pointer gap-2"
-            onSelect={handleOpenDatabase}
+            onClick={handleOpenDatabase}
           >
             <Plus className="h-4 w-4" />
             <span>Open Database...</span>
