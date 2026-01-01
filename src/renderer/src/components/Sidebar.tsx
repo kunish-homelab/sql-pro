@@ -2,15 +2,26 @@ import type { SchemaInfo, TableSchema, TriggerSchema } from '@/types/database';
 import {
   ChevronDown,
   ChevronRight,
+  Code,
+  Copy,
   Database,
   Eye,
+  FileSearch,
   Search,
   Settings,
   Table,
+  Trash2,
   Zap,
 } from 'lucide-react';
 import { useCallback, useEffect, useMemo, useRef, useState } from 'react';
 import { Button } from '@/components/ui/button';
+import {
+  ContextMenu,
+  ContextMenuContent,
+  ContextMenuItem,
+  ContextMenuSeparator,
+  ContextMenuTrigger,
+} from '@/components/ui/context-menu';
 import { ScrollArea } from '@/components/ui/scroll-area';
 import {
   Tooltip,
@@ -23,6 +34,7 @@ import { cn } from '@/lib/utils';
 import {
   useConnectionStore,
   useDataTabsStore,
+  useQueryTabsStore,
   useSettingsStore,
   useTableDataStore,
   useTableFont,
@@ -42,10 +54,12 @@ export function Sidebar({ onOpenDatabase }: SidebarProps) {
     connection,
     activeConnectionId,
     isLoadingSchema,
+    setSchema,
   } = useConnectionStore();
   const { setTableData, setIsLoading, setError, resetConnection } =
     useTableDataStore();
   const { openTable } = useDataTabsStore();
+  const { createTab } = useQueryTabsStore();
 
   // Expansion state for schemas (key is schema name)
   const [expandedSchemas, setExpandedSchemas] = useState<
@@ -199,6 +213,80 @@ export function Sidebar({ onOpenDatabase }: SidebarProps) {
       setTableData,
       setError,
     ]
+  );
+
+  // Table context menu handlers
+  const handleCopyTableName = useCallback((table: TableSchema) => {
+    navigator.clipboard.writeText(table.name);
+  }, []);
+
+  const handleCopyCreateStatement = useCallback((table: TableSchema) => {
+    if (table.sql) {
+      navigator.clipboard.writeText(table.sql);
+    }
+  }, []);
+
+  const handleOpenInQueryEditor = useCallback(
+    (table: TableSchema) => {
+      if (!activeConnectionId) return;
+      const schemaPrefix =
+        table.schema && table.schema !== 'main' ? `"${table.schema}".` : '';
+      const query = `SELECT * FROM ${schemaPrefix}"${table.name}" LIMIT 100;`;
+      createTab(activeConnectionId, `SELECT ${table.name}`, query);
+    },
+    [activeConnectionId, createTab]
+  );
+
+  const handleTruncateTable = useCallback(
+    async (table: TableSchema) => {
+      if (!connection || !activeConnectionId) return;
+      const schemaPrefix =
+        table.schema && table.schema !== 'main' ? `"${table.schema}".` : '';
+      const query = `DELETE FROM ${schemaPrefix}"${table.name}";`;
+      try {
+        await sqlPro.db.executeQuery({
+          connectionId: connection.id,
+          query,
+        });
+        // Refresh the table data if it's currently selected
+        if (selectedTable?.name === table.name) {
+          handleSelectTable(table);
+        }
+      } catch (err) {
+        console.error('Failed to truncate table:', err);
+      }
+    },
+    [connection, activeConnectionId, selectedTable, handleSelectTable]
+  );
+
+  const handleDropTable = useCallback(
+    async (table: TableSchema) => {
+      if (!connection || !activeConnectionId) return;
+      const schemaPrefix =
+        table.schema && table.schema !== 'main' ? `"${table.schema}".` : '';
+      const objectType = table.type === 'view' ? 'VIEW' : 'TABLE';
+      const query = `DROP ${objectType} ${schemaPrefix}"${table.name}";`;
+      try {
+        await sqlPro.db.executeQuery({
+          connectionId: connection.id,
+          query,
+        });
+        // Refresh schema after dropping
+        const schemaResult = await sqlPro.db.getSchema({
+          connectionId: connection.id,
+        });
+        if (schemaResult.success && schemaResult.schema) {
+          setSchema(activeConnectionId, {
+            schemas: schemaResult.schema,
+            tables: schemaResult.schema.flatMap((s) => s.tables),
+            views: schemaResult.schema.flatMap((s) => s.views),
+          });
+        }
+      } catch (err) {
+        console.error('Failed to drop table:', err);
+      }
+    },
+    [connection, activeConnectionId, setSchema]
   );
 
   // Filter schemas based on search query
@@ -458,6 +546,11 @@ export function Sidebar({ onOpenDatabase }: SidebarProps) {
                   appVimMode={appVimMode}
                   getItemIndex={getItemIndex}
                   onSelectTable={handleSelectTable}
+                  onCopyTableName={handleCopyTableName}
+                  onCopyCreateStatement={handleCopyCreateStatement}
+                  onOpenInQueryEditor={handleOpenInQueryEditor}
+                  onTruncateTable={handleTruncateTable}
+                  onDropTable={handleDropTable}
                 />
               ))}
 
@@ -518,6 +611,11 @@ interface SchemaSectionProps {
     itemIndex: number
   ) => number;
   onSelectTable: (table: TableSchema) => void;
+  onCopyTableName: (table: TableSchema) => void;
+  onCopyCreateStatement: (table: TableSchema) => void;
+  onOpenInQueryEditor: (table: TableSchema) => void;
+  onTruncateTable: (table: TableSchema) => void;
+  onDropTable: (table: TableSchema) => void;
 }
 
 function SchemaSection({
@@ -532,6 +630,11 @@ function SchemaSection({
   appVimMode,
   getItemIndex,
   onSelectTable,
+  onCopyTableName,
+  onCopyCreateStatement,
+  onOpenInQueryEditor,
+  onTruncateTable,
+  onDropTable,
 }: SchemaSectionProps) {
   const tablesKey = `${schemaInfo.name}:tables`;
   const viewsKey = `${schemaInfo.name}:views`;
@@ -589,6 +692,13 @@ function SchemaSection({
                         }
                         isFocused={appVimMode && focusedIndex === itemIdx}
                         onClick={() => onSelectTable(table)}
+                        onCopyTableName={() => onCopyTableName(table)}
+                        onCopyCreateStatement={() =>
+                          onCopyCreateStatement(table)
+                        }
+                        onOpenInQueryEditor={() => onOpenInQueryEditor(table)}
+                        onTruncateTable={() => onTruncateTable(table)}
+                        onDropTable={() => onDropTable(table)}
                       />
                     );
                   })}
@@ -625,6 +735,13 @@ function SchemaSection({
                         }
                         isFocused={appVimMode && focusedIndex === itemIdx}
                         onClick={() => onSelectTable(view)}
+                        onCopyTableName={() => onCopyTableName(view)}
+                        onCopyCreateStatement={() =>
+                          onCopyCreateStatement(view)
+                        }
+                        onOpenInQueryEditor={() => onOpenInQueryEditor(view)}
+                        onTruncateTable={() => onTruncateTable(view)}
+                        onDropTable={() => onDropTable(view)}
                         isView
                       />
                     );
@@ -671,6 +788,11 @@ interface TableItemProps {
   isSelected: boolean;
   isFocused?: boolean;
   onClick: () => void;
+  onCopyTableName: () => void;
+  onCopyCreateStatement: () => void;
+  onOpenInQueryEditor: () => void;
+  onTruncateTable: () => void;
+  onDropTable: () => void;
   isView?: boolean;
 }
 
@@ -679,31 +801,68 @@ function TableItem({
   isSelected,
   isFocused,
   onClick,
+  onCopyTableName,
+  onCopyCreateStatement,
+  onOpenInQueryEditor,
+  onTruncateTable,
+  onDropTable,
   isView,
 }: TableItemProps) {
   return (
-    <button
-      onClick={onClick}
-      className={cn(
-        'flex w-full items-center gap-2 overflow-hidden rounded px-2 py-1.5 transition-colors',
-        isSelected
-          ? 'bg-accent text-accent-foreground'
-          : 'hover:bg-accent/50 text-foreground',
-        isFocused && !isSelected && 'ring-primary/50 ring-2 ring-inset'
-      )}
-    >
-      {isView ? (
-        <Eye className="text-muted-foreground h-4 w-4 shrink-0" />
-      ) : (
-        <Table className="text-muted-foreground h-4 w-4 shrink-0" />
-      )}
-      <span className="min-w-0 flex-1 truncate text-left">{table.name}</span>
-      {table.rowCount !== undefined && (
-        <span className="text-muted-foreground shrink-0 tabular-nums">
-          {table.rowCount.toLocaleString()}
-        </span>
-      )}
-    </button>
+    <ContextMenu>
+      <ContextMenuTrigger>
+        <button
+          onClick={onClick}
+          className={cn(
+            'flex w-full items-center gap-2 overflow-hidden rounded px-2 py-1.5 transition-colors',
+            isSelected
+              ? 'bg-accent text-accent-foreground'
+              : 'hover:bg-accent/50 text-foreground',
+            isFocused && !isSelected && 'ring-primary/50 ring-2 ring-inset'
+          )}
+        >
+          {isView ? (
+            <Eye className="text-muted-foreground h-4 w-4 shrink-0" />
+          ) : (
+            <Table className="text-muted-foreground h-4 w-4 shrink-0" />
+          )}
+          <span className="min-w-0 flex-1 truncate text-left">
+            {table.name}
+          </span>
+          {table.rowCount !== undefined && (
+            <span className="text-muted-foreground shrink-0 tabular-nums">
+              {table.rowCount.toLocaleString()}
+            </span>
+          )}
+        </button>
+      </ContextMenuTrigger>
+      <ContextMenuContent>
+        <ContextMenuItem onClick={onOpenInQueryEditor}>
+          <FileSearch className="size-4" />
+          Open in Query Editor
+        </ContextMenuItem>
+        <ContextMenuSeparator />
+        <ContextMenuItem onClick={onCopyTableName}>
+          <Copy className="size-4" />
+          Copy Name
+        </ContextMenuItem>
+        <ContextMenuItem onClick={onCopyCreateStatement} disabled={!table.sql}>
+          <Code className="size-4" />
+          Copy CREATE Statement
+        </ContextMenuItem>
+        <ContextMenuSeparator />
+        {!isView && (
+          <ContextMenuItem onClick={onTruncateTable}>
+            <Trash2 className="size-4" />
+            Truncate Table
+          </ContextMenuItem>
+        )}
+        <ContextMenuItem variant="destructive" onClick={onDropTable}>
+          <Trash2 className="size-4" />
+          Drop {isView ? 'View' : 'Table'}
+        </ContextMenuItem>
+      </ContextMenuContent>
+    </ContextMenu>
   );
 }
 
