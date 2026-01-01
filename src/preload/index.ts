@@ -49,6 +49,8 @@ import type {
   CompareSnapshotsRequest,
   CompareSnapshotsResponse,
   CreateWindowResponse,
+  GenerateMigrationSQLRequest,
+  GenerateMigrationSQLResponse,
   DeleteQueryHistoryRequest,
   DeleteQueryHistoryResponse,
   DeleteSchemaSnapshotRequest,
@@ -427,6 +429,8 @@ const sqlProAPI = {
       ipcRenderer.invoke(IPC_CHANNELS.SCHEMA_COMPARISON_COMPARE_CONNECTION_TO_SNAPSHOT, request),
     compareSnapshots: (request: CompareSnapshotsRequest): Promise<CompareSnapshotsResponse> =>
       ipcRenderer.invoke(IPC_CHANNELS.SCHEMA_COMPARISON_COMPARE_SNAPSHOTS, request),
+    generateMigrationSQL: (request: GenerateMigrationSQLRequest): Promise<GenerateMigrationSQLResponse> =>
+      ipcRenderer.invoke(IPC_CHANNELS.SCHEMA_COMPARISON_GENERATE_MIGRATION_SQL, request),
   },
 };
 

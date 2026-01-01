@@ -11,6 +11,7 @@ import type {
   DeleteSchemaSnapshotRequest,
   ExecuteQueryRequest,
   ExportRequest,
+  GenerateMigrationSQLRequest,
   GetPasswordRequest,
   GetQueryHistoryRequest,
   GetSchemaRequest,
@@ -1067,6 +1068,17 @@ export const mockSqlProAPI: any = {
             foreignKeysModified: 0,
           },
         },
+      };
+    },
+    generateMigrationSQL: async (
+      _request: GenerateMigrationSQLRequest
+    ): Promise<any> => {
+      await delay(300);
+      return {
+        success: true,
+        sql: '-- Mock migration SQL\n-- No changes detected in mock mode',
+        statements: [],
+        warnings: [],
       };
     },
   },

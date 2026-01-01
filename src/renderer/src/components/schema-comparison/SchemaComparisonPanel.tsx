@@ -8,6 +8,7 @@ import { sqlPro } from '@/lib/api';
 import { useSchemaComparisonStore } from '@/stores';
 import { DiffFilterBar } from './DiffFilterBar';
 import { DiffSummary } from './DiffSummary';
+import { MigrationPreview } from './MigrationPreview';
 import { SchemaDiffView } from './SchemaDiffView';
 import { SourceSelector } from './SourceSelector';
 
@@ -305,6 +306,9 @@ export function SchemaComparisonPanel({
                   <SchemaDiffView comparisonResult={comparisonResult} />
                 </CardContent>
               </Card>
+
+              {/* Migration SQL Preview */}
+              <MigrationPreview />
             </div>
           )}
 

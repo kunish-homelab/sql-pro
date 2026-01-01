@@ -17,6 +17,7 @@ import type {
   ExecuteQueryRequest,
   ExportRequest,
   FocusWindowRequest,
+  GenerateMigrationSQLRequest,
   GetPasswordRequest,
   GetQueryHistoryRequest,
   GetSchemaRequest,
@@ -54,6 +55,7 @@ import {
   generateSQL,
 } from '../lib/export-generators';
 import { databaseService } from './database';
+import { migrationGeneratorService } from './migration-generator';
 import { passwordStorageService } from './password-storage';
 import { schemaComparisonService } from './schema-comparison';
 import { sqlLogger } from './sql-logger';
@@ -1672,6 +1674,25 @@ export function setupIpcHandlers(): void {
             error instanceof Error
               ? error.message
               : 'Failed to compare snapshots',
+        };
+      }
+    }
+  );
+
+  // Schema Comparison: Generate Migration SQL
+  ipcMain.handle(
+    IPC_CHANNELS.SCHEMA_COMPARISON_GENERATE_MIGRATION_SQL,
+    async (_event, request: GenerateMigrationSQLRequest) => {
+      try {
+        const result = migrationGeneratorService.generateMigrationSQL(request);
+        return result;
+      } catch (error) {
+        return {
+          success: false,
+          error:
+            error instanceof Error
+              ? error.message
+              : 'Failed to generate migration SQL',
         };
       }
     }
