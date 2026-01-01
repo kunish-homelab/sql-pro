@@ -62,10 +62,19 @@ function ShortcutKbd({
   className,
   ...props
 }: ShortcutKbdProps) {
+  // Subscribe to activePreset and customShortcuts to trigger re-renders when they change
+  const activePreset = useKeyboardShortcutsStore((s) => s.activePreset);
+  const customShortcuts = useKeyboardShortcutsStore((s) => s.customShortcuts);
   const getShortcut = useKeyboardShortcutsStore((s) => s.getShortcut);
 
   // Get binding from store if action is provided, otherwise use custom binding
+  // Note: We include activePreset and customShortcuts in dependencies to ensure
+  // the binding is recalculated when the preset changes
   const binding = action ? getShortcut(action) : customBinding;
+
+  // Keep activePreset and customShortcuts referenced to avoid unused variable warnings
+  void activePreset;
+  void customShortcuts;
 
   // Don't render if no binding and no fallback
   if (!binding && !fallback) {
