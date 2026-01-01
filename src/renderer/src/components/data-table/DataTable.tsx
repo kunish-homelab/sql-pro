@@ -185,7 +185,7 @@ export const DataTable = function DataTable({
 
   // Auto-focus and start editing the first editable cell of new row
   useEffect(() => {
-    if (newRowId === null || newRowId === undefined) return;
+    if (newRowId === null || newRowId === undefined) return undefined;
 
     // Find the new row
     const newRow = rows.find((r) => {
@@ -193,7 +193,7 @@ export const DataTable = function DataTable({
       return rowData.__rowId === newRowId;
     });
 
-    if (!newRow) return;
+    if (!newRow) return undefined;
 
     // Find the first non-primary-key column (more likely to be editable)
     const visibleColumns = table.getVisibleLeafColumns();
@@ -224,6 +224,7 @@ export const DataTable = function DataTable({
 
       return () => clearTimeout(timer);
     }
+    return undefined;
   }, [
     newRowId,
     rows,

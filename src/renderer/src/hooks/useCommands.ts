@@ -343,6 +343,7 @@ export function useCommands() {
           );
           if (exportButton) {
             exportButton.click();
+            return undefined;
           } else {
             // If button not found, try navigating to compare tab first
             document

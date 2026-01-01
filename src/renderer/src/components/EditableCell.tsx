@@ -45,6 +45,7 @@ export function EditableCell({
       const timeoutId = setTimeout(() => inputRef.current?.focus(), 0);
       return () => clearTimeout(timeoutId);
     }
+    return undefined;
   }, [isEditing, value]);
 
   const validateValue = (val: string): string | null => {

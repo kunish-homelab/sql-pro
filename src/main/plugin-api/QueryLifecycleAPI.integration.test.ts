@@ -661,6 +661,7 @@ describe('queryLifecycleAPI Integration', () => {
           lifecycle.push('cancelled: dangerous query');
           return { cancel: true, cancelReason: 'DELETE queries are blocked' };
         }
+        return undefined;
       });
 
       // Register after hook that should not be called

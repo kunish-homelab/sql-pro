@@ -101,7 +101,7 @@ class QueryHookPluginSimulator {
     const unregisterBefore = queryLifecycleService.registerBeforeQueryHook(
       this.pluginId,
       (context) => {
-        if (!this.shouldLogQuery(context.query)) return;
+        if (!this.shouldLogQuery(context.query)) return undefined;
 
         if (this.settings.addQueryComments) {
           const timestamp = new Date(context.timestamp).toLocaleString();
@@ -114,6 +114,7 @@ class QueryHookPluginSimulator {
             },
           };
         }
+        return undefined;
       }
     );
     if (unregisterBefore.success) {
