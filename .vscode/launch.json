@@ -13,6 +13,9 @@
       "runtimeArgs": ["--sourcemap"],
       "env": {
         "REMOTE_DEBUGGING_PORT": "9222"
+      },
+      "presentation": {
+        "hidden": true
       }
     },
     {
@@ -32,7 +35,7 @@
       "name": "Debug All",
       "configurations": ["Debug Main Process", "Debug Renderer Process"],
       "presentation": {
-        "order": 1
+        "order": 0
       }
     }
   ]

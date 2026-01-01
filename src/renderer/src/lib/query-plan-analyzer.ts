@@ -1,6 +1,6 @@
 import type { Edge, Node } from '@xyflow/react';
-import dagre from 'dagre';
 import type { QueryPlanNode, QueryPlanStats } from '../../../shared/types';
+import dagre from 'dagre';
 
 export interface Suggestion {
   type: 'index' | 'rewrite' | 'warning';
@@ -11,7 +11,11 @@ export interface Suggestion {
 
 // ============ Flow Diagram Types ============
 
-export type WarningType = 'full-scan' | 'missing-index' | 'temp-btree' | 'subquery';
+export type WarningType =
+  | 'full-scan'
+  | 'missing-index'
+  | 'temp-btree'
+  | 'subquery';
 
 export interface ExecutionPlanNodeData {
   [key: string]: unknown;
@@ -65,7 +69,10 @@ export function getWarningMessage(warningType: WarningType): {
   }
 }
 
-export type ExecutionPlanFlowNode = Node<ExecutionPlanNodeData, 'executionPlan'>;
+export type ExecutionPlanFlowNode = Node<
+  ExecutionPlanNodeData,
+  'executionPlan'
+>;
 export type ExecutionPlanFlowEdge = Edge;
 
 // Layout configuration
@@ -337,9 +344,7 @@ export function buildPlanTree(nodes: QueryPlanNode[]): QueryPlanNode[] {
 /**
  * Converts QueryPlanNode tree to React Flow nodes and edges
  */
-export function planTreeToFlowNodes(
-  planRoots: QueryPlanNode[]
-): {
+export function planTreeToFlowNodes(planRoots: QueryPlanNode[]): {
   nodes: ExecutionPlanFlowNode[];
   edges: ExecutionPlanFlowEdge[];
 } {
@@ -446,7 +451,7 @@ export function applyExecutionPlanLayout(
   // Run the layout algorithm
   try {
     dagre.layout(g);
-  } catch (error) {
+  } catch {
     // On error, use simple vertical layout
     return nodes.map((node, index) => ({
       ...node,
@@ -525,7 +530,10 @@ function renderPlanNodeAsText(node: QueryPlanNode, depth: number): string[] {
 /**
  * Recursively renders plan tree nodes as formatted text
  */
-function renderPlanTreeAsText(nodes: QueryPlanNode[], depth: number = 0): string[] {
+function renderPlanTreeAsText(
+  nodes: QueryPlanNode[],
+  depth: number = 0
+): string[] {
   const lines: string[] = [];
 
   nodes.forEach((node, index) => {

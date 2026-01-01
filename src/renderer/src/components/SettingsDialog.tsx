@@ -590,7 +590,7 @@ function FontSettingsSection({
                 {categoriesToShow.map((category) => (
                   <CommandGroup
                     key={category}
-                    heading={CATEGORY_LABELS[category]}
+                    heading={FONT_CATEGORY_LABELS[category]}
                   >
                     {fontsByCategory[category].map((font) => (
                       <CommandItem

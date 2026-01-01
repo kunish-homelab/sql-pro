@@ -1,4 +1,8 @@
-import type { RecentConnection } from '../../../shared/types';
+import type {
+  ConnectionProfile,
+  ProfileFolder,
+  RecentConnection,
+} from '../../../shared/types';
 import type {
   DatabaseConnection,
   DatabaseSchema,
@@ -20,6 +24,12 @@ interface ConnectionState {
 
   // Recent connections (using shared type with new fields)
   recentConnections: RecentConnection[];
+
+  // Profile management
+  profiles: Map<string, ConnectionProfile>;
+  folders: Map<string, ProfileFolder>;
+  selectedProfileId: string | null;
+  expandedFolderIds: Set<string>;
 
   // Loading states
   isConnecting: boolean;
@@ -44,6 +54,20 @@ interface ConnectionState {
   // Recent Connections Actions
   setRecentConnections: (connections: RecentConnection[]) => void;
 
+  // Profile Actions
+  addProfile: (profile: ConnectionProfile) => void;
+  updateProfile: (id: string, updates: Partial<ConnectionProfile>) => void;
+  deleteProfile: (id: string) => void;
+  selectProfile: (id: string | null) => void;
+  setProfiles: (profiles: ConnectionProfile[]) => void;
+
+  // Folder Actions
+  addFolder: (folder: ProfileFolder) => void;
+  updateFolder: (id: string, updates: Partial<ProfileFolder>) => void;
+  deleteFolder: (id: string) => void;
+  toggleFolderExpanded: (id: string) => void;
+  setFolders: (folders: ProfileFolder[]) => void;
+
   // Loading State Actions
   setIsConnecting: (isConnecting: boolean) => void;
   setIsLoadingSchema: (isLoading: boolean) => void;
@@ -62,6 +86,16 @@ interface ConnectionState {
   getAllConnections: () => DatabaseConnection[];
   hasUnsavedChanges: (connectionId: string) => boolean;
 
+  // Profile getters
+  getProfileById: (id: string) => ConnectionProfile | undefined;
+  getAllProfiles: () => ConnectionProfile[];
+  getProfilesByFolder: (folderId?: string) => ConnectionProfile[];
+
+  // Folder getters
+  getFolderById: (id: string) => ProfileFolder | undefined;
+  getAllFolders: () => ProfileFolder[];
+  getSubfolders: (parentId?: string) => ProfileFolder[];
+
   // Legacy compatibility
   connection: DatabaseConnection | null;
   schema: DatabaseSchema | null;
@@ -75,6 +109,10 @@ const initialState = {
   selectedTable: null,
   selectedSchemaObject: null,
   recentConnections: [],
+  profiles: new Map<string, ConnectionProfile>(),
+  folders: new Map<string, ProfileFolder>(),
+  selectedProfileId: null,
+  expandedFolderIds: new Set<string>(),
   isConnecting: false,
   isLoadingSchema: false,
   error: null,
@@ -214,6 +252,103 @@ export const useConnectionStore = create<ConnectionState>((set, get) => ({
   // Recent Connections Actions
   setRecentConnections: (recentConnections) => set({ recentConnections }),
 
+  // Profile Actions
+  addProfile: (profile) =>
+    set((state) => {
+      const newProfiles = new Map(state.profiles);
+      newProfiles.set(profile.id, profile);
+      return { profiles: newProfiles };
+    }),
+
+  updateProfile: (id, updates) =>
+    set((state) => {
+      const existingProfile = state.profiles.get(id);
+      if (!existingProfile) return state;
+
+      const updatedProfile = { ...existingProfile, ...updates };
+      const newProfiles = new Map(state.profiles);
+      newProfiles.set(id, updatedProfile);
+
+      return { profiles: newProfiles };
+    }),
+
+  deleteProfile: (id) =>
+    set((state) => {
+      const newProfiles = new Map(state.profiles);
+      newProfiles.delete(id);
+
+      return {
+        profiles: newProfiles,
+        selectedProfileId:
+          state.selectedProfileId === id ? null : state.selectedProfileId,
+      };
+    }),
+
+  selectProfile: (id) => set({ selectedProfileId: id }),
+
+  setProfiles: (profiles) =>
+    set(() => {
+      const profileMap = new Map<string, ConnectionProfile>();
+      profiles.forEach((profile) => {
+        profileMap.set(profile.id, profile);
+      });
+      return { profiles: profileMap };
+    }),
+
+  // Folder Actions
+  addFolder: (folder) =>
+    set((state) => {
+      const newFolders = new Map(state.folders);
+      newFolders.set(folder.id, folder);
+      return { folders: newFolders };
+    }),
+
+  updateFolder: (id, updates) =>
+    set((state) => {
+      const existingFolder = state.folders.get(id);
+      if (!existingFolder) return state;
+
+      const updatedFolder = { ...existingFolder, ...updates };
+      const newFolders = new Map(state.folders);
+      newFolders.set(id, updatedFolder);
+
+      return { folders: newFolders };
+    }),
+
+  deleteFolder: (id) =>
+    set((state) => {
+      const newFolders = new Map(state.folders);
+      newFolders.delete(id);
+
+      const newExpandedFolderIds = new Set(state.expandedFolderIds);
+      newExpandedFolderIds.delete(id);
+
+      return {
+        folders: newFolders,
+        expandedFolderIds: newExpandedFolderIds,
+      };
+    }),
+
+  toggleFolderExpanded: (id) =>
+    set((state) => {
+      const newExpandedFolderIds = new Set(state.expandedFolderIds);
+      if (newExpandedFolderIds.has(id)) {
+        newExpandedFolderIds.delete(id);
+      } else {
+        newExpandedFolderIds.add(id);
+      }
+      return { expandedFolderIds: newExpandedFolderIds };
+    }),
+
+  setFolders: (folders) =>
+    set(() => {
+      const folderMap = new Map<string, ProfileFolder>();
+      folders.forEach((folder) => {
+        folderMap.set(folder.id, folder);
+      });
+      return { folders: folderMap };
+    }),
+
   // Loading State Actions
   setIsConnecting: (isConnecting) => set({ isConnecting }),
   setIsLoadingSchema: (isLoadingSchema) => set({ isLoadingSchema }),
@@ -229,7 +364,11 @@ export const useConnectionStore = create<ConnectionState>((set, get) => ({
       schemas: new Map(),
       selectedTable: null,
       selectedSchemaObject: null,
-      recentConnections: get().recentConnections, // Keep recent connections
+      recentConnections: [],
+      profiles: get().profiles, // Keep profiles
+      folders: get().folders, // Keep folders
+      selectedProfileId: null,
+      expandedFolderIds: get().expandedFolderIds, // Keep folder expansion state
       isConnecting: false,
       isLoadingSchema: false,
       error: null,
@@ -269,6 +408,34 @@ export const useConnectionStore = create<ConnectionState>((set, get) => ({
     return false;
   },
 
+  // Profile getters
+  getProfileById: (id) => {
+    return get().profiles.get(id);
+  },
+
+  getAllProfiles: () => {
+    return Array.from(get().profiles.values());
+  },
+
+  getProfilesByFolder: (folderId) => {
+    const profiles = Array.from(get().profiles.values());
+    return profiles.filter((profile) => profile.folderId === folderId);
+  },
+
+  // Folder getters
+  getFolderById: (id) => {
+    return get().folders.get(id);
+  },
+
+  getAllFolders: () => {
+    return Array.from(get().folders.values());
+  },
+
+  getSubfolders: (parentId) => {
+    const folders = Array.from(get().folders.values());
+    return folders.filter((folder) => folder.parentId === parentId);
+  },
+
   // Legacy compatibility - setter for single connection
   setConnection: (connection) => {
     if (connection === null) {
@@ -276,6 +443,7 @@ export const useConnectionStore = create<ConnectionState>((set, get) => ({
       if (state.activeConnectionId) {
         get().removeConnection(state.activeConnectionId);
       }
+      set({ error: null });
     } else {
       get().addConnection(connection);
     }

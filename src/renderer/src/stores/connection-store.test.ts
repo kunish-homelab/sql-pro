@@ -98,11 +98,18 @@ describe('connection-store', () => {
   beforeEach(() => {
     // Reset store to initial state before each test
     useConnectionStore.setState({
+      connections: new Map(),
+      activeConnectionId: null,
+      schemas: new Map(),
       connection: null,
       schema: null,
       selectedTable: null,
       selectedSchemaObject: null,
       recentConnections: [],
+      profiles: new Map(),
+      folders: new Map(),
+      selectedProfileId: null,
+      expandedFolderIds: new Set(),
       isConnecting: false,
       isLoadingSchema: false,
       error: null,
@@ -582,6 +589,438 @@ describe('connection-store', () => {
       expect(state.connection).toEqual(connection);
       expect(state.schema).toEqual(schema);
       expect(state.selectedTable).toEqual(table);
+    });
+  });
+
+  describe('profile loading and syncing', () => {
+    it('should load profiles from array', () => {
+      const { setProfiles, getAllProfiles } = useConnectionStore.getState();
+
+      const profiles = [
+        {
+          id: 'profile-1',
+          path: '/path/to/db1.sqlite',
+          filename: 'db1.sqlite',
+          isEncrypted: false,
+          lastOpened: new Date().toISOString(),
+          displayName: 'Profile 1',
+          readOnly: false,
+          createdAt: new Date().toISOString(),
+        },
+        {
+          id: 'profile-2',
+          path: '/path/to/db2.sqlite',
+          filename: 'db2.sqlite',
+          isEncrypted: false,
+          lastOpened: new Date().toISOString(),
+          displayName: 'Profile 2',
+          readOnly: false,
+          createdAt: new Date().toISOString(),
+          folderId: 'folder-1',
+        },
+      ];
+
+      setProfiles(profiles);
+
+      const loadedProfiles = getAllProfiles();
+      expect(loadedProfiles).toHaveLength(2);
+      expect(loadedProfiles.find((p) => p.id === 'profile-1')).toBeDefined();
+      expect(loadedProfiles.find((p) => p.id === 'profile-2')).toBeDefined();
+    });
+
+    it('should load folders from array', () => {
+      const { setFolders, getAllFolders } = useConnectionStore.getState();
+
+      const folders = [
+        {
+          id: 'folder-1',
+          name: 'Production',
+          createdAt: new Date().toISOString(),
+        },
+        {
+          id: 'folder-2',
+          name: 'Development',
+          createdAt: new Date().toISOString(),
+          parentId: 'folder-1',
+        },
+      ];
+
+      setFolders(folders);
+
+      const loadedFolders = getAllFolders();
+      expect(loadedFolders).toHaveLength(2);
+      expect(loadedFolders.find((f) => f.id === 'folder-1')).toBeDefined();
+      expect(loadedFolders.find((f) => f.id === 'folder-2')).toBeDefined();
+    });
+
+    it('should sync profile updates correctly', () => {
+      const { setProfiles, updateProfile, getProfileById } =
+        useConnectionStore.getState();
+
+      const initialProfiles = [
+        {
+          id: 'profile-1',
+          path: '/path/to/db1.sqlite',
+          filename: 'db1.sqlite',
+          isEncrypted: false,
+          lastOpened: new Date().toISOString(),
+          displayName: 'Initial Name',
+          readOnly: false,
+          createdAt: new Date().toISOString(),
+        },
+      ];
+
+      setProfiles(initialProfiles);
+
+      // Update the profile
+      updateProfile('profile-1', {
+        displayName: 'Updated Name',
+        notes: 'New notes',
+      });
+
+      const updated = getProfileById('profile-1');
+      expect(updated?.displayName).toBe('Updated Name');
+      expect(updated?.notes).toBe('New notes');
+      expect(updated?.path).toBe('/path/to/db1.sqlite'); // Unchanged fields remain
+    });
+
+    it('should sync folder updates correctly', () => {
+      const { setFolders, updateFolder, getFolderById } =
+        useConnectionStore.getState();
+
+      const initialFolders = [
+        {
+          id: 'folder-1',
+          name: 'Old Name',
+          createdAt: new Date().toISOString(),
+        },
+      ];
+
+      setFolders(initialFolders);
+
+      // Update the folder
+      updateFolder('folder-1', { name: 'New Name' });
+
+      const updated = getFolderById('folder-1');
+      expect(updated?.name).toBe('New Name');
+      expect(updated?.id).toBe('folder-1'); // ID should not change
+    });
+
+    it('should handle adding new profiles after initial load', () => {
+      const { setProfiles, addProfile, getAllProfiles } =
+        useConnectionStore.getState();
+
+      // Initial load
+      setProfiles([
+        {
+          id: 'profile-1',
+          path: '/path/to/db1.sqlite',
+          filename: 'db1.sqlite',
+          isEncrypted: false,
+          lastOpened: new Date().toISOString(),
+          displayName: 'Profile 1',
+          readOnly: false,
+          createdAt: new Date().toISOString(),
+        },
+      ]);
+
+      expect(getAllProfiles()).toHaveLength(1);
+
+      // Add new profile
+      addProfile({
+        id: 'profile-2',
+        path: '/path/to/db2.sqlite',
+        filename: 'db2.sqlite',
+        isEncrypted: false,
+        lastOpened: new Date().toISOString(),
+        displayName: 'Profile 2',
+        readOnly: false,
+        createdAt: new Date().toISOString(),
+      });
+
+      const profiles = getAllProfiles();
+      expect(profiles).toHaveLength(2);
+      expect(profiles.find((p) => p.id === 'profile-2')).toBeDefined();
+    });
+
+    it('should handle deleting profiles and maintain sync', () => {
+      const { setProfiles, deleteProfile, getAllProfiles, getProfileById } =
+        useConnectionStore.getState();
+
+      setProfiles([
+        {
+          id: 'profile-1',
+          path: '/path/to/db1.sqlite',
+          filename: 'db1.sqlite',
+          isEncrypted: false,
+          lastOpened: new Date().toISOString(),
+          displayName: 'Profile 1',
+          readOnly: false,
+          createdAt: new Date().toISOString(),
+        },
+        {
+          id: 'profile-2',
+          path: '/path/to/db2.sqlite',
+          filename: 'db2.sqlite',
+          isEncrypted: false,
+          lastOpened: new Date().toISOString(),
+          displayName: 'Profile 2',
+          readOnly: false,
+          createdAt: new Date().toISOString(),
+        },
+      ]);
+
+      expect(getAllProfiles()).toHaveLength(2);
+
+      deleteProfile('profile-1');
+
+      expect(getAllProfiles()).toHaveLength(1);
+      expect(getProfileById('profile-1')).toBeUndefined();
+      expect(getProfileById('profile-2')).toBeDefined();
+    });
+
+    it('should reload profiles completely when setProfiles called', () => {
+      const { setProfiles, getAllProfiles } = useConnectionStore.getState();
+
+      // Initial load
+      setProfiles([
+        {
+          id: 'profile-1',
+          path: '/path/to/db1.sqlite',
+          filename: 'db1.sqlite',
+          isEncrypted: false,
+          lastOpened: new Date().toISOString(),
+          displayName: 'Profile 1',
+          readOnly: false,
+          createdAt: new Date().toISOString(),
+        },
+      ]);
+
+      expect(getAllProfiles()).toHaveLength(1);
+
+      // Reload with different data
+      setProfiles([
+        {
+          id: 'profile-2',
+          path: '/path/to/db2.sqlite',
+          filename: 'db2.sqlite',
+          isEncrypted: false,
+          lastOpened: new Date().toISOString(),
+          displayName: 'Profile 2',
+          readOnly: false,
+          createdAt: new Date().toISOString(),
+        },
+        {
+          id: 'profile-3',
+          path: '/path/to/db3.sqlite',
+          filename: 'db3.sqlite',
+          isEncrypted: false,
+          lastOpened: new Date().toISOString(),
+          displayName: 'Profile 3',
+          readOnly: false,
+          createdAt: new Date().toISOString(),
+        },
+      ]);
+
+      const profiles = getAllProfiles();
+      expect(profiles).toHaveLength(2);
+      expect(profiles.find((p) => p.id === 'profile-1')).toBeUndefined();
+      expect(profiles.find((p) => p.id === 'profile-2')).toBeDefined();
+      expect(profiles.find((p) => p.id === 'profile-3')).toBeDefined();
+    });
+
+    it('should filter profiles by folder correctly', () => {
+      const { setProfiles, getProfilesByFolder } =
+        useConnectionStore.getState();
+
+      setProfiles([
+        {
+          id: 'profile-1',
+          path: '/path/to/db1.sqlite',
+          filename: 'db1.sqlite',
+          isEncrypted: false,
+          lastOpened: new Date().toISOString(),
+          displayName: 'Profile 1',
+          readOnly: false,
+          createdAt: new Date().toISOString(),
+          folderId: 'folder-1',
+        },
+        {
+          id: 'profile-2',
+          path: '/path/to/db2.sqlite',
+          filename: 'db2.sqlite',
+          isEncrypted: false,
+          lastOpened: new Date().toISOString(),
+          displayName: 'Profile 2',
+          readOnly: false,
+          createdAt: new Date().toISOString(),
+          folderId: 'folder-1',
+        },
+        {
+          id: 'profile-3',
+          path: '/path/to/db3.sqlite',
+          filename: 'db3.sqlite',
+          isEncrypted: false,
+          lastOpened: new Date().toISOString(),
+          displayName: 'Profile 3',
+          readOnly: false,
+          createdAt: new Date().toISOString(),
+          folderId: 'folder-2',
+        },
+        {
+          id: 'profile-4',
+          path: '/path/to/db4.sqlite',
+          filename: 'db4.sqlite',
+          isEncrypted: false,
+          lastOpened: new Date().toISOString(),
+          displayName: 'Profile 4',
+          readOnly: false,
+          createdAt: new Date().toISOString(),
+        },
+      ]);
+
+      const folder1Profiles = getProfilesByFolder('folder-1');
+      expect(folder1Profiles).toHaveLength(2);
+      expect(folder1Profiles.every((p) => p.folderId === 'folder-1')).toBe(
+        true
+      );
+
+      const folder2Profiles = getProfilesByFolder('folder-2');
+      expect(folder2Profiles).toHaveLength(1);
+
+      const rootProfiles = getProfilesByFolder(undefined);
+      expect(rootProfiles).toHaveLength(1);
+      expect(rootProfiles[0].id).toBe('profile-4');
+    });
+
+    it('should maintain selected profile during sync', () => {
+      const {
+        setProfiles,
+        selectProfile,
+        selectedProfileId: _selectedProfileId,
+      } = useConnectionStore.getState();
+
+      setProfiles([
+        {
+          id: 'profile-1',
+          path: '/path/to/db1.sqlite',
+          filename: 'db1.sqlite',
+          isEncrypted: false,
+          lastOpened: new Date().toISOString(),
+          displayName: 'Profile 1',
+          readOnly: false,
+          createdAt: new Date().toISOString(),
+        },
+      ]);
+
+      selectProfile('profile-1');
+      expect(useConnectionStore.getState().selectedProfileId).toBe('profile-1');
+
+      // Reload profiles (simulating sync from storage)
+      setProfiles([
+        {
+          id: 'profile-1',
+          path: '/path/to/db1.sqlite',
+          filename: 'db1.sqlite',
+          isEncrypted: false,
+          lastOpened: new Date().toISOString(),
+          displayName: 'Profile 1 Updated',
+          readOnly: false,
+          createdAt: new Date().toISOString(),
+        },
+      ]);
+
+      // Selection should be maintained
+      expect(useConnectionStore.getState().selectedProfileId).toBe('profile-1');
+    });
+
+    it('should clear selected profile when deleted', () => {
+      const { setProfiles, selectProfile, deleteProfile } =
+        useConnectionStore.getState();
+
+      setProfiles([
+        {
+          id: 'profile-1',
+          path: '/path/to/db1.sqlite',
+          filename: 'db1.sqlite',
+          isEncrypted: false,
+          lastOpened: new Date().toISOString(),
+          displayName: 'Profile 1',
+          readOnly: false,
+          createdAt: new Date().toISOString(),
+        },
+      ]);
+
+      selectProfile('profile-1');
+      expect(useConnectionStore.getState().selectedProfileId).toBe('profile-1');
+
+      deleteProfile('profile-1');
+      expect(useConnectionStore.getState().selectedProfileId).toBeNull();
+    });
+
+    it('should handle empty profile list sync', () => {
+      const { setProfiles, getAllProfiles } = useConnectionStore.getState();
+
+      // Load some profiles first
+      setProfiles([
+        {
+          id: 'profile-1',
+          path: '/path/to/db1.sqlite',
+          filename: 'db1.sqlite',
+          isEncrypted: false,
+          lastOpened: new Date().toISOString(),
+          displayName: 'Profile 1',
+          readOnly: false,
+          createdAt: new Date().toISOString(),
+        },
+      ]);
+
+      expect(getAllProfiles()).toHaveLength(1);
+
+      // Clear all profiles
+      setProfiles([]);
+
+      expect(getAllProfiles()).toHaveLength(0);
+    });
+
+    it('should get subfolders correctly', () => {
+      const { setFolders, getSubfolders } = useConnectionStore.getState();
+
+      setFolders([
+        {
+          id: 'folder-1',
+          name: 'Root 1',
+          createdAt: new Date().toISOString(),
+        },
+        {
+          id: 'folder-2',
+          name: 'Child of 1',
+          createdAt: new Date().toISOString(),
+          parentId: 'folder-1',
+        },
+        {
+          id: 'folder-3',
+          name: 'Root 2',
+          createdAt: new Date().toISOString(),
+        },
+        {
+          id: 'folder-4',
+          name: 'Child of 1 also',
+          createdAt: new Date().toISOString(),
+          parentId: 'folder-1',
+        },
+      ]);
+
+      const rootFolders = getSubfolders(undefined);
+      expect(rootFolders).toHaveLength(2);
+      expect(rootFolders.find((f) => f.id === 'folder-1')).toBeDefined();
+      expect(rootFolders.find((f) => f.id === 'folder-3')).toBeDefined();
+
+      const folder1Children = getSubfolders('folder-1');
+      expect(folder1Children).toHaveLength(2);
+      expect(folder1Children.every((f) => f.parentId === 'folder-1')).toBe(
+        true
+      );
     });
   });
 

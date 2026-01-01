@@ -1,9 +1,18 @@
-import type { QueryPlanNode, QueryPlanStats } from '../../../../shared/types';
 import type { ColorMode } from '@xyflow/react';
+import type { ErrorInfo, ReactNode } from 'react';
+import type { QueryPlanNode, QueryPlanStats } from '../../../../shared/types';
 import type {
   ExecutionPlanFlowEdge,
   ExecutionPlanFlowNode,
 } from '@/lib/query-plan-analyzer';
+import {
+  Background,
+  Controls,
+  MiniMap,
+  ReactFlow,
+  useEdgesState,
+  useNodesState,
+} from '@xyflow/react';
 import {
   AlertCircle,
   AlertTriangle,
@@ -25,15 +34,6 @@ import {
 } from 'lucide-react';
 import { useTheme } from 'next-themes';
 import { Component, memo, useCallback, useMemo, useState } from 'react';
-import type { ErrorInfo, ReactNode } from 'react';
-import {
-  Background,
-  Controls,
-  MiniMap,
-  ReactFlow,
-  useEdgesState,
-  useNodesState,
-} from '@xyflow/react';
 import { Badge } from '@/components/ui/badge';
 import { Button } from '@/components/ui/button';
 import {
@@ -53,10 +53,10 @@ import {
   SheetTitle,
 } from '@/components/ui/sheet';
 import { SqlHighlight } from '@/components/ui/sql-highlight';
-import { cn } from '@/lib/utils';
 import { convertPlanToFlow, exportPlanAsText } from '@/lib/query-plan-analyzer';
-import { ExecutionPlanNode as ExecutionPlanNodeComponent } from './ExecutionPlanNode';
+import { cn } from '@/lib/utils';
 import { exportDiagramAsPng } from '../er-diagram/utils/export-diagram';
+import { ExecutionPlanNode as ExecutionPlanNodeComponent } from './ExecutionPlanNode';
 import '@xyflow/react/dist/style.css';
 
 // Error Boundary for graceful error handling
@@ -300,7 +300,7 @@ export const QueryOptimizerPanel = memo(
         await exportDiagramAsPng(container, {
           filename: `query-execution-plan-${Date.now()}.png`,
         });
-      } catch (error) {
+      } catch {
         // Error is logged by exportDiagramAsPng
       } finally {
         setIsExporting(false);
@@ -322,7 +322,7 @@ export const QueryOptimizerPanel = memo(
         link.href = url;
         link.click();
         URL.revokeObjectURL(url);
-      } catch (error) {
+      } catch {
         // Silent error handling
       }
     }, [plan, stats, query]);
@@ -587,13 +587,13 @@ export const QueryOptimizerPanel = memo(
           open={!!selectedNode}
           onOpenChange={(open) => !open && setSelectedNode(null)}
         >
-          <SheetContent className="w-[400px] sm:w-[540px]">
+          <SheetContent className="w-100 sm:w-135">
             {selectedNode && (
               <>
                 <SheetHeader>
                   <SheetTitle className="flex items-center gap-2">
                     {selectedNode.data.hasWarning && (
-                      <AlertTriangle className="text-amber-600 h-5 w-5" />
+                      <AlertTriangle className="h-5 w-5 text-amber-600" />
                     )}
                     {selectedNode.data.operation}
                   </SheetTitle>
@@ -617,9 +617,7 @@ export const QueryOptimizerPanel = memo(
                   {(selectedNode.data.tableName ||
                     selectedNode.data.indexName) && (
                     <div className="space-y-2">
-                      <h3 className="text-sm font-medium">
-                        Table &amp; Index
-                      </h3>
+                      <h3 className="text-sm font-medium">Table &amp; Index</h3>
                       <div className="space-y-2">
                         {selectedNode.data.tableName && (
                           <div className="flex items-center gap-2">
@@ -682,7 +680,9 @@ export const QueryOptimizerPanel = memo(
                   {/* Warnings */}
                   {selectedNode.data.hasWarning && (
                     <div className="space-y-2">
-                      <h3 className="text-sm font-medium">Performance Warning</h3>
+                      <h3 className="text-sm font-medium">
+                        Performance Warning
+                      </h3>
                       <div
                         className={cn(
                           'flex items-start gap-3 rounded-lg border p-4',
@@ -717,8 +717,8 @@ export const QueryOptimizerPanel = memo(
                               'Temporary B-Tree'}
                             {selectedNode.data.warningType === 'subquery' &&
                               'Subquery Operation'}
-                            {selectedNode.data.warningType === 'missing-index' &&
-                              'Missing Index'}
+                            {selectedNode.data.warningType ===
+                              'missing-index' && 'Missing Index'}
                           </p>
                           <p className="text-muted-foreground text-sm">
                             {selectedNode.data.warningType === 'full-scan' &&
@@ -727,7 +727,8 @@ export const QueryOptimizerPanel = memo(
                               'A temporary structure is created for sorting. Adding an index on sort columns may help.'}
                             {selectedNode.data.warningType === 'subquery' &&
                               'Subqueries can be expensive. Consider rewriting as a JOIN if possible.'}
-                            {selectedNode.data.warningType === 'missing-index' &&
+                            {selectedNode.data.warningType ===
+                              'missing-index' &&
                               'An index could improve performance for this operation.'}
                           </p>
                         </div>
@@ -736,7 +737,7 @@ export const QueryOptimizerPanel = memo(
                   )}
                 </div>
 
-                <SheetClose className="absolute right-4 top-4">
+                <SheetClose className="absolute top-4 right-4">
                   <Button variant="ghost" size="icon">
                     <X className="h-4 w-4" />
                   </Button>

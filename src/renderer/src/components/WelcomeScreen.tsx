@@ -1,8 +1,13 @@
 import type { DragEvent } from 'react';
-import type { RecentConnection } from '../../../shared/types';
+import type {
+  ConnectionProfile,
+  RecentConnection,
+} from '../../../shared/types';
+import type { ProfileFormData } from './connection-profiles/ProfileForm';
 import type { ConnectionSettings } from './ConnectionSettingsDialog';
 import {
   AlertCircle,
+  BookmarkPlus,
   Clock,
   Database,
   Eye,
@@ -19,6 +24,12 @@ import {
 import { useCallback, useEffect, useState } from 'react';
 import { Button } from '@/components/ui/button';
 import {
+  Dialog,
+  DialogContent,
+  DialogHeader,
+  DialogTitle,
+} from '@/components/ui/dialog';
+import {
   DropdownMenu,
   DropdownMenuContent,
   DropdownMenuItem,
@@ -33,6 +44,8 @@ import {
 import { sqlPro } from '@/lib/api';
 import { cn } from '@/lib/utils';
 import { useConnectionStore, useThemeStore } from '@/stores';
+import { ProfileForm } from './connection-profiles/ProfileForm';
+import { ProfileManager } from './connection-profiles/ProfileManager';
 import { ConnectionSettingsDialog } from './ConnectionSettingsDialog';
 import { PasswordDialog } from './PasswordDialog';
 
@@ -98,6 +111,15 @@ export function WelcomeScreen() {
 
   // Drag and drop state
   const [isDragging, setIsDragging] = useState(false);
+
+  // Profile view state
+  const [showProfiles, setShowProfiles] = useState(false);
+  const [saveProfileDialogOpen, setSaveProfileDialogOpen] = useState(false);
+  const [profileToSave, setProfileToSave] = useState<{
+    path: string;
+    filename: string;
+    isEncrypted: boolean;
+  } | null>(null);
 
   const connectToDatabase = async (
     path: string,
@@ -401,6 +423,66 @@ export function WelcomeScreen() {
     }
   };
 
+  // Handle connecting from a profile
+  const handleConnectFromProfile = useCallback(
+    async (profile: ConnectionProfile) => {
+      await handleRecentClick(
+        profile.path,
+        profile.isEncrypted,
+        profile.readOnly
+      );
+    },
+    [handleRecentClick]
+  );
+
+  // Handle save as profile
+  const handleSaveAsProfile = useCallback((conn: RecentConnection) => {
+    setProfileToSave({
+      path: conn.path,
+      filename: conn.filename,
+      isEncrypted: conn.isEncrypted,
+    });
+    setSaveProfileDialogOpen(true);
+  }, []);
+
+  // Handle save profile form submit
+  const handleSaveProfileSubmit = useCallback(
+    async (data: ProfileFormData) => {
+      if (!profileToSave) return;
+
+      try {
+        const newProfile: ConnectionProfile = {
+          id: crypto.randomUUID(),
+          path: profileToSave.path,
+          filename: profileToSave.filename,
+          displayName: data.displayName,
+          isEncrypted: profileToSave.isEncrypted,
+          folderId: data.folderId,
+          tags: data.tags,
+          notes: data.notes,
+          readOnly: data.readOnly,
+          isSaved: true,
+          createdAt: new Date().toISOString(),
+        };
+
+        const result = await sqlPro.profile.save({ profile: newProfile });
+
+        if (result.success) {
+          setSaveProfileDialogOpen(false);
+          setProfileToSave(null);
+          // Refresh profiles by toggling the view
+          setShowProfiles(false);
+          setTimeout(() => setShowProfiles(true), 100);
+        } else {
+          setError(result.error || 'Failed to save profile');
+        }
+      } catch (err) {
+        setError(err instanceof Error ? err.message : 'Unknown error');
+      }
+    },
+    [profileToSave, setError]
+  );
+
   const cycleTheme = () => {
     const themes: Array<'light' | 'dark' | 'system'> = [
       'light',
@@ -454,8 +536,22 @@ export function WelcomeScreen() {
         </div>
       )}
 
-      {/* Theme Toggle - Top Right */}
-      <div className="absolute top-4 right-4">
+      {/* Top Right Controls */}
+      <div className="absolute top-4 right-4 flex items-center gap-2">
+        <Tooltip>
+          <TooltipTrigger>
+            <Button
+              variant={showProfiles ? 'default' : 'ghost'}
+              size="icon"
+              onClick={() => setShowProfiles(!showProfiles)}
+            >
+              <Database className="h-4 w-4" />
+            </Button>
+          </TooltipTrigger>
+          <TooltipContent>
+            {showProfiles ? 'Hide' : 'Show'} Profiles
+          </TooltipContent>
+        </Tooltip>
         <Tooltip>
           <TooltipTrigger>
             <Button variant="ghost" size="icon" onClick={cycleTheme}>
@@ -508,82 +604,102 @@ export function WelcomeScreen() {
           </p>
         </div>
 
-        {/* Recent Connections */}
-        {recentConnections.length > 0 && (
-          <div className="space-y-2">
-            <div className="flex items-center justify-between">
-              <label className="text-sm font-medium">Recent Connections</label>
-              <Clock className="text-muted-foreground h-4 w-4" />
-            </div>
-            <div className="space-y-1">
-              {recentConnections.map((conn) => (
-                <div key={conn.path} className="group flex items-center gap-2">
-                  <Button
-                    variant="ghost"
-                    className="h-auto min-w-0 flex-1 justify-start px-2 py-2 text-left"
-                    onClick={() =>
-                      handleRecentClick(
-                        conn.path,
-                        conn.isEncrypted,
-                        conn.readOnly
-                      )
-                    }
-                    disabled={isConnecting}
+        {/* Recent Connections / Profile Manager */}
+        {showProfiles ? (
+          <div className="bg-card -mx-4 h-96 rounded-lg border">
+            <ProfileManager
+              onConnect={handleConnectFromProfile}
+              compact={true}
+            />
+          </div>
+        ) : (
+          recentConnections.length > 0 && (
+            <div className="space-y-2">
+              <div className="flex items-center justify-between">
+                <label className="text-sm font-medium">
+                  Recent Connections
+                </label>
+                <Clock className="text-muted-foreground h-4 w-4" />
+              </div>
+              <div className="space-y-1">
+                {recentConnections.map((conn) => (
+                  <div
+                    key={conn.path}
+                    className="group flex items-center gap-2"
                   >
-                    <Database className="text-muted-foreground mr-2 h-4 w-4 shrink-0" />
-                    <div className="min-w-0 flex-1">
-                      <div className="flex items-center gap-2">
-                        <span className="truncate text-sm font-medium">
-                          {conn.displayName || conn.filename}
-                        </span>
-                        <div className="flex shrink-0 items-center gap-1">
-                          {conn.readOnly && (
-                            <Tooltip>
-                              <TooltipTrigger>
-                                <Eye className="text-muted-foreground h-3 w-3" />
-                              </TooltipTrigger>
-                              <TooltipContent>Read-only</TooltipContent>
-                            </Tooltip>
-                          )}
-                          <HasSavedPasswordIndicator path={conn.path} />
+                    <Button
+                      variant="ghost"
+                      className="h-auto min-w-0 flex-1 justify-start px-2 py-2 text-left"
+                      onClick={() =>
+                        handleRecentClick(
+                          conn.path,
+                          conn.isEncrypted,
+                          conn.readOnly
+                        )
+                      }
+                      disabled={isConnecting}
+                    >
+                      <Database className="text-muted-foreground mr-2 h-4 w-4 shrink-0" />
+                      <div className="min-w-0 flex-1">
+                        <div className="flex items-center gap-2">
+                          <span className="truncate text-sm font-medium">
+                            {conn.displayName || conn.filename}
+                          </span>
+                          <div className="flex shrink-0 items-center gap-1">
+                            {conn.readOnly && (
+                              <Tooltip>
+                                <TooltipTrigger>
+                                  <Eye className="text-muted-foreground h-3 w-3" />
+                                </TooltipTrigger>
+                                <TooltipContent>Read-only</TooltipContent>
+                              </Tooltip>
+                            )}
+                            <HasSavedPasswordIndicator path={conn.path} />
+                          </div>
+                        </div>
+                        <div className="text-muted-foreground truncate text-xs">
+                          {conn.path}
                         </div>
                       </div>
-                      <div className="text-muted-foreground truncate text-xs">
-                        {conn.path}
-                      </div>
-                    </div>
-                  </Button>
-                  <DropdownMenu>
-                    <DropdownMenuTrigger>
-                      <Button
-                        variant="ghost"
-                        size="sm"
-                        className="text-muted-foreground shrink-0 opacity-0 group-hover:opacity-100"
-                      >
-                        <MoreVertical className="h-4 w-4" />
-                      </Button>
-                    </DropdownMenuTrigger>
-                    <DropdownMenuContent align="end" side="bottom">
-                      <DropdownMenuItem
-                        onClick={() => handleEditConnection(conn)}
-                      >
-                        <Settings className="mr-2 h-4 w-4" />
-                        <span>Edit</span>
-                      </DropdownMenuItem>
-                      <DropdownMenuSeparator />
-                      <DropdownMenuItem
-                        onClick={() => handleRemoveConnection(conn)}
-                        className="text-destructive focus:text-destructive"
-                      >
-                        <Trash2 className="mr-2 h-4 w-4" />
-                        <span>Remove</span>
-                      </DropdownMenuItem>
-                    </DropdownMenuContent>
-                  </DropdownMenu>
-                </div>
-              ))}
+                    </Button>
+                    <DropdownMenu>
+                      <DropdownMenuTrigger>
+                        <Button
+                          variant="ghost"
+                          size="sm"
+                          className="text-muted-foreground shrink-0 opacity-0 group-hover:opacity-100"
+                        >
+                          <MoreVertical className="h-4 w-4" />
+                        </Button>
+                      </DropdownMenuTrigger>
+                      <DropdownMenuContent align="end" side="bottom">
+                        <DropdownMenuItem
+                          onClick={() => handleEditConnection(conn)}
+                        >
+                          <Settings className="mr-2 h-4 w-4" />
+                          <span>Edit</span>
+                        </DropdownMenuItem>
+                        <DropdownMenuItem
+                          onClick={() => handleSaveAsProfile(conn)}
+                        >
+                          <BookmarkPlus className="mr-2 h-4 w-4" />
+                          <span>Save as Profile</span>
+                        </DropdownMenuItem>
+                        <DropdownMenuSeparator />
+                        <DropdownMenuItem
+                          onClick={() => handleRemoveConnection(conn)}
+                          className="text-destructive focus:text-destructive"
+                        >
+                          <Trash2 className="mr-2 h-4 w-4" />
+                          <span>Remove</span>
+                        </DropdownMenuItem>
+                      </DropdownMenuContent>
+                    </DropdownMenu>
+                  </div>
+                ))}
+              </div>
             </div>
-          </div>
+          )
         )}
       </div>
 
@@ -619,6 +735,32 @@ export function WelcomeScreen() {
         filename={pendingFilename}
         dbPath={pendingPath || ''}
       />
+
+      {/* Save Profile Dialog */}
+      <Dialog
+        open={saveProfileDialogOpen}
+        onOpenChange={setSaveProfileDialogOpen}
+      >
+        <DialogContent>
+          <DialogHeader>
+            <DialogTitle>Save as Profile</DialogTitle>
+          </DialogHeader>
+          {profileToSave && (
+            <ProfileForm
+              mode="create"
+              dbPath={profileToSave.path}
+              filename={profileToSave.filename}
+              isEncrypted={profileToSave.isEncrypted}
+              folders={[]}
+              onSubmit={handleSaveProfileSubmit}
+              onCancel={() => {
+                setSaveProfileDialogOpen(false);
+                setProfileToSave(null);
+              }}
+            />
+          )}
+        </DialogContent>
+      </Dialog>
     </div>
   );
 }

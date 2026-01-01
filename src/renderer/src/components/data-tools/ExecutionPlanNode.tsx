@@ -1,5 +1,4 @@
 import type { ExecutionPlanNodeData } from '@/lib/query-plan-analyzer';
-import { getWarningMessage } from '@/lib/query-plan-analyzer';
 import { Handle, Position } from '@xyflow/react';
 import {
   AlertTriangle,
@@ -10,8 +9,13 @@ import {
   Zap,
 } from 'lucide-react';
 import { memo } from 'react';
+import {
+  Tooltip,
+  TooltipContent,
+  TooltipTrigger,
+} from '@/components/ui/tooltip';
+import { getWarningMessage } from '@/lib/query-plan-analyzer';
 import { cn } from '@/lib/utils';
-import { Tooltip, TooltipContent, TooltipTrigger } from '@/components/ui/tooltip';
 
 interface ExecutionPlanNodeProps {
   data: ExecutionPlanNodeData;
@@ -92,7 +96,7 @@ function ExecutionPlanNodeComponent({
       <Handle
         type="target"
         position={Position.Top}
-        className="!h-2 !w-2 !border-2 !border-primary !bg-primary"
+        className="!border-primary !bg-primary !h-2 !w-2 !border-2"
       />
 
       {/* Header with operation type */}
@@ -175,7 +179,7 @@ function ExecutionPlanNodeComponent({
       <Handle
         type="source"
         position={Position.Bottom}
-        className="!h-2 !w-2 !border-2 !border-primary !bg-primary"
+        className="!border-primary !bg-primary !h-2 !w-2 !border-2"
       />
     </div>
   );

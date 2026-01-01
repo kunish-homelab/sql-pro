@@ -453,6 +453,35 @@ export interface IsPasswordStorageAvailableResponse {
 
 // ============ Connection Profile Types ============
 
+/**
+ * Connection profile for saved database connections
+ */
+export interface ConnectionProfile {
+  id: string;
+  path: string;
+  filename: string;
+  isEncrypted: boolean;
+  lastOpened: string;
+  displayName: string;
+  readOnly: boolean;
+  createdAt: string;
+  folderId?: string;
+  tags?: string[];
+  notes?: string;
+  isSaved: boolean;
+}
+
+/**
+ * Folder for organizing connection profiles
+ */
+export interface ProfileFolder {
+  id: string;
+  name: string;
+  parentId?: string;
+  createdAt: string;
+  expanded?: boolean;
+}
+
 export interface UpdateConnectionRequest {
   /** Absolute path to database file (profile identifier) */
   path: string;
@@ -476,6 +505,119 @@ export interface RemoveConnectionRequest {
 
 export interface RemoveConnectionResponse {
   success: boolean;
+  error?: string;
+}
+
+// Profile CRUD types
+export interface SaveProfileRequest {
+  profile: Omit<ConnectionProfile, 'id' | 'createdAt'> & {
+    id?: string;
+    createdAt?: string;
+  };
+}
+
+export interface SaveProfileResponse {
+  success: boolean;
+  profile?: ConnectionProfile;
+  error?: string;
+}
+
+export interface UpdateProfileRequest {
+  id: string;
+  updates: Partial<Omit<ConnectionProfile, 'id' | 'createdAt'>>;
+}
+
+export interface UpdateProfileResponse {
+  success: boolean;
+  profile?: ConnectionProfile;
+  error?: string;
+}
+
+export interface DeleteProfileRequest {
+  id: string;
+  removePassword?: boolean;
+}
+
+export interface DeleteProfileResponse {
+  success: boolean;
+  error?: string;
+}
+
+export interface GetProfilesRequest {
+  folderId?: string;
+}
+
+export interface GetProfilesResponse {
+  success: boolean;
+  profiles?: ConnectionProfile[];
+  error?: string;
+}
+
+export interface ExportProfilesRequest {
+  profileIds?: string[];
+  includePasswords?: boolean;
+}
+
+export interface ExportProfilesResponse {
+  success: boolean;
+  data?: string;
+  error?: string;
+}
+
+export interface ImportProfilesRequest {
+  data: string;
+  overwrite?: boolean;
+}
+
+export interface ImportProfilesResponse {
+  success: boolean;
+  imported?: number;
+  skipped?: number;
+  error?: string;
+}
+
+// Folder CRUD types
+export interface CreateFolderRequest {
+  folder: Omit<ProfileFolder, 'id' | 'createdAt'> & {
+    id?: string;
+    createdAt?: string;
+  };
+}
+
+export interface CreateFolderResponse {
+  success: boolean;
+  folder?: ProfileFolder;
+  error?: string;
+}
+
+export interface UpdateFolderRequest {
+  id: string;
+  updates: Partial<Omit<ProfileFolder, 'id' | 'createdAt'>>;
+}
+
+export interface UpdateFolderResponse {
+  success: boolean;
+  folder?: ProfileFolder;
+  error?: string;
+}
+
+export interface DeleteFolderRequest {
+  id: string;
+  deleteContents?: boolean;
+}
+
+export interface DeleteFolderResponse {
+  success: boolean;
+  error?: string;
+}
+
+export interface GetFoldersRequest {
+  parentId?: string;
+}
+
+export interface GetFoldersResponse {
+  success: boolean;
+  folders?: ProfileFolder[];
   error?: string;
 }
 
@@ -1179,4 +1321,18 @@ export const IPC_CHANNELS = {
   UPDATE_DOWNLOAD: 'updates:download',
   UPDATE_INSTALL: 'updates:quit-and-install',
   UPDATE_STATUS: 'updates:get-status',
+
+  // Profile
+  PROFILE_SAVE: 'profile:save',
+  PROFILE_UPDATE: 'profile:update',
+  PROFILE_DELETE: 'profile:delete',
+  PROFILE_GET_ALL: 'profile:get-all',
+  PROFILE_EXPORT: 'profile:export',
+  PROFILE_IMPORT: 'profile:import',
+
+  // Folder
+  FOLDER_CREATE: 'folder:create',
+  FOLDER_UPDATE: 'folder:update',
+  FOLDER_DELETE: 'folder:delete',
+  FOLDER_GET_ALL: 'folder:get-all',
 } as const;

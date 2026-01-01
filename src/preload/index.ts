@@ -42,11 +42,19 @@ import type {
   CloseDatabaseResponse,
   CloseWindowRequest,
   CloseWindowResponse,
+  CreateFolderRequest,
+  CreateFolderResponse,
   CreateWindowResponse,
+  DeleteFolderRequest,
+  DeleteFolderResponse,
+  DeleteProfileRequest,
+  DeleteProfileResponse,
   DeleteQueryHistoryRequest,
   DeleteQueryHistoryResponse,
   ExecuteQueryRequest,
   ExecuteQueryResponse,
+  ExportProfilesRequest,
+  ExportProfilesResponse,
   ExportRequest,
   ExportResponse,
   FocusWindowRequest,
@@ -55,9 +63,13 @@ import type {
   GetAllWindowsResponse,
   GetClaudeCodePathsResponse,
   GetCurrentWindowResponse,
+  GetFoldersRequest,
+  GetFoldersResponse,
   GetPasswordRequest,
   GetPasswordResponse,
   GetPreferencesResponse,
+  GetProfilesRequest,
+  GetProfilesResponse,
   GetQueryHistoryRequest,
   GetQueryHistoryResponse,
   GetRecentConnectionsResponse,
@@ -69,6 +81,8 @@ import type {
   GetTableDataResponse,
   HasPasswordRequest,
   HasPasswordResponse,
+  ImportProfilesRequest,
+  ImportProfilesResponse,
   IsPasswordStorageAvailableResponse,
   MenuAction,
   OpenDatabaseRequest,
@@ -89,6 +103,8 @@ import type {
   SaveFileDialogResponse,
   SavePasswordRequest,
   SavePasswordResponse,
+  SaveProfileRequest,
+  SaveProfileResponse,
   SaveQueryHistoryRequest,
   SaveQueryHistoryResponse,
   SetPreferencesRequest,
@@ -96,6 +112,10 @@ import type {
   SqlLogEntry,
   UpdateConnectionRequest,
   UpdateConnectionResponse,
+  UpdateFolderRequest,
+  UpdateFolderResponse,
+  UpdateProfileRequest,
+  UpdateProfileResponse,
   UpdateStatus,
   ValidateChangesRequest,
   ValidateChangesResponse,
@@ -191,6 +211,34 @@ const sqlProAPI = {
       request: RemoveConnectionRequest
     ): Promise<RemoveConnectionResponse> =>
       ipcRenderer.invoke(IPC_CHANNELS.CONNECTION_REMOVE, request),
+  },
+
+  // Profile operations
+  profile: {
+    save: (request: SaveProfileRequest): Promise<SaveProfileResponse> =>
+      ipcRenderer.invoke(IPC_CHANNELS.PROFILE_SAVE, request),
+    update: (request: UpdateProfileRequest): Promise<UpdateProfileResponse> =>
+      ipcRenderer.invoke(IPC_CHANNELS.PROFILE_UPDATE, request),
+    delete: (request: DeleteProfileRequest): Promise<DeleteProfileResponse> =>
+      ipcRenderer.invoke(IPC_CHANNELS.PROFILE_DELETE, request),
+    getAll: (request: GetProfilesRequest): Promise<GetProfilesResponse> =>
+      ipcRenderer.invoke(IPC_CHANNELS.PROFILE_GET_ALL, request),
+    export: (request: ExportProfilesRequest): Promise<ExportProfilesResponse> =>
+      ipcRenderer.invoke(IPC_CHANNELS.PROFILE_EXPORT, request),
+    import: (request: ImportProfilesRequest): Promise<ImportProfilesResponse> =>
+      ipcRenderer.invoke(IPC_CHANNELS.PROFILE_IMPORT, request),
+  },
+
+  // Folder operations
+  folder: {
+    create: (request: CreateFolderRequest): Promise<CreateFolderResponse> =>
+      ipcRenderer.invoke(IPC_CHANNELS.FOLDER_CREATE, request),
+    update: (request: UpdateFolderRequest): Promise<UpdateFolderResponse> =>
+      ipcRenderer.invoke(IPC_CHANNELS.FOLDER_UPDATE, request),
+    delete: (request: DeleteFolderRequest): Promise<DeleteFolderResponse> =>
+      ipcRenderer.invoke(IPC_CHANNELS.FOLDER_DELETE, request),
+    getAll: (request: GetFoldersRequest): Promise<GetFoldersResponse> =>
+      ipcRenderer.invoke(IPC_CHANNELS.FOLDER_GET_ALL, request),
   },
 
   // File utilities
