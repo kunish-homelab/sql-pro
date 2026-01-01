@@ -1,5 +1,5 @@
 import type { DatabaseConnection } from '@/types/database';
-import { AlertCircle, CheckCircle, Circle } from 'lucide-react';
+import { AlertCircle, CheckCircle, Circle, X } from 'lucide-react';
 import { memo } from 'react';
 import { cn } from '@/lib/utils';
 import {
@@ -18,10 +18,11 @@ interface ConnectionTabProps {
   connection: DatabaseConnection;
   isActive: boolean;
   onSelect: () => void;
+  onClose: () => void;
 }
 
 const ConnectionTab = memo(
-  ({ connection, isActive, onSelect }: ConnectionTabProps) => {
+  ({ connection, isActive, onSelect, onClose }: ConnectionTabProps) => {
     const { getConnectionColor } = useConnectionStore();
     const connectionColor = getConnectionColor(connection.id) || '#3b82f6'; // default blue
 
@@ -39,6 +40,11 @@ const ConnectionTab = memo(
         : connection.status === 'error'
         ? 'text-red-500'
         : 'text-muted-foreground';
+
+    const handleCloseClick = (e: React.MouseEvent) => {
+      e.stopPropagation();
+      onClose();
+    };
 
     return (
       <TooltipProvider delay={300}>
@@ -62,6 +68,22 @@ const ConnectionTab = memo(
             >
               <StatusIcon className={cn('h-3.5 w-3.5 shrink-0', statusColorClass)} />
               <span className="flex-1 truncate">{connection.filename}</span>
+              <Tooltip>
+                <TooltipTrigger asChild>
+                  <button
+                    onClick={handleCloseClick}
+                    className={cn(
+                      'hover:bg-accent shrink-0 rounded p-0.5 opacity-0 transition-opacity group-hover:opacity-100',
+                      isActive && 'opacity-60'
+                    )}
+                  >
+                    <X className="h-3 w-3" />
+                  </button>
+                </TooltipTrigger>
+                <TooltipContent side="bottom" className="text-xs">
+                  Close connection
+                </TooltipContent>
+              </Tooltip>
             </div>
           </TooltipTrigger>
           <TooltipContent side="bottom" className="text-xs">
@@ -84,6 +106,7 @@ export const ConnectionTabBar = memo(({ className }: ConnectionTabBarProps) => {
     connectionTabOrder,
     getAllConnections,
     setActiveConnection,
+    removeConnection,
   } = useConnectionStore();
 
   const allConnections = getAllConnections();
@@ -115,6 +138,7 @@ export const ConnectionTabBar = memo(({ className }: ConnectionTabBarProps) => {
             connection={connection}
             isActive={connection.id === activeConnectionId}
             onSelect={() => setActiveConnection(connection.id)}
+            onClose={() => removeConnection(connection.id)}
           />
         ))}
       </div>
