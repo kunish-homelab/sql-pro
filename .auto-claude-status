@@ -3,13 +3,13 @@
   "spec": "011-schema-comparison-tool",
   "state": "building",
   "subtasks": {
-    "completed": 15,
+    "completed": 18,
     "total": 24,
     "in_progress": 1,
     "failed": 0
   },
   "phase": {
-    "current": "Migration SQL Generator",
+    "current": "Report Export",
     "id": null,
     "total": 3
   },
@@ -18,8 +18,8 @@
     "max": 1
   },
   "session": {
-    "number": 20,
+    "number": 22,
     "started_at": "2026-01-01T12:57:13.430626"
   },
-  "last_update": "2026-01-01T15:29:18.915959"
+  "last_update": "2026-01-01T16:08:13.387778"
 }

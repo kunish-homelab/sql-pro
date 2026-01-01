@@ -1,5 +1,5 @@
-import { AlertCircle, ArrowLeftRight, GitCompare, Loader2 } from 'lucide-react';
-import { useCallback, useEffect } from 'react';
+import { AlertCircle, ArrowLeftRight, FileDown, GitCompare, Loader2 } from 'lucide-react';
+import { useCallback, useEffect, useState } from 'react';
 import { Alert, AlertDescription, AlertTitle } from '@/components/ui/alert';
 import { Button } from '@/components/ui/button';
 import { Card, CardContent, CardHeader, CardTitle } from '@/components/ui/card';
@@ -8,6 +8,7 @@ import { sqlPro } from '@/lib/api';
 import { useSchemaComparisonStore } from '@/stores';
 import { DiffFilterBar } from './DiffFilterBar';
 import { DiffSummary } from './DiffSummary';
+import { ExportReportDialog } from './ExportReportDialog';
 import { MigrationPreview } from './MigrationPreview';
 import { SchemaDiffView } from './SchemaDiffView';
 import { SourceSelector } from './SourceSelector';
@@ -38,6 +39,8 @@ export function SchemaComparisonPanel({
     setAvailableSnapshots,
     setIsLoadingSnapshots,
   } = useSchemaComparisonStore();
+
+  const [isExportDialogOpen, setIsExportDialogOpen] = useState(false);
 
   // Load available snapshots on mount
   useEffect(() => {
@@ -235,8 +238,16 @@ export function SchemaComparisonPanel({
             <div className="space-y-4">
               {/* Summary Card */}
               <Card>
-                <CardHeader>
+                <CardHeader className="flex flex-row items-center justify-between space-y-0 pb-4">
                   <CardTitle>Comparison Results</CardTitle>
+                  <Button
+                    variant="outline"
+                    size="sm"
+                    onClick={() => setIsExportDialogOpen(true)}
+                  >
+                    <FileDown className="mr-2 h-4 w-4" />
+                    Export Report
+                  </Button>
                 </CardHeader>
                 <CardContent>
                   <div className="space-y-2">
@@ -324,6 +335,13 @@ export function SchemaComparisonPanel({
           )}
         </div>
       </ScrollArea>
+
+      {/* Export Report Dialog */}
+      <ExportReportDialog
+        open={isExportDialogOpen}
+        onOpenChange={setIsExportDialogOpen}
+        comparisonResult={comparisonResult}
+      />
     </div>
   );
 }
