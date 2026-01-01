@@ -11,6 +11,9 @@ interface ConnectionState {
   connections: Map<string, DatabaseConnection>;
   activeConnectionId: string | null;
 
+  // Tab order for connection tabs UI
+  connectionTabOrder: string[];
+
   // Schema per connection
   schemas: Map<string, DatabaseSchema>;
 
@@ -33,6 +36,7 @@ interface ConnectionState {
   removeConnection: (id: string) => void;
   setActiveConnection: (id: string | null) => void;
   updateConnection: (id: string, updates: Partial<DatabaseConnection>) => void;
+  reorderConnections: (fromIndex: number, toIndex: number) => void;
 
   // Schema Actions
   setSchema: (connectionId: string, schema: DatabaseSchema | null) => void;
@@ -71,6 +75,7 @@ interface ConnectionState {
 const initialState = {
   connections: new Map<string, DatabaseConnection>(),
   activeConnectionId: null,
+  connectionTabOrder: [],
   schemas: new Map<string, DatabaseSchema>(),
   selectedTable: null,
   selectedSchemaObject: null,
@@ -91,9 +96,16 @@ export const useConnectionStore = create<ConnectionState>((set, get) => ({
     set((state) => {
       const newConnections = new Map(state.connections);
       newConnections.set(connection.id, connection);
+
+      // Add to tab order if not already present
+      const newTabOrder = state.connectionTabOrder.includes(connection.id)
+        ? state.connectionTabOrder
+        : [...state.connectionTabOrder, connection.id];
+
       return {
         connections: newConnections,
         activeConnectionId: connection.id,
+        connectionTabOrder: newTabOrder,
         // Legacy compatibility
         connection,
         error: null,
@@ -107,6 +119,11 @@ export const useConnectionStore = create<ConnectionState>((set, get) => ({
 
       const newSchemas = new Map(state.schemas);
       newSchemas.delete(id);
+
+      // Remove from tab order
+      const newTabOrder = state.connectionTabOrder.filter(
+        (connId) => connId !== id
+      );
 
       // If removing the active connection, switch to another one or null
       let newActiveId = state.activeConnectionId;
@@ -133,6 +150,7 @@ export const useConnectionStore = create<ConnectionState>((set, get) => ({
         connections: newConnections,
         schemas: newSchemas,
         activeConnectionId: newActiveId,
+        connectionTabOrder: newTabOrder,
         selectedTable:
           state.activeConnectionId === id ? null : state.selectedTable,
         selectedSchemaObject:
@@ -188,6 +206,17 @@ export const useConnectionStore = create<ConnectionState>((set, get) => ({
       };
     }),
 
+  reorderConnections: (fromIndex, toIndex) =>
+    set((state) => {
+      const newTabOrder = [...state.connectionTabOrder];
+      const [movedId] = newTabOrder.splice(fromIndex, 1);
+      newTabOrder.splice(toIndex, 0, movedId);
+
+      return {
+        connectionTabOrder: newTabOrder,
+      };
+    }),
+
   // Schema Actions
   setSchema: (connectionId, schema) =>
     set((state) => {
@@ -226,6 +255,7 @@ export const useConnectionStore = create<ConnectionState>((set, get) => ({
     set({
       connections: new Map(),
       activeConnectionId: null,
+      connectionTabOrder: [],
       schemas: new Map(),
       selectedTable: null,
       selectedSchemaObject: null,
