@@ -7,6 +7,9 @@ import {
   ContextMenuContent,
   ContextMenuItem,
   ContextMenuSeparator,
+  ContextMenuSub,
+  ContextMenuSubContent,
+  ContextMenuSubTrigger,
   ContextMenuTrigger,
 } from '@/components/ui/context-menu';
 import {
@@ -33,6 +36,22 @@ import {
 import { CSS } from '@dnd-kit/utilities';
 import type { DragEndEvent } from '@dnd-kit/core';
 
+// Preset colors for connection tabs
+const PRESET_COLORS = [
+  { name: 'Blue', value: '#3b82f6' },
+  { name: 'Green', value: '#10b981' },
+  { name: 'Red', value: '#ef4444' },
+  { name: 'Yellow', value: '#eab308' },
+  { name: 'Purple', value: '#a855f7' },
+  { name: 'Pink', value: '#ec4899' },
+  { name: 'Orange', value: '#f97316' },
+  { name: 'Teal', value: '#14b8a6' },
+  { name: 'Indigo', value: '#6366f1' },
+  { name: 'Cyan', value: '#06b6d4' },
+  { name: 'Lime', value: '#84cc16' },
+  { name: 'Amber', value: '#f59e0b' },
+];
+
 interface ConnectionTabBarProps {
   className?: string;
 }
@@ -46,7 +65,7 @@ interface ConnectionTabProps {
 
 const ConnectionTab = memo(
   ({ connection, isActive, onSelect, onClose }: ConnectionTabProps) => {
-    const { getConnectionColor } = useConnectionStore();
+    const { getConnectionColor, setConnectionColor } = useConnectionStore();
     const connectionColor = getConnectionColor(connection.id) || '#3b82f6'; // default blue
 
     // Set up drag and drop for this tab
@@ -76,6 +95,10 @@ const ConnectionTab = memo(
     const handleCloseClick = (e: React.MouseEvent) => {
       e.stopPropagation();
       onClose();
+    };
+
+    const handleColorSelect = (color: string) => {
+      setConnectionColor(connection.id, color);
     };
 
     return (
@@ -135,10 +158,34 @@ const ConnectionTab = memo(
           </TooltipProvider>
         </ContextMenuTrigger>
         <ContextMenuContent>
-          <ContextMenuItem>
-            <Palette className="mr-2 h-4 w-4" />
-            Set Color
-          </ContextMenuItem>
+          <ContextMenuSub>
+            <ContextMenuSubTrigger>
+              <Palette className="mr-2 h-4 w-4" />
+              Set Color
+            </ContextMenuSubTrigger>
+            <ContextMenuSubContent>
+              <div className="grid grid-cols-3 gap-1 p-1">
+                {PRESET_COLORS.map((color) => (
+                  <button
+                    key={color.value}
+                    onClick={() => handleColorSelect(color.value)}
+                    className={cn(
+                      'group relative flex h-10 w-16 items-center justify-center rounded border-2 transition-all hover:scale-105',
+                      connectionColor === color.value
+                        ? 'border-foreground ring-2 ring-foreground/20'
+                        : 'border-border hover:border-foreground/50'
+                    )}
+                    style={{ backgroundColor: color.value }}
+                    title={color.name}
+                  >
+                    {connectionColor === color.value && (
+                      <CheckCircle className="h-4 w-4 text-white drop-shadow-md" />
+                    )}
+                  </button>
+                ))}
+              </div>
+            </ContextMenuSubContent>
+          </ContextMenuSub>
           <ContextMenuSeparator />
           <ContextMenuItem onClick={onClose}>Close</ContextMenuItem>
         </ContextMenuContent>
