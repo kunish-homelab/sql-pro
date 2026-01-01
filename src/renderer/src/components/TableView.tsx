@@ -662,13 +662,14 @@ export function TableView({
 
           {/* Pagination Controls - hidden when showing all */}
           {pageSizeOption !== 'all' && (
-            <div className="flex items-center gap-1">
+            <div className="flex items-center gap-2">
               <Button
                 variant="outline"
                 size="icon"
                 className="h-8 w-8"
                 onClick={() => handlePageChange(1)}
                 disabled={page <= 1 || isLoading}
+                title="First page"
               >
                 <ChevronsLeft className="h-4 w-4" />
               </Button>
@@ -678,15 +679,58 @@ export function TableView({
                 className="h-8 w-8"
                 onClick={() => handlePageChange(page - 1)}
                 disabled={page <= 1 || isLoading}
+                title="Previous page"
               >
                 <ChevronLeft className="h-4 w-4" />
               </Button>
+
+              {/* Page Jump Input */}
+              <div className="flex items-center gap-1.5">
+                <Input
+                  type="number"
+                  min={1}
+                  max={totalPages || 1}
+                  value={page}
+                  onChange={(e) => {
+                    const value = Number.parseInt(e.target.value, 10);
+                    if (
+                      !Number.isNaN(value) &&
+                      value >= 1 &&
+                      value <= totalPages
+                    ) {
+                      handlePageChange(value);
+                    }
+                  }}
+                  onKeyDown={(e) => {
+                    if (e.key === 'Enter') {
+                      const value = Number.parseInt(
+                        (e.target as HTMLInputElement).value,
+                        10
+                      );
+                      if (!Number.isNaN(value)) {
+                        const clampedValue = Math.max(
+                          1,
+                          Math.min(value, totalPages)
+                        );
+                        handlePageChange(clampedValue);
+                      }
+                    }
+                  }}
+                  className="h-8 w-16 text-center text-sm"
+                  disabled={isLoading}
+                />
+                <span className="text-muted-foreground text-sm">
+                  / {totalPages || 1}
+                </span>
+              </div>
+
               <Button
                 variant="outline"
                 size="icon"
                 className="h-8 w-8"
                 onClick={() => handlePageChange(page + 1)}
                 disabled={page >= totalPages || isLoading}
+                title="Next page"
               >
                 <ChevronRight className="h-4 w-4" />
               </Button>
@@ -696,6 +740,7 @@ export function TableView({
                 className="h-8 w-8"
                 onClick={() => handlePageChange(totalPages)}
                 disabled={page >= totalPages || isLoading}
+                title="Last page"
               >
                 <ChevronsRight className="h-4 w-4" />
               </Button>
