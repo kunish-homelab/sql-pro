@@ -4,12 +4,17 @@ import type {
   ApplyChangesRequest,
   ClearQueryHistoryRequest,
   CloseDatabaseRequest,
+  CompareConnectionsRequest,
+  CompareConnectionToSnapshotRequest,
+  CompareSnapshotsRequest,
   DeleteQueryHistoryRequest,
+  DeleteSchemaSnapshotRequest,
   ExecuteQueryRequest,
   ExportRequest,
   GetPasswordRequest,
   GetQueryHistoryRequest,
   GetSchemaRequest,
+  GetSchemaSnapshotRequest,
   GetTableDataRequest,
   HasPasswordRequest,
   OpenDatabaseRequest,
@@ -21,6 +26,7 @@ import type {
   SaveFileDialogRequest,
   SavePasswordRequest,
   SaveQueryHistoryRequest,
+  SaveSchemaSnapshotRequest,
   SetPreferencesRequest,
   TableInfo,
   UpdateConnectionRequest,
@@ -896,6 +902,171 @@ export const mockSqlProAPI: any = {
       await delay(200);
       return {
         success: true,
+      };
+    },
+  },
+  schemaSnapshot: {
+    save: async (_request: SaveSchemaSnapshotRequest): Promise<any> => {
+      await delay(300);
+      return {
+        success: true,
+        snapshot: {
+          id: `snapshot-${Date.now()}`,
+          name: _request.name,
+          connectionId: _request.connectionId,
+          createdAt: new Date().toISOString(),
+          schema: {
+            tables: mockTables,
+          },
+        },
+      };
+    },
+    getAll: async (): Promise<any> => {
+      await delay(200);
+      return {
+        snapshots: [
+          {
+            id: 'snapshot-1',
+            name: 'Production Schema - 2024-01-15',
+            connectionId: 'conn-1',
+            createdAt: new Date(Date.now() - 86400000).toISOString(),
+            schema: { tables: mockTables },
+          },
+        ],
+      };
+    },
+    get: async (_request: GetSchemaSnapshotRequest): Promise<any> => {
+      await delay(200);
+      return {
+        snapshot: {
+          id: _request.snapshotId,
+          name: 'Production Schema - 2024-01-15',
+          connectionId: 'conn-1',
+          createdAt: new Date(Date.now() - 86400000).toISOString(),
+          schema: { tables: mockTables },
+        },
+      };
+    },
+    delete: async (_request: DeleteSchemaSnapshotRequest): Promise<any> => {
+      await delay(200);
+      return {
+        success: true,
+      };
+    },
+  },
+  schemaComparison: {
+    compareConnections: async (
+      _request: CompareConnectionsRequest
+    ): Promise<any> => {
+      await delay(500);
+      return {
+        success: true,
+        result: {
+          source: {
+            type: 'connection' as const,
+            id: _request.sourceConnectionId,
+            name: 'Source Database',
+          },
+          target: {
+            type: 'connection' as const,
+            id: _request.targetConnectionId,
+            name: 'Target Database',
+          },
+          tableDiffs: [],
+          summary: {
+            tablesAdded: 0,
+            tablesRemoved: 0,
+            tablesModified: 0,
+            columnsAdded: 0,
+            columnsRemoved: 0,
+            columnsModified: 0,
+            indexesAdded: 0,
+            indexesRemoved: 0,
+            indexesModified: 0,
+            triggersAdded: 0,
+            triggersRemoved: 0,
+            triggersModified: 0,
+            foreignKeysAdded: 0,
+            foreignKeysRemoved: 0,
+            foreignKeysModified: 0,
+          },
+        },
+      };
+    },
+    compareConnectionToSnapshot: async (
+      _request: CompareConnectionToSnapshotRequest
+    ): Promise<any> => {
+      await delay(500);
+      return {
+        success: true,
+        result: {
+          source: {
+            type: 'connection' as const,
+            id: _request.connectionId,
+            name: 'Current Database',
+          },
+          target: {
+            type: 'snapshot' as const,
+            id: _request.snapshotId,
+            name: 'Saved Snapshot',
+          },
+          tableDiffs: [],
+          summary: {
+            tablesAdded: 0,
+            tablesRemoved: 0,
+            tablesModified: 0,
+            columnsAdded: 0,
+            columnsRemoved: 0,
+            columnsModified: 0,
+            indexesAdded: 0,
+            indexesRemoved: 0,
+            indexesModified: 0,
+            triggersAdded: 0,
+            triggersRemoved: 0,
+            triggersModified: 0,
+            foreignKeysAdded: 0,
+            foreignKeysRemoved: 0,
+            foreignKeysModified: 0,
+          },
+        },
+      };
+    },
+    compareSnapshots: async (
+      _request: CompareSnapshotsRequest
+    ): Promise<any> => {
+      await delay(500);
+      return {
+        success: true,
+        result: {
+          source: {
+            type: 'snapshot' as const,
+            id: _request.sourceSnapshotId,
+            name: 'Source Snapshot',
+          },
+          target: {
+            type: 'snapshot' as const,
+            id: _request.targetSnapshotId,
+            name: 'Target Snapshot',
+          },
+          tableDiffs: [],
+          summary: {
+            tablesAdded: 0,
+            tablesRemoved: 0,
+            tablesModified: 0,
+            columnsAdded: 0,
+            columnsRemoved: 0,
+            columnsModified: 0,
+            indexesAdded: 0,
+            indexesRemoved: 0,
+            indexesModified: 0,
+            triggersAdded: 0,
+            triggersRemoved: 0,
+            triggersModified: 0,
+            foreignKeysAdded: 0,
+            foreignKeysRemoved: 0,
+            foreignKeysModified: 0,
+          },
+        },
       };
     },
   },
