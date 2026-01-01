@@ -357,6 +357,27 @@ class DatabaseService {
     }
   }
 
+  /**
+   * Get connection information by connection ID.
+   * Used for retrieving connection metadata without database operations.
+   */
+  getConnection(
+    connectionId: string
+  ): Omit<ConnectionInfo, 'db'> | null {
+    const conn = this.connections.get(connectionId);
+    if (!conn) {
+      return null;
+    }
+
+    return {
+      id: conn.id,
+      path: conn.path,
+      filename: conn.filename,
+      isEncrypted: conn.isEncrypted,
+      isReadOnly: conn.isReadOnly,
+    };
+  }
+
   getSchema(connectionId: string):
     | {
         success: true;

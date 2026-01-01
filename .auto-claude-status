@@ -1,25 +1,25 @@
 {
   "active": true,
-  "spec": "005-session-state-persistence",
+  "spec": "011-schema-comparison-tool",
   "state": "building",
   "subtasks": {
-    "completed": 7,
-    "total": 8,
+    "completed": 3,
+    "total": 24,
     "in_progress": 1,
     "failed": 0
   },
   "phase": {
-    "current": "Enhance Existing Persistence",
+    "current": "Types & Backend Infrastructure",
     "id": null,
-    "total": 8
+    "total": 4
   },
   "workers": {
     "active": 0,
     "max": 1
   },
   "session": {
-    "number": 9,
-    "started_at": "2026-01-01T00:26:52.955825"
+    "number": 6,
+    "started_at": "2026-01-01T12:57:13.430626"
   },
-  "last_update": "2026-01-01T01:22:06.401906"
+  "last_update": "2026-01-01T13:27:38.248274"
 }

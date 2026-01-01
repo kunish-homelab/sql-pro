@@ -9,13 +9,18 @@ import type {
   ApplyChangesRequest,
   ClearQueryHistoryRequest,
   CloseDatabaseRequest,
+  CompareConnectionsRequest,
+  CompareConnectionToSnapshotRequest,
+  CompareSnapshotsRequest,
   DeleteQueryHistoryRequest,
+  DeleteSchemaSnapshotRequest,
   ExecuteQueryRequest,
   ExportRequest,
   FocusWindowRequest,
   GetPasswordRequest,
   GetQueryHistoryRequest,
   GetSchemaRequest,
+  GetSchemaSnapshotRequest,
   GetTableDataRequest,
   HasPasswordRequest,
   OpenDatabaseRequest,
@@ -27,6 +32,7 @@ import type {
   SaveFileDialogRequest,
   SavePasswordRequest,
   SaveQueryHistoryRequest,
+  SaveSchemaSnapshotRequest,
   UpdateConnectionRequest,
   ValidateChangesRequest,
 } from '../../shared/types';
@@ -49,21 +55,26 @@ import {
 } from '../lib/export-generators';
 import { databaseService } from './database';
 import { passwordStorageService } from './password-storage';
+import { schemaComparisonService } from './schema-comparison';
 import { sqlLogger } from './sql-logger';
 import {
   addRecentConnection,
   clearProStatus,
   clearQueryHistory,
   deleteQueryHistoryEntry,
+  deleteSchemaSnapshot,
   getAISettings,
   getPreferences,
   getProStatus,
   getQueryHistory,
   getRecentConnections,
+  getSchemaSnapshot,
+  getSchemaSnapshots,
   removeRecentConnection,
   saveAISettings,
   saveProStatus,
   saveQueryHistoryEntry,
+  saveSchemaSnapshot,
   setPreferences,
   updateRecentConnection,
 } from './store';
@@ -1361,6 +1372,306 @@ export function setupIpcHandlers(): void {
           success: false,
           error:
             error instanceof Error ? error.message : 'Failed to clear SQL logs',
+        };
+      }
+    }
+  );
+
+  // Schema Snapshots: Save
+  ipcMain.handle(
+    IPC_CHANNELS.SCHEMA_SNAPSHOT_SAVE,
+    async (_event, request: SaveSchemaSnapshotRequest) => {
+      try {
+        const schemaResult = databaseService.getSchema(request.connectionId);
+        if (!schemaResult.success) {
+          return {
+            success: false,
+            error: schemaResult.error,
+          };
+        }
+        if (!schemaResult.schemas) {
+          return {
+            success: false,
+            error: 'Failed to get schema',
+          };
+        }
+
+        const connection = databaseService.getConnection(request.connectionId);
+        if (!connection) {
+          return {
+            success: false,
+            error: 'Connection not found',
+          };
+        }
+
+        const snapshot = {
+          id: `snapshot-${Date.now()}-${Math.random().toString(36).slice(2, 9)}`,
+          name: request.name,
+          dbPath: connection.path,
+          filename: connection.filename,
+          createdAt: new Date().toISOString(),
+          schemas: schemaResult.schemas,
+          tableCount: schemaResult.schemas.reduce(
+            (acc, s) => acc + s.tables.length,
+            0
+          ),
+          viewCount: schemaResult.schemas.reduce(
+            (acc, s) => acc + s.views.length,
+            0
+          ),
+        };
+
+        saveSchemaSnapshot(snapshot);
+        return { success: true, snapshot };
+      } catch (error) {
+        return {
+          success: false,
+          error:
+            error instanceof Error
+              ? error.message
+              : 'Failed to save schema snapshot',
+        };
+      }
+    }
+  );
+
+  // Schema Snapshots: Get All
+  ipcMain.handle(IPC_CHANNELS.SCHEMA_SNAPSHOT_GET_ALL, async () => {
+    try {
+      const snapshots = getSchemaSnapshots();
+      return { success: true, snapshots };
+    } catch (error) {
+      return {
+        success: false,
+        error:
+          error instanceof Error
+            ? error.message
+            : 'Failed to get schema snapshots',
+      };
+    }
+  });
+
+  // Schema Snapshots: Get
+  ipcMain.handle(
+    IPC_CHANNELS.SCHEMA_SNAPSHOT_GET,
+    async (_event, request: GetSchemaSnapshotRequest) => {
+      try {
+        const snapshot = getSchemaSnapshot(request.snapshotId);
+        if (!snapshot) {
+          return {
+            success: false,
+            error: 'Schema snapshot not found',
+          };
+        }
+        return { success: true, snapshot };
+      } catch (error) {
+        return {
+          success: false,
+          error:
+            error instanceof Error
+              ? error.message
+              : 'Failed to get schema snapshot',
+        };
+      }
+    }
+  );
+
+  // Schema Snapshots: Delete
+  ipcMain.handle(
+    IPC_CHANNELS.SCHEMA_SNAPSHOT_DELETE,
+    async (_event, request: DeleteSchemaSnapshotRequest) => {
+      try {
+        const result = deleteSchemaSnapshot(request.snapshotId);
+        return result;
+      } catch (error) {
+        return {
+          success: false,
+          error:
+            error instanceof Error
+              ? error.message
+              : 'Failed to delete schema snapshot',
+        };
+      }
+    }
+  );
+
+  // Schema Comparison: Compare Connections
+  ipcMain.handle(
+    IPC_CHANNELS.SCHEMA_COMPARISON_COMPARE_CONNECTIONS,
+    async (_event, request: CompareConnectionsRequest) => {
+      try {
+        const sourceSchemaResult = databaseService.getSchema(
+          request.sourceConnectionId
+        );
+        const targetSchemaResult = databaseService.getSchema(
+          request.targetConnectionId
+        );
+
+        if (!sourceSchemaResult.success) {
+          return {
+            success: false,
+            error: sourceSchemaResult.error,
+          };
+        }
+
+        if (!targetSchemaResult.success) {
+          return {
+            success: false,
+            error: targetSchemaResult.error,
+          };
+        }
+
+        const sourceConnection = databaseService.getConnection(
+          request.sourceConnectionId
+        );
+        const targetConnection = databaseService.getConnection(
+          request.targetConnectionId
+        );
+
+        if (!sourceConnection || !targetConnection) {
+          return {
+            success: false,
+            error: 'One or both connections not found',
+          };
+        }
+
+        const result = schemaComparisonService.compareSchemas(
+          sourceSchemaResult.schemas,
+          targetSchemaResult.schemas,
+          request.sourceConnectionId,
+          sourceConnection.filename,
+          'connection',
+          request.targetConnectionId,
+          targetConnection.filename,
+          'connection'
+        );
+
+        return { success: true, result };
+      } catch (error) {
+        return {
+          success: false,
+          error:
+            error instanceof Error
+              ? error.message
+              : 'Failed to compare connections',
+        };
+      }
+    }
+  );
+
+  // Schema Comparison: Compare Connection to Snapshot
+  ipcMain.handle(
+    IPC_CHANNELS.SCHEMA_COMPARISON_COMPARE_CONNECTION_TO_SNAPSHOT,
+    async (_event, request: CompareConnectionToSnapshotRequest) => {
+      try {
+        const connectionSchemaResult = databaseService.getSchema(
+          request.connectionId
+        );
+
+        if (!connectionSchemaResult.success) {
+          return {
+            success: false,
+            error: connectionSchemaResult.error,
+          };
+        }
+
+        const snapshot = getSchemaSnapshot(request.snapshotId);
+        if (!snapshot) {
+          return {
+            success: false,
+            error: 'Schema snapshot not found',
+          };
+        }
+
+        const connection = databaseService.getConnection(request.connectionId);
+        if (!connection) {
+          return {
+            success: false,
+            error: 'Connection not found',
+          };
+        }
+
+        let result;
+        if (request.reverseComparison) {
+          // Snapshot is source, connection is target
+          result = schemaComparisonService.compareSchemas(
+            snapshot.schemas,
+            connectionSchemaResult.schemas,
+            request.snapshotId,
+            snapshot.name,
+            'snapshot',
+            request.connectionId,
+            connection.filename,
+            'connection'
+          );
+        } else {
+          // Connection is source, snapshot is target
+          result = schemaComparisonService.compareSchemas(
+            connectionSchemaResult.schemas,
+            snapshot.schemas,
+            request.connectionId,
+            connection.filename,
+            'connection',
+            request.snapshotId,
+            snapshot.name,
+            'snapshot'
+          );
+        }
+
+        return { success: true, result };
+      } catch (error) {
+        return {
+          success: false,
+          error:
+            error instanceof Error
+              ? error.message
+              : 'Failed to compare connection to snapshot',
+        };
+      }
+    }
+  );
+
+  // Schema Comparison: Compare Snapshots
+  ipcMain.handle(
+    IPC_CHANNELS.SCHEMA_COMPARISON_COMPARE_SNAPSHOTS,
+    async (_event, request: CompareSnapshotsRequest) => {
+      try {
+        const sourceSnapshot = getSchemaSnapshot(request.sourceSnapshotId);
+        const targetSnapshot = getSchemaSnapshot(request.targetSnapshotId);
+
+        if (!sourceSnapshot) {
+          return {
+            success: false,
+            error: 'Source schema snapshot not found',
+          };
+        }
+
+        if (!targetSnapshot) {
+          return {
+            success: false,
+            error: 'Target schema snapshot not found',
+          };
+        }
+
+        const result = schemaComparisonService.compareSchemas(
+          sourceSnapshot.schemas,
+          targetSnapshot.schemas,
+          request.sourceSnapshotId,
+          sourceSnapshot.name,
+          'snapshot',
+          request.targetSnapshotId,
+          targetSnapshot.name,
+          'snapshot'
+        );
+
+        return { success: true, result };
+      } catch (error) {
+        return {
+          success: false,
+          error:
+            error instanceof Error
+              ? error.message
+              : 'Failed to compare snapshots',
         };
       }
     }
