@@ -25,6 +25,12 @@ export {
   useQueryTemplatesStore,
 } from './query-templates-store';
 export type { QueryTemplate, TemplateCategory } from './query-templates-store';
+export { useSchemaComparisonStore } from './schema-comparison-store';
+export type {
+  ComparisonSource,
+  DiffFilters,
+  ExpandedSections,
+} from './schema-comparison-store';
 export {
   MONOSPACE_FONTS,
   PAGE_SIZE_OPTIONS,

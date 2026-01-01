@@ -21,6 +21,12 @@ import type {
   CloseDatabaseResponse,
   CloseWindowRequest,
   CloseWindowResponse,
+  CompareConnectionsRequest,
+  CompareConnectionsResponse,
+  CompareConnectionToSnapshotRequest,
+  CompareConnectionToSnapshotResponse,
+  CompareSnapshotsRequest,
+  CompareSnapshotsResponse,
   CreateFolderRequest,
   CreateFolderResponse,
   CreateWindowResponse,
@@ -30,14 +36,20 @@ import type {
   DeleteProfileResponse,
   DeleteQueryHistoryRequest,
   DeleteQueryHistoryResponse,
+  DeleteSchemaSnapshotRequest,
+  DeleteSchemaSnapshotResponse,
   ExecuteQueryRequest,
   ExecuteQueryResponse,
+  ExportComparisonReportRequest,
+  ExportComparisonReportResponse,
   ExportProfilesRequest,
   ExportProfilesResponse,
   ExportRequest,
   ExportResponse,
   FocusWindowRequest,
   FocusWindowResponse,
+  GenerateMigrationSQLRequest,
+  GenerateMigrationSQLResponse,
   GetAISettingsResponse,
   GetAllWindowsResponse,
   GetClaudeCodePathsResponse,
@@ -54,6 +66,9 @@ import type {
   GetRecentConnectionsResponse,
   GetSchemaRequest,
   GetSchemaResponse,
+  GetSchemaSnapshotRequest,
+  GetSchemaSnapshotResponse,
+  GetSchemaSnapshotsResponse,
   GetSqlLogsRequest,
   GetSqlLogsResponse,
   GetTableDataRequest,
@@ -86,6 +101,8 @@ import type {
   SaveProfileResponse,
   SaveQueryHistoryRequest,
   SaveQueryHistoryResponse,
+  SaveSchemaSnapshotRequest,
+  SaveSchemaSnapshotResponse,
   SetPreferencesRequest,
   SetPreferencesResponse,
   SqlLogEntry,
@@ -440,6 +457,60 @@ const sqlProAPI = {
       ipcRenderer.on(IPC_CHANNELS.PLUGIN_EVENT, handler);
       return () => ipcRenderer.off(IPC_CHANNELS.PLUGIN_EVENT, handler);
     },
+  },
+
+  // Schema snapshot operations
+  schemaSnapshot: {
+    save: (
+      request: SaveSchemaSnapshotRequest
+    ): Promise<SaveSchemaSnapshotResponse> =>
+      ipcRenderer.invoke(IPC_CHANNELS.SCHEMA_SNAPSHOT_SAVE, request),
+    getAll: (): Promise<GetSchemaSnapshotsResponse> =>
+      ipcRenderer.invoke(IPC_CHANNELS.SCHEMA_SNAPSHOT_GET_ALL),
+    get: (
+      request: GetSchemaSnapshotRequest
+    ): Promise<GetSchemaSnapshotResponse> =>
+      ipcRenderer.invoke(IPC_CHANNELS.SCHEMA_SNAPSHOT_GET, request),
+    delete: (
+      request: DeleteSchemaSnapshotRequest
+    ): Promise<DeleteSchemaSnapshotResponse> =>
+      ipcRenderer.invoke(IPC_CHANNELS.SCHEMA_SNAPSHOT_DELETE, request),
+  },
+
+  // Schema comparison operations
+  schemaComparison: {
+    compareConnections: (
+      request: CompareConnectionsRequest
+    ): Promise<CompareConnectionsResponse> =>
+      ipcRenderer.invoke(
+        IPC_CHANNELS.SCHEMA_COMPARISON_COMPARE_CONNECTIONS,
+        request
+      ),
+    compareConnectionToSnapshot: (
+      request: CompareConnectionToSnapshotRequest
+    ): Promise<CompareConnectionToSnapshotResponse> =>
+      ipcRenderer.invoke(
+        IPC_CHANNELS.SCHEMA_COMPARISON_COMPARE_CONNECTION_TO_SNAPSHOT,
+        request
+      ),
+    compareSnapshots: (
+      request: CompareSnapshotsRequest
+    ): Promise<CompareSnapshotsResponse> =>
+      ipcRenderer.invoke(
+        IPC_CHANNELS.SCHEMA_COMPARISON_COMPARE_SNAPSHOTS,
+        request
+      ),
+    generateMigrationSQL: (
+      request: GenerateMigrationSQLRequest
+    ): Promise<GenerateMigrationSQLResponse> =>
+      ipcRenderer.invoke(
+        IPC_CHANNELS.SCHEMA_COMPARISON_GENERATE_MIGRATION_SQL,
+        request
+      ),
+    exportReport: (
+      request: ExportComparisonReportRequest
+    ): Promise<ExportComparisonReportResponse> =>
+      ipcRenderer.invoke(IPC_CHANNELS.SCHEMA_COMPARISON_EXPORT_REPORT, request),
   },
 };
 

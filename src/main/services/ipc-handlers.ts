@@ -9,13 +9,20 @@ import type {
   ApplyChangesRequest,
   ClearQueryHistoryRequest,
   CloseDatabaseRequest,
+  CompareConnectionsRequest,
+  CompareConnectionToSnapshotRequest,
+  CompareSnapshotsRequest,
   DeleteQueryHistoryRequest,
+  DeleteSchemaSnapshotRequest,
   ExecuteQueryRequest,
+  ExportComparisonReportRequest,
   ExportRequest,
   FocusWindowRequest,
+  GenerateMigrationSQLRequest,
   GetPasswordRequest,
   GetQueryHistoryRequest,
   GetSchemaRequest,
+  GetSchemaSnapshotRequest,
   GetTableDataRequest,
   HasPasswordRequest,
   OpenDatabaseRequest,
@@ -27,9 +34,11 @@ import type {
   SaveFileDialogRequest,
   SavePasswordRequest,
   SaveQueryHistoryRequest,
+  SaveSchemaSnapshotRequest,
   UpdateConnectionRequest,
   ValidateChangesRequest,
 } from '@shared/types';
+import type { Buffer } from 'node:buffer';
 import type { StoredPreferences } from './store';
 import type { SystemFont } from '@/lib/font-constants';
 import { exec } from 'node:child_process';
@@ -43,6 +52,11 @@ import { IPC_CHANNELS } from '@shared/types';
 import { BrowserWindow, dialog, ipcMain } from 'electron';
 import OpenAI from 'openai';
 import {
+  generateHTMLReport,
+  generateJSONReport,
+  generateMarkdownReport,
+} from '@/lib/comparison-report-generators';
+import {
   generateCSV,
   generateExcel,
   generateJSON,
@@ -50,7 +64,9 @@ import {
 } from '@/lib/export-generators';
 import { CATEGORY_ORDER, classifyFont } from '@/lib/font-constants';
 import { databaseService } from './database';
+import { migrationGeneratorService } from './migration-generator';
 import { passwordStorageService } from './password-storage';
+import { schemaComparisonService } from './schema-comparison';
 import { sqlLogger } from './sql-logger';
 import {
   addRecentConnection,
@@ -59,6 +75,7 @@ import {
   deleteFolder,
   deleteProfile,
   deleteQueryHistoryEntry,
+  deleteSchemaSnapshot,
   getAISettings,
   getFolders,
   getPreferences,
@@ -66,12 +83,15 @@ import {
   getProStatus,
   getQueryHistory,
   getRecentConnections,
+  getSchemaSnapshot,
+  getSchemaSnapshots,
   removeRecentConnection,
   saveAISettings,
   saveFolder,
   saveProfile,
   saveProStatus,
   saveQueryHistoryEntry,
+  saveSchemaSnapshot,
   setPreferences,
   updateFolder,
   updateProfile,
@@ -1309,4 +1329,474 @@ export function setupIpcHandlers(): void {
       result: deleteFolder(request.id),
     }))
   );
+
+  // ============ Schema Snapshot Handlers ============
+
+  // Schema Snapshots: Save
+  ipcMain.handle(
+    IPC_CHANNELS.SCHEMA_SNAPSHOT_SAVE,
+    async (_event, request: SaveSchemaSnapshotRequest) => {
+      try {
+        const schemaResult = databaseService.getSchema(request.connectionId);
+        if (!schemaResult.success) {
+          return {
+            success: false,
+            error: schemaResult.error,
+          };
+        }
+        if (!schemaResult.schemas) {
+          return {
+            success: false,
+            error: 'Failed to get schema',
+          };
+        }
+
+        const connection = databaseService.getConnection(request.connectionId);
+        if (!connection) {
+          return {
+            success: false,
+            error: 'Connection not found',
+          };
+        }
+
+        const snapshot = {
+          id: `snapshot-${Date.now()}-${Math.random().toString(36).slice(2, 9)}`,
+          name: request.name,
+          dbPath: connection.path,
+          filename: connection.filename,
+          createdAt: new Date().toISOString(),
+          schemas: schemaResult.schemas,
+          tableCount: schemaResult.schemas.reduce(
+            (acc, s) => acc + s.tables.length,
+            0
+          ),
+          viewCount: schemaResult.schemas.reduce(
+            (acc, s) => acc + s.views.length,
+            0
+          ),
+        };
+
+        saveSchemaSnapshot(snapshot);
+        return { success: true, snapshot };
+      } catch (error) {
+        return {
+          success: false,
+          error:
+            error instanceof Error
+              ? error.message
+              : 'Failed to save schema snapshot',
+        };
+      }
+    }
+  );
+
+  // Schema Snapshots: Get All
+  ipcMain.handle(IPC_CHANNELS.SCHEMA_SNAPSHOT_GET_ALL, async () => {
+    try {
+      const snapshots = getSchemaSnapshots();
+      return { success: true, snapshots };
+    } catch (error) {
+      return {
+        success: false,
+        error:
+          error instanceof Error
+            ? error.message
+            : 'Failed to get schema snapshots',
+      };
+    }
+  });
+
+  // Schema Snapshots: Get
+  ipcMain.handle(
+    IPC_CHANNELS.SCHEMA_SNAPSHOT_GET,
+    async (_event, request: GetSchemaSnapshotRequest) => {
+      try {
+        const snapshot = getSchemaSnapshot(request.snapshotId);
+        if (!snapshot) {
+          return {
+            success: false,
+            error: 'Schema snapshot not found',
+          };
+        }
+        return { success: true, snapshot };
+      } catch (error) {
+        return {
+          success: false,
+          error:
+            error instanceof Error
+              ? error.message
+              : 'Failed to get schema snapshot',
+        };
+      }
+    }
+  );
+
+  // Schema Snapshots: Delete
+  ipcMain.handle(
+    IPC_CHANNELS.SCHEMA_SNAPSHOT_DELETE,
+    async (_event, request: DeleteSchemaSnapshotRequest) => {
+      try {
+        const result = deleteSchemaSnapshot(request.snapshotId);
+        return result;
+      } catch (error) {
+        return {
+          success: false,
+          error:
+            error instanceof Error
+              ? error.message
+              : 'Failed to delete schema snapshot',
+        };
+      }
+    }
+  );
+
+  // ============ Schema Comparison Handlers ============
+
+  // Schema Comparison: Compare Connections
+  ipcMain.handle(
+    IPC_CHANNELS.SCHEMA_COMPARISON_COMPARE_CONNECTIONS,
+    async (_event, request: CompareConnectionsRequest) => {
+      try {
+        const sourceSchemaResult = databaseService.getSchema(
+          request.sourceConnectionId
+        );
+        const targetSchemaResult = databaseService.getSchema(
+          request.targetConnectionId
+        );
+
+        if (!sourceSchemaResult.success) {
+          return {
+            success: false,
+            error: sourceSchemaResult.error,
+          };
+        }
+
+        if (!targetSchemaResult.success) {
+          return {
+            success: false,
+            error: targetSchemaResult.error,
+          };
+        }
+
+        const sourceConnection = databaseService.getConnection(
+          request.sourceConnectionId
+        );
+        const targetConnection = databaseService.getConnection(
+          request.targetConnectionId
+        );
+
+        if (!sourceConnection || !targetConnection) {
+          return {
+            success: false,
+            error: 'One or both connections not found',
+          };
+        }
+
+        const result = schemaComparisonService.compareSchemas(
+          sourceSchemaResult.schemas,
+          targetSchemaResult.schemas,
+          request.sourceConnectionId,
+          sourceConnection.filename,
+          'connection',
+          request.targetConnectionId,
+          targetConnection.filename,
+          'connection'
+        );
+
+        return { success: true, result };
+      } catch (error) {
+        return {
+          success: false,
+          error:
+            error instanceof Error
+              ? error.message
+              : 'Failed to compare connections',
+        };
+      }
+    }
+  );
+
+  // Schema Comparison: Compare Connection to Snapshot
+  ipcMain.handle(
+    IPC_CHANNELS.SCHEMA_COMPARISON_COMPARE_CONNECTION_TO_SNAPSHOT,
+    async (_event, request: CompareConnectionToSnapshotRequest) => {
+      try {
+        const connectionSchemaResult = databaseService.getSchema(
+          request.connectionId
+        );
+
+        if (!connectionSchemaResult.success) {
+          return {
+            success: false,
+            error: connectionSchemaResult.error,
+          };
+        }
+
+        const snapshot = getSchemaSnapshot(request.snapshotId);
+        if (!snapshot) {
+          return {
+            success: false,
+            error: 'Schema snapshot not found',
+          };
+        }
+
+        const connection = databaseService.getConnection(request.connectionId);
+        if (!connection) {
+          return {
+            success: false,
+            error: 'Connection not found',
+          };
+        }
+
+        let result;
+        if (request.reverseComparison) {
+          // Snapshot is source, connection is target
+          result = schemaComparisonService.compareSchemas(
+            snapshot.schemas,
+            connectionSchemaResult.schemas,
+            request.snapshotId,
+            snapshot.name,
+            'snapshot',
+            request.connectionId,
+            connection.filename,
+            'connection'
+          );
+        } else {
+          // Connection is source, snapshot is target
+          result = schemaComparisonService.compareSchemas(
+            connectionSchemaResult.schemas,
+            snapshot.schemas,
+            request.connectionId,
+            connection.filename,
+            'connection',
+            request.snapshotId,
+            snapshot.name,
+            'snapshot'
+          );
+        }
+
+        return { success: true, result };
+      } catch (error) {
+        return {
+          success: false,
+          error:
+            error instanceof Error
+              ? error.message
+              : 'Failed to compare connection to snapshot',
+        };
+      }
+    }
+  );
+
+  // Schema Comparison: Compare Snapshots
+  ipcMain.handle(
+    IPC_CHANNELS.SCHEMA_COMPARISON_COMPARE_SNAPSHOTS,
+    async (_event, request: CompareSnapshotsRequest) => {
+      try {
+        const sourceSnapshot = getSchemaSnapshot(request.sourceSnapshotId);
+        const targetSnapshot = getSchemaSnapshot(request.targetSnapshotId);
+
+        if (!sourceSnapshot) {
+          return {
+            success: false,
+            error: 'Source schema snapshot not found',
+          };
+        }
+
+        if (!targetSnapshot) {
+          return {
+            success: false,
+            error: 'Target schema snapshot not found',
+          };
+        }
+
+        const result = schemaComparisonService.compareSchemas(
+          sourceSnapshot.schemas,
+          targetSnapshot.schemas,
+          request.sourceSnapshotId,
+          sourceSnapshot.name,
+          'snapshot',
+          request.targetSnapshotId,
+          targetSnapshot.name,
+          'snapshot'
+        );
+
+        return { success: true, result };
+      } catch (error) {
+        return {
+          success: false,
+          error:
+            error instanceof Error
+              ? error.message
+              : 'Failed to compare snapshots',
+        };
+      }
+    }
+  );
+
+  // Schema Comparison: Generate Migration SQL
+  ipcMain.handle(
+    IPC_CHANNELS.SCHEMA_COMPARISON_GENERATE_MIGRATION_SQL,
+    async (_event, request: GenerateMigrationSQLRequest) => {
+      try {
+        const result = migrationGeneratorService.generateMigrationSQL(request);
+        return result;
+      } catch (error) {
+        return {
+          success: false,
+          error:
+            error instanceof Error
+              ? error.message
+              : 'Failed to generate migration SQL',
+        };
+      }
+    }
+  );
+
+  // Schema Comparison: Export Report
+  ipcMain.handle(
+    IPC_CHANNELS.SCHEMA_COMPARISON_EXPORT_REPORT,
+    async (_event, request: ExportComparisonReportRequest) => {
+      try {
+        const { comparisonResult, format, filePath, includeMigrationSQL } =
+          request;
+
+        let reportContent: string | Buffer;
+
+        // Generate report based on format
+        switch (format) {
+          case 'html': {
+            let htmlContent = generateHTMLReport(comparisonResult);
+
+            // Optionally append migration SQL
+            if (includeMigrationSQL) {
+              const migrationResult =
+                migrationGeneratorService.generateMigrationSQL({
+                  comparisonResult,
+                  includeDropStatements: true,
+                });
+
+              if (migrationResult.success && migrationResult.sql) {
+                // Append migration SQL section to HTML
+                htmlContent = htmlContent.replace(
+                  '</body>',
+                  `
+  <section class="migration-sql">
+    <h2>Migration SQL</h2>
+    <pre><code>${escapeHtml(migrationResult.sql)}</code></pre>
+    ${
+      migrationResult.warnings && migrationResult.warnings.length > 0
+        ? `
+    <div class="warnings">
+      <h3>Warnings</h3>
+      <ul>
+        ${migrationResult.warnings.map((w) => `<li>${escapeHtml(w)}</li>`).join('\n        ')}
+      </ul>
+    </div>
+    `
+        : ''
+    }
+  </section>
+</body>`
+                );
+              }
+            }
+
+            reportContent = htmlContent;
+            break;
+          }
+          case 'json': {
+            const jsonReport = JSON.parse(generateJSONReport(comparisonResult));
+
+            // Optionally include migration SQL
+            if (includeMigrationSQL) {
+              const migrationResult =
+                migrationGeneratorService.generateMigrationSQL({
+                  comparisonResult,
+                  includeDropStatements: true,
+                });
+
+              if (migrationResult.success) {
+                jsonReport.migrationSQL = {
+                  sql: migrationResult.sql,
+                  statements: migrationResult.statements,
+                  warnings: migrationResult.warnings,
+                };
+              }
+            }
+
+            reportContent = JSON.stringify(jsonReport, null, 2);
+            break;
+          }
+          case 'markdown': {
+            let markdownContent = generateMarkdownReport(comparisonResult);
+
+            // Optionally append migration SQL
+            if (includeMigrationSQL) {
+              const migrationResult =
+                migrationGeneratorService.generateMigrationSQL({
+                  comparisonResult,
+                  includeDropStatements: true,
+                });
+
+              if (migrationResult.success && migrationResult.sql) {
+                markdownContent += '\n\n## Migration SQL\n\n';
+                markdownContent += '```sql\n';
+                markdownContent += migrationResult.sql;
+                markdownContent += '\n```\n';
+
+                if (
+                  migrationResult.warnings &&
+                  migrationResult.warnings.length > 0
+                ) {
+                  markdownContent += '\n### Warnings\n\n';
+                  migrationResult.warnings.forEach((w) => {
+                    markdownContent += `- ${w}\n`;
+                  });
+                }
+              }
+            }
+
+            reportContent = markdownContent;
+            break;
+          }
+          default:
+            return {
+              success: false,
+              error: 'Unsupported report format',
+            };
+        }
+
+        // Write report to file
+        fs.writeFileSync(filePath, reportContent, 'utf-8');
+
+        return {
+          success: true,
+          filePath,
+        };
+      } catch (error) {
+        return {
+          success: false,
+          error:
+            error instanceof Error
+              ? error.message
+              : 'Failed to export comparison report',
+        };
+      }
+    }
+  );
+}
+
+/**
+ * Helper function to escape HTML special characters
+ */
+function escapeHtml(text: string): string {
+  const map: Record<string, string> = {
+    '&': '&amp;',
+    '<': '&lt;',
+    '>': '&gt;',
+    '"': '&quot;',
+    "'": '&#039;',
+  };
+  return text.replace(/[&<>"']/g, (char) => map[char] || char);
 }

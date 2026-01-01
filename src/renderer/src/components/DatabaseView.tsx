@@ -1,4 +1,4 @@
-import { Code, GitFork, Table } from 'lucide-react';
+import { Code, GitCompare, GitFork, Table } from 'lucide-react';
 import { useCallback, useEffect, useRef, useState } from 'react';
 import { Tabs, TabsContent, TabsList, TabsTrigger } from '@/components/ui/tabs';
 import { cn } from '@/lib/utils';
@@ -13,12 +13,13 @@ import { DiffPreview } from './DiffPreview';
 import { ERDiagram } from './er-diagram';
 import { QueryEditor } from './QueryEditor';
 import { ResizablePanel } from './ResizablePanel';
+import { SchemaComparisonPanel } from './schema-comparison';
 import { SchemaDetailsPanel } from './SchemaDetailsPanel';
 import { Sidebar } from './Sidebar';
 import { TableView } from './TableView';
 import { Toolbar } from './Toolbar';
 
-type TabValue = 'data' | 'query' | 'diagram';
+type TabValue = 'data' | 'query' | 'diagram' | 'compare';
 
 interface DatabaseViewProps {
   onOpenDatabase?: () => void;
@@ -111,6 +112,10 @@ export function DatabaseView({
           case '4':
             e.preventDefault();
             setShowDetailsPanel((prev) => !prev);
+            break;
+          case '5':
+            e.preventDefault();
+            setActiveTab('compare');
             break;
         }
       }
@@ -212,6 +217,22 @@ export function DatabaseView({
                 ⌘3
               </kbd>
             </TabsTrigger>
+            <TabsTrigger
+              value="compare"
+              data-tab="compare"
+              className={cn(
+                'flex items-center gap-2 border-b-2 px-4 py-2 text-sm font-medium transition-colors',
+                activeTab === 'compare'
+                  ? 'border-primary text-foreground'
+                  : 'text-muted-foreground hover:text-foreground border-transparent'
+              )}
+            >
+              <GitCompare className="h-4 w-4" />
+              Schema Compare
+              <kbd className="bg-muted text-muted-foreground ml-1 hidden rounded px-1 py-0.5 font-mono text-[10px] sm:inline-block">
+                ⌘5
+              </kbd>
+            </TabsTrigger>
           </TabsList>
 
           {/* Tab Content */}
@@ -256,6 +277,13 @@ export function DatabaseView({
             className="h-full min-h-0 flex-1 data-[state=inactive]:hidden"
           >
             <ERDiagram />
+          </TabsContent>
+
+          <TabsContent
+            value="compare"
+            className="h-full min-h-0 flex-1 data-[state=inactive]:hidden"
+          >
+            <SchemaComparisonPanel />
           </TabsContent>
         </Tabs>
 
