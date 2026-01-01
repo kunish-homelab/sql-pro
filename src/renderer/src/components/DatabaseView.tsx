@@ -7,6 +7,7 @@ import {
   useConnectionStore,
   useDataTabsStore,
 } from '@/stores';
+import { ConnectionTabBar } from './ConnectionTabBar';
 import { DataTabBar } from './data-table';
 import { DiffPreview } from './DiffPreview';
 import { ERDiagram } from './er-diagram';
@@ -127,6 +128,9 @@ export function DatabaseView({
 
   return (
     <div className="flex h-full flex-col">
+      {/* Connection Tab Bar */}
+      <ConnectionTabBar />
+
       {/* Toolbar */}
       <Toolbar onOpenChanges={() => setShowChangesPanel(true)} />
 

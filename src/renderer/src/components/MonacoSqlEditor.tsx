@@ -62,10 +62,7 @@ interface MonacoSqlEditorProps {
   /** Initial scroll position to restore on mount */
   initialScrollPosition?: number;
   /** Callback when cursor position changes */
-  onCursorPositionChange?: (position: {
-    line: number;
-    column: number;
-  }) => void;
+  onCursorPositionChange?: (position: { line: number; column: number }) => void;
   /** Callback when scroll position changes */
   onScrollPositionChange?: (scrollTop: number) => void;
 }

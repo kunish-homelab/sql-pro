@@ -3,4 +3,4 @@
 
 // Import jest-dom matchers for Vitest
 // This adds custom matchers like .toBeInTheDocument(), .toHaveClass(), etc.
-import '@testing-library/jest-dom/vitest'
+import '@testing-library/jest-dom/vitest';

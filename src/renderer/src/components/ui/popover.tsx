@@ -10,19 +10,21 @@ function Popover({ ...props }: PopoverPrimitive.Root.Props) {
 function PopoverTrigger({
   render,
   children,
-  nativeButton = true,
   ...props
 }: PopoverPrimitive.Trigger.Props) {
   // If render is provided, use it; otherwise use children as render
   // This allows: <PopoverTrigger><Button>...</Button></PopoverTrigger>
   // to work without nesting buttons
   const renderElement = render ?? (children as React.ReactElement);
+  // Check if renderElement is a native button
+  const isNativeButton =
+    React.isValidElement(renderElement) && renderElement.type === 'button';
 
   return (
     <PopoverPrimitive.Trigger
       data-slot="popover-trigger"
       render={renderElement}
-      nativeButton={nativeButton}
+      nativeButton={isNativeButton}
       {...props}
     />
   );

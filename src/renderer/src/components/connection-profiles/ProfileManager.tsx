@@ -62,7 +62,9 @@ export function ProfileManager({
   const [searchQuery, setSearchQuery] = useState('');
   const [isLoading, setIsLoading] = useState(true);
   const [error, setError] = useState<string | null>(null);
-  const [missingDbPaths, setMissingDbPaths] = useState<Set<string>>(new Set());
+  const [missingDbPaths, setMissingDbPaths] = useState<Set<string>>(
+    () => new Set()
+  );
   const [keychainAvailable, setKeychainAvailable] = useState<boolean>(true);
 
   // Dialog states
@@ -200,7 +202,7 @@ export function ProfileManager({
         displayName: `${profile.displayName || profile.filename} (Copy)`,
         isSaved: true,
         createdAt: new Date().toISOString(),
-        lastOpened: undefined,
+        lastOpened: '',
       };
 
       try {
