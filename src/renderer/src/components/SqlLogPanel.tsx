@@ -187,7 +187,7 @@ export function SqlLogPanel() {
     <Sheet open={isVisible} onOpenChange={setVisible}>
       <SheetContent
         side="bottom"
-        className="!h-[400px] p-0"
+        className="h-100! p-0"
         showCloseButton={false}
       >
         <div className="flex h-full flex-col overflow-hidden">

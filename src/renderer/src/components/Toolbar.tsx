@@ -108,11 +108,13 @@ export function Toolbar({ onOpenChanges }: ToolbarProps) {
   if (!connection) return null;
 
   return (
-    <div className="flex h-12 items-center gap-2 border-b px-3">
+    <div className="flex h-12 min-w-0 items-center gap-2 overflow-hidden border-b px-3">
       {/* Database Info */}
-      <div className="flex items-center gap-2">
-        <Database className="text-muted-foreground h-4 w-4" />
-        <span className="font-medium">{connection.filename}</span>
+      <div className="flex min-w-0 items-center gap-2">
+        <Database className="text-muted-foreground h-4 w-4 shrink-0" />
+        <span className="min-w-0 truncate font-medium">
+          {connection.filename}
+        </span>
         {connection.isEncrypted && (
           <Lock className="text-muted-foreground h-3 w-3" />
         )}
@@ -123,7 +125,7 @@ export function Toolbar({ onOpenChanges }: ToolbarProps) {
         )}
       </div>
 
-      <Separator orientation="vertical" className="h-6" />
+      <Separator orientation="vertical" className="h-auto! self-stretch" />
 
       {/* Actions */}
       <Tooltip>
@@ -147,77 +149,80 @@ export function Toolbar({ onOpenChanges }: ToolbarProps) {
         </TooltipContent>
       </Tooltip>
 
-      <div className="flex-1" />
+      <div className="min-w-0 flex-1" />
 
-      {/* Pending Changes Indicator - Clickable */}
-      {hasChanges() && (
-        <button
-          onClick={onOpenChanges}
-          className="flex items-center gap-2 rounded-md bg-amber-500/10 px-3 py-1 text-sm text-amber-600 transition-colors hover:bg-amber-500/20 dark:text-amber-400"
-        >
-          <FileText className="h-4 w-4" />
-          <span>
-            {changes.length} unsaved change{changes.length !== 1 ? 's' : ''}
-          </span>
-        </button>
-      )}
-
-      {/* Theme Toggle */}
-      <Tooltip>
-        <TooltipTrigger>
-          <Button variant="ghost" size="icon" onClick={cycleTheme}>
-            {getThemeIcon()}
-          </Button>
-        </TooltipTrigger>
-        <TooltipContent>{getThemeLabel()}</TooltipContent>
-      </Tooltip>
-
-      {/* SQL Log Toggle */}
-      <Tooltip>
-        <TooltipTrigger>
-          <Button variant="ghost" size="icon" onClick={toggleSqlLog}>
-            <ScrollText className="h-4 w-4" />
-          </Button>
-        </TooltipTrigger>
-        <TooltipContent>SQL Log</TooltipContent>
-      </Tooltip>
-
-      {/* Command Palette Hint */}
-      <Tooltip>
-        <TooltipTrigger>
-          <Button
-            variant="ghost"
-            size="sm"
-            onClick={() => {
-              // Trigger command palette via keyboard event
-              window.dispatchEvent(
-                new KeyboardEvent('keydown', {
-                  key: 'k',
-                  metaKey: true,
-                  bubbles: true,
-                })
-              );
-            }}
-            className="text-muted-foreground gap-1.5 text-xs"
+      {/* Right side actions - won't shrink */}
+      <div className="flex shrink-0 items-center gap-2">
+        {/* Pending Changes Indicator - Clickable */}
+        {hasChanges() && (
+          <button
+            onClick={onOpenChanges}
+            className="flex shrink-0 items-center gap-2 rounded-md bg-amber-500/10 px-3 py-1 text-sm text-amber-600 transition-colors hover:bg-amber-500/20 dark:text-amber-400"
           >
-            <span>Commands</span>
-            <kbd className="bg-muted text-muted-foreground rounded px-1 py-0.5 font-mono text-[10px]">
-              ⌘K
-            </kbd>
-          </Button>
-        </TooltipTrigger>
-        <TooltipContent>Open command palette</TooltipContent>
-      </Tooltip>
+            <FileText className="h-4 w-4" />
+            <span>
+              {changes.length} unsaved change{changes.length !== 1 ? 's' : ''}
+            </span>
+          </button>
+        )}
 
-      {/* Disconnect */}
-      <Tooltip>
-        <TooltipTrigger>
-          <Button variant="ghost" size="icon" onClick={handleDisconnect}>
-            <X className="h-4 w-4" />
-          </Button>
-        </TooltipTrigger>
-        <TooltipContent>Close Database</TooltipContent>
-      </Tooltip>
+        {/* Theme Toggle */}
+        <Tooltip>
+          <TooltipTrigger>
+            <Button variant="ghost" size="icon" onClick={cycleTheme}>
+              {getThemeIcon()}
+            </Button>
+          </TooltipTrigger>
+          <TooltipContent>{getThemeLabel()}</TooltipContent>
+        </Tooltip>
+
+        {/* SQL Log Toggle */}
+        <Tooltip>
+          <TooltipTrigger>
+            <Button variant="ghost" size="icon" onClick={toggleSqlLog}>
+              <ScrollText className="h-4 w-4" />
+            </Button>
+          </TooltipTrigger>
+          <TooltipContent>SQL Log</TooltipContent>
+        </Tooltip>
+
+        {/* Command Palette Hint */}
+        <Tooltip>
+          <TooltipTrigger>
+            <Button
+              variant="ghost"
+              size="sm"
+              onClick={() => {
+                // Trigger command palette via keyboard event
+                window.dispatchEvent(
+                  new KeyboardEvent('keydown', {
+                    key: 'k',
+                    metaKey: true,
+                    bubbles: true,
+                  })
+                );
+              }}
+              className="text-muted-foreground gap-1.5 text-xs"
+            >
+              <span>Commands</span>
+              <kbd className="bg-muted text-muted-foreground rounded px-1 py-0.5 font-mono text-[10px]">
+                ⌘K
+              </kbd>
+            </Button>
+          </TooltipTrigger>
+          <TooltipContent>Open command palette</TooltipContent>
+        </Tooltip>
+
+        {/* Disconnect */}
+        <Tooltip>
+          <TooltipTrigger>
+            <Button variant="ghost" size="icon" onClick={handleDisconnect}>
+              <X className="h-4 w-4" />
+            </Button>
+          </TooltipTrigger>
+          <TooltipContent>Close Database</TooltipContent>
+        </Tooltip>
+      </div>
     </div>
   );
 }
