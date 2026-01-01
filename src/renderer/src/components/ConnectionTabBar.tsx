@@ -33,7 +33,6 @@ import {
   useSortable,
   horizontalListSortingStrategy,
   sortableKeyboardCoordinates,
-  arrayMove,
 } from '@dnd-kit/sortable';
 import { CSS } from '@dnd-kit/utilities';
 
@@ -120,10 +119,9 @@ const ConnectionTab = memo(
         <ContextMenuTrigger>
           <TooltipProvider delay={300}>
             <Tooltip>
-              <TooltipTrigger asChild>
+              <TooltipTrigger>
                 <div
                   ref={setNodeRef}
-                  role="tab"
                   aria-selected={isActive}
                   className={cn(
                     'group relative flex h-8 max-w-45 min-w-25 cursor-pointer items-center gap-1.5 border-r px-2 text-sm transition-colors',
@@ -145,7 +143,7 @@ const ConnectionTab = memo(
                   <StatusIcon className={cn('h-3.5 w-3.5 shrink-0', statusColorClass)} />
                   <span className="flex-1 truncate">{connection.filename}</span>
                   <Tooltip>
-                    <TooltipTrigger asChild>
+                    <TooltipTrigger>
                       <button
                         onClick={handleCloseClick}
                         className={cn(
