@@ -39,6 +39,12 @@ export type {
   FontConfig,
   PageSizeOption,
 } from './settings-store';
+export { useSchemaComparisonStore } from './schema-comparison-store';
+export type {
+  ComparisonSource,
+  DiffFilters,
+  ExpandedSections,
+} from './schema-comparison-store';
 export { useTableDataStore } from './table-data-store';
 export { useThemeStore } from './theme-store';
 export { useUndoRedoStore } from './undo-redo-store';
