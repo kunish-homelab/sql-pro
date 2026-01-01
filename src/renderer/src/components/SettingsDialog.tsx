@@ -56,6 +56,7 @@ import {
   useSettingsStore,
   useThemeStore,
 } from '@/stores';
+import { FONT_CATEGORY_LABELS } from '../../../shared/types/font';
 import { ProActivationDialog } from './pro/ProActivation';
 import { ProBadge } from './pro/ProBadge';
 

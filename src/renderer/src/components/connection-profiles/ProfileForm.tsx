@@ -1,4 +1,4 @@
-import type { ConnectionProfile, ProfileFolder } from '@shared/types';
+import type { ConnectionProfile, ProfileFolder } from '../../../shared/types';
 import { Info } from 'lucide-react';
 import { useEffect, useState } from 'react';
 import { Button } from '@/components/ui/button';

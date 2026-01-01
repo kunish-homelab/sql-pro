@@ -1,4 +1,4 @@
-import type { ConnectionProfile, ProfileFolder } from '@shared/types';
+import type { ConnectionProfile, ProfileFolder } from '../../../shared/types';
 import {
   ChevronDown,
   ChevronRight,

@@ -1,19 +1,23 @@
-import type { FontCategory, FontConfig } from '@/stores';
+import type { AppFontCategory, FontConfig } from '@/stores/settings-store';
 import { useEffect } from 'react';
 
 /**
  * Hook to apply font configuration to a DOM element
  * Handles both CSS variables and inline styles for optimal compatibility
+ *
+ * @param config Font configuration (family and size)
+ * @param category App font category: 'editor', 'table', or 'ui'
+ * @param selector Optional CSS selector for target element (defaults to document root)
  */
 export function useApplyFont(
   config: FontConfig,
-  category: FontCategory,
+  category: AppFontCategory,
   selector?: string
 ) {
   useEffect(() => {
-    const target = selector
-      ? document.querySelector(selector)
-      : document.documentElement;
+    const target = (
+      selector ? document.querySelector(selector) : document.documentElement
+    ) as HTMLElement | null;
     if (!target) return;
 
     // Apply CSS variables for cascading styles

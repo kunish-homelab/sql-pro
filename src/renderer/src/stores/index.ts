@@ -35,7 +35,7 @@ export {
   useUIFont,
 } from './settings-store';
 export type {
-  FontCategory,
+  AppFontCategory,
   FontConfig,
   PageSizeOption,
 } from './settings-store';

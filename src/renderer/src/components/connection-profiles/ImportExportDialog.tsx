@@ -1,4 +1,4 @@
-import type { ConnectionProfile, ProfileFolder } from '@shared/types';
+import type { ConnectionProfile, ProfileFolder } from '../../../shared/types';
 import { Download, Upload } from 'lucide-react';
 import { useCallback, useState } from 'react';
 import { Button } from '@/components/ui/button';
