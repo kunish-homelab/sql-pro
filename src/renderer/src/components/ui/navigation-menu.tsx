@@ -60,11 +60,13 @@ const navigationMenuTriggerStyle = cva(
 function NavigationMenuTrigger({
   className,
   children,
+  nativeButton = true,
   ...props
 }: NavigationMenuPrimitive.Trigger.Props) {
   return (
     <NavigationMenuPrimitive.Trigger
       data-slot="navigation-menu-trigger"
+      nativeButton={nativeButton}
       className={cn(navigationMenuTriggerStyle(), 'group', className)}
       {...props}
     >
