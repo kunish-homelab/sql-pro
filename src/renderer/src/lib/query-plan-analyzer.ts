@@ -1,5 +1,5 @@
+import type { QueryPlanNode, QueryPlanStats } from '@shared/types';
 import type { Edge, Node } from '@xyflow/react';
-import type { QueryPlanNode, QueryPlanStats } from '../../../shared/types';
 import dagre from 'dagre';
 
 export interface Suggestion {

@@ -1,25 +1,4 @@
 import type {
-  CheckUpdatesRequest,
-  CheckUpdatesResponse,
-  DisablePluginRequest,
-  DisablePluginResponse,
-  EnablePluginRequest,
-  EnablePluginResponse,
-  FetchMarketplaceRequest,
-  FetchMarketplaceResponse,
-  GetPluginRequest,
-  GetPluginResponse,
-  InstallPluginRequest,
-  InstallPluginResponse,
-  ListPluginsRequest,
-  ListPluginsResponse,
-  PluginEvent,
-  UninstallPluginRequest,
-  UninstallPluginResponse,
-  UpdatePluginRequest,
-  UpdatePluginResponse,
-} from '../main/types/plugin.d';
-import type {
   AIAgentMessage,
   AIAgentQueryRequest,
   AICancelStreamRequest,
@@ -119,11 +98,32 @@ import type {
   UpdateStatus,
   ValidateChangesRequest,
   ValidateChangesResponse,
-} from '../shared/types';
+} from '@shared/types';
+import type {
+  CheckUpdatesRequest,
+  CheckUpdatesResponse,
+  DisablePluginRequest,
+  DisablePluginResponse,
+  EnablePluginRequest,
+  EnablePluginResponse,
+  FetchMarketplaceRequest,
+  FetchMarketplaceResponse,
+  GetPluginRequest,
+  GetPluginResponse,
+  InstallPluginRequest,
+  InstallPluginResponse,
+  ListPluginsRequest,
+  ListPluginsResponse,
+  PluginEvent,
+  UninstallPluginRequest,
+  UninstallPluginResponse,
+  UpdatePluginRequest,
+  UpdatePluginResponse,
+} from '../main/types/plugin.d';
 import process from 'node:process';
 import { electronAPI } from '@electron-toolkit/preload';
+import { IPC_CHANNELS } from '@shared/types';
 import { contextBridge, ipcRenderer, webUtils } from 'electron';
-import { IPC_CHANNELS } from '../shared/types';
 
 // Custom API for SQL Pro
 const sqlProAPI = {

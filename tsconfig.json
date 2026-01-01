@@ -1,9 +1,5 @@
 {
   "compilerOptions": {
-    "baseUrl": ".",
-    "paths": {
-      "@/*": ["./src/renderer/src/*"]
-    },
     "types": ["@testing-library/jest-dom"]
   },
   "references": [

@@ -5,6 +5,10 @@
     "lib": ["ESNext"],
     "module": "ESNext",
     "moduleResolution": "bundler",
+    "paths": {
+      "@/*": ["./*"],
+      "@shared/*": ["../shared/*"]
+    },
     "resolveJsonModule": true,
     "types": ["node"],
     "strict": true,

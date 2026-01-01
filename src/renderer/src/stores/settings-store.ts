@@ -1,7 +1,4 @@
-import type {
-  FontConfig,
-  FontSettings,
-} from '../../../shared/types/font';
+import type { FontConfig, FontSettings } from '@shared/types/font';
 import { create } from 'zustand';
 import { persist } from 'zustand/middleware';
 
@@ -189,7 +186,7 @@ export const useSettingsStore = create<SettingsState>()(
 );
 
 // Re-export shared types for convenience
-export type { FontConfig, FontSettings } from '../../../shared/types/font';
+export type { FontConfig, FontSettings } from '@shared/types/font';
 
 // Selector hooks for convenience
 export const useEditorFont = () => useSettingsStore((s) => s.fonts.editor);

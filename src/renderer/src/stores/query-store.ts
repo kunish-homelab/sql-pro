@@ -1,4 +1,4 @@
-import type { QueryHistoryEntry } from '../../../shared/types';
+import type { QueryHistoryEntry } from '@shared/types';
 import type { QueryResult } from '@/types/database';
 import { create } from 'zustand';
 import { sqlPro } from '@/lib/api';

@@ -1,7 +1,7 @@
-import type { AIProvider, AISettings } from '../../../shared/types';
+import type { AIProvider, AISettings } from '@shared/types';
+import { DEFAULT_AI_BASE_URLS } from '@shared/types';
 import { create } from 'zustand';
 import { sqlPro } from '@/lib/api';
-import { DEFAULT_AI_BASE_URLS } from '../../../shared/types';
 
 interface AIState {
   // Settings

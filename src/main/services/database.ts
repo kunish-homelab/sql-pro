@@ -12,11 +12,11 @@ import type {
   TableInfo,
   TriggerInfo,
   ValidationResult,
-} from '../../shared/types';
+} from '@shared/types';
 import { Buffer } from 'node:buffer';
 import { readFileSync } from 'node:fs';
 import Database from 'better-sqlite3-multiple-ciphers';
-import { enhanceConnectionError, enhanceQueryError } from '../lib/error-parser';
+import { enhanceConnectionError, enhanceQueryError } from '@/lib/error-parser';
 import { sqlLogger } from './sql-logger';
 
 interface ConnectionInfo {

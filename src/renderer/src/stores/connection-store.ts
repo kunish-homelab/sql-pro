@@ -2,7 +2,7 @@ import type {
   ConnectionProfile,
   ProfileFolder,
   RecentConnection,
-} from '../../../shared/types';
+} from '@shared/types';
 import type {
   DatabaseConnection,
   DatabaseSchema,

@@ -29,9 +29,9 @@ import type {
   SaveQueryHistoryRequest,
   UpdateConnectionRequest,
   ValidateChangesRequest,
-} from '../../shared/types';
-import type {SystemFont} from '../lib/font-constants';
+} from '@shared/types';
 import type { StoredPreferences } from './store';
+import type { SystemFont } from '@/lib/font-constants';
 import { exec } from 'node:child_process';
 import fs from 'node:fs';
 import os from 'node:os';
@@ -39,20 +39,16 @@ import process from 'node:process';
 import { promisify } from 'node:util';
 import { query as claudeAgentQuery } from '@anthropic-ai/claude-agent-sdk';
 import Anthropic from '@anthropic-ai/sdk';
+import { IPC_CHANNELS } from '@shared/types';
 import { BrowserWindow, dialog, ipcMain } from 'electron';
 import OpenAI from 'openai';
-import { IPC_CHANNELS } from '../../shared/types';
 import {
   generateCSV,
   generateExcel,
   generateJSON,
   generateSQL,
-} from '../lib/export-generators';
-import {
-  CATEGORY_ORDER,
-  classifyFont
-  
-} from '../lib/font-constants';
+} from '@/lib/export-generators';
+import { CATEGORY_ORDER, classifyFont } from '@/lib/font-constants';
 import { databaseService } from './database';
 import { passwordStorageService } from './password-storage';
 import { sqlLogger } from './sql-logger';

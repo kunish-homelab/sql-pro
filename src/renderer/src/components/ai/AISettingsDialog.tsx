@@ -1,4 +1,4 @@
-import type { AIProvider } from '../../../../shared/types';
+import type { AIProvider } from '@shared/types';
 import {
   Check,
   ChevronsUpDown,

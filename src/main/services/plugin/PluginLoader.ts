@@ -7,8 +7,8 @@
  * Following the service module pattern from database.ts
  */
 
-import type { PluginInfo, PluginManifest } from '../../types/plugin';
-import type { ManifestValidationResult } from '../../utils/plugins/validate-manifest';
+import type { PluginInfo, PluginManifest } from '@/types/plugin';
+import type { ManifestValidationResult } from '@/utils/plugins/validate-manifest';
 import { Buffer } from 'node:buffer';
 import { exec } from 'node:child_process';
 import {
@@ -27,7 +27,7 @@ import { app } from 'electron';
 import {
   formatManifestErrors,
   parseAndValidateManifest,
-} from '../../utils/plugins/validate-manifest';
+} from '@/utils/plugins/validate-manifest';
 
 const execAsync = promisify(exec);
 

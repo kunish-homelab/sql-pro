@@ -1,4 +1,4 @@
-import type { PluginManifest } from '../../types/plugin';
+import type { PluginManifest } from '@/types/plugin';
 // Import mocked modules AFTER mocking
 import * as fs from 'node:fs';
 
@@ -9,7 +9,7 @@ import * as fs from 'node:fs';
  * Uses mocks for filesystem and Electron APIs.
  */
 import { beforeEach, describe, expect, it, vi } from 'vitest';
-import { parseAndValidateManifest } from '../../utils/plugins/validate-manifest';
+import { parseAndValidateManifest } from '@/utils/plugins/validate-manifest';
 import { PluginLoader } from './PluginLoader';
 
 // Mock electron

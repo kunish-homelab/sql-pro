@@ -1,4 +1,4 @@
-import type { ExportFormat, ExportResponse } from '../../../shared/types';
+import type { ExportFormat, ExportResponse } from '@shared/types';
 import { useCallback, useState } from 'react';
 import { sqlPro } from '@/lib/api';
 

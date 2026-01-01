@@ -1,4 +1,4 @@
-import type { ErrorCode, ErrorPosition } from '../../../../shared/types';
+import type { ErrorCode, ErrorPosition } from '@shared/types';
 import {
   AlertCircle,
   ChevronRight,

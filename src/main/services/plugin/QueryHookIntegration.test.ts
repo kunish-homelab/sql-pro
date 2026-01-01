@@ -13,15 +13,11 @@
  * 5. Verify query entries are logged to storage
  */
 
-import type {
-  QueryContext,
-  QueryError,
-  QueryResults,
-} from '../../types/plugin';
+import type { QueryContext, QueryError, QueryResults } from '@/types/plugin';
 import { afterEach, beforeEach, describe, expect, it, vi } from 'vitest';
 
-import { queryLifecycleService } from '../../plugin-api/QueryLifecycleAPI';
-import { storageService } from '../../plugin-api/StorageAPI';
+import { queryLifecycleService } from '@/plugin-api/QueryLifecycleAPI';
+import { storageService } from '@/plugin-api/StorageAPI';
 
 // Mock electron-store
 const mockStore = new Map<string, unknown>();

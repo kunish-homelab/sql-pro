@@ -12,7 +12,7 @@ import type {
   EnhancedErrorInfo,
   ErrorCode,
   ErrorPosition,
-} from '../../shared/types';
+} from '@shared/types';
 
 /**
  * Documentation URLs for different error categories.

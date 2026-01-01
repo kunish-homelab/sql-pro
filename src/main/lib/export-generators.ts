@@ -1,4 +1,4 @@
-import type { ColumnInfo } from '../../shared/types';
+import type { ColumnInfo } from '@shared/types';
 import { Buffer } from 'node:buffer';
 /**
  * Export generators for various data formats.

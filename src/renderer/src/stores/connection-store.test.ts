@@ -1,4 +1,4 @@
-import type { RecentConnection } from '../../../shared/types';
+import type { RecentConnection } from '@shared/types';
 import type {
   DatabaseConnection,
   DatabaseSchema,
@@ -720,6 +720,7 @@ describe('connection-store', () => {
           lastOpened: new Date().toISOString(),
           displayName: 'Profile 1',
           readOnly: false,
+          isSaved: true,
           createdAt: new Date().toISOString(),
         },
       ]);
@@ -735,6 +736,7 @@ describe('connection-store', () => {
         lastOpened: new Date().toISOString(),
         displayName: 'Profile 2',
         readOnly: false,
+        isSaved: true,
         createdAt: new Date().toISOString(),
       });
 
@@ -756,6 +758,7 @@ describe('connection-store', () => {
           lastOpened: new Date().toISOString(),
           displayName: 'Profile 1',
           readOnly: false,
+          isSaved: true,
           createdAt: new Date().toISOString(),
         },
         {
@@ -766,6 +769,7 @@ describe('connection-store', () => {
           lastOpened: new Date().toISOString(),
           displayName: 'Profile 2',
           readOnly: false,
+          isSaved: true,
           createdAt: new Date().toISOString(),
         },
       ]);
@@ -792,6 +796,7 @@ describe('connection-store', () => {
           lastOpened: new Date().toISOString(),
           displayName: 'Profile 1',
           readOnly: false,
+          isSaved: true,
           createdAt: new Date().toISOString(),
         },
       ]);
@@ -808,6 +813,7 @@ describe('connection-store', () => {
           lastOpened: new Date().toISOString(),
           displayName: 'Profile 2',
           readOnly: false,
+          isSaved: true,
           createdAt: new Date().toISOString(),
         },
         {
@@ -818,6 +824,7 @@ describe('connection-store', () => {
           lastOpened: new Date().toISOString(),
           displayName: 'Profile 3',
           readOnly: false,
+          isSaved: true,
           createdAt: new Date().toISOString(),
         },
       ]);
@@ -842,6 +849,7 @@ describe('connection-store', () => {
           lastOpened: new Date().toISOString(),
           displayName: 'Profile 1',
           readOnly: false,
+          isSaved: true,
           createdAt: new Date().toISOString(),
           folderId: 'folder-1',
         },
@@ -853,6 +861,7 @@ describe('connection-store', () => {
           lastOpened: new Date().toISOString(),
           displayName: 'Profile 2',
           readOnly: false,
+          isSaved: true,
           createdAt: new Date().toISOString(),
           folderId: 'folder-1',
         },
@@ -864,6 +873,7 @@ describe('connection-store', () => {
           lastOpened: new Date().toISOString(),
           displayName: 'Profile 3',
           readOnly: false,
+          isSaved: true,
           createdAt: new Date().toISOString(),
           folderId: 'folder-2',
         },
@@ -875,6 +885,7 @@ describe('connection-store', () => {
           lastOpened: new Date().toISOString(),
           displayName: 'Profile 4',
           readOnly: false,
+          isSaved: true,
           createdAt: new Date().toISOString(),
         },
       ]);

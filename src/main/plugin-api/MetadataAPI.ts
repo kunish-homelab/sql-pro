@@ -17,7 +17,7 @@ import type {
   ConnectionInfo,
   MetadataAPI,
   PluginManifest,
-} from '../types/plugin';
+} from '@/types/plugin';
 
 import process from 'node:process';
 import { app } from 'electron';

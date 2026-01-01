@@ -1,6 +1,7 @@
-import type { AIProvider } from '../../../shared/types';
-import type { FontCategory, SystemFont } from '../../../shared/types/font';
+import type { AIProvider } from '@shared/types';
+import type { FontCategory, SystemFont } from '@shared/types/font';
 import type { FontConfig } from '@/stores/settings-store';
+import { FONT_CATEGORY_LABELS } from '@shared/types/font';
 import {
   Check,
   ChevronsUpDown,
@@ -56,7 +57,6 @@ import {
   useSettingsStore,
   useThemeStore,
 } from '@/stores';
-import { FONT_CATEGORY_LABELS } from '../../../shared/types/font';
 import { ProActivationDialog } from './pro/ProActivation';
 import { ProBadge } from './pro/ProBadge';
 

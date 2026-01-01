@@ -6,7 +6,7 @@
  * These tests verify the error enhancement integration logic.
  */
 import { beforeEach, describe, expect, it, vi } from 'vitest';
-import * as errorParser from '../lib/error-parser';
+import * as errorParser from '@/lib/error-parser';
 
 // Mock the error parser module to verify it's being called correctly
 vi.mock('../lib/error-parser', async () => {

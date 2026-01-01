@@ -2,9 +2,9 @@
  * Font classification categories and definitions
  */
 
-import type { FontCategory } from '../../shared/types/font';
+import type { FontCategory } from '@shared/types/font';
 
-export type { FontCategory, SystemFont } from '../../shared/types/font';
+export type { FontCategory, SystemFont } from '@shared/types/font';
 
 // Well-known font lists for efficient classification
 export const MONOSPACE_FONTS = new Set([

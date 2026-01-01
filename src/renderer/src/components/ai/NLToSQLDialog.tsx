@@ -1,4 +1,4 @@
-import type { SchemaInfo } from '../../../../shared/types';
+import type { SchemaInfo } from '@shared/types';
 import {
   AlertCircle,
   ArrowRight,
@@ -66,7 +66,7 @@ export function NLToSQLDialog({
   return (
     <>
       <Dialog open={open} onOpenChange={onOpenChange}>
-        <DialogContent className="sm:max-w-[600px]">
+        <DialogContent className="sm:max-w-150">
           <DialogHeader>
             <DialogTitle className="flex items-center gap-2">
               <Wand2 className="h-5 w-5" />
@@ -160,7 +160,7 @@ export function NLToSQLDialog({
                       <ArrowRight className="ml-2 h-4 w-4" />
                     </Button>
                   </div>
-                  <div className="bg-muted max-h-[200px] overflow-auto rounded-lg p-4">
+                  <div className="bg-muted max-h-50 overflow-auto rounded-lg p-4">
                     <SqlHighlight code={generatedSQL} className="text-sm" />
                   </div>
                 </div>

@@ -1,4 +1,4 @@
-import type { PendingChangeInfo } from '../../../shared/types';
+import type { PendingChangeInfo } from '@shared/types';
 import type { PendingChange } from '@/lib/collections';
 import { useCallback, useEffect, useMemo, useState } from 'react';
 import { sqlPro } from '@/lib/api';

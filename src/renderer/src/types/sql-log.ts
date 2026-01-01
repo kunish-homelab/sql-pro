@@ -6,4 +6,4 @@ export type {
   GetSqlLogsResponse,
   SqlLogEntry,
   SqlLogLevel,
-} from '../../../shared/types';
+} from '@shared/types';

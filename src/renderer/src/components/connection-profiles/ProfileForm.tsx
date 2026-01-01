@@ -1,4 +1,4 @@
-import type { ConnectionProfile, ProfileFolder } from '../../../shared/types';
+import type { ConnectionProfile, ProfileFolder } from '@shared/types.ts';
 import { Info } from 'lucide-react';
 import { useEffect, useState } from 'react';
 import { Button } from '@/components/ui/button';
@@ -145,8 +145,8 @@ export function ProfileForm({
     // Parse tags from comma-separated string
     const parsedTags = tags
       .split(',')
-      .map((tag) => tag.trim())
-      .filter((tag) => tag.length > 0);
+      .map((tag: string) => tag.trim())
+      .filter((tag: string) => tag.length > 0);
 
     onSubmit({
       displayName: displayName.trim(),
@@ -211,7 +211,10 @@ export function ProfileForm({
         <label htmlFor="folder" className="text-sm font-medium">
           Folder <span className="text-muted-foreground">(optional)</span>
         </label>
-        <Select value={folderId} onValueChange={setFolderId}>
+        <Select
+          value={folderId ?? ''}
+          onValueChange={(value) => setFolderId(value || undefined)}
+        >
           <SelectTrigger id="folder" className="w-full">
             <SelectValue placeholder="No folder (root level)" />
           </SelectTrigger>

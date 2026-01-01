@@ -1,4 +1,4 @@
-import type { ProFeature } from '../../../shared/types';
+import type { ProFeature } from '@shared/types';
 import { create } from 'zustand';
 import { sqlPro } from '@/lib/api';
 

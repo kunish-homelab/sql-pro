@@ -1,4 +1,4 @@
-import type { ColumnInfo, PendingChangeInfo } from '../../../shared/types';
+import type { ColumnInfo, PendingChangeInfo } from '@shared/types';
 import type { FilterState } from '@/types/database';
 import { createCollection, localOnlyCollectionOptions } from '@tanstack/db';
 import { queryCollectionOptions } from '@tanstack/query-db-collection';

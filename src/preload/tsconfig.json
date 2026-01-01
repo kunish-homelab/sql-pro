@@ -5,6 +5,9 @@
     "lib": ["ESNext", "DOM", "DOM.Iterable"],
     "module": "ESNext",
     "moduleResolution": "bundler",
+    "paths": {
+      "@shared/*": ["../shared/*"]
+    },
     "resolveJsonModule": true,
     "strict": true,
     "noFallthroughCasesInSwitch": true,

@@ -1,5 +1,5 @@
+import type { ProFeature } from '@shared/types';
 import type { ReactNode } from 'react';
-import type { ProFeature } from '../../../../shared/types';
 import { Crown, Lock, Sparkles } from 'lucide-react';
 import { Button } from '@/components/ui/button';
 import { cn } from '@/lib/utils';

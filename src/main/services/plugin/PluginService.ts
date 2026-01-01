@@ -23,7 +23,7 @@ import type {
   PluginListing,
   PluginState,
   PluginUpdate,
-} from '../../types/plugin';
+} from '@/types/plugin';
 import { Buffer } from 'node:buffer';
 import Store from 'electron-store';
 import EventEmitter from 'eventemitter3';

@@ -1,6 +1,6 @@
-import type { SqlLogEntry, SqlLogLevel } from '../../shared/types';
+import type { SqlLogEntry, SqlLogLevel } from '@shared/types';
+import { IPC_CHANNELS } from '@shared/types';
 import { BrowserWindow } from 'electron';
-import { IPC_CHANNELS } from '../../shared/types';
 
 const MAX_LOG_ENTRIES = 1000;
 

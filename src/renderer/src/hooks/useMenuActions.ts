@@ -1,4 +1,4 @@
-import type { GetSchemaResponse } from '../../../shared/types';
+import type { GetSchemaResponse } from '@shared/types';
 import { useNavigate } from '@tanstack/react-router';
 import { useEffect } from 'react';
 import { sqlPro } from '@/lib/api';

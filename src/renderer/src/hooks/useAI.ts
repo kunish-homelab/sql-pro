@@ -3,7 +3,7 @@ import type {
   AIStreamChunk,
   DataInsight,
   SchemaInfo,
-} from '../../../shared/types';
+} from '@shared/types';
 import OpenAI from 'openai';
 import { useCallback, useEffect, useRef, useState } from 'react';
 import { useAIStore } from '@/stores/ai-store';

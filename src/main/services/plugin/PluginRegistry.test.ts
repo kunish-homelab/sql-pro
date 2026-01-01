@@ -1,4 +1,4 @@
-import type { PluginEvent, PluginManifest } from '../../types/plugin';
+import type { PluginEvent, PluginManifest } from '@/types/plugin';
 /**
  * Tests for PluginRegistry service.
  *

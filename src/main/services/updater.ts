@@ -1,9 +1,9 @@
+import type { UpdateStatus } from '@shared/types';
 import type {
   AppUpdater,
   UpdateDownloadedEvent,
   UpdateInfo,
 } from 'electron-updater';
-import type { UpdateStatus } from '../../shared/types';
 import { app, BrowserWindow, dialog } from 'electron';
 import log from 'electron-log';
 import { autoUpdater } from 'electron-updater';

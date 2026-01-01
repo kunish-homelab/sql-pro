@@ -1,5 +1,5 @@
 import type { Buffer } from 'node:buffer';
-import type { PluginInfo, PluginManifest } from '../../types/plugin';
+import type { PluginInfo, PluginManifest } from '@/types/plugin';
 /**
  * E2E Tests for Plugin Installation from .sqlpro-plugin Archive
  *

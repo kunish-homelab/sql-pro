@@ -1,4 +1,4 @@
-import type { QueryContext, QueryError, QueryResults } from '../types/plugin';
+import type { QueryContext, QueryError, QueryResults } from '@/types/plugin';
 /**
  * Query Lifecycle API Integration Tests
  *

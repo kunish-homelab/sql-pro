@@ -10,7 +10,7 @@
  * 6. Verify restoration (without passwords)
  */
 
-import type { ConnectionProfile, ProfileFolder } from '../../../shared/types';
+import type { ConnectionProfile, ProfileFolder } from '@shared/types';
 import { afterEach, beforeEach, describe, expect, it } from 'vitest';
 import {
   exportProfiles,

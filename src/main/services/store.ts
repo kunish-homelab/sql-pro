@@ -3,7 +3,7 @@ import type {
   ProFeatureType,
   ProStatus,
   QueryHistoryEntry,
-} from '../../shared/types';
+} from '@shared/types';
 import process from 'node:process';
 import { app } from 'electron';
 import Store from 'electron-store';

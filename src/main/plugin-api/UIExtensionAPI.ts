@@ -15,10 +15,10 @@ import type {
   MenuItemOptions,
   NotificationOptions,
   PanelOptions,
-} from '../types/plugin';
+} from '@/types/plugin';
+import { IPC_CHANNELS } from '@shared/types';
 import { BrowserWindow } from 'electron';
 import EventEmitter from 'eventemitter3';
-import { IPC_CHANNELS } from '../../shared/types';
 
 // ============ Types ============
 

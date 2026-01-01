@@ -1,8 +1,5 @@
+import type { ConnectionProfile, RecentConnection } from '@shared/types';
 import type { DragEvent } from 'react';
-import type {
-  ConnectionProfile,
-  RecentConnection,
-} from '../../../shared/types';
 import type { ProfileFormData } from './connection-profiles/ProfileForm';
 import type { ConnectionSettings } from './ConnectionSettingsDialog';
 import {
@@ -462,6 +459,7 @@ export function WelcomeScreen() {
           notes: data.notes,
           readOnly: data.readOnly,
           isSaved: true,
+          lastOpened: new Date().toISOString(),
           createdAt: new Date().toISOString(),
         };
 
@@ -747,7 +745,7 @@ export function WelcomeScreen() {
           </DialogHeader>
           {profileToSave && (
             <ProfileForm
-              mode="create"
+              mode="new"
               dbPath={profileToSave.path}
               filename={profileToSave.filename}
               isEncrypted={profileToSave.isEncrypted}

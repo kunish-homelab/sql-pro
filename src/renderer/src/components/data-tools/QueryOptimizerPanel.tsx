@@ -1,6 +1,6 @@
+import type { QueryPlanNode, QueryPlanStats } from '@shared/types';
 import type { ColorMode } from '@xyflow/react';
 import type { ErrorInfo, ReactNode } from 'react';
-import type { QueryPlanNode, QueryPlanStats } from '../../../../shared/types';
 import type {
   ExecutionPlanFlowEdge,
   ExecutionPlanFlowNode,

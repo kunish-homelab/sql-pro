@@ -1,4 +1,4 @@
-import type { PluginInfo, PluginManifest } from '../../types/plugin';
+import type { PluginInfo, PluginManifest } from '@/types/plugin';
 /**
  * Tests for PluginService orchestrator.
  *

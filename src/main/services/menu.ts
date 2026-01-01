@@ -1,7 +1,7 @@
-import type { MenuAction } from '../../shared/types';
+import type { MenuAction } from '@shared/types';
 import process from 'node:process';
+import { IPC_CHANNELS } from '@shared/types';
 import { app, BrowserWindow, Menu, shell } from 'electron';
-import { IPC_CHANNELS } from '../../shared/types';
 import { checkForUpdates } from './updater';
 import { windowManager } from './window-manager';
 

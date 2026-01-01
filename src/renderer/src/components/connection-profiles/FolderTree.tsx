@@ -1,4 +1,4 @@
-import type { ConnectionProfile, ProfileFolder } from '../../../shared/types';
+import type { ConnectionProfile, ProfileFolder } from '@shared/types.ts';
 import {
   ChevronDown,
   ChevronRight,
@@ -143,7 +143,7 @@ function FolderNode({
               onDragLeave={handleDragLeave}
               onDrop={handleDrop}
             >
-              <CollapsibleTrigger asChild>
+              <CollapsibleTrigger className="h-auto w-auto p-0 hover:bg-transparent">
                 <Button
                   variant="ghost"
                   size="sm"

@@ -1,4 +1,4 @@
-import type { ColumnInfo, ExportFormat } from '../../../shared/types';
+import type { ColumnInfo, ExportFormat } from '@shared/types';
 import {
   FileCode,
   FileDown,

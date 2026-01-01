@@ -1,4 +1,4 @@
-import type { ColumnInfo, DataInsight } from '../../../../shared/types';
+import type { ColumnInfo, DataInsight } from '@shared/types';
 import {
   AlertCircle,
   AlertTriangle,

@@ -24,7 +24,7 @@ import type {
   QueryError,
   QueryErrorHook,
   QueryResults,
-} from '../../types/plugin';
+} from '@/types/plugin';
 import process from 'node:process';
 import EventEmitter from 'eventemitter3';
 

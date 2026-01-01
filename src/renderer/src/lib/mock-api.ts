@@ -25,7 +25,7 @@ import type {
   TableInfo,
   UpdateConnectionRequest,
   ValidateChangesRequest,
-} from '../../../shared/types';
+} from '@shared/types';
 
 // Mock tables schema
 const mockTables: TableInfo[] = [
