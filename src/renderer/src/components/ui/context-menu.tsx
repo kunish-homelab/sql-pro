@@ -74,16 +74,19 @@ function ContextMenuLabel({
 }: ContextMenuPrimitive.GroupLabel.Props & {
   inset?: boolean;
 }) {
+  // GroupLabel must be wrapped in Group to provide the required context
   return (
-    <ContextMenuPrimitive.GroupLabel
-      data-slot="context-menu-label"
-      data-inset={inset}
-      className={cn(
-        'text-muted-foreground px-2 py-1.5 text-xs font-medium data-[inset]:pl-8',
-        className
-      )}
-      {...props}
-    />
+    <ContextMenuPrimitive.Group>
+      <ContextMenuPrimitive.GroupLabel
+        data-slot="context-menu-label"
+        data-inset={inset}
+        className={cn(
+          'text-muted-foreground px-2 py-1.5 text-xs font-medium data-[inset]:pl-8',
+          className
+        )}
+        {...props}
+      />
+    </ContextMenuPrimitive.Group>
   );
 }
 
