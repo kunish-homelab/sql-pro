@@ -33,5 +33,6 @@ coverage
 docs/.vitepress/cache
 .worktrees
 .auto-claude/
+.auto-claude-status
 .claude_settings.json
 .claude-flow/
