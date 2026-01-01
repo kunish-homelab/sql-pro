@@ -1,4 +1,5 @@
 import type { Row } from '@tanstack/react-table';
+import type { VirtualItem } from '@tanstack/react-virtual';
 import type { TableRowData } from './hooks/useTableCore';
 import type { PendingChange } from '@/types/database';
 import { memo, useMemo } from 'react';
@@ -130,6 +131,9 @@ const DataRow = memo(
 
 interface TableBodyProps {
   rows: Row<TableRowData>[];
+  // Virtualization props
+  virtualItems: VirtualItem[];
+  totalSize: number;
   // Editing props
   editable?: boolean;
   onCellClick?: (rowId: string, columnId: string) => void;
@@ -151,6 +155,8 @@ interface TableBodyProps {
 export const TableBody = memo(
   ({
     rows,
+    virtualItems,
+    totalSize,
     editable = false,
     onCellClick,
     onCellDoubleClick,
@@ -176,7 +182,16 @@ export const TableBody = memo(
 
     return (
       <tbody>
-        {rows.map((row, index) => {
+        {/* Padding row for virtualization - top spacer */}
+        {virtualItems.length > 0 && virtualItems[0].start > 0 && (
+          <tr style={{ height: virtualItems[0].start }} />
+        )}
+
+        {/* Render only visible rows */}
+        {virtualItems.map((virtualItem) => {
+          const row = rows[virtualItem.index];
+          if (!row) return null;
+
           const isGroupRow = row.getIsGrouped?.() ?? false;
           const rowData = row.original as TableRowData;
           const rowId = rowData.__rowId ?? row.id;
@@ -194,7 +209,7 @@ export const TableBody = memo(
             <DataRow
               key={row.id}
               row={row}
-              rowIndex={index}
+              rowIndex={virtualItem.index}
               isDeleted={isDeleted}
               isNewRow={isNewRow}
               change={change}
@@ -211,6 +226,16 @@ export const TableBody = memo(
             />
           );
         })}
+
+        {/* Padding row for virtualization - bottom spacer */}
+        {virtualItems.length > 0 && (
+          <tr
+            style={{
+              height:
+                totalSize - (virtualItems[virtualItems.length - 1].end || 0),
+            }}
+          />
+        )}
       </tbody>
     );
   }

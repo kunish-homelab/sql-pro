@@ -6,6 +6,7 @@ import type {
   PendingChange,
   SortState,
 } from '@/types/database';
+import { useVirtualizer } from '@tanstack/react-virtual';
 import { Filter, SearchX } from 'lucide-react';
 import {
   useCallback,
@@ -260,6 +261,17 @@ export const DataTable = function DataTable({
     }
   }, [focusedCell, rows, table, handleCellClick]);
 
+  // Row height for virtualization
+  const ROW_HEIGHT = 32;
+
+  // Setup row virtualization
+  const rowVirtualizer = useVirtualizer({
+    count: rows.length,
+    getScrollElement: () => containerRef.current,
+    estimateSize: () => ROW_HEIGHT,
+    overscan: 10,
+  });
+
   return (
     <ScrollArea
       viewportRef={containerRef}
@@ -315,9 +327,11 @@ export const DataTable = function DataTable({
           enableSelection={enableSelection}
         />
 
-        {/* Table body */}
+        {/* Virtualized table body */}
         <TableBody
           rows={rows}
+          virtualItems={rowVirtualizer.getVirtualItems()}
+          totalSize={rowVirtualizer.getTotalSize()}
           editable={editable}
           onCellClick={handleCellClick}
           onCellDoubleClick={handleCellDoubleClick}
