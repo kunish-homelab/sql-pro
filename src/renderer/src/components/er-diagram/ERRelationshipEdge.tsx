@@ -65,8 +65,8 @@ function ERRelationshipEdgeComponent({
         path={edgePath}
         style={{
           stroke: selected
-            ? 'hsl(var(--primary))'
-            : 'hsl(var(--muted-foreground))',
+            ? 'var(--color-primary)'
+            : 'var(--color-muted-foreground)',
           strokeWidth: selected ? 2 : 1.5,
         }}
       />
