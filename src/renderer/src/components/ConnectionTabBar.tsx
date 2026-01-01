@@ -25,6 +25,8 @@ import {
   KeyboardSensor,
   useSensor,
   useSensors,
+  type DragEndEvent,
+  type DragCancelEvent,
 } from '@dnd-kit/core';
 import {
   SortableContext,
@@ -34,7 +36,6 @@ import {
   arrayMove,
 } from '@dnd-kit/sortable';
 import { CSS } from '@dnd-kit/utilities';
-import type { DragEndEvent } from '@dnd-kit/core';
 
 // Preset colors for connection tabs
 const PRESET_COLORS = [
@@ -51,6 +52,16 @@ const PRESET_COLORS = [
   { name: 'Lime', value: '#84cc16' },
   { name: 'Amber', value: '#f59e0b' },
 ];
+
+/**
+ * Validates if a string is a valid hex color code
+ * Supports both 3-digit (#RGB) and 6-digit (#RRGGBB) formats
+ */
+const isValidHexColor = (color: string): boolean => {
+  // Check for valid hex color format: #RGB or #RRGGBB
+  const hexColorRegex = /^#([A-Fa-f0-9]{6}|[A-Fa-f0-9]{3})$/;
+  return hexColorRegex.test(color);
+};
 
 interface ConnectionTabBarProps {
   className?: string;
@@ -98,7 +109,10 @@ const ConnectionTab = memo(
     };
 
     const handleColorSelect = (color: string) => {
-      setConnectionColor(connection.id, color);
+      // Validate color before setting it
+      if (isValidHexColor(color)) {
+        setConnectionColor(connection.id, color);
+      }
     };
 
     return (
@@ -241,12 +255,18 @@ export const ConnectionTabBar = memo(({ className }: ConnectionTabBarProps) => {
     }
   };
 
+  // Handle drag cancel - called when drag is cancelled (e.g., dragged outside droppable area)
+  const handleDragCancel = (_event: DragCancelEvent) => {
+    // No action needed - tab will return to original position automatically
+    // This handler ensures the drag operation is properly cancelled
+  };
+
   if (connections.length === 0) {
     return null;
   }
 
   return (
-    <DndContext sensors={sensors} onDragEnd={handleDragEnd}>
+    <DndContext sensors={sensors} onDragEnd={handleDragEnd} onDragCancel={handleDragCancel}>
       <div
         className={cn('bg-muted/30 flex h-8 items-center border-b', className)}
         role="tablist"
@@ -255,7 +275,7 @@ export const ConnectionTabBar = memo(({ className }: ConnectionTabBarProps) => {
           items={connections.map((conn) => conn.id)}
           strategy={horizontalListSortingStrategy}
         >
-          <div className="flex flex-1 items-center overflow-x-auto">
+          <div className="scrollbar-thin scrollbar-thumb-muted-foreground/20 scrollbar-track-transparent flex flex-1 items-center overflow-x-auto hover:scrollbar-thumb-muted-foreground/40">
             {connections.map((connection) => (
               <ConnectionTab
                 key={connection.id}

@@ -231,12 +231,21 @@ export const useConnectionStore = create<ConnectionState>()(
     }),
 
   setConnectionColor: (id, color) =>
-    set((state) => ({
-      connectionColors: {
-        ...state.connectionColors,
-        [id]: color,
-      },
-    })),
+    set((state) => {
+      // Validate hex color format: #RGB or #RRGGBB
+      const hexColorRegex = /^#([A-Fa-f0-9]{6}|[A-Fa-f0-9]{3})$/;
+      if (!hexColorRegex.test(color)) {
+        // Invalid color, don't update state
+        return state;
+      }
+
+      return {
+        connectionColors: {
+          ...state.connectionColors,
+          [id]: color,
+        },
+      };
+    }),
 
   // Schema Actions
   setSchema: (connectionId, schema) =>
