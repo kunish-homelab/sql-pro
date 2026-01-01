@@ -9,6 +9,18 @@ import {
   TooltipTrigger,
 } from '@/components/ui/tooltip';
 import { useConnectionStore } from '@/stores';
+import {
+  DndContext,
+  PointerSensor,
+  KeyboardSensor,
+  useSensor,
+  useSensors,
+} from '@dnd-kit/core';
+import {
+  SortableContext,
+  horizontalListSortingStrategy,
+  sortableKeyboardCoordinates,
+} from '@dnd-kit/sortable';
 
 interface ConnectionTabBarProps {
   className?: string;
@@ -122,27 +134,42 @@ export const ConnectionTabBar = memo(({ className }: ConnectionTabBarProps) => {
   );
   const connections = [...orderedConnections, ...unorderedConnections];
 
+  // Set up sensors for drag and drop
+  const sensors = useSensors(
+    useSensor(PointerSensor),
+    useSensor(KeyboardSensor, {
+      coordinateGetter: sortableKeyboardCoordinates,
+    })
+  );
+
   if (connections.length === 0) {
     return null;
   }
 
   return (
-    <div
-      className={cn('bg-muted/30 flex h-8 items-center border-b', className)}
-      role="tablist"
-    >
-      <div className="flex flex-1 items-center overflow-x-auto">
-        {connections.map((connection) => (
-          <ConnectionTab
-            key={connection.id}
-            connection={connection}
-            isActive={connection.id === activeConnectionId}
-            onSelect={() => setActiveConnection(connection.id)}
-            onClose={() => removeConnection(connection.id)}
-          />
-        ))}
+    <DndContext sensors={sensors}>
+      <div
+        className={cn('bg-muted/30 flex h-8 items-center border-b', className)}
+        role="tablist"
+      >
+        <SortableContext
+          items={connections.map((conn) => conn.id)}
+          strategy={horizontalListSortingStrategy}
+        >
+          <div className="flex flex-1 items-center overflow-x-auto">
+            {connections.map((connection) => (
+              <ConnectionTab
+                key={connection.id}
+                connection={connection}
+                isActive={connection.id === activeConnectionId}
+                onSelect={() => setActiveConnection(connection.id)}
+                onClose={() => removeConnection(connection.id)}
+              />
+            ))}
+          </div>
+        </SortableContext>
       </div>
-    </div>
+    </DndContext>
   );
 });
 
