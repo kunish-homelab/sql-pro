@@ -21,9 +21,17 @@ type TabValue = 'data' | 'query' | 'diagram';
 
 interface DatabaseViewProps {
   onOpenDatabase?: () => void;
+  onOpenRecentConnection?: (
+    path: string,
+    isEncrypted: boolean,
+    readOnly?: boolean
+  ) => void;
 }
 
-export function DatabaseView({ onOpenDatabase }: DatabaseViewProps) {
+export function DatabaseView({
+  onOpenDatabase,
+  onOpenRecentConnection,
+}: DatabaseViewProps) {
   const { selectedTable, activeConnectionId, setSelectedTable } =
     useConnectionStore();
   const { hasChanges } = useChangesStore();
@@ -132,7 +140,10 @@ export function DatabaseView({ onOpenDatabase }: DatabaseViewProps) {
           maxWidth={400}
           storageKey="sidebar"
         >
-          <Sidebar onOpenDatabase={onOpenDatabase} />
+          <Sidebar
+            onOpenDatabase={onOpenDatabase}
+            onOpenRecentConnection={onOpenRecentConnection}
+          />
         </ResizablePanel>
 
         {/* Content Area with Tabs */}

@@ -32,9 +32,17 @@ import { SettingsDialog } from './SettingsDialog';
 
 interface SidebarProps {
   onOpenDatabase?: () => void;
+  onOpenRecentConnection?: (
+    path: string,
+    isEncrypted: boolean,
+    readOnly?: boolean
+  ) => void;
 }
 
-export function Sidebar({ onOpenDatabase }: SidebarProps) {
+export function Sidebar({
+  onOpenDatabase,
+  onOpenRecentConnection,
+}: SidebarProps) {
   const {
     schema,
     selectedTable,
@@ -407,7 +415,10 @@ export function Sidebar({ onOpenDatabase }: SidebarProps) {
     >
       {/* Connection Selector */}
       <div className="border-b p-2">
-        <ConnectionSelector onOpenDatabase={onOpenDatabase} />
+        <ConnectionSelector
+          onOpenDatabase={onOpenDatabase}
+          onOpenRecentConnection={onOpenRecentConnection}
+        />
       </div>
 
       {/* Search */}

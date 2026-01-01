@@ -186,6 +186,34 @@ export function DatabasePage() {
     }
   }, [setIsConnecting]);
 
+  // Open a recent connection directly (skip file picker and settings dialog)
+  const handleOpenRecentConnection = useCallback(
+    async (path: string, isEncrypted: boolean, readOnly?: boolean) => {
+      const filename = path.split('/').pop() || path;
+      setPendingPath(path);
+      setPendingFilename(filename);
+      setPendingIsEncrypted(isEncrypted);
+      setPendingSettings(
+        readOnly
+          ? { displayName: filename, readOnly, rememberPassword: false }
+          : null
+      );
+
+      if (isEncrypted) {
+        // Check for saved password
+        const savedPasswordResult = await sqlPro.password.get({ dbPath: path });
+        if (savedPasswordResult.success && savedPasswordResult.password) {
+          await connectToDatabase(path, savedPasswordResult.password, readOnly);
+        } else {
+          setPasswordDialogOpen(true);
+        }
+      } else {
+        await connectToDatabase(path, undefined, readOnly);
+      }
+    },
+    [connectToDatabase]
+  );
+
   // Handle settings dialog submit
   const handleSettingsSubmit = useCallback(
     async (settings: ConnectionSettings) => {
@@ -251,7 +279,10 @@ export function DatabasePage() {
 
   return (
     <>
-      <DatabaseView onOpenDatabase={handleOpenDatabase} />
+      <DatabaseView
+        onOpenDatabase={handleOpenDatabase}
+        onOpenRecentConnection={handleOpenRecentConnection}
+      />
 
       {/* Connection Settings Dialog */}
       <ConnectionSettingsDialog

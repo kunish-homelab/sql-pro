@@ -1,8 +1,10 @@
+import type { RecentConnection } from '@shared/types';
 import type { DatabaseConnection } from '@/types/database';
 import {
   AlertCircle,
   Check,
   ChevronDown,
+  Clock,
   Database,
   Plus,
   X,
@@ -23,6 +25,7 @@ import {
   DropdownMenu,
   DropdownMenuContent,
   DropdownMenuItem,
+  DropdownMenuLabel,
   DropdownMenuSeparator,
   DropdownMenuTrigger,
 } from '@/components/ui/dropdown-menu';
@@ -36,11 +39,17 @@ import { useChangesStore, useConnectionStore } from '@/stores';
 
 interface ConnectionSelectorProps {
   onOpenDatabase?: () => void;
+  onOpenRecentConnection?: (
+    path: string,
+    isEncrypted: boolean,
+    readOnly?: boolean
+  ) => void;
   className?: string;
 }
 
 export function ConnectionSelector({
   onOpenDatabase,
+  onOpenRecentConnection,
   className,
 }: ConnectionSelectorProps) {
   const {
@@ -49,6 +58,7 @@ export function ConnectionSelector({
     setActiveConnection,
     removeConnection,
     getAllConnections,
+    recentConnections,
   } = useConnectionStore();
 
   const { changes, clearChanges } = useChangesStore();
@@ -60,6 +70,12 @@ export function ConnectionSelector({
   const activeConnection = activeConnectionId
     ? connections.get(activeConnectionId)
     : null;
+
+  // Filter recent connections to exclude currently open ones
+  const openPaths = new Set(allConnections.map((c) => c.path));
+  const filteredRecentConnections = recentConnections.filter(
+    (rc) => !openPaths.has(rc.path)
+  );
 
   // Check if there are unsaved changes for the current connection
   const hasUnsavedChanges = changes.length > 0;
@@ -111,6 +127,14 @@ export function ConnectionSelector({
     setIsOpen(false);
     onOpenDatabase?.();
   }, [onOpenDatabase]);
+
+  const handleRecentClick = useCallback(
+    (conn: RecentConnection) => {
+      setIsOpen(false);
+      onOpenRecentConnection?.(conn.path, conn.isEncrypted, conn.readOnly);
+    },
+    [onOpenRecentConnection]
+  );
 
   // Get connection status indicator color
   const getStatusColor = (connection: DatabaseConnection) => {
@@ -179,9 +203,14 @@ export function ConnectionSelector({
 
         <DropdownMenuContent
           align="start"
-          className="w-(--radix-dropdown-menu-trigger-width) min-w-50"
+          className="w-(--radix-dropdown-menu-trigger-width) max-w-(--radix-dropdown-menu-trigger-width) min-w-50"
         >
-          {/* Connection list */}
+          {/* Open connections */}
+          {allConnections.length > 0 && (
+            <DropdownMenuLabel className="text-muted-foreground text-xs font-normal">
+              Open Connections
+            </DropdownMenuLabel>
+          )}
           {allConnections.map((conn) => (
             <DropdownMenuItem
               key={conn.id}
@@ -207,7 +236,7 @@ export function ConnectionSelector({
                   </span>
                 )}
               </div>
-              <div className="flex items-center gap-1">
+              <div className="flex shrink-0 items-center gap-1">
                 {conn.id === activeConnectionId && (
                   <Check className="text-primary h-4 w-4" />
                 )}
@@ -222,6 +251,39 @@ export function ConnectionSelector({
               </div>
             </DropdownMenuItem>
           ))}
+
+          {/* Recent connections */}
+          {filteredRecentConnections.length > 0 && (
+            <>
+              <DropdownMenuSeparator />
+              <DropdownMenuLabel className="text-muted-foreground flex items-center gap-1.5 text-xs font-normal">
+                <Clock className="h-3 w-3" />
+                Recent
+              </DropdownMenuLabel>
+              {filteredRecentConnections.slice(0, 5).map((conn) => (
+                <DropdownMenuItem
+                  key={conn.path}
+                  className="cursor-pointer gap-2"
+                  onClick={() => handleRecentClick(conn)}
+                >
+                  <Database className="text-muted-foreground h-4 w-4 shrink-0" />
+                  <span className="truncate">
+                    {conn.displayName || conn.filename}
+                  </span>
+                  {conn.readOnly && (
+                    <span className="bg-muted text-muted-foreground shrink-0 rounded px-1 py-0.5 text-[10px]">
+                      R/O
+                    </span>
+                  )}
+                  {conn.isEncrypted && (
+                    <span className="bg-muted text-muted-foreground shrink-0 rounded px-1 py-0.5 text-[10px]">
+                      🔒
+                    </span>
+                  )}
+                </DropdownMenuItem>
+              ))}
+            </>
+          )}
 
           <DropdownMenuSeparator />
 
