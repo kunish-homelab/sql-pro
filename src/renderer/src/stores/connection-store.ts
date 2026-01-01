@@ -5,6 +5,7 @@ import type {
   TableSchema,
 } from '@/types/database';
 import { create } from 'zustand';
+import { persist } from 'zustand/middleware';
 
 interface ConnectionState {
   // Multiple connections support
@@ -94,8 +95,10 @@ const initialState = {
   schema: null,
 };
 
-export const useConnectionStore = create<ConnectionState>((set, get) => ({
-  ...initialState,
+export const useConnectionStore = create<ConnectionState>()(
+  persist(
+    (set, get) => ({
+      ...initialState,
 
   // Connection Actions
   addConnection: (connection) =>
@@ -333,4 +336,15 @@ export const useConnectionStore = create<ConnectionState>((set, get) => ({
       get().addConnection(connection);
     }
   },
-}));
+    }),
+    {
+      name: 'sql-pro-connections',
+      partialize: (state) => ({
+        // Only persist UI preferences - tab order and colors
+        connectionTabOrder: state.connectionTabOrder,
+        connectionColors: state.connectionColors,
+        recentConnections: state.recentConnections,
+      }),
+    }
+  )
+);
