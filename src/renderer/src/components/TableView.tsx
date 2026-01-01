@@ -1,3 +1,4 @@
+import type { BulkEditField } from './BulkEditDialog';
 import type { DataTableRef, TableRowData } from './data-table';
 import type { ExportOptions } from './ExportDialog';
 import type { UIFilterState } from '@/lib/filter-utils';
@@ -10,6 +11,7 @@ import {
   ChevronsLeft,
   ChevronsRight,
   Download,
+  Edit3,
   Eye,
   FileText,
   Info,
@@ -48,6 +50,7 @@ import {
   usePageSize,
   useSettingsStore,
 } from '@/stores';
+import { BulkEditDialog } from './BulkEditDialog';
 import {
   AnimatedLoader,
   ColumnStats,
@@ -105,6 +108,7 @@ export function TableView({
   const [grouping, setGrouping] = useState<string[]>([]);
   const [showDiffPreview, setShowDiffPreview] = useState(false);
   const [showExportDialog, setShowExportDialog] = useState(false);
+  const [showBulkEditDialog, setShowBulkEditDialog] = useState(false);
   const [filters, setFilters] = useState<UIFilterState[]>([]);
   const [selectedRowIds, setSelectedRowIds] = useState<string[]>([]);
 
@@ -302,6 +306,32 @@ export function TableView({
     setSelectedRowIds([]);
   }, [selectedRowIds, deleteRow]);
 
+  // Handle bulk edit of selected rows
+  const handleBulkEdit = useCallback(
+    (fields: BulkEditField[]) => {
+      if (selectedRowIds.length === 0 || fields.length === 0) return;
+
+      // Apply the edits to each selected row
+      selectedRowIds.forEach((rowId) => {
+        const updates: Record<string, unknown> = {};
+        fields.forEach((field) => {
+          // Convert empty string to null for nullable columns
+          const col = columns.find((c) => c.name === field.column);
+          let value = field.value;
+          if (col?.nullable && value === '') {
+            value = null;
+          }
+          updates[field.column] = value;
+        });
+        updateRow(rowId, updates);
+      });
+
+      // Clear selection and close dialog
+      setSelectedRowIds([]);
+    },
+    [selectedRowIds, columns, updateRow]
+  );
+
   // Handle selection change
   const handleSelectionChange = useCallback((ids: string[]) => {
     setSelectedRowIds(ids);
@@ -400,6 +430,16 @@ export function TableView({
             </div>
             <div className="flex items-center gap-2">
               <Button
+                variant="outline"
+                size="sm"
+                onClick={() => setShowBulkEditDialog(true)}
+                className="h-7 gap-1"
+              >
+                <Edit3 className="h-3.5 w-3.5" />
+                Edit{' '}
+                {selectedRowIds.length > 1 ? `(${selectedRowIds.length})` : ''}
+              </Button>
+              <Button
                 variant="destructive"
                 size="sm"
                 onClick={handleBulkDelete}
@@ -470,7 +510,7 @@ export function TableView({
 
             {/* Refresh button */}
             <Tooltip>
-              <TooltipTrigger asChild>
+              <TooltipTrigger>
                 <Button
                   variant="outline"
                   size="sm"
@@ -781,6 +821,15 @@ export function TableView({
         })}
         connectionId={connection?.id || ''}
         onExport={handleExport}
+      />
+
+      {/* Bulk Edit Dialog */}
+      <BulkEditDialog
+        open={showBulkEditDialog}
+        onOpenChange={setShowBulkEditDialog}
+        columns={columns}
+        selectedRowCount={selectedRowIds.length}
+        onApply={handleBulkEdit}
       />
 
       {/* Keyboard Shortcuts Overlay - Floating button */}
