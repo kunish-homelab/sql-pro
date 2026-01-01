@@ -439,7 +439,7 @@ export function Sidebar({ onOpenDatabase }: SidebarProps) {
           }}
         >
           {isLoadingSchema ? (
-            <div className="text-muted-foreground flex items-center justify-center py-8 text-sm">
+            <div className="text-muted-foreground flex items-center justify-center py-8">
               Loading schema...
             </div>
           ) : (
@@ -463,7 +463,7 @@ export function Sidebar({ onOpenDatabase }: SidebarProps) {
 
               {/* Empty State */}
               {filteredSchemas.length === 0 && (
-                <div className="text-muted-foreground py-8 text-center text-sm">
+                <div className="text-muted-foreground py-8 text-center">
                   {searchQuery
                     ? 'No tables match your search'
                     : 'No tables found'}

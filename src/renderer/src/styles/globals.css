@@ -129,6 +129,56 @@
   }
 }
 
+/* Font size inheritance - use CSS variables set by useApplyFont */
+:root {
+  /* Default font sizes (will be overridden by useApplyFont) */
+  --font-ui-size: 14px;
+  --font-table-size: 13px;
+  --font-editor-size: 14px;
+}
+
+/* Elements with explicit font-size style should have children inherit it */
+[style*='font-size'] {
+  /* Make sure children inherit font size unless they have their own explicit size */
+  & *:not([style*='font-size']) {
+    font-size: inherit;
+  }
+
+  /* Override Tailwind fixed-size text classes within font-styled containers */
+  & .text-xs,
+  & .text-sm,
+  & .text-base {
+    font-size: inherit;
+  }
+
+  /* Allow smaller relative sizes for specific UI elements */
+  & .text-\[10px\],
+  & .text-\[11px\] {
+    font-size: 0.8em;
+  }
+}
+
+/* Table elements should inherit font size */
+table,
+table * {
+  font-size: inherit;
+}
+
+/* Specific areas that should use the UI font size variable */
+[data-ui-font] {
+  font-size: var(--font-ui-size);
+}
+
+/* Table data areas should use table font size variable */
+[data-table-font] {
+  font-size: var(--font-table-size);
+}
+
+/* Editor areas should use editor font size variable */
+[data-editor-font] {
+  font-size: var(--font-editor-size);
+}
+
 /* macOS window drag region */
 .titlebar {
   -webkit-app-region: drag;
