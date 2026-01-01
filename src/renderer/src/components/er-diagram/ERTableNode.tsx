@@ -23,7 +23,7 @@ function ERTableNodeComponent({ data, selected }: ERTableNodeProps) {
   return (
     <div
       className={cn(
-        'bg-card text-card-foreground min-w-50 rounded-lg border shadow-sm',
+        'bg-card text-card-foreground relative min-w-50 rounded-lg border shadow-sm',
         'dark:border-zinc-700 dark:bg-zinc-900',
         selected && 'ring-primary ring-2'
       )}
@@ -55,7 +55,7 @@ function ERTableNodeComponent({ data, selected }: ERTableNodeProps) {
             <div
               key={column.name}
               className={cn(
-                'relative flex items-center gap-2 px-3 py-1 text-sm',
+                'flex items-center gap-2 px-3 py-1 text-sm',
                 'hover:bg-accent/50'
               )}
             >
