@@ -16,14 +16,12 @@ function ContextMenuPortal({ ...props }: ContextMenuPrimitive.Portal.Props) {
 
 function ContextMenuTrigger({
   className,
-  nativeButton = true,
   ...props
 }: ContextMenuPrimitive.Trigger.Props) {
   return (
     <ContextMenuPrimitive.Trigger
       data-slot="context-menu-trigger"
       className={cn('select-none', className)}
-      nativeButton={nativeButton}
       {...props}
     />
   );

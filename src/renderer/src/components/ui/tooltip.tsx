@@ -29,7 +29,6 @@ function Tooltip({ ...props }: TooltipPrimitive.Root.Props) {
 function TooltipTrigger({
   render,
   children,
-  nativeButton = true,
   ...props
 }: TooltipPrimitive.Trigger.Props) {
   // If render is provided, use it; otherwise use children as render
@@ -39,7 +38,6 @@ function TooltipTrigger({
     <TooltipPrimitive.Trigger
       data-slot="tooltip-trigger"
       render={render ?? (children as React.ReactElement)}
-      nativeButton={nativeButton}
       {...props}
     />
   );
