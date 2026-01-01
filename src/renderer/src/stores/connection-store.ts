@@ -14,6 +14,9 @@ interface ConnectionState {
   // Tab order for connection tabs UI
   connectionTabOrder: string[];
 
+  // Connection colors for visual distinction (connectionId -> hex color)
+  connectionColors: Record<string, string>;
+
   // Schema per connection
   schemas: Map<string, DatabaseSchema>;
 
@@ -37,6 +40,7 @@ interface ConnectionState {
   setActiveConnection: (id: string | null) => void;
   updateConnection: (id: string, updates: Partial<DatabaseConnection>) => void;
   reorderConnections: (fromIndex: number, toIndex: number) => void;
+  setConnectionColor: (id: string, color: string) => void;
 
   // Schema Actions
   setSchema: (connectionId: string, schema: DatabaseSchema | null) => void;
@@ -64,6 +68,7 @@ interface ConnectionState {
   getConnectionById: (id: string) => DatabaseConnection | undefined;
   getSchemaByConnectionId: (id: string) => DatabaseSchema | undefined;
   getAllConnections: () => DatabaseConnection[];
+  getConnectionColor: (id: string) => string | undefined;
   hasUnsavedChanges: (connectionId: string) => boolean;
 
   // Legacy compatibility
@@ -76,6 +81,7 @@ const initialState = {
   connections: new Map<string, DatabaseConnection>(),
   activeConnectionId: null,
   connectionTabOrder: [],
+  connectionColors: {},
   schemas: new Map<string, DatabaseSchema>(),
   selectedTable: null,
   selectedSchemaObject: null,
@@ -125,6 +131,9 @@ export const useConnectionStore = create<ConnectionState>((set, get) => ({
         (connId) => connId !== id
       );
 
+      // Remove from connection colors
+      const { [id]: _, ...newConnectionColors } = state.connectionColors;
+
       // If removing the active connection, switch to another one or null
       let newActiveId = state.activeConnectionId;
       let newConnection: DatabaseConnection | null = null;
@@ -151,6 +160,7 @@ export const useConnectionStore = create<ConnectionState>((set, get) => ({
         schemas: newSchemas,
         activeConnectionId: newActiveId,
         connectionTabOrder: newTabOrder,
+        connectionColors: newConnectionColors,
         selectedTable:
           state.activeConnectionId === id ? null : state.selectedTable,
         selectedSchemaObject:
@@ -217,6 +227,14 @@ export const useConnectionStore = create<ConnectionState>((set, get) => ({
       };
     }),
 
+  setConnectionColor: (id, color) =>
+    set((state) => ({
+      connectionColors: {
+        ...state.connectionColors,
+        [id]: color,
+      },
+    })),
+
   // Schema Actions
   setSchema: (connectionId, schema) =>
     set((state) => {
@@ -256,6 +274,7 @@ export const useConnectionStore = create<ConnectionState>((set, get) => ({
       connections: new Map(),
       activeConnectionId: null,
       connectionTabOrder: [],
+      connectionColors: {},
       schemas: new Map(),
       selectedTable: null,
       selectedSchemaObject: null,
@@ -291,6 +310,10 @@ export const useConnectionStore = create<ConnectionState>((set, get) => ({
 
   getAllConnections: () => {
     return Array.from(get().connections.values());
+  },
+
+  getConnectionColor: (id) => {
+    return get().connectionColors[id];
   },
 
   hasUnsavedChanges: (_connectionId) => {
