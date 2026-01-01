@@ -3,7 +3,9 @@ import { useNavigate } from '@tanstack/react-router';
 import {
   Code,
   Database,
+  FileDown,
   FileText,
+  GitCompare,
   HelpCircle,
   History,
   Keyboard,
@@ -141,6 +143,19 @@ export function useCommands() {
           document
             .querySelector<HTMLInputElement>('input[placeholder*="Search"]')
             ?.focus();
+        },
+      },
+      {
+        id: 'nav.schema-compare',
+        label: 'Open Schema Compare',
+        shortcut: formatShortcut('5', { cmd: true }),
+        icon: GitCompare,
+        category: 'navigation',
+        keywords: ['schema', 'compare', 'comparison', 'diff', 'migration'],
+        action: () => {
+          document
+            .querySelector<HTMLButtonElement>('[data-tab="compare"]')
+            ?.click();
         },
       },
 
@@ -288,6 +303,55 @@ export function useCommands() {
             );
             tableDataStoreRef.current.resetConnection(activeConnectionId);
             navigate({ to: '/' });
+          }
+        },
+        disabled: () => !connectionStoreRef.current.connection,
+      },
+      {
+        id: 'action.compare-schemas',
+        label: 'Compare Schemas',
+        icon: GitCompare,
+        category: 'actions',
+        keywords: ['compare', 'schema', 'diff', 'comparison'],
+        action: () => {
+          // First switch to compare tab
+          document
+            .querySelector<HTMLButtonElement>('[data-tab="compare"]')
+            ?.click();
+          // Then trigger compare button
+          setTimeout(() => {
+            const compareButton = document.querySelector<HTMLButtonElement>(
+              'button:has(svg.lucide-git-compare)'
+            );
+            compareButton?.click();
+          }, 100);
+        },
+        disabled: () => !connectionStoreRef.current.connection,
+      },
+      {
+        id: 'action.export-schema-report',
+        label: 'Export Schema Comparison Report',
+        icon: FileDown,
+        category: 'actions',
+        keywords: ['export', 'schema', 'report', 'comparison', 'download'],
+        action: () => {
+          // Find and click the Export Report button
+          const exportButton = document.querySelector<HTMLButtonElement>(
+            'button:has(svg.lucide-file-down)'
+          );
+          if (exportButton) {
+            exportButton.click();
+          } else {
+            // If button not found, try navigating to compare tab first
+            document
+              .querySelector<HTMLButtonElement>('[data-tab="compare"]')
+              ?.click();
+            setTimeout(() => {
+              const btn = document.querySelector<HTMLButtonElement>(
+                'button:has(svg.lucide-file-down)'
+              );
+              btn?.click();
+            }, 100);
           }
         },
         disabled: () => !connectionStoreRef.current.connection,
