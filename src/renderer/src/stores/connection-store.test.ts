@@ -920,6 +920,7 @@ describe('connection-store', () => {
           lastOpened: new Date().toISOString(),
           displayName: 'Profile 1',
           readOnly: false,
+          isSaved: true,
           createdAt: new Date().toISOString(),
         },
       ]);
@@ -937,6 +938,7 @@ describe('connection-store', () => {
           lastOpened: new Date().toISOString(),
           displayName: 'Profile 1 Updated',
           readOnly: false,
+          isSaved: true,
           createdAt: new Date().toISOString(),
         },
       ]);
@@ -958,6 +960,7 @@ describe('connection-store', () => {
           lastOpened: new Date().toISOString(),
           displayName: 'Profile 1',
           readOnly: false,
+          isSaved: true,
           createdAt: new Date().toISOString(),
         },
       ]);
