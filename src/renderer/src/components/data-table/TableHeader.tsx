@@ -25,6 +25,8 @@ interface HeaderCellProps {
   onResetColumnSize?: (columnId: string) => void;
   onTogglePin?: (columnId: string) => void;
   isGrouped: boolean;
+  /** Number of groups for this column (only when grouped) */
+  groupCount?: number;
   /** Current sort direction for this column */
   sortDirection: 'asc' | 'desc' | false;
   /** Current column size */
@@ -41,8 +43,6 @@ interface HeaderCellProps {
   pinnedOffset?: number;
   /** Whether this is the last pinned column */
   isLastPinned?: boolean;
-  /** Number of groups when this column is used for grouping */
-  groupCount?: number;
 }
 
 const HeaderCell = memo(
@@ -52,6 +52,7 @@ const HeaderCell = memo(
     onResetColumnSize,
     onTogglePin,
     isGrouped,
+    groupCount,
     sortDirection,
     existingFilter,
     onFilterAdd,
@@ -59,7 +60,6 @@ const HeaderCell = memo(
     isPinned,
     pinnedOffset,
     isLastPinned,
-    groupCount,
   }: HeaderCellProps) => {
     // State for filter popover
     const [filterPopoverOpen, setFilterPopoverOpen] = useState(false);
@@ -319,8 +319,6 @@ interface TableHeaderProps {
   onResetColumnSize?: (columnId: string) => void;
   onTogglePin?: (columnId: string) => void;
   grouping?: string[];
-  /** Number of groups (top-level grouped rows count) */
-  groupCount?: number;
   /** Sorting state - used to trigger re-render when sorting changes */
   sorting?: { column: string; direction: 'asc' | 'desc' } | null;
   /** Column sizing info - used to trigger re-render during resize */
@@ -344,7 +342,6 @@ export const TableHeader = memo(
     onResetColumnSize,
     onTogglePin,
     grouping = [],
-    groupCount,
     sorting: _sorting, // Used to trigger re-render when sorting changes
     columnSizingInfo: _columnSizingInfo, // Used to trigger re-render during resize
     filters = [],
@@ -372,6 +369,15 @@ export const TableHeader = memo(
         offset += col.getSize();
       }
     }
+
+    // Calculate group count for the first grouped column
+    // Count top-level grouped rows (depth 0)
+    const groupCount =
+      grouping.length > 0
+        ? table
+            .getRowModel()
+            .rows.filter((row) => row.getIsGrouped() && row.depth === 0).length
+        : 0;
 
     return (
       <thead className="bg-background after:bg-border sticky top-0 z-20 after:pointer-events-none after:absolute after:inset-x-0 after:bottom-0 after:h-px">
@@ -401,6 +407,10 @@ export const TableHeader = memo(
               const isLastPinned =
                 isPinned &&
                 pinnedColumns[pinnedColumns.length - 1] === header.column.id;
+              const isGrouped = grouping.includes(header.column.id);
+              // Only show group count for the first grouped column
+              const isFirstGroupedColumn =
+                isGrouped && grouping[0] === header.column.id;
 
               return (
                 <HeaderCell
@@ -409,10 +419,8 @@ export const TableHeader = memo(
                   onToggleGrouping={onToggleGrouping}
                   onResetColumnSize={onResetColumnSize}
                   onTogglePin={onTogglePin}
-                  isGrouped={grouping.includes(header.column.id)}
-                  groupCount={
-                    grouping.includes(header.column.id) ? groupCount : undefined
-                  }
+                  isGrouped={isGrouped}
+                  groupCount={isFirstGroupedColumn ? groupCount : undefined}
                   sortDirection={header.column.getIsSorted()}
                   columnSize={header.getSize()}
                   existingFilter={filtersByColumn[header.column.id]}

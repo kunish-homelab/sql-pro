@@ -77,7 +77,6 @@ import type {
   HasPasswordResponse,
   ImportProfilesRequest,
   ImportProfilesResponse,
-  IPC_CHANNELS,
   IsPasswordStorageAvailableResponse,
   MenuAction,
   OpenDatabaseRequest,
@@ -106,7 +105,7 @@ import type {
   SaveSchemaSnapshotResponse,
   SetPreferencesRequest,
   SetPreferencesResponse,
-  type ShortcutsUpdatePayload,
+  ShortcutsUpdatePayload,
   SqlLogEntry,
   UpdateConnectionRequest,
   UpdateConnectionResponse,
@@ -114,7 +113,9 @@ import type {
   UpdateFolderResponse,
   UpdateProfileRequest,
   UpdateProfileResponse,
-  UpdateStatus, ValidateChangesRequest, ValidateChangesResponse 
+  UpdateStatus,
+  ValidateChangesRequest,
+  ValidateChangesResponse,
 } from '@shared/types';
 import type {
   CheckUpdatesRequest,
@@ -136,9 +137,10 @@ import type {
   UninstallPluginResponse,
   UpdatePluginRequest,
   UpdatePluginResponse,
-} from '../main/types/plugin.d';
+} from '@/types/plugin.d';
 import process from 'node:process';
 import { electronAPI } from '@electron-toolkit/preload';
+import { IPC_CHANNELS } from '@shared/types';
 import { contextBridge, ipcRenderer, webUtils } from 'electron';
 
 // Custom API for SQL Pro
