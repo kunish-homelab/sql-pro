@@ -1,3 +1,7 @@
+import type {
+  FontConfig,
+  FontSettings,
+} from '../../../shared/types/font';
 import { create } from 'zustand';
 import { persist } from 'zustand/middleware';
 
@@ -19,21 +23,8 @@ export const MONOSPACE_FONTS = [
   { name: 'Inconsolata', value: 'Inconsolata' },
 ] as const;
 
-// Font configuration for each category
-export interface FontConfig {
-  family: string;
-  size: number;
-}
-
-// Font categories
-export type FontCategory = 'editor' | 'table' | 'ui';
-
-interface FontSettings {
-  editor: FontConfig;
-  table: FontConfig;
-  ui: FontConfig;
-  syncAll: boolean;
-}
+// Font categories (app-level categories: editor, table, ui)
+export type AppFontCategory = 'editor' | 'table' | 'ui';
 
 // Page size options for data browser
 export const PAGE_SIZE_OPTIONS = [50, 100, 200, 500, 1000, 'all'] as const;
@@ -59,7 +50,7 @@ interface SettingsState {
   // Actions
   setEditorVimMode: (enabled: boolean) => void;
   setAppVimMode: (enabled: boolean) => void;
-  setFont: (category: FontCategory, config: Partial<FontConfig>) => void;
+  setFont: (category: AppFontCategory, config: Partial<FontConfig>) => void;
   setSyncAll: (sync: boolean) => void;
   setTabSize: (size: number) => void;
   setPageSize: (size: PageSizeOption) => void;
@@ -196,6 +187,9 @@ export const useSettingsStore = create<SettingsState>()(
     }
   )
 );
+
+// Re-export shared types for convenience
+export type { FontConfig, FontSettings } from '../../../shared/types/font';
 
 // Selector hooks for convenience
 export const useEditorFont = () => useSettingsStore((s) => s.fonts.editor);

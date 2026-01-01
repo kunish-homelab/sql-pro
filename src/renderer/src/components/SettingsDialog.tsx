@@ -1,4 +1,5 @@
 import type { AIProvider } from '../../../shared/types';
+import type { FontCategory, SystemFont } from '../../../shared/types/font';
 import type { FontConfig } from '@/stores/settings-store';
 import {
   Check,
@@ -63,26 +64,11 @@ interface SettingsDialogProps {
   onOpenChange: (open: boolean) => void;
 }
 
-type FontCategory = 'monospace' | 'serif' | 'sans-serif' | 'display' | 'other';
-
-interface SystemFont {
-  name: string;
-  category: FontCategory;
-}
-
 interface FontOption {
   name: string;
   value: string;
   category?: FontCategory;
 }
-
-const CATEGORY_LABELS: Record<FontCategory, string> = {
-  monospace: 'Monospace',
-  'sans-serif': 'Sans Serif',
-  serif: 'Serif',
-  display: 'Display',
-  other: 'Other',
-};
 
 export function SettingsDialog({ open, onOpenChange }: SettingsDialogProps) {
   const { theme, setTheme } = useThemeStore();
@@ -359,7 +345,7 @@ export function SettingsDialog({ open, onOpenChange }: SettingsDialogProps) {
                 <div className="space-y-0.5">
                   <Label
                     htmlFor="restore-session"
-                    className="text-sm font-medium cursor-pointer"
+                    className="cursor-pointer text-sm font-medium"
                   >
                     Restore session on startup
                   </Label>

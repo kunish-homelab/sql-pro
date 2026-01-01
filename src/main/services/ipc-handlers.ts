@@ -30,6 +30,7 @@ import type {
   UpdateConnectionRequest,
   ValidateChangesRequest,
 } from '../../shared/types';
+import type {SystemFont} from '../lib/font-constants';
 import type { StoredPreferences } from './store';
 import { exec } from 'node:child_process';
 import fs from 'node:fs';
@@ -47,6 +48,11 @@ import {
   generateJSON,
   generateSQL,
 } from '../lib/export-generators';
+import {
+  CATEGORY_ORDER,
+  classifyFont
+  
+} from '../lib/font-constants';
 import { databaseService } from './database';
 import { passwordStorageService } from './password-storage';
 import { sqlLogger } from './sql-logger';
@@ -54,17 +60,25 @@ import {
   addRecentConnection,
   clearProStatus,
   clearQueryHistory,
+  deleteFolder,
+  deleteProfile,
   deleteQueryHistoryEntry,
   getAISettings,
+  getFolders,
   getPreferences,
+  getProfiles,
   getProStatus,
   getQueryHistory,
   getRecentConnections,
   removeRecentConnection,
   saveAISettings,
+  saveFolder,
+  saveProfile,
   saveProStatus,
   saveQueryHistoryEntry,
   setPreferences,
+  updateFolder,
+  updateProfile,
   updateRecentConnection,
 } from './store';
 import {
@@ -76,168 +90,28 @@ import {
 
 const execAsync = promisify(exec);
 
-// Well-known font categories for classification
-const MONOSPACE_FONTS = new Set([
-  'Cascadia Code',
-  'Cascadia Mono',
-  'Consolas',
-  'Courier',
-  'Courier New',
-  'DejaVu Sans Mono',
-  'Droid Sans Mono',
-  'Fira Code',
-  'Fira Mono',
-  'Hack',
-  'IBM Plex Mono',
-  'Inconsolata',
-  'JetBrains Mono',
-  'Menlo',
-  'Monaco',
-  'Noto Mono',
-  'Noto Sans Mono',
-  'PT Mono',
-  'Roboto Mono',
-  'SF Mono',
-  'Source Code Pro',
-  'Ubuntu Mono',
-  'Victor Mono',
-]);
-
-const SERIF_FONTS = new Set([
-  'Baskerville',
-  'Book Antiqua',
-  'Cambria',
-  'Century',
-  'Charter',
-  'Crimson Text',
-  'DejaVu Serif',
-  'Didot',
-  'EB Garamond',
-  'Georgia',
-  'Hoefler Text',
-  'IBM Plex Serif',
-  'Iowan Old Style',
-  'Linux Libertine',
-  'Lora',
-  'Merriweather',
-  'Noto Serif',
-  'PT Serif',
-  'Palatino',
-  'Palatino Linotype',
-  'Playfair Display',
-  'Source Serif Pro',
-  'Times',
-  'Times New Roman',
-]);
-
-const SANS_SERIF_FONTS = new Set([
-  'Arial',
-  'Avenir',
-  'Avenir Next',
-  'Calibri',
-  'DejaVu Sans',
-  'Fira Sans',
-  'Franklin Gothic',
-  'Gill Sans',
-  'Helvetica',
-  'Helvetica Neue',
-  'IBM Plex Sans',
-  'Inter',
-  'Lato',
-  'Lucida Grande',
-  'Lucida Sans',
-  'Montserrat',
-  'Noto Sans',
-  'Nunito',
-  'Open Sans',
-  'Optima',
-  'Oswald',
-  'PT Sans',
-  'Poppins',
-  'Raleway',
-  'Roboto',
-  'San Francisco',
-  'Segoe UI',
-  'SF Pro',
-  'SF Pro Display',
-  'SF Pro Text',
-  'Source Sans Pro',
-  'Tahoma',
-  'Trebuchet MS',
-  'Ubuntu',
-  'Verdana',
-]);
-
-const DISPLAY_FONTS = new Set([
-  'American Typewriter',
-  'Brush Script',
-  'Chalkboard',
-  'Comic Sans MS',
-  'Copperplate',
-  'Impact',
-  'Luminari',
-  'Marker Felt',
-  'Papyrus',
-  'Phosphate',
-  'Rockwell',
-  'Snell Roundhand',
-  'Zapfino',
-]);
-
-type FontCategory = 'monospace' | 'serif' | 'sans-serif' | 'display' | 'other';
-
-interface SystemFont {
-  name: string;
-  category: FontCategory;
-}
+// ============ Utilities ============
 
 /**
- * Classify a font into a category based on known font lists
- * or naming heuristics.
+ * Wraps an async handler with consistent error handling
  */
-function classifyFont(fontName: string): FontCategory {
-  const normalized = fontName.trim();
-
-  // Check known font sets first
-  if (MONOSPACE_FONTS.has(normalized)) return 'monospace';
-  if (SERIF_FONTS.has(normalized)) return 'serif';
-  if (SANS_SERIF_FONTS.has(normalized)) return 'sans-serif';
-  if (DISPLAY_FONTS.has(normalized)) return 'display';
-
-  // Use naming heuristics
-  const lower = normalized.toLowerCase();
-  if (
-    lower.includes('mono') ||
-    lower.includes('code') ||
-    lower.includes('console') ||
-    lower.includes('courier')
-  ) {
-    return 'monospace';
-  }
-  if (
-    lower.includes('serif') &&
-    !lower.includes('sans') &&
-    !lower.includes('sans-serif')
-  ) {
-    return 'serif';
-  }
-  if (
-    lower.includes('sans') ||
-    lower.includes('gothic') ||
-    lower.includes('grotesk')
-  ) {
-    return 'sans-serif';
-  }
-  if (
-    lower.includes('script') ||
-    lower.includes('hand') ||
-    lower.includes('brush') ||
-    lower.includes('display')
-  ) {
-    return 'display';
-  }
-
-  return 'other';
+function createHandler<T, R>(
+  handler: (request: T) => Promise<R>
+): (
+  _event: any,
+  request: T
+) => Promise<{ success: boolean; error?: string } & R> {
+  return async (_event, request) => {
+    try {
+      const result = await handler(request);
+      return { success: true, ...result } as any;
+    } catch (error) {
+      return {
+        success: false,
+        error: error instanceof Error ? error.message : 'Operation failed',
+      };
+    }
+  };
 }
 
 /**
@@ -316,16 +190,8 @@ async function getSystemFonts(): Promise<SystemFont[]> {
   }));
 
   // Sort: first by category priority, then alphabetically within each category
-  const categoryOrder: Record<FontCategory, number> = {
-    monospace: 0,
-    'sans-serif': 1,
-    serif: 2,
-    display: 3,
-    other: 4,
-  };
-
   return fonts.sort((a, b) => {
-    const catDiff = categoryOrder[a.category] - categoryOrder[b.category];
+    const catDiff = CATEGORY_ORDER[a.category] - CATEGORY_ORDER[b.category];
     if (catDiff !== 0) return catDiff;
     return a.name.toLowerCase().localeCompare(b.name.toLowerCase());
   });
@@ -1364,5 +1230,87 @@ export function setupIpcHandlers(): void {
         };
       }
     }
+  );
+
+  // ============ Profile Handlers ============
+
+  // Profile: Get all profiles
+  ipcMain.handle(
+    IPC_CHANNELS.PROFILE_GET_ALL,
+    createHandler(async () => ({
+      profiles: getProfiles(),
+    }))
+  );
+
+  // Profile: Save profile
+  ipcMain.handle(
+    IPC_CHANNELS.PROFILE_SAVE,
+    createHandler(async (request: { profile: Record<string, unknown> }) => ({
+      result: saveProfile(request.profile as Parameters<typeof saveProfile>[0]),
+    }))
+  );
+
+  // Profile: Update profile
+  ipcMain.handle(
+    IPC_CHANNELS.PROFILE_UPDATE,
+    createHandler(
+      async (request: { id: string; updates: Record<string, unknown> }) => ({
+        result: updateProfile(
+          request.id,
+          request.updates as Parameters<typeof updateProfile>[1]
+        ),
+      })
+    )
+  );
+
+  // Profile: Delete profile
+  ipcMain.handle(
+    IPC_CHANNELS.PROFILE_DELETE,
+    createHandler(async (request: { id: string }) => ({
+      result: deleteProfile(request.id),
+    }))
+  );
+
+  // ============ Folder Handlers ============
+
+  // Folder: Get all folders
+  ipcMain.handle(
+    IPC_CHANNELS.FOLDER_GET_ALL,
+    createHandler(async () => ({
+      folders: getFolders(),
+    }))
+  );
+
+  // Folder: Create folder
+  ipcMain.handle(
+    IPC_CHANNELS.FOLDER_CREATE,
+    createHandler(async (request: Record<string, unknown>) => {
+      // Support both { folder: {...} } and direct { name, parentId } formats
+      const folderData = request.folder ?? request;
+      return {
+        result: saveFolder(folderData as Parameters<typeof saveFolder>[0]),
+      };
+    })
+  );
+
+  // Folder: Update folder
+  ipcMain.handle(
+    IPC_CHANNELS.FOLDER_UPDATE,
+    createHandler(
+      async (request: { id: string; updates: Record<string, unknown> }) => ({
+        result: updateFolder(
+          request.id,
+          request.updates as Parameters<typeof updateFolder>[1]
+        ),
+      })
+    )
+  );
+
+  // Folder: Delete folder
+  ipcMain.handle(
+    IPC_CHANNELS.FOLDER_DELETE,
+    createHandler(async (request: { id: string }) => ({
+      result: deleteFolder(request.id),
+    }))
   );
 }

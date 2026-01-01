@@ -3,8 +3,8 @@ import { TanStackDevtools } from '@tanstack/react-devtools';
 import { ReactQueryDevtoolsPanel } from '@tanstack/react-query-devtools';
 import { Outlet } from '@tanstack/react-router';
 import { TanStackRouterDevtoolsPanel } from '@tanstack/react-router-devtools';
-import { useEffect } from 'react';
 import { CommandPalette } from '@/components/CommandPalette';
+import { getFontFamilyCSS, useApplyFont } from '@/hooks/useApplyFont';
 import { useCommands } from '@/hooks/useCommands';
 import { useMenuActions } from '@/hooks/useMenuActions';
 import { isMockMode } from '@/lib/mock-api';
@@ -24,23 +24,13 @@ export function RootLayout() {
   useMenuActions();
 
   // Apply UI font to document root
-  useEffect(() => {
-    const root = document.documentElement;
-    if (uiFont.family) {
-      root.style.setProperty('--font-ui-family', uiFont.family);
-    } else {
-      root.style.removeProperty('--font-ui-family');
-    }
-    root.style.setProperty('--font-ui-size', `${uiFont.size}px`);
-  }, [uiFont.family, uiFont.size]);
+  useApplyFont(uiFont, 'ui');
 
   return (
     <div
       className="bg-background text-foreground flex h-screen flex-col overflow-hidden"
       style={{
-        fontFamily: uiFont.family
-          ? `"${uiFont.family}", system-ui, sans-serif`
-          : undefined,
+        fontFamily: getFontFamilyCSS(uiFont.family),
         fontSize: `${uiFont.size}px`,
       }}
     >
