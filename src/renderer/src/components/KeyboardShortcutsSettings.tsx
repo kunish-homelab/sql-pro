@@ -353,7 +353,7 @@ export const KeyboardShortcutsSettings = memo(
                 <SelectTrigger className="h-9">
                   <SelectValue />
                 </SelectTrigger>
-                <SelectContent>
+                <SelectContent className="w-[--radix-select-trigger-width] min-w-[200px]">
                   {Object.entries(PRESET_INFO).map(([key, info]) => (
                     <SelectItem key={key} value={key}>
                       <div className="flex flex-col">
