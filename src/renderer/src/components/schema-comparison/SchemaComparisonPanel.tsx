@@ -7,6 +7,7 @@ import { ScrollArea } from '@/components/ui/scroll-area';
 import { sqlPro } from '@/lib/api';
 import { useSchemaComparisonStore } from '@/stores';
 import { DiffFilterBar } from './DiffFilterBar';
+import { DiffSummary } from './DiffSummary';
 import { SchemaDiffView } from './SchemaDiffView';
 import { SourceSelector } from './SourceSelector';
 
@@ -287,6 +288,9 @@ export function SchemaComparisonPanel({
                   </div>
                 </CardContent>
               </Card>
+
+              {/* Diff Summary - Clickable counts */}
+              <DiffSummary comparisonResult={comparisonResult} />
 
               {/* Detailed Diff View */}
               <Card>
