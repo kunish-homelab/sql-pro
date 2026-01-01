@@ -1,12 +1,14 @@
 import type { DragCancelEvent, DragEndEvent } from '@dnd-kit/core';
 import type { DatabaseConnection } from '@/types/database';
 import {
+  closestCenter,
   DndContext,
   KeyboardSensor,
   PointerSensor,
   useSensor,
   useSensors,
 } from '@dnd-kit/core';
+import { restrictToHorizontalAxis } from '@dnd-kit/modifiers';
 import {
   horizontalListSortingStrategy,
   SortableContext,
@@ -77,9 +79,17 @@ const ConnectionTab = memo(
     const { getConnectionColor, setConnectionColor } = useConnectionStore();
     const connectionColor = getConnectionColor(connection.id) || '#3b82f6'; // default blue
 
-    // Set up drag and drop for this tab
-    const { attributes, listeners, setNodeRef, transform, transition } =
-      useSortable({ id: connection.id });
+    // Set up drag and drop for this tab with activation constraint
+    const {
+      attributes,
+      listeners,
+      setNodeRef,
+      transform,
+      transition,
+      isDragging,
+    } = useSortable({
+      id: connection.id,
+    });
 
     // Status icon based on connection status
     const StatusIcon =
@@ -108,6 +118,13 @@ const ConnectionTab = memo(
       }
     };
 
+    // Prevent click from triggering when dragging
+    const handleClick = () => {
+      if (!isDragging) {
+        onSelect();
+      }
+    };
+
     return (
       <ContextMenu>
         <ContextMenuTrigger>
@@ -121,7 +138,8 @@ const ConnectionTab = memo(
                     'group relative flex h-8 max-w-45 min-w-25 cursor-pointer items-center gap-1.5 border-r px-2 text-sm transition-colors',
                     isActive
                       ? 'bg-background text-foreground'
-                      : 'bg-muted/50 text-muted-foreground hover:bg-muted hover:text-foreground'
+                      : 'bg-muted/50 text-muted-foreground hover:bg-muted hover:text-foreground',
+                    isDragging && 'z-50 opacity-80 shadow-lg'
                   )}
                   style={{
                     transform: CSS.Transform.toString(transform),
@@ -132,7 +150,7 @@ const ConnectionTab = memo(
                       ? connectionColor
                       : 'transparent',
                   }}
-                  onClick={onSelect}
+                  onClick={handleClick}
                   {...attributes}
                   {...listeners}
                 >
@@ -158,10 +176,10 @@ const ConnectionTab = memo(
                   </Tooltip>
                 </div>
               </TooltipTrigger>
-              <TooltipContent side="bottom" className="text-xs">
+              <TooltipContent side="bottom" className="max-w-80 text-xs">
                 <div className="flex flex-col gap-1">
                   <div className="font-medium">{connection.filename}</div>
-                  <div className="text-muted-foreground text-xs">
+                  <div className="text-muted-foreground text-xs break-all">
                     {connection.path}
                   </div>
                 </div>
@@ -231,9 +249,14 @@ export const ConnectionTabBar = memo(({ className }: ConnectionTabBarProps) => {
   );
   const connections = [...orderedConnections, ...unorderedConnections];
 
-  // Set up sensors for drag and drop
+  // Set up sensors for drag and drop with activation constraint
+  // Require at least 8px movement before starting drag to allow clicks
   const sensors = useSensors(
-    useSensor(PointerSensor),
+    useSensor(PointerSensor, {
+      activationConstraint: {
+        distance: 8,
+      },
+    }),
     useSensor(KeyboardSensor, {
       coordinateGetter: sortableKeyboardCoordinates,
     })
@@ -244,8 +267,9 @@ export const ConnectionTabBar = memo(({ className }: ConnectionTabBarProps) => {
     const { active, over } = event;
 
     if (over && active.id !== over.id) {
-      const oldIndex = connections.findIndex((conn) => conn.id === active.id);
-      const newIndex = connections.findIndex((conn) => conn.id === over.id);
+      // Find indices in connectionTabOrder (not in connections array)
+      const oldIndex = connectionTabOrder.indexOf(active.id as string);
+      const newIndex = connectionTabOrder.indexOf(over.id as string);
 
       if (oldIndex !== -1 && newIndex !== -1) {
         reorderConnections(oldIndex, newIndex);
@@ -266,6 +290,8 @@ export const ConnectionTabBar = memo(({ className }: ConnectionTabBarProps) => {
   return (
     <DndContext
       sensors={sensors}
+      collisionDetection={closestCenter}
+      modifiers={[restrictToHorizontalAxis]}
       onDragEnd={handleDragEnd}
       onDragCancel={handleDragCancel}
     >
