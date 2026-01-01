@@ -18,9 +18,11 @@ import {
 } from '@dnd-kit/core';
 import {
   SortableContext,
+  useSortable,
   horizontalListSortingStrategy,
   sortableKeyboardCoordinates,
 } from '@dnd-kit/sortable';
+import { CSS } from '@dnd-kit/utilities';
 
 interface ConnectionTabBarProps {
   className?: string;
@@ -37,6 +39,15 @@ const ConnectionTab = memo(
   ({ connection, isActive, onSelect, onClose }: ConnectionTabProps) => {
     const { getConnectionColor } = useConnectionStore();
     const connectionColor = getConnectionColor(connection.id) || '#3b82f6'; // default blue
+
+    // Set up drag and drop for this tab
+    const {
+      attributes,
+      listeners,
+      setNodeRef,
+      transform,
+      transition,
+    } = useSortable({ id: connection.id });
 
     // Status icon based on connection status
     const StatusIcon =
@@ -63,6 +74,7 @@ const ConnectionTab = memo(
         <Tooltip>
           <TooltipTrigger asChild>
             <div
+              ref={setNodeRef}
               role="tab"
               aria-selected={isActive}
               className={cn(
@@ -72,11 +84,15 @@ const ConnectionTab = memo(
                   : 'bg-muted/50 text-muted-foreground hover:bg-muted hover:text-foreground'
               )}
               style={{
+                transform: CSS.Transform.toString(transform),
+                transition,
                 borderBottomWidth: '2px',
                 borderBottomStyle: 'solid',
                 borderBottomColor: isActive ? connectionColor : 'transparent',
               }}
               onClick={onSelect}
+              {...attributes}
+              {...listeners}
             >
               <StatusIcon className={cn('h-3.5 w-3.5 shrink-0', statusColorClass)} />
               <span className="flex-1 truncate">{connection.filename}</span>
