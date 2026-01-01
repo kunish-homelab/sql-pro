@@ -203,7 +203,7 @@ export function ConnectionSelector({
 
         <DropdownMenuContent
           align="start"
-          className="w-(--radix-dropdown-menu-trigger-width) max-w-(--radix-dropdown-menu-trigger-width) min-w-50"
+          className="min-w-(--radix-dropdown-menu-trigger-width)"
         >
           {/* Open connections */}
           {allConnections.length > 0 && (
