@@ -35,7 +35,7 @@ import {
   TooltipTrigger,
 } from '@/components/ui/tooltip';
 import { cn } from '@/lib/utils';
-import { useChangesStore, useConnectionStore } from '@/stores';
+import { useChangesStore, useConnectionStore, useTableFont } from '@/stores';
 
 interface ConnectionSelectorProps {
   onOpenDatabase?: () => void;
@@ -62,6 +62,7 @@ export function ConnectionSelector({
   } = useConnectionStore();
 
   const { changes, clearChanges } = useChangesStore();
+  const tableFont = useTableFont();
   const [isOpen, setIsOpen] = useState(false);
   const [pendingSwitchId, setPendingSwitchId] = useState<string | null>(null);
   const [showUnsavedDialog, setShowUnsavedDialog] = useState(false);
@@ -174,6 +175,10 @@ export function ConnectionSelector({
               'w-full justify-between gap-2 font-normal',
               className
             )}
+            style={{
+              fontFamily: tableFont.family || undefined,
+              fontSize: tableFont.size ? `${tableFont.size}px` : undefined,
+            }}
           >
             <div className="flex min-w-0 items-center gap-2">
               <span
@@ -204,6 +209,10 @@ export function ConnectionSelector({
         <DropdownMenuContent
           align="start"
           className="min-w-(--radix-dropdown-menu-trigger-width)"
+          style={{
+            fontFamily: tableFont.family || undefined,
+            fontSize: tableFont.size ? `${tableFont.size}px` : undefined,
+          }}
         >
           {/* Open connections */}
           {allConnections.length > 0 && (
