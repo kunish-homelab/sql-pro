@@ -1,6 +1,13 @@
 import type { DatabaseConnection } from '@/types/database';
+import { AlertCircle, CheckCircle, Circle } from 'lucide-react';
 import { memo } from 'react';
 import { cn } from '@/lib/utils';
+import {
+  Tooltip,
+  TooltipContent,
+  TooltipProvider,
+  TooltipTrigger,
+} from '@/components/ui/tooltip';
 import { useConnectionStore } from '@/stores';
 
 interface ConnectionTabBarProps {
@@ -15,20 +22,56 @@ interface ConnectionTabProps {
 
 const ConnectionTab = memo(
   ({ connection, isActive, onSelect }: ConnectionTabProps) => {
+    const { getConnectionColor } = useConnectionStore();
+    const connectionColor = getConnectionColor(connection.id) || '#3b82f6'; // default blue
+
+    // Status icon based on connection status
+    const StatusIcon =
+      connection.status === 'connected'
+        ? CheckCircle
+        : connection.status === 'error'
+        ? AlertCircle
+        : Circle;
+
+    const statusColorClass =
+      connection.status === 'connected'
+        ? 'text-green-500'
+        : connection.status === 'error'
+        ? 'text-red-500'
+        : 'text-muted-foreground';
+
     return (
-      <div
-        role="tab"
-        aria-selected={isActive}
-        className={cn(
-          'group relative flex h-8 max-w-45 min-w-25 cursor-pointer items-center gap-1 border-r px-2 text-sm transition-colors',
-          isActive
-            ? 'bg-background text-foreground'
-            : 'bg-muted/50 text-muted-foreground hover:bg-muted hover:text-foreground'
-        )}
-        onClick={onSelect}
-      >
-        <span className="flex-1 truncate">{connection.filename}</span>
-      </div>
+      <TooltipProvider delay={300}>
+        <Tooltip>
+          <TooltipTrigger asChild>
+            <div
+              role="tab"
+              aria-selected={isActive}
+              className={cn(
+                'group relative flex h-8 max-w-45 min-w-25 cursor-pointer items-center gap-1.5 border-r px-2 text-sm transition-colors',
+                isActive
+                  ? 'bg-background text-foreground'
+                  : 'bg-muted/50 text-muted-foreground hover:bg-muted hover:text-foreground'
+              )}
+              style={{
+                borderBottomWidth: '2px',
+                borderBottomStyle: 'solid',
+                borderBottomColor: isActive ? connectionColor : 'transparent',
+              }}
+              onClick={onSelect}
+            >
+              <StatusIcon className={cn('h-3.5 w-3.5 shrink-0', statusColorClass)} />
+              <span className="flex-1 truncate">{connection.filename}</span>
+            </div>
+          </TooltipTrigger>
+          <TooltipContent side="bottom" className="text-xs">
+            <div className="flex flex-col gap-1">
+              <div className="font-medium">{connection.filename}</div>
+              <div className="text-muted-foreground text-xs">{connection.path}</div>
+            </div>
+          </TooltipContent>
+        </Tooltip>
+      </TooltipProvider>
     );
   }
 );
