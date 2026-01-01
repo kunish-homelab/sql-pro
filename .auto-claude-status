@@ -3,7 +3,7 @@
   "spec": "007-multi-connection-tabs",
   "state": "building",
   "subtasks": {
-    "completed": 11,
+    "completed": 13,
     "total": 22,
     "in_progress": 1,
     "failed": 0
@@ -18,8 +18,8 @@
     "max": 1
   },
   "session": {
-    "number": 14,
+    "number": 17,
     "started_at": "2026-01-01T12:57:35.659394"
   },
-  "last_update": "2026-01-01T13:56:22.928786"
+  "last_update": "2026-01-01T14:07:18.095224"
 }
