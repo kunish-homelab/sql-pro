@@ -6,6 +6,7 @@ import { Card, CardContent, CardHeader, CardTitle } from '@/components/ui/card';
 import { ScrollArea } from '@/components/ui/scroll-area';
 import { sqlPro } from '@/lib/api';
 import { useSchemaComparisonStore } from '@/stores';
+import { DiffFilterBar } from './DiffFilterBar';
 import { SchemaDiffView } from './SchemaDiffView';
 import { SourceSelector } from './SourceSelector';
 
@@ -292,7 +293,11 @@ export function SchemaComparisonPanel({
                 <CardHeader>
                   <CardTitle>Schema Differences</CardTitle>
                 </CardHeader>
-                <CardContent className="p-0">
+                <CardContent className="space-y-4">
+                  {/* Filter Bar */}
+                  <DiffFilterBar />
+
+                  {/* Diff View */}
                   <SchemaDiffView comparisonResult={comparisonResult} />
                 </CardContent>
               </Card>
