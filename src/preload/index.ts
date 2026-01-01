@@ -49,16 +49,18 @@ import type {
   CompareSnapshotsRequest,
   CompareSnapshotsResponse,
   CreateWindowResponse,
-  GenerateMigrationSQLRequest,
-  GenerateMigrationSQLResponse,
   DeleteQueryHistoryRequest,
   DeleteQueryHistoryResponse,
   DeleteSchemaSnapshotRequest,
   DeleteSchemaSnapshotResponse,
   ExecuteQueryRequest,
   ExecuteQueryResponse,
+  ExportComparisonReportRequest,
+  ExportComparisonReportResponse,
   ExportRequest,
   ExportResponse,
+  GenerateMigrationSQLRequest,
+  GenerateMigrationSQLResponse,
   FocusWindowRequest,
   FocusWindowResponse,
   GetAISettingsResponse,
@@ -431,6 +433,8 @@ const sqlProAPI = {
       ipcRenderer.invoke(IPC_CHANNELS.SCHEMA_COMPARISON_COMPARE_SNAPSHOTS, request),
     generateMigrationSQL: (request: GenerateMigrationSQLRequest): Promise<GenerateMigrationSQLResponse> =>
       ipcRenderer.invoke(IPC_CHANNELS.SCHEMA_COMPARISON_GENERATE_MIGRATION_SQL, request),
+    exportReport: (request: ExportComparisonReportRequest): Promise<ExportComparisonReportResponse> =>
+      ipcRenderer.invoke(IPC_CHANNELS.SCHEMA_COMPARISON_EXPORT_REPORT, request),
   },
 };
 

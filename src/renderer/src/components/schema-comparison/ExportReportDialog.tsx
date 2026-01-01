@@ -116,17 +116,17 @@ export function ExportReportDialog({
         return;
       }
 
-      // TODO: Call IPC handler to export report (to be implemented in subtask 6.3)
-      // For now, this is a placeholder that will be implemented in the next subtask
-      // const response = await sqlPro.schemaComparison.exportReport({
-      //   comparisonResult,
-      //   format: selectedFormat,
-      //   filePath,
-      //   includeMigrationSQL,
-      // });
+      // Call IPC handler to export report
+      const response = await window.sqlPro.schemaComparison.exportReport({
+        comparisonResult,
+        format: selectedFormat,
+        filePath,
+        includeMigrationSQL,
+      });
 
-      // Temporary placeholder - will be replaced in subtask 6.3
-      console.warn('Export functionality will be implemented in subtask 6.3');
+      if (!response.success) {
+        throw new Error(response.error || 'Export failed');
+      }
 
       // Close dialog on success
       onOpenChange(false);

@@ -10,6 +10,7 @@ import type {
   DeleteQueryHistoryRequest,
   DeleteSchemaSnapshotRequest,
   ExecuteQueryRequest,
+  ExportComparisonReportRequest,
   ExportRequest,
   GenerateMigrationSQLRequest,
   GetPasswordRequest,
@@ -1079,6 +1080,15 @@ export const mockSqlProAPI: any = {
         sql: '-- Mock migration SQL\n-- No changes detected in mock mode',
         statements: [],
         warnings: [],
+      };
+    },
+    exportReport: async (
+      _request: ExportComparisonReportRequest
+    ): Promise<any> => {
+      await delay(400);
+      return {
+        success: true,
+        filePath: _request.filePath,
       };
     },
   },

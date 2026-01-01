@@ -15,6 +15,7 @@ import type {
   DeleteQueryHistoryRequest,
   DeleteSchemaSnapshotRequest,
   ExecuteQueryRequest,
+  ExportComparisonReportRequest,
   ExportRequest,
   FocusWindowRequest,
   GenerateMigrationSQLRequest,
@@ -54,6 +55,11 @@ import {
   generateJSON,
   generateSQL,
 } from '../lib/export-generators';
+import {
+  generateHTMLReport,
+  generateJSONReport,
+  generateMarkdownReport,
+} from '../lib/comparison-report-generators';
 import { databaseService } from './database';
 import { migrationGeneratorService } from './migration-generator';
 import { passwordStorageService } from './password-storage';
@@ -1697,4 +1703,140 @@ export function setupIpcHandlers(): void {
       }
     }
   );
+
+  // Schema Comparison: Export Report
+  ipcMain.handle(
+    IPC_CHANNELS.SCHEMA_COMPARISON_EXPORT_REPORT,
+    async (_event, request: ExportComparisonReportRequest) => {
+      try {
+        const { comparisonResult, format, filePath, includeMigrationSQL } = request;
+
+        let reportContent: string | Buffer;
+
+        // Generate report based on format
+        switch (format) {
+          case 'html': {
+            let htmlContent = generateHTMLReport(comparisonResult);
+
+            // Optionally append migration SQL
+            if (includeMigrationSQL) {
+              const migrationResult = migrationGeneratorService.generateMigrationSQL({
+                comparisonResult,
+                includeDropStatements: true,
+              });
+
+              if (migrationResult.success && migrationResult.sql) {
+                // Append migration SQL section to HTML
+                htmlContent = htmlContent.replace(
+                  '</body>',
+                  `
+  <section class="migration-sql">
+    <h2>Migration SQL</h2>
+    <pre><code>${escapeHtml(migrationResult.sql)}</code></pre>
+    ${migrationResult.warnings && migrationResult.warnings.length > 0 ? `
+    <div class="warnings">
+      <h3>Warnings</h3>
+      <ul>
+        ${migrationResult.warnings.map(w => `<li>${escapeHtml(w)}</li>`).join('\n        ')}
+      </ul>
+    </div>
+    ` : ''}
+  </section>
+</body>`
+                );
+              }
+            }
+
+            reportContent = htmlContent;
+            break;
+          }
+          case 'json': {
+            const jsonReport = JSON.parse(generateJSONReport(comparisonResult));
+
+            // Optionally include migration SQL
+            if (includeMigrationSQL) {
+              const migrationResult = migrationGeneratorService.generateMigrationSQL({
+                comparisonResult,
+                includeDropStatements: true,
+              });
+
+              if (migrationResult.success) {
+                jsonReport.migrationSQL = {
+                  sql: migrationResult.sql,
+                  statements: migrationResult.statements,
+                  warnings: migrationResult.warnings,
+                };
+              }
+            }
+
+            reportContent = JSON.stringify(jsonReport, null, 2);
+            break;
+          }
+          case 'markdown': {
+            let markdownContent = generateMarkdownReport(comparisonResult);
+
+            // Optionally append migration SQL
+            if (includeMigrationSQL) {
+              const migrationResult = migrationGeneratorService.generateMigrationSQL({
+                comparisonResult,
+                includeDropStatements: true,
+              });
+
+              if (migrationResult.success && migrationResult.sql) {
+                markdownContent += '\n\n## Migration SQL\n\n';
+                markdownContent += '```sql\n';
+                markdownContent += migrationResult.sql;
+                markdownContent += '\n```\n';
+
+                if (migrationResult.warnings && migrationResult.warnings.length > 0) {
+                  markdownContent += '\n### Warnings\n\n';
+                  migrationResult.warnings.forEach(w => {
+                    markdownContent += `- ${w}\n`;
+                  });
+                }
+              }
+            }
+
+            reportContent = markdownContent;
+            break;
+          }
+          default:
+            return {
+              success: false,
+              error: 'Unsupported report format',
+            };
+        }
+
+        // Write report to file
+        fs.writeFileSync(filePath, reportContent, 'utf-8');
+
+        return {
+          success: true,
+          filePath,
+        };
+      } catch (error) {
+        return {
+          success: false,
+          error:
+            error instanceof Error
+              ? error.message
+              : 'Failed to export comparison report',
+        };
+      }
+    }
+  );
+}
+
+/**
+ * Helper function to escape HTML special characters
+ */
+function escapeHtml(text: string): string {
+  const map: Record<string, string> = {
+    '&': '&amp;',
+    '<': '&lt;',
+    '>': '&gt;',
+    '"': '&quot;',
+    "'": '&#039;',
+  };
+  return text.replace(/[&<>"']/g, (char) => map[char] || char);
 }

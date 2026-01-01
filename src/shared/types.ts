@@ -1275,6 +1275,23 @@ export interface GenerateMigrationSQLResponse {
   error?: string;
 }
 
+export interface ExportComparisonReportRequest {
+  comparisonResult: SchemaComparisonResult;
+  /** Report format (html, json, markdown) */
+  format: 'html' | 'json' | 'markdown';
+  /** File path to save the report */
+  filePath: string;
+  /** Include migration SQL in the report (optional) */
+  includeMigrationSQL?: boolean;
+}
+
+export interface ExportComparisonReportResponse {
+  success: boolean;
+  /** Path where the report was saved */
+  filePath?: string;
+  error?: string;
+}
+
 // ============ IPC Channel Definitions ============
 
 export interface IPCChannels {
@@ -1388,6 +1405,10 @@ export interface IPCChannels {
   'schema-comparison:generate-migration-sql': [
     GenerateMigrationSQLRequest,
     GenerateMigrationSQLResponse,
+  ];
+  'schema-comparison:export-report': [
+    ExportComparisonReportRequest,
+    ExportComparisonReportResponse,
   ];
 }
 
@@ -1511,4 +1532,5 @@ export const IPC_CHANNELS = {
   SCHEMA_COMPARISON_COMPARE_SNAPSHOTS: 'schema-comparison:compare-snapshots',
   SCHEMA_COMPARISON_GENERATE_MIGRATION_SQL:
     'schema-comparison:generate-migration-sql',
+  SCHEMA_COMPARISON_EXPORT_REPORT: 'schema-comparison:export-report',
 } as const;
