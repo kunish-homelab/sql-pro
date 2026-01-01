@@ -5,7 +5,8 @@ import { Button } from '@/components/ui/button';
 import { Card, CardContent, CardHeader, CardTitle } from '@/components/ui/card';
 import { ScrollArea } from '@/components/ui/scroll-area';
 import { sqlPro } from '@/lib/api';
-import { useConnectionStore, useSchemaComparisonStore } from '@/stores';
+import { useSchemaComparisonStore } from '@/stores';
+import { SourceSelector } from './SourceSelector';
 
 interface SchemaComparisonPanelProps {
   className?: string;
@@ -18,24 +19,21 @@ interface SchemaComparisonPanelProps {
 export function SchemaComparisonPanel({
   className,
 }: SchemaComparisonPanelProps) {
-  const { getAllConnections } = useConnectionStore();
-
   const {
     source,
     target,
     comparisonResult,
     isComparing,
     comparisonError,
-    availableSnapshots,
     isLoadingSnapshots,
+    setSource,
+    setTarget,
     setIsComparing,
     setComparisonResult,
     setComparisonError,
     setAvailableSnapshots,
     setIsLoadingSnapshots,
   } = useSchemaComparisonStore();
-
-  const availableConnections = getAllConnections();
 
   // Load available snapshots on mount
   useEffect(() => {
@@ -160,21 +158,12 @@ export function SchemaComparisonPanel({
               <CardHeader>
                 <CardTitle className="text-base">Source</CardTitle>
               </CardHeader>
-              <CardContent className="space-y-4">
-                <div className="text-muted-foreground flex items-center justify-center rounded-lg border-2 border-dashed p-8 text-center text-sm">
-                  {source ? (
-                    <div className="space-y-1">
-                      <p className="font-medium">{source.name}</p>
-                      <p className="text-xs capitalize">({source.type})</p>
-                    </div>
-                  ) : (
-                    <p>Select source to compare from</p>
-                  )}
-                </div>
-                <p className="text-muted-foreground text-xs">
-                  {availableConnections.length} connection(s),{' '}
-                  {availableSnapshots.length} snapshot(s) available
-                </p>
+              <CardContent>
+                <SourceSelector
+                  type="source"
+                  value={source}
+                  onChange={setSource}
+                />
               </CardContent>
             </Card>
 
@@ -188,21 +177,12 @@ export function SchemaComparisonPanel({
               <CardHeader>
                 <CardTitle className="text-base">Target</CardTitle>
               </CardHeader>
-              <CardContent className="space-y-4">
-                <div className="text-muted-foreground flex items-center justify-center rounded-lg border-2 border-dashed p-8 text-center text-sm">
-                  {target ? (
-                    <div className="space-y-1">
-                      <p className="font-medium">{target.name}</p>
-                      <p className="text-xs capitalize">({target.type})</p>
-                    </div>
-                  ) : (
-                    <p>Select target to compare to</p>
-                  )}
-                </div>
-                <p className="text-muted-foreground text-xs">
-                  {availableConnections.length} connection(s),{' '}
-                  {availableSnapshots.length} snapshot(s) available
-                </p>
+              <CardContent>
+                <SourceSelector
+                  type="target"
+                  value={target}
+                  onChange={setTarget}
+                />
               </CardContent>
             </Card>
           </div>
