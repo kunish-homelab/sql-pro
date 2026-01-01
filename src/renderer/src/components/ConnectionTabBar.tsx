@@ -1,7 +1,14 @@
 import type { DatabaseConnection } from '@/types/database';
-import { AlertCircle, CheckCircle, Circle, X } from 'lucide-react';
+import { AlertCircle, CheckCircle, Circle, Palette, X } from 'lucide-react';
 import { memo } from 'react';
 import { cn } from '@/lib/utils';
+import {
+  ContextMenu,
+  ContextMenuContent,
+  ContextMenuItem,
+  ContextMenuSeparator,
+  ContextMenuTrigger,
+} from '@/components/ui/context-menu';
 import {
   Tooltip,
   TooltipContent,
@@ -72,58 +79,70 @@ const ConnectionTab = memo(
     };
 
     return (
-      <TooltipProvider delay={300}>
-        <Tooltip>
-          <TooltipTrigger asChild>
-            <div
-              ref={setNodeRef}
-              role="tab"
-              aria-selected={isActive}
-              className={cn(
-                'group relative flex h-8 max-w-45 min-w-25 cursor-pointer items-center gap-1.5 border-r px-2 text-sm transition-colors',
-                isActive
-                  ? 'bg-background text-foreground'
-                  : 'bg-muted/50 text-muted-foreground hover:bg-muted hover:text-foreground'
-              )}
-              style={{
-                transform: CSS.Transform.toString(transform),
-                transition,
-                borderBottomWidth: '2px',
-                borderBottomStyle: 'solid',
-                borderBottomColor: isActive ? connectionColor : 'transparent',
-              }}
-              onClick={onSelect}
-              {...attributes}
-              {...listeners}
-            >
-              <StatusIcon className={cn('h-3.5 w-3.5 shrink-0', statusColorClass)} />
-              <span className="flex-1 truncate">{connection.filename}</span>
-              <Tooltip>
-                <TooltipTrigger asChild>
-                  <button
-                    onClick={handleCloseClick}
-                    className={cn(
-                      'hover:bg-accent shrink-0 rounded p-0.5 opacity-0 transition-opacity group-hover:opacity-100',
-                      isActive && 'opacity-60'
-                    )}
-                  >
-                    <X className="h-3 w-3" />
-                  </button>
-                </TooltipTrigger>
-                <TooltipContent side="bottom" className="text-xs">
-                  Close connection
-                </TooltipContent>
-              </Tooltip>
-            </div>
-          </TooltipTrigger>
-          <TooltipContent side="bottom" className="text-xs">
-            <div className="flex flex-col gap-1">
-              <div className="font-medium">{connection.filename}</div>
-              <div className="text-muted-foreground text-xs">{connection.path}</div>
-            </div>
-          </TooltipContent>
-        </Tooltip>
-      </TooltipProvider>
+      <ContextMenu>
+        <ContextMenuTrigger>
+          <TooltipProvider delay={300}>
+            <Tooltip>
+              <TooltipTrigger asChild>
+                <div
+                  ref={setNodeRef}
+                  role="tab"
+                  aria-selected={isActive}
+                  className={cn(
+                    'group relative flex h-8 max-w-45 min-w-25 cursor-pointer items-center gap-1.5 border-r px-2 text-sm transition-colors',
+                    isActive
+                      ? 'bg-background text-foreground'
+                      : 'bg-muted/50 text-muted-foreground hover:bg-muted hover:text-foreground'
+                  )}
+                  style={{
+                    transform: CSS.Transform.toString(transform),
+                    transition,
+                    borderBottomWidth: '2px',
+                    borderBottomStyle: 'solid',
+                    borderBottomColor: isActive ? connectionColor : 'transparent',
+                  }}
+                  onClick={onSelect}
+                  {...attributes}
+                  {...listeners}
+                >
+                  <StatusIcon className={cn('h-3.5 w-3.5 shrink-0', statusColorClass)} />
+                  <span className="flex-1 truncate">{connection.filename}</span>
+                  <Tooltip>
+                    <TooltipTrigger asChild>
+                      <button
+                        onClick={handleCloseClick}
+                        className={cn(
+                          'hover:bg-accent shrink-0 rounded p-0.5 opacity-0 transition-opacity group-hover:opacity-100',
+                          isActive && 'opacity-60'
+                        )}
+                      >
+                        <X className="h-3 w-3" />
+                      </button>
+                    </TooltipTrigger>
+                    <TooltipContent side="bottom" className="text-xs">
+                      Close connection
+                    </TooltipContent>
+                  </Tooltip>
+                </div>
+              </TooltipTrigger>
+              <TooltipContent side="bottom" className="text-xs">
+                <div className="flex flex-col gap-1">
+                  <div className="font-medium">{connection.filename}</div>
+                  <div className="text-muted-foreground text-xs">{connection.path}</div>
+                </div>
+              </TooltipContent>
+            </Tooltip>
+          </TooltipProvider>
+        </ContextMenuTrigger>
+        <ContextMenuContent>
+          <ContextMenuItem>
+            <Palette className="mr-2 h-4 w-4" />
+            Set Color
+          </ContextMenuItem>
+          <ContextMenuSeparator />
+          <ContextMenuItem onClick={onClose}>Close</ContextMenuItem>
+        </ContextMenuContent>
+      </ContextMenu>
     );
   }
 );
