@@ -41,6 +41,8 @@ interface HeaderCellProps {
   pinnedOffset?: number;
   /** Whether this is the last pinned column */
   isLastPinned?: boolean;
+  /** Number of groups when this column is used for grouping */
+  groupCount?: number;
 }
 
 const HeaderCell = memo(
@@ -57,6 +59,7 @@ const HeaderCell = memo(
     isPinned,
     pinnedOffset,
     isLastPinned,
+    groupCount,
   }: HeaderCellProps) => {
     // State for filter popover
     const [filterPopoverOpen, setFilterPopoverOpen] = useState(false);
@@ -165,9 +168,14 @@ const HeaderCell = memo(
                 <Key className="h-3 w-3 shrink-0 text-amber-500" />
               )}
 
-              {/* Grouping indicator */}
+              {/* Grouping indicator with count */}
               {isGrouped && (
-                <Layers className="text-primary h-3 w-3 shrink-0" />
+                <span className="text-primary flex shrink-0 items-center gap-0.5">
+                  <Layers className="h-3 w-3" />
+                  {groupCount !== undefined && (
+                    <span className="text-xs">({groupCount})</span>
+                  )}
+                </span>
               )}
 
               {/* Column name */}
@@ -311,6 +319,8 @@ interface TableHeaderProps {
   onResetColumnSize?: (columnId: string) => void;
   onTogglePin?: (columnId: string) => void;
   grouping?: string[];
+  /** Number of groups (top-level grouped rows count) */
+  groupCount?: number;
   /** Sorting state - used to trigger re-render when sorting changes */
   sorting?: { column: string; direction: 'asc' | 'desc' } | null;
   /** Column sizing info - used to trigger re-render during resize */
@@ -334,6 +344,7 @@ export const TableHeader = memo(
     onResetColumnSize,
     onTogglePin,
     grouping = [],
+    groupCount,
     sorting: _sorting, // Used to trigger re-render when sorting changes
     columnSizingInfo: _columnSizingInfo, // Used to trigger re-render during resize
     filters = [],
@@ -399,6 +410,9 @@ export const TableHeader = memo(
                   onResetColumnSize={onResetColumnSize}
                   onTogglePin={onTogglePin}
                   isGrouped={grouping.includes(header.column.id)}
+                  groupCount={
+                    grouping.includes(header.column.id) ? groupCount : undefined
+                  }
                   sortDirection={header.column.getIsSorted()}
                   columnSize={header.getSize()}
                   existingFilter={filtersByColumn[header.column.id]}

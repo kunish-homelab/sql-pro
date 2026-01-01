@@ -4,7 +4,10 @@ import { join } from 'node:path';
 import process from 'node:process';
 import { app, BrowserWindow, nativeImage, session, shell } from 'electron';
 import { cleanupIpcHandlers, setupIpcHandlers } from './services/ipc-handlers';
-import { createApplicationMenu } from './services/menu';
+import {
+  createApplicationMenu,
+  registerShortcutsHandler,
+} from './services/menu';
 import { pluginService } from './services/plugin/PluginService';
 import { checkForUpdatesOnStartup, initAutoUpdater } from './services/updater';
 import { windowManager } from './services/window-manager';
@@ -170,6 +173,9 @@ app.whenReady().then(async () => {
 
   // Setup IPC handlers for database operations
   setupIpcHandlers();
+
+  // Register shortcuts sync handler
+  registerShortcutsHandler();
 
   // Initialize plugin system (after IPC handlers are ready)
   const pluginInitResult = await pluginService.initialize();

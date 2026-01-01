@@ -1,9 +1,23 @@
-import type { MenuAction } from '@shared/types';
+import type { MenuAction, ShortcutPreset } from '@shared/types';
 import process from 'node:process';
-import { IPC_CHANNELS } from '@shared/types';
-import { app, BrowserWindow, Menu, shell } from 'electron';
+import {
+  bindingToAccelerator,
+  DEFAULT_SHORTCUTS,
+  IPC_CHANNELS,
+} from '@shared/types';
+import { app, BrowserWindow, ipcMain, Menu, shell } from 'electron';
 import { checkForUpdates } from './updater';
 import { windowManager } from './window-manager';
+
+// Current shortcuts state (synced from renderer)
+let currentShortcuts: ShortcutPreset = DEFAULT_SHORTCUTS;
+
+/**
+ * Get accelerator for a shortcut action
+ */
+function getAccelerator(action: keyof ShortcutPreset): string | undefined {
+  return bindingToAccelerator(currentShortcuts[action]);
+}
 
 function sendMenuAction(action: MenuAction): void {
   const focusedWindow = BrowserWindow.getFocusedWindow();
@@ -12,6 +26,9 @@ function sendMenuAction(action: MenuAction): void {
   }
 }
 
+/**
+ * Build and set the application menu with current shortcuts
+ */
 export function createApplicationMenu(): void {
   const isMac = process.platform === 'darwin';
 
@@ -26,13 +43,8 @@ export function createApplicationMenu(): void {
               { type: 'separator' as const },
               {
                 label: 'Settings...',
-                accelerator: 'CmdOrCtrl+,',
+                accelerator: getAccelerator('settings.open'),
                 click: () => sendMenuAction('open-settings'),
-              },
-              {
-                label: 'Plugins...',
-                accelerator: 'CmdOrCtrl+Shift+P',
-                click: () => sendMenuAction('open-plugins'),
               },
               { type: 'separator' as const },
               { role: 'services' as const },
@@ -53,7 +65,7 @@ export function createApplicationMenu(): void {
       submenu: [
         {
           label: 'New Window',
-          accelerator: 'CmdOrCtrl+Shift+N',
+          accelerator: getAccelerator('action.new-window'),
           click: () => {
             windowManager.createWindow();
           },
@@ -61,7 +73,7 @@ export function createApplicationMenu(): void {
         { type: 'separator' },
         {
           label: 'Open Database...',
-          accelerator: 'CmdOrCtrl+O',
+          accelerator: getAccelerator('action.open-database'),
           click: () => sendMenuAction('open-database'),
         },
         {
@@ -72,12 +84,12 @@ export function createApplicationMenu(): void {
         { type: 'separator' },
         {
           label: 'Refresh Schema',
-          accelerator: 'CmdOrCtrl+Shift+R',
+          accelerator: getAccelerator('action.refresh-schema'),
           click: () => sendMenuAction('refresh-schema'),
         },
         {
           label: 'Refresh Table',
-          accelerator: 'CmdOrCtrl+R',
+          accelerator: getAccelerator('action.refresh-table'),
           click: () => sendMenuAction('refresh-table'),
         },
         { type: 'separator' },
@@ -86,13 +98,8 @@ export function createApplicationMenu(): void {
           : [
               {
                 label: 'Settings...',
-                accelerator: 'CmdOrCtrl+,',
+                accelerator: getAccelerator('settings.open'),
                 click: () => sendMenuAction('open-settings'),
-              },
-              {
-                label: 'Plugins...',
-                accelerator: 'CmdOrCtrl+Shift+P',
-                click: () => sendMenuAction('open-plugins'),
               },
               { type: 'separator' as const },
             ]),
@@ -130,24 +137,29 @@ export function createApplicationMenu(): void {
       submenu: [
         {
           label: 'Command Palette...',
-          accelerator: 'CmdOrCtrl+K',
+          accelerator: getAccelerator('action.command-palette'),
           click: () => sendMenuAction('toggle-command-palette'),
         },
         { type: 'separator' },
         {
           label: 'Data Browser',
-          accelerator: 'CmdOrCtrl+1',
+          accelerator: getAccelerator('nav.data-browser'),
           click: () => sendMenuAction('switch-to-data'),
         },
         {
           label: 'SQL Query',
-          accelerator: 'CmdOrCtrl+2',
+          accelerator: getAccelerator('nav.query-editor'),
           click: () => sendMenuAction('switch-to-query'),
+        },
+        {
+          label: 'Schema Compare',
+          accelerator: getAccelerator('nav.schema-compare'),
+          click: () => sendMenuAction('switch-to-schema-compare'),
         },
         { type: 'separator' },
         {
           label: 'Query History',
-          accelerator: 'CmdOrCtrl+H',
+          accelerator: getAccelerator('view.toggle-history'),
           click: () => sendMenuAction('toggle-history'),
         },
         { type: 'separator' },
@@ -167,8 +179,14 @@ export function createApplicationMenu(): void {
       submenu: [
         {
           label: 'Execute Query',
-          accelerator: 'CmdOrCtrl+Enter',
+          accelerator: getAccelerator('action.execute-query'),
           click: () => sendMenuAction('execute-query'),
+        },
+        { type: 'separator' },
+        {
+          label: 'View Unsaved Changes',
+          accelerator: getAccelerator('action.view-changes'),
+          click: () => sendMenuAction('view-changes'),
         },
       ],
     },
@@ -179,7 +197,7 @@ export function createApplicationMenu(): void {
       submenu: [
         {
           label: 'New Window',
-          accelerator: 'CmdOrCtrl+Shift+N',
+          accelerator: getAccelerator('action.new-window'),
           click: () => {
             windowManager.createWindow();
           },
@@ -202,6 +220,12 @@ export function createApplicationMenu(): void {
     {
       role: 'help',
       submenu: [
+        {
+          label: 'Keyboard Shortcuts',
+          accelerator: getAccelerator('help.shortcuts'),
+          click: () => sendMenuAction('show-shortcuts'),
+        },
+        { type: 'separator' },
         {
           label: 'Check for Updates...',
           click: () => {
@@ -229,4 +253,25 @@ export function createApplicationMenu(): void {
 
   const menu = Menu.buildFromTemplate(template);
   Menu.setApplicationMenu(menu);
+}
+
+/**
+ * Update shortcuts and rebuild menu
+ */
+export function updateShortcuts(shortcuts: ShortcutPreset): void {
+  currentShortcuts = shortcuts;
+  createApplicationMenu();
+}
+
+/**
+ * Register IPC handler for shortcuts sync
+ */
+export function registerShortcutsHandler(): void {
+  ipcMain.handle(
+    IPC_CHANNELS.SHORTCUTS_UPDATE,
+    (_event, payload: { shortcuts: ShortcutPreset }) => {
+      updateShortcuts(payload.shortcuts);
+      return { success: true };
+    }
+  );
 }

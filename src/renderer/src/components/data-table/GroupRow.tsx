@@ -11,7 +11,8 @@ interface GroupRowProps {
 export const GroupRow = memo(({ row }: GroupRowProps) => {
   const isExpanded = row.getIsExpanded();
   const groupingValue = row.groupingValue;
-  const leafCount = row.subRows.length;
+  // Use getLeafRows() to get the actual count of leaf rows (data rows, not groups)
+  const leafCount = row.getLeafRows().length;
   const colSpan = row.getVisibleCells().length;
 
   return (

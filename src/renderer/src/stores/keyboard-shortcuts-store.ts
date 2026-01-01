@@ -1,47 +1,22 @@
+import type {
+  PresetName,
+  ShortcutAction,
+  ShortcutBinding,
+  ShortcutModifiers,
+  ShortcutPreset,
+} from '@shared/types';
+import { DEFAULT_SHORTCUTS } from '@shared/types';
 import { create } from 'zustand';
 import { persist } from 'zustand/middleware';
 
-/**
- * Modifier keys for shortcuts
- */
-export interface ShortcutModifiers {
-  cmd?: boolean; // Cmd on Mac, Ctrl on Windows/Linux
-  ctrl?: boolean; // Always Ctrl (rarely used, mainly for Ctrl+K/J vim-style)
-  shift?: boolean;
-  alt?: boolean;
-}
-
-/**
- * A keyboard shortcut binding
- */
-export interface ShortcutBinding {
-  key: string; // The key (e.g., 'k', 'Enter', 'ArrowUp')
-  modifiers: ShortcutModifiers;
-}
-
-/**
- * All available shortcut actions in the application
- */
-export type ShortcutAction =
-  // Navigation
-  | 'nav.data-browser'
-  | 'nav.query-editor'
-  | 'nav.search-tables'
-  | 'nav.schema-compare'
-  // View
-  | 'view.toggle-history'
-  // Actions
-  | 'action.command-palette'
-  | 'action.refresh-schema'
-  | 'action.refresh-table'
-  | 'action.execute-query'
-  | 'action.view-changes'
-  | 'action.open-database'
-  | 'action.new-window'
-  // Settings
-  | 'settings.open'
-  // Help
-  | 'help.shortcuts';
+// Re-export types from shared for convenience
+export type {
+  PresetName,
+  ShortcutAction,
+  ShortcutBinding,
+  ShortcutModifiers,
+  ShortcutPreset,
+};
 
 /**
  * Metadata for each shortcut action
@@ -164,35 +139,8 @@ export const SHORTCUT_ACTIONS: ShortcutActionMeta[] = [
   },
 ];
 
-/**
- * A complete shortcut preset configuration
- */
-export type ShortcutPreset = Record<ShortcutAction, ShortcutBinding | null>;
-
-/**
- * Available preset names
- */
-export type PresetName = 'default' | 'vscode' | 'sublime' | 'custom';
-
-/**
- * Default shortcuts (SQL Pro native)
- */
-export const DEFAULT_SHORTCUTS: ShortcutPreset = {
-  'nav.data-browser': { key: '1', modifiers: { cmd: true } },
-  'nav.query-editor': { key: '2', modifiers: { cmd: true } },
-  'nav.search-tables': { key: 'p', modifiers: { cmd: true, shift: true } },
-  'nav.schema-compare': { key: '5', modifiers: { cmd: true } },
-  'view.toggle-history': { key: 'h', modifiers: { cmd: true } },
-  'action.command-palette': { key: 'k', modifiers: { cmd: true } },
-  'action.refresh-schema': { key: 'r', modifiers: { cmd: true, shift: true } },
-  'action.refresh-table': { key: 'r', modifiers: { cmd: true } },
-  'action.execute-query': { key: 'Enter', modifiers: { cmd: true } },
-  'action.view-changes': { key: 's', modifiers: { cmd: true, shift: true } },
-  'action.open-database': { key: 'o', modifiers: { cmd: true } },
-  'action.new-window': { key: 'n', modifiers: { cmd: true, shift: true } },
-  'settings.open': { key: ',', modifiers: { cmd: true } },
-  'help.shortcuts': { key: '/', modifiers: { cmd: true } },
-};
+// Re-export DEFAULT_SHORTCUTS from shared
+export { DEFAULT_SHORTCUTS };
 
 /**
  * VS Code-style shortcuts
@@ -517,9 +465,43 @@ export const useKeyboardShortcutsStore = create<KeyboardShortcutsState>()(
     {
       name: 'sql-pro-keyboard-shortcuts',
       version: 1,
+      onRehydrateStorage: () => {
+        return (state) => {
+          // Sync shortcuts to main process after rehydration
+          if (state) {
+            syncShortcutsToMain(state.getActiveShortcuts());
+          }
+        };
+      },
     }
   )
 );
+
+/**
+ * Sync shortcuts to the main process to update native menu accelerators
+ */
+export async function syncShortcutsToMain(
+  shortcuts: ShortcutPreset
+): Promise<void> {
+  try {
+    if (window.sqlPro?.shortcuts?.update) {
+      await window.sqlPro.shortcuts.update({ shortcuts });
+    }
+  } catch (error) {
+    console.error('Failed to sync shortcuts to main process:', error);
+  }
+}
+
+// Subscribe to store changes and sync to main
+useKeyboardShortcutsStore.subscribe((state, prevState) => {
+  // Only sync if shortcuts actually changed
+  const currentShortcuts = state.getActiveShortcuts();
+  const prevShortcuts = prevState.getActiveShortcuts();
+
+  if (currentShortcuts !== prevShortcuts) {
+    syncShortcutsToMain(currentShortcuts);
+  }
+});
 
 // Selector hooks
 export const useShortcut = (action: ShortcutAction) =>

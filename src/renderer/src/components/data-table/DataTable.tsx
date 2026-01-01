@@ -162,6 +162,13 @@ export const DataTable = function DataTable({
   // Get rows from table
   const { rows } = table.getRowModel();
 
+  // Calculate group count (number of top-level groups) when grouping is active
+  const groupCount = useMemo(() => {
+    if (grouping.length === 0) return undefined;
+    // Count top-level grouped rows
+    return rows.filter((row) => row.getIsGrouped() && row.depth === 0).length;
+  }, [rows, grouping]);
+
   // Initialize editing
   const {
     focusedCell,
@@ -317,6 +324,7 @@ export const DataTable = function DataTable({
           onResetColumnSize={resetColumnSize}
           onTogglePin={toggleColumnPin}
           grouping={grouping}
+          groupCount={groupCount}
           sorting={sort}
           columnSizingInfo={{
             isResizingColumn: columnSizingInfo.isResizingColumn,

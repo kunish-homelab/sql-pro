@@ -194,6 +194,40 @@ export function useMenuActions() {
           }
           break;
         }
+
+        case 'switch-to-schema-compare': {
+          document
+            .querySelector<HTMLButtonElement>('[data-tab="schema-compare"]')
+            ?.click();
+          break;
+        }
+
+        case 'view-changes': {
+          // Try to click the view changes button in the toolbar
+          const viewChangesButton =
+            document.querySelector<HTMLButtonElement>(
+              'button[data-action="view-changes"]'
+            ) ||
+            document.querySelector<HTMLButtonElement>(
+              'button[aria-label="View Changes"]'
+            );
+          viewChangesButton?.click();
+          break;
+        }
+
+        case 'show-shortcuts': {
+          // Try to open keyboard shortcuts settings
+          const settingsButton =
+            document.querySelector<HTMLButtonElement>(
+              'button[data-action="open-settings"]'
+            ) ||
+            document.querySelector<HTMLButtonElement>(
+              'button[aria-label="Settings"]'
+            );
+          settingsButton?.click();
+          // Note: This opens settings, user can then navigate to shortcuts tab
+          break;
+        }
       }
     });
 

@@ -77,6 +77,7 @@ import type {
   HasPasswordResponse,
   ImportProfilesRequest,
   ImportProfilesResponse,
+  IPC_CHANNELS,
   IsPasswordStorageAvailableResponse,
   MenuAction,
   OpenDatabaseRequest,
@@ -105,6 +106,7 @@ import type {
   SaveSchemaSnapshotResponse,
   SetPreferencesRequest,
   SetPreferencesResponse,
+  type ShortcutsUpdatePayload,
   SqlLogEntry,
   UpdateConnectionRequest,
   UpdateConnectionResponse,
@@ -112,9 +114,7 @@ import type {
   UpdateFolderResponse,
   UpdateProfileRequest,
   UpdateProfileResponse,
-  UpdateStatus,
-  ValidateChangesRequest,
-  ValidateChangesResponse,
+  UpdateStatus, ValidateChangesRequest, ValidateChangesResponse 
 } from '@shared/types';
 import type {
   CheckUpdatesRequest,
@@ -139,7 +139,6 @@ import type {
 } from '../main/types/plugin.d';
 import process from 'node:process';
 import { electronAPI } from '@electron-toolkit/preload';
-import { IPC_CHANNELS } from '@shared/types';
 import { contextBridge, ipcRenderer, webUtils } from 'electron';
 
 // Custom API for SQL Pro
@@ -303,6 +302,12 @@ const sqlProAPI = {
       ipcRenderer.on(IPC_CHANNELS.MENU_ACTION, handler);
       return () => ipcRenderer.off(IPC_CHANNELS.MENU_ACTION, handler);
     },
+  },
+
+  // Keyboard shortcuts
+  shortcuts: {
+    update: (request: ShortcutsUpdatePayload): Promise<{ success: boolean }> =>
+      ipcRenderer.invoke(IPC_CHANNELS.SHORTCUTS_UPDATE, request),
   },
 
   // AI operations

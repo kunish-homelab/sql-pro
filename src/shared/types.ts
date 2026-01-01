@@ -994,8 +994,11 @@ export type MenuAction =
   | 'toggle-command-palette'
   | 'switch-to-data'
   | 'switch-to-query'
+  | 'switch-to-schema-compare'
   | 'toggle-history'
   | 'execute-query'
+  | 'view-changes'
+  | 'show-shortcuts'
   | 'new-window';
 
 // ============ Pro Features Types ============
@@ -1687,4 +1690,123 @@ export const IPC_CHANNELS = {
   SCHEMA_COMPARISON_GENERATE_MIGRATION_SQL:
     'schema-comparison:generate-migration-sql',
   SCHEMA_COMPARISON_EXPORT_REPORT: 'schema-comparison:export-report',
+
+  // Shortcuts
+  SHORTCUTS_UPDATE: 'shortcuts:update',
 } as const;
+
+// ============ Keyboard Shortcuts Types ============
+
+/**
+ * Modifier keys for shortcuts
+ */
+export interface ShortcutModifiers {
+  cmd?: boolean; // Cmd on Mac, Ctrl on Windows/Linux
+  ctrl?: boolean; // Always Ctrl (rarely used, mainly for Ctrl+K/J vim-style)
+  shift?: boolean;
+  alt?: boolean;
+}
+
+/**
+ * A keyboard shortcut binding
+ */
+export interface ShortcutBinding {
+  key: string; // The key (e.g., 'k', 'Enter', 'ArrowUp')
+  modifiers: ShortcutModifiers;
+}
+
+/**
+ * All available shortcut actions in the application
+ */
+export type ShortcutAction =
+  // Navigation
+  | 'nav.data-browser'
+  | 'nav.query-editor'
+  | 'nav.search-tables'
+  | 'nav.schema-compare'
+  // View
+  | 'view.toggle-history'
+  // Actions
+  | 'action.command-palette'
+  | 'action.refresh-schema'
+  | 'action.refresh-table'
+  | 'action.execute-query'
+  | 'action.view-changes'
+  | 'action.open-database'
+  | 'action.new-window'
+  // Settings
+  | 'settings.open'
+  // Help
+  | 'help.shortcuts';
+
+/**
+ * A complete shortcut preset configuration
+ */
+export type ShortcutPreset = Record<ShortcutAction, ShortcutBinding | null>;
+
+/**
+ * Available preset names
+ */
+export type PresetName = 'default' | 'vscode' | 'sublime' | 'custom';
+
+/**
+ * Data sent when syncing shortcuts to main process
+ */
+export interface ShortcutsUpdatePayload {
+  shortcuts: ShortcutPreset;
+}
+
+/**
+ * Convert a ShortcutBinding to Electron accelerator format
+ */
+export function bindingToAccelerator(
+  binding: ShortcutBinding | null
+): string | undefined {
+  if (!binding) return undefined;
+
+  const parts: string[] = [];
+
+  if (binding.modifiers.cmd) {
+    parts.push('CmdOrCtrl');
+  }
+  if (binding.modifiers.ctrl && !binding.modifiers.cmd) {
+    parts.push('Ctrl');
+  }
+  if (binding.modifiers.alt) {
+    parts.push('Alt');
+  }
+  if (binding.modifiers.shift) {
+    parts.push('Shift');
+  }
+
+  // Format special keys for Electron
+  let key = binding.key;
+  if (key === ',') key = ',';
+  else if (key === '/') key = '/';
+  else if (key.length === 1) key = key.toUpperCase();
+  // For special keys like Enter, ArrowUp, etc., keep as-is
+
+  parts.push(key);
+
+  return parts.join('+');
+}
+
+/**
+ * Default shortcuts (SQL Pro native)
+ */
+export const DEFAULT_SHORTCUTS: ShortcutPreset = {
+  'nav.data-browser': { key: '1', modifiers: { cmd: true } },
+  'nav.query-editor': { key: '2', modifiers: { cmd: true } },
+  'nav.search-tables': { key: 'p', modifiers: { cmd: true, shift: true } },
+  'nav.schema-compare': { key: '5', modifiers: { cmd: true } },
+  'view.toggle-history': { key: 'h', modifiers: { cmd: true } },
+  'action.command-palette': { key: 'k', modifiers: { cmd: true } },
+  'action.refresh-schema': { key: 'r', modifiers: { cmd: true, shift: true } },
+  'action.refresh-table': { key: 'r', modifiers: { cmd: true } },
+  'action.execute-query': { key: 'Enter', modifiers: { cmd: true } },
+  'action.view-changes': { key: 's', modifiers: { cmd: true, shift: true } },
+  'action.open-database': { key: 'o', modifiers: { cmd: true } },
+  'action.new-window': { key: 'n', modifiers: { cmd: true, shift: true } },
+  'settings.open': { key: ',', modifiers: { cmd: true } },
+  'help.shortcuts': { key: '/', modifiers: { cmd: true } },
+};
