@@ -5,7 +5,9 @@ import { XIcon } from 'lucide-react';
 
 import * as React from 'react';
 import { Button } from '@/components/ui/button';
+import { getFontFamilyCSS } from '@/hooks/useApplyFont';
 import { cn } from '@/lib/utils';
+import { useUIFont } from '@/stores';
 
 function Dialog({ ...props }: DialogPrimitive.Root.Props) {
   return <DialogPrimitive.Root data-slot="dialog" {...props} />;
@@ -52,10 +54,13 @@ function DialogContent({
   className,
   children,
   showCloseButton = true,
+  style,
   ...props
 }: DialogPrimitive.Popup.Props & {
   showCloseButton?: boolean;
 }) {
+  const uiFont = useUIFont();
+
   return (
     <DialogPortal>
       <DialogOverlay />
@@ -65,6 +70,11 @@ function DialogContent({
           'bg-background data-open:animate-in data-closed:animate-out data-closed:fade-out-0 data-open:fade-in-0 data-closed:zoom-out-95 data-open:zoom-in-95 ring-foreground/10 fixed top-1/2 left-1/2 z-50 w-full max-w-[calc(100%-2rem)] -translate-x-1/2 -translate-y-1/2 gap-6 rounded-xl p-6 text-sm ring-1 duration-100 outline-none sm:max-w-md',
           className
         )}
+        style={{
+          fontFamily: getFontFamilyCSS(uiFont.family),
+          fontSize: `${uiFont.size}px`,
+          ...style,
+        }}
         {...props}
       >
         {children}
