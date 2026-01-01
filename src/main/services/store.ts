@@ -3,6 +3,7 @@ import type {
   ProFeatureType,
   ProStatus,
   QueryHistoryEntry,
+  SchemaSnapshot,
 } from '../../shared/types';
 import process from 'node:process';
 import { app } from 'electron';
@@ -31,6 +32,10 @@ interface QueryHistoryStore {
   [dbPath: string]: QueryHistoryEntry[];
 }
 
+interface SchemaSnapshotStore {
+  [snapshotId: string]: SchemaSnapshot;
+}
+
 // ============ Store Schema ============
 
 interface StoreSchema {
@@ -39,6 +44,7 @@ interface StoreSchema {
   queryHistory: QueryHistoryStore;
   aiSettings: AISettings | null;
   proStatus: ProStatus | null;
+  schemaSnapshots: SchemaSnapshotStore;
 }
 
 // ============ Default Values ============
@@ -60,6 +66,7 @@ const store = new Store<StoreSchema>({
     queryHistory: {},
     aiSettings: null,
     proStatus: null,
+    schemaSnapshots: {},
   },
   // Enable schema migration
   migrations: {
@@ -264,6 +271,42 @@ export function saveProStatus(status: ProStatus): void {
 
 export function clearProStatus(): void {
   store.set('proStatus', null);
+}
+
+// ============ Schema Snapshots ============
+
+export function saveSchemaSnapshot(snapshot: SchemaSnapshot): void {
+  const snapshots = store.get('schemaSnapshots', {});
+  snapshots[snapshot.id] = snapshot;
+  store.set('schemaSnapshots', snapshots);
+}
+
+export function getSchemaSnapshots(): SchemaSnapshot[] {
+  const snapshots = store.get('schemaSnapshots', {});
+  return Object.values(snapshots).sort(
+    (a, b) => new Date(b.createdAt).getTime() - new Date(a.createdAt).getTime()
+  );
+}
+
+export function getSchemaSnapshot(snapshotId: string): SchemaSnapshot | null {
+  const snapshots = store.get('schemaSnapshots', {});
+  return snapshots[snapshotId] || null;
+}
+
+export function deleteSchemaSnapshot(snapshotId: string): {
+  success: boolean;
+  error?: string;
+} {
+  const snapshots = store.get('schemaSnapshots', {});
+
+  if (!snapshots[snapshotId]) {
+    // Snapshot not found, but not an error
+    return { success: true };
+  }
+
+  delete snapshots[snapshotId];
+  store.set('schemaSnapshots', snapshots);
+  return { success: true };
 }
 
 // ============ Utility Functions ============
