@@ -21,8 +21,10 @@ import {
   useSortable,
   horizontalListSortingStrategy,
   sortableKeyboardCoordinates,
+  arrayMove,
 } from '@dnd-kit/sortable';
 import { CSS } from '@dnd-kit/utilities';
+import type { DragEndEvent } from '@dnd-kit/core';
 
 interface ConnectionTabBarProps {
   className?: string;
@@ -135,6 +137,7 @@ export const ConnectionTabBar = memo(({ className }: ConnectionTabBarProps) => {
     getAllConnections,
     setActiveConnection,
     removeConnection,
+    reorderConnections,
   } = useConnectionStore();
 
   const allConnections = getAllConnections();
@@ -158,12 +161,26 @@ export const ConnectionTabBar = memo(({ className }: ConnectionTabBarProps) => {
     })
   );
 
+  // Handle drag end to update tab order in store
+  const handleDragEnd = (event: DragEndEvent) => {
+    const { active, over } = event;
+
+    if (over && active.id !== over.id) {
+      const oldIndex = connections.findIndex((conn) => conn.id === active.id);
+      const newIndex = connections.findIndex((conn) => conn.id === over.id);
+
+      if (oldIndex !== -1 && newIndex !== -1) {
+        reorderConnections(oldIndex, newIndex);
+      }
+    }
+  };
+
   if (connections.length === 0) {
     return null;
   }
 
   return (
-    <DndContext sensors={sensors}>
+    <DndContext sensors={sensors} onDragEnd={handleDragEnd}>
       <div
         className={cn('bg-muted/30 flex h-8 items-center border-b', className)}
         role="tablist"
