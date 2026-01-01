@@ -6,6 +6,7 @@ import { Card, CardContent, CardHeader, CardTitle } from '@/components/ui/card';
 import { ScrollArea } from '@/components/ui/scroll-area';
 import { sqlPro } from '@/lib/api';
 import { useSchemaComparisonStore } from '@/stores';
+import { SchemaDiffView } from './SchemaDiffView';
 import { SourceSelector } from './SourceSelector';
 
 interface SchemaComparisonPanelProps {
@@ -226,66 +227,76 @@ export function SchemaComparisonPanel({
             </div>
           )}
 
-          {/* Results Placeholder */}
+          {/* Comparison Results */}
           {comparisonResult && (
-            <Card>
-              <CardHeader>
-                <CardTitle>Comparison Results</CardTitle>
-              </CardHeader>
-              <CardContent>
-                <div className="space-y-2">
-                  <div className="flex items-center justify-between text-sm">
-                    <span className="text-muted-foreground">Source:</span>
-                    <span className="font-medium">
-                      {comparisonResult.sourceName}
-                    </span>
-                  </div>
-                  <div className="flex items-center justify-between text-sm">
-                    <span className="text-muted-foreground">Target:</span>
-                    <span className="font-medium">
-                      {comparisonResult.targetName}
-                    </span>
-                  </div>
-                  <div className="mt-4 border-t pt-2">
-                    <p className="text-muted-foreground text-sm">
-                      Summary (
-                      {comparisonResult.summary.sourceTables +
-                        comparisonResult.summary.targetTables}{' '}
-                      tables compared)
-                    </p>
-                    <div className="mt-2 grid grid-cols-3 gap-2 text-xs">
-                      <div className="rounded bg-green-100 p-2 dark:bg-green-950">
-                        <div className="text-green-700 dark:text-green-300">
-                          Added
+            <div className="space-y-4">
+              {/* Summary Card */}
+              <Card>
+                <CardHeader>
+                  <CardTitle>Comparison Results</CardTitle>
+                </CardHeader>
+                <CardContent>
+                  <div className="space-y-2">
+                    <div className="flex items-center justify-between text-sm">
+                      <span className="text-muted-foreground">Source:</span>
+                      <span className="font-medium">
+                        {comparisonResult.sourceName}
+                      </span>
+                    </div>
+                    <div className="flex items-center justify-between text-sm">
+                      <span className="text-muted-foreground">Target:</span>
+                      <span className="font-medium">
+                        {comparisonResult.targetName}
+                      </span>
+                    </div>
+                    <div className="mt-4 border-t pt-2">
+                      <p className="text-muted-foreground text-sm">
+                        Summary (
+                        {comparisonResult.summary.sourceTables +
+                          comparisonResult.summary.targetTables}{' '}
+                        tables compared)
+                      </p>
+                      <div className="mt-2 grid grid-cols-3 gap-2 text-xs">
+                        <div className="rounded bg-green-100 p-2 dark:bg-green-950">
+                          <div className="text-green-700 dark:text-green-300">
+                            Added
+                          </div>
+                          <div className="text-lg font-semibold">
+                            {comparisonResult.summary.tablesAdded}
+                          </div>
                         </div>
-                        <div className="text-lg font-semibold">
-                          {comparisonResult.summary.tablesAdded}
+                        <div className="rounded bg-red-100 p-2 dark:bg-red-950">
+                          <div className="text-red-700 dark:text-red-300">
+                            Removed
+                          </div>
+                          <div className="text-lg font-semibold">
+                            {comparisonResult.summary.tablesRemoved}
+                          </div>
                         </div>
-                      </div>
-                      <div className="rounded bg-red-100 p-2 dark:bg-red-950">
-                        <div className="text-red-700 dark:text-red-300">
-                          Removed
-                        </div>
-                        <div className="text-lg font-semibold">
-                          {comparisonResult.summary.tablesRemoved}
-                        </div>
-                      </div>
-                      <div className="rounded bg-amber-100 p-2 dark:bg-amber-950">
-                        <div className="text-amber-700 dark:text-amber-300">
-                          Modified
-                        </div>
-                        <div className="text-lg font-semibold">
-                          {comparisonResult.summary.tablesModified}
+                        <div className="rounded bg-amber-100 p-2 dark:bg-amber-950">
+                          <div className="text-amber-700 dark:text-amber-300">
+                            Modified
+                          </div>
+                          <div className="text-lg font-semibold">
+                            {comparisonResult.summary.tablesModified}
+                          </div>
                         </div>
                       </div>
                     </div>
                   </div>
-                  <p className="text-muted-foreground mt-4 text-xs italic">
-                    Detailed diff view will be available in the next component
-                  </p>
-                </div>
-              </CardContent>
-            </Card>
+                </CardContent>
+              </Card>
+
+              {/* Detailed Diff View */}
+              <Card>
+                <CardHeader>
+                  <CardTitle>Schema Differences</CardTitle>
+                </CardHeader>
+                <CardContent className="p-0">
+                  <SchemaDiffView comparisonResult={comparisonResult} />
+                </CardContent>
+              </Card>
+            </div>
           )}
 
           {/* Empty State */}
