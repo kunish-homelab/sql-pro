@@ -226,37 +226,45 @@ The following table lists all commands available in the Command Palette, organiz
 
 ## Customizing Shortcuts
 
-Currently, keyboard shortcuts cannot be customized. This is a planned feature for a future release.
+SQL Pro now supports fully customizable keyboard shortcuts. You can change any shortcut to match your preferred workflow.
 
-::: info Feature Request
-If you have specific shortcut customization needs, please open an issue on our [GitHub repository](https://github.com/kunish-homelab/sql-pro).
-:::
+### Accessing Shortcut Settings
 
-## Tips for Keyboard-Driven Workflow
+1. Open **Settings** (<kbd>Cmd/Ctrl</kbd> + <kbd>,</kbd>)
+2. Find the **Keyboard Shortcuts** section
+3. Click to open the shortcuts customization panel
 
-### Maximize Productivity
+### Presets
 
-1. **Learn the Command Palette** (<kbd>Cmd/Ctrl</kbd> + <kbd>K</kbd>) - It's the fastest way to access any command
-2. **Use Tab navigation** in data grids for fast horizontal data entry
-3. **Enable Vim Mode** if you're familiar with Vim - it significantly speeds up navigation
-4. **Memorize query execution** (<kbd>Cmd/Ctrl</kbd> + <kbd>Enter</kbd>) - You'll use it constantly
+SQL Pro includes several built-in presets to help you get started quickly:
 
-### Efficient Query Writing
+| Preset           | Description                                   |
+| ---------------- | --------------------------------------------- |
+| **SQL Pro**      | Default shortcuts optimized for database work |
+| **VS Code**      | Visual Studio Code-style shortcuts            |
+| **Sublime Text** | Sublime Text-style shortcuts                  |
+| **Custom**       | Your personalized shortcut configuration      |
 
-1. Press <kbd>Cmd/Ctrl</kbd> + <kbd>2</kbd> to jump to the query editor
-2. Write your SQL with autocomplete (triggered automatically)
-3. Press <kbd>Cmd/Ctrl</kbd> + <kbd>Shift</kbd> + <kbd>F</kbd> to format
-4. Press <kbd>Cmd/Ctrl</kbd> + <kbd>Enter</kbd> to execute
-5. Press <kbd>Cmd/Ctrl</kbd> + <kbd>H</kbd> to review history
+### Changing a Shortcut
 
-### Efficient Data Editing
+1. Click on any shortcut in the list
+2. Press the new key combination you want to use
+3. Click the checkmark to confirm, or X to cancel
 
-1. Navigate to a cell using arrow keys or Tab
-2. Press <kbd>Enter</kbd> to start editing
-3. Make your change
-4. Press <kbd>Tab</kbd> to save and move to the next cell
-5. Press <kbd>Cmd/Ctrl</kbd> + <kbd>Shift</kbd> + <kbd>S</kbd> to review changes
-6. Apply changes from the diff preview panel
+### Conflict Detection
+
+SQL Pro automatically detects when two shortcuts use the same key combination. Conflicting shortcuts are highlighted with a warning, allowing you to resolve them.
+
+### Import/Export
+
+You can export your custom shortcuts to a JSON file and import them on other machines:
+
+- **Export**: Click the Export button to download your shortcuts
+- **Import**: Click the Import button to load shortcuts from a file
+
+### Reset to Defaults
+
+Click **Reset All** to restore all shortcuts to the SQL Pro defaults.
 
 ## Troubleshooting
 

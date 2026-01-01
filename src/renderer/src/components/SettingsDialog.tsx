@@ -4,11 +4,13 @@ import type { FontConfig } from '@/stores/settings-store';
 import { FONT_CATEGORY_LABELS } from '@shared/types/font';
 import {
   Check,
+  ChevronRight,
   ChevronsUpDown,
   Crown,
   Eye,
   EyeOff,
   FolderSearch,
+  Keyboard,
   Link,
   Loader2,
   Monitor,
@@ -52,11 +54,14 @@ import { Switch } from '@/components/ui/switch';
 import { cn } from '@/lib/utils';
 import {
   DEFAULT_MODELS,
+  PRESET_INFO,
   useAIStore,
+  useKeyboardShortcutsStore,
   useProStore,
   useSettingsStore,
   useThemeStore,
 } from '@/stores';
+import { KeyboardShortcutsSettings } from './KeyboardShortcutsSettings';
 import { ProActivationDialog } from './pro/ProActivation';
 import { ProBadge } from './pro/ProBadge';
 
@@ -87,9 +92,13 @@ export function SettingsDialog({ open, onOpenChange }: SettingsDialogProps) {
     setRestoreSession,
   } = useSettingsStore();
   const { isPro, activatedAt, features } = useProStore();
+  const { activePreset } = useKeyboardShortcutsStore();
 
   // Pro activation dialog state
   const [proDialogOpen, setProDialogOpen] = useState(false);
+
+  // Keyboard shortcuts dialog state
+  const [shortcutsDialogOpen, setShortcutsDialogOpen] = useState(false);
 
   // System fonts state
   const [systemFonts, setSystemFonts] = useState<SystemFont[]>([]);
@@ -363,6 +372,30 @@ export function SettingsDialog({ open, onOpenChange }: SettingsDialogProps) {
               </div>
             </div>
 
+            {/* Keyboard Shortcuts Section */}
+            <div className="space-y-3">
+              <Label className="text-sm font-medium">Keyboard Shortcuts</Label>
+              <button
+                onClick={() => setShortcutsDialogOpen(true)}
+                className="hover:border-primary hover:bg-muted flex w-full items-center justify-between rounded-lg border p-3 transition-colors"
+              >
+                <div className="flex items-center gap-3">
+                  <div className="bg-muted flex h-10 w-10 items-center justify-center rounded-full">
+                    <Keyboard className="text-muted-foreground h-5 w-5" />
+                  </div>
+                  <div className="text-left">
+                    <span className="text-sm font-medium">
+                      {PRESET_INFO[activePreset].label} Preset
+                    </span>
+                    <p className="text-muted-foreground text-xs">
+                      Click to customize shortcuts
+                    </p>
+                  </div>
+                </div>
+                <ChevronRight className="text-muted-foreground h-5 w-5" />
+              </button>
+            </div>
+
             <Separator />
 
             {/* Pro Section */}
@@ -437,6 +470,12 @@ export function SettingsDialog({ open, onOpenChange }: SettingsDialogProps) {
       <ProActivationDialog
         open={proDialogOpen}
         onOpenChange={setProDialogOpen}
+      />
+
+      {/* Keyboard Shortcuts Settings Dialog */}
+      <KeyboardShortcutsSettings
+        open={shortcutsDialogOpen}
+        onOpenChange={setShortcutsDialogOpen}
       />
     </Dialog>
   );

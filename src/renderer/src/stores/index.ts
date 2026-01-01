@@ -11,6 +11,29 @@ export { useConnectionStore } from './connection-store';
 export { useDataTabsStore } from './data-tabs-store';
 export type { DataTab } from './data-tabs-store';
 export { useDiagramStore } from './diagram-store';
+export {
+  DEFAULT_SHORTCUTS,
+  formatShortcutBinding,
+  matchesBinding,
+  parseKeyboardEvent,
+  PRESET_INFO,
+  SHORTCUT_ACTIONS,
+  SHORTCUT_PRESETS,
+  SUBLIME_SHORTCUTS,
+  useActiveShortcuts,
+  useKeyboardShortcutsStore,
+  useShortcut,
+  VSCODE_SHORTCUTS,
+} from './keyboard-shortcuts-store';
+export type {
+  PresetName,
+  ShortcutAction,
+  ShortcutActionMeta,
+  ShortcutBinding,
+  ShortcutModifiers,
+  ShortcutPreset,
+  ShortcutsExport,
+} from './keyboard-shortcuts-store';
 export { ALL_PRO_FEATURES, useProStore } from './pro-store';
 export { useQueryStore } from './query-store';
 export { useQueryTabsStore } from './query-tabs-store';

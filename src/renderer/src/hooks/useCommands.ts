@@ -23,10 +23,12 @@ import { useEffect, useRef } from 'react';
 import { sqlPro } from '@/lib/api';
 import { queryClient } from '@/lib/query-client';
 import {
-  formatShortcut,
+  formatShortcutBinding,
+  matchesBinding,
   useChangesStore,
   useCommandPaletteStore,
   useConnectionStore,
+  useKeyboardShortcutsStore,
   useSettingsStore,
   useTableDataStore,
   useThemeStore,
@@ -48,6 +50,7 @@ export function useCommands() {
   const changesStoreRef = useRef(useChangesStore.getState());
   const tableDataStoreRef = useRef(useTableDataStore.getState());
   const settingsStoreRef = useRef(useSettingsStore.getState());
+  const shortcutsStoreRef = useRef(useKeyboardShortcutsStore.getState());
 
   // Keep refs up to date
   useEffect(() => {
@@ -66,6 +69,9 @@ export function useCommands() {
     const unsubSettings = useSettingsStore.subscribe((s) => {
       settingsStoreRef.current = s;
     });
+    const unsubShortcuts = useKeyboardShortcutsStore.subscribe((s) => {
+      shortcutsStoreRef.current = s;
+    });
 
     return () => {
       unsubTheme();
@@ -73,24 +79,29 @@ export function useCommands() {
       unsubChanges();
       unsubTableData();
       unsubSettings();
+      unsubShortcuts();
     };
   }, []);
 
-  // Global keyboard shortcuts
+  // Global keyboard shortcuts - now using customizable shortcuts
   useEffect(() => {
     const handleKeyDown = (e: KeyboardEvent) => {
-      // Cmd/Ctrl + K to toggle command palette
-      if ((e.metaKey || e.ctrlKey) && e.key === 'k') {
+      const { getShortcut } = shortcutsStoreRef.current;
+
+      // Command palette shortcut
+      const commandPaletteBinding = getShortcut('action.command-palette');
+      if (matchesBinding(e, commandPaletteBinding)) {
         e.preventDefault();
         toggle();
+        return;
       }
 
-      // Cmd/Ctrl + R to refresh table (prevent browser refresh)
-      if ((e.metaKey || e.ctrlKey) && e.key === 'r' && !e.shiftKey) {
+      // Refresh table shortcut (prevent browser refresh)
+      const refreshTableBinding = getShortcut('action.refresh-table');
+      if (matchesBinding(e, refreshTableBinding)) {
         e.preventDefault();
         const { activeConnectionId } = connectionStoreRef.current;
         if (activeConnectionId) {
-          // Invalidate table data queries to trigger refetch
           queryClient.invalidateQueries({
             queryKey: ['tableData', activeConnectionId],
           });
@@ -104,12 +115,20 @@ export function useCommands() {
 
   // Register commands only once on mount
   useEffect(() => {
+    // Helper to get formatted shortcut from store
+    const getShortcutDisplay = (actionId: string): string | undefined => {
+      const binding = shortcutsStoreRef.current.getShortcut(
+        actionId as Parameters<typeof shortcutsStoreRef.current.getShortcut>[0]
+      );
+      return binding ? formatShortcutBinding(binding) : undefined;
+    };
+
     const commands: Command[] = [
       // Navigation commands
       {
         id: 'nav.data-browser',
         label: 'Open Data Browser',
-        shortcut: formatShortcut('1', { cmd: true }),
+        shortcut: getShortcutDisplay('nav.data-browser'),
         icon: Table,
         category: 'navigation',
         keywords: ['data', 'browser', 'table'],
@@ -122,7 +141,7 @@ export function useCommands() {
       {
         id: 'nav.query-editor',
         label: 'Open SQL Query',
-        shortcut: formatShortcut('2', { cmd: true }),
+        shortcut: getShortcutDisplay('nav.query-editor'),
         icon: Code,
         category: 'navigation',
         keywords: ['sql', 'query', 'editor'],
@@ -135,7 +154,7 @@ export function useCommands() {
       {
         id: 'nav.search-tables',
         label: 'Search Tables',
-        shortcut: formatShortcut('P', { cmd: true, shift: true }),
+        shortcut: getShortcutDisplay('nav.search-tables'),
         icon: Search,
         category: 'navigation',
         keywords: ['search', 'tables', 'find', 'filter'],
@@ -148,7 +167,7 @@ export function useCommands() {
       {
         id: 'nav.schema-compare',
         label: 'Open Schema Compare',
-        shortcut: formatShortcut('5', { cmd: true }),
+        shortcut: getShortcutDisplay('nav.schema-compare'),
         icon: GitCompare,
         category: 'navigation',
         keywords: ['schema', 'compare', 'comparison', 'diff', 'migration'],
@@ -190,7 +209,7 @@ export function useCommands() {
       {
         id: 'view.toggle-history',
         label: 'Toggle Query History',
-        shortcut: formatShortcut('H', { cmd: true }),
+        shortcut: getShortcutDisplay('view.toggle-history'),
         icon: History,
         category: 'view',
         keywords: ['history', 'query', 'recent'],
@@ -206,7 +225,7 @@ export function useCommands() {
       {
         id: 'action.refresh-schema',
         label: 'Refresh Schema',
-        shortcut: formatShortcut('R', { cmd: true, shift: true }),
+        shortcut: getShortcutDisplay('action.refresh-schema'),
         icon: RefreshCw,
         category: 'actions',
         keywords: ['refresh', 'schema', 'reload', 'update'],
@@ -236,14 +255,13 @@ export function useCommands() {
       {
         id: 'action.refresh-table',
         label: 'Refresh Table',
-        shortcut: formatShortcut('R', { cmd: true }),
+        shortcut: getShortcutDisplay('action.refresh-table'),
         icon: RefreshCw,
         category: 'actions',
         keywords: ['refresh', 'table', 'reload', 'data'],
         action: () => {
           const { activeConnectionId } = connectionStoreRef.current;
           if (activeConnectionId) {
-            // Invalidate table data queries to trigger refetch
             queryClient.invalidateQueries({
               queryKey: ['tableData', activeConnectionId],
             });
@@ -254,7 +272,7 @@ export function useCommands() {
       {
         id: 'action.execute-query',
         label: 'Execute Query',
-        shortcut: formatShortcut('Enter', { cmd: true }),
+        shortcut: getShortcutDisplay('action.execute-query'),
         icon: Code,
         category: 'actions',
         keywords: ['execute', 'run', 'query', 'sql'],
@@ -269,7 +287,7 @@ export function useCommands() {
       {
         id: 'action.view-changes',
         label: 'View Unsaved Changes',
-        shortcut: formatShortcut('S', { cmd: true, shift: true }),
+        shortcut: getShortcutDisplay('action.view-changes'),
         icon: FileText,
         category: 'actions',
         keywords: ['changes', 'unsaved', 'diff', 'pending'],
@@ -314,18 +332,15 @@ export function useCommands() {
         category: 'actions',
         keywords: ['compare', 'schema', 'diff', 'comparison'],
         action: () => {
-          // First switch to compare tab
           document
             .querySelector<HTMLButtonElement>('[data-tab="compare"]')
             ?.click();
-          // Then trigger compare button
           const timeoutId = setTimeout(() => {
             const compareButton = document.querySelector<HTMLButtonElement>(
               'button:has(svg.lucide-git-compare)'
             );
             compareButton?.click();
           }, 100);
-          // Return cleanup function (though not used in command actions)
           return () => clearTimeout(timeoutId);
         },
         disabled: () => !connectionStoreRef.current.connection,
@@ -337,7 +352,6 @@ export function useCommands() {
         category: 'actions',
         keywords: ['export', 'schema', 'report', 'comparison', 'download'],
         action: () => {
-          // Find and click the Export Report button
           const exportButton = document.querySelector<HTMLButtonElement>(
             'button:has(svg.lucide-file-down)'
           );
@@ -345,7 +359,6 @@ export function useCommands() {
             exportButton.click();
             return undefined;
           } else {
-            // If button not found, try navigating to compare tab first
             document
               .querySelector<HTMLButtonElement>('[data-tab="compare"]')
               ?.click();
@@ -355,7 +368,6 @@ export function useCommands() {
               );
               btn?.click();
             }, 100);
-            // Return cleanup function (though not used in command actions)
             return () => clearTimeout(timeoutId);
           }
         },
@@ -364,7 +376,7 @@ export function useCommands() {
       {
         id: 'action.new-window',
         label: 'New Window',
-        shortcut: formatShortcut('N', { cmd: true, shift: true }),
+        shortcut: getShortcutDisplay('action.new-window'),
         icon: PanelLeft,
         category: 'actions',
         keywords: ['new', 'window', 'open'],
@@ -377,19 +389,17 @@ export function useCommands() {
       {
         id: 'action.open-database',
         label: 'Open Database...',
-        shortcut: formatShortcut('O', { cmd: true }),
+        shortcut: getShortcutDisplay('action.open-database'),
         icon: Database,
         category: 'actions',
         keywords: ['open', 'database', 'file', 'connect'],
         action: () => {
-          // Try to find and click the button immediately
           const openButton = document.querySelector<HTMLButtonElement>(
             'button[data-action="open-database"]'
           );
           if (openButton) {
             openButton.click();
           } else {
-            // Button not found, navigate to home and retry
             navigate({ to: '/' });
             const timer = setTimeout(() => {
               const btn = document.querySelector<HTMLButtonElement>(
@@ -407,7 +417,7 @@ export function useCommands() {
       {
         id: 'settings.open',
         label: 'Open Settings',
-        shortcut: formatShortcut(',', { cmd: true }),
+        shortcut: getShortcutDisplay('settings.open'),
         icon: Settings,
         category: 'settings',
         keywords: ['settings', 'preferences', 'options', 'config'],
@@ -445,7 +455,7 @@ export function useCommands() {
       {
         id: 'help.shortcuts',
         label: 'Show Keyboard Shortcuts',
-        shortcut: formatShortcut('/', { cmd: true }),
+        shortcut: getShortcutDisplay('help.shortcuts'),
         icon: HelpCircle,
         category: 'help',
         keywords: ['help', 'shortcuts', 'keyboard', 'keys'],
