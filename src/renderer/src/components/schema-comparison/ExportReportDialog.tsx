@@ -1,4 +1,4 @@
-import type { SchemaComparisonResult } from '../../../../shared/types';
+import type { SchemaComparisonResult } from '@shared/types';
 import { FileCode, FileDown, FileJson, FileText, Loader2 } from 'lucide-react';
 
 import { useCallback, useState } from 'react';
@@ -99,7 +99,7 @@ export function ExportReportDialog({
       const defaultFilename = `schema-comparison-${timestamp}.${formatOption.extension}`;
 
       // Show save dialog
-      const filePath = await window.electron.showSaveDialog({
+      const result = await window.sqlPro.dialog.saveFile({
         title: 'Export Comparison Report',
         defaultPath: defaultFilename,
         filters: [
@@ -111,8 +111,8 @@ export function ExportReportDialog({
         ],
       });
 
-      if (!filePath) {
-        // User cancelled
+      if (!result.success || !result.filePath || result.canceled) {
+        // User cancelled or error
         return;
       }
 
@@ -120,7 +120,7 @@ export function ExportReportDialog({
       const response = await window.sqlPro.schemaComparison.exportReport({
         comparisonResult,
         format: selectedFormat,
-        filePath,
+        filePath: result.filePath,
         includeMigrationSQL,
       });
 

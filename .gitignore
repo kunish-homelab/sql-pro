@@ -2,8 +2,9 @@
 node_modules
 
 # Build output
-out
+build
 dist
+out
 
 # IDE
 .idea
@@ -35,4 +36,3 @@ docs/.vitepress/cache
 .auto-claude/
 .auto-claude-status
 .claude_settings.json
-.claude-flow/

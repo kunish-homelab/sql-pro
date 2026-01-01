@@ -373,12 +373,10 @@ export const TableHeader = memo(
                 style={{ width: 40, minWidth: 40, maxWidth: 40 }}
               >
                 <Checkbox
-                  checked={
-                    table.getIsAllPageRowsSelected()
-                      ? true
-                      : table.getIsSomePageRowsSelected()
-                        ? 'indeterminate'
-                        : false
+                  checked={table.getIsAllPageRowsSelected()}
+                  indeterminate={
+                    table.getIsSomePageRowsSelected() &&
+                    !table.getIsAllPageRowsSelected()
                   }
                   onCheckedChange={(checked) =>
                     table.toggleAllPageRowsSelected(!!checked)

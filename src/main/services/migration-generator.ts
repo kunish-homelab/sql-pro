@@ -10,7 +10,7 @@ import type {
   TableInfo,
   TriggerDiff,
   TriggerInfo,
-} from '../../shared/types';
+} from '@shared/types';
 
 /**
  * Service for generating migration SQL from schema comparison results.

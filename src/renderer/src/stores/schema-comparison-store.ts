@@ -1,7 +1,8 @@
 import type {
   SchemaComparisonResult,
   SchemaSnapshot,
-} from '../../../shared/types';
+  TableDiff,
+} from '@shared/types';
 import { create } from 'zustand';
 
 /**
@@ -248,7 +249,7 @@ export const useSchemaComparisonStore = create<SchemaComparisonState>(
       set((state) => {
         if (!state.comparisonResult) return state;
         const newTablesMap = new Map<string, boolean>();
-        state.comparisonResult.tableDiffs.forEach((diff) => {
+        state.comparisonResult.tableDiffs.forEach((diff: TableDiff) => {
           newTablesMap.set(diff.name, true);
         });
         return {

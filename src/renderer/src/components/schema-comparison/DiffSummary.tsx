@@ -1,7 +1,12 @@
 import type {
+  ColumnDiff,
   DiffType,
+  ForeignKeyDiff,
+  IndexDiff,
   SchemaComparisonResult,
-} from '../../../../shared/types';
+  TableDiff,
+  TriggerDiff,
+} from '@shared/types';
 import {
   ChevronDown,
   ChevronUp,
@@ -59,30 +64,30 @@ export function DiffSummary({ comparisonResult, className }: DiffSummaryProps) {
     };
 
     // Iterate through table diffs to count column, index, FK, and trigger changes
-    comparisonResult.tableDiffs.forEach((tableDiff) => {
+    comparisonResult.tableDiffs.forEach((tableDiff: TableDiff) => {
       // Count column changes
-      tableDiff.columnDiffs?.forEach((colDiff) => {
+      tableDiff.columnDiffs?.forEach((colDiff: ColumnDiff) => {
         if (colDiff.diffType === 'added') result.columns.added++;
         else if (colDiff.diffType === 'removed') result.columns.removed++;
         else if (colDiff.diffType === 'modified') result.columns.modified++;
       });
 
       // Count index changes
-      tableDiff.indexDiffs?.forEach((indexDiff) => {
+      tableDiff.indexDiffs?.forEach((indexDiff: IndexDiff) => {
         if (indexDiff.diffType === 'added') result.indexes.added++;
         else if (indexDiff.diffType === 'removed') result.indexes.removed++;
         else if (indexDiff.diffType === 'modified') result.indexes.modified++;
       });
 
       // Count foreign key changes
-      tableDiff.foreignKeyDiffs?.forEach((fkDiff) => {
+      tableDiff.foreignKeyDiffs?.forEach((fkDiff: ForeignKeyDiff) => {
         if (fkDiff.diffType === 'added') result.foreignKeys.added++;
         else if (fkDiff.diffType === 'removed') result.foreignKeys.removed++;
         else if (fkDiff.diffType === 'modified') result.foreignKeys.modified++;
       });
 
       // Count trigger changes
-      tableDiff.triggerDiffs?.forEach((triggerDiff) => {
+      tableDiff.triggerDiffs?.forEach((triggerDiff: TriggerDiff) => {
         if (triggerDiff.diffType === 'added') result.triggers.added++;
         else if (triggerDiff.diffType === 'removed') result.triggers.removed++;
         else if (triggerDiff.diffType === 'modified')

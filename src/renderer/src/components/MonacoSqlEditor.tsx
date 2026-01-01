@@ -1,7 +1,7 @@
 import type { BeforeMount, OnMount } from '@monaco-editor/react';
+import type { ErrorPosition } from '@shared/types';
 import type * as Monaco from 'monaco-editor';
 import type { VimMode } from 'monaco-vim';
-import type { ErrorPosition } from '@/../../shared/types';
 import type { DatabaseSchema } from '@/types/database';
 import Editor, { loader } from '@monaco-editor/react';
 // Configure Monaco to use local package with Vite worker

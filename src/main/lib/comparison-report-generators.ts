@@ -1,4 +1,4 @@
-import type { SchemaComparisonResult, TableDiff } from '../../shared/types';
+import type { SchemaComparisonResult, TableDiff } from '@shared/types';
 
 /**
  * Report generators for schema comparison results.

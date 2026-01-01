@@ -11,7 +11,7 @@ import type {
   TableInfo,
   TriggerDiff,
   TriggerInfo,
-} from '../../shared/types';
+} from '@shared/types';
 
 /**
  * Service for comparing database schemas and generating diffs.

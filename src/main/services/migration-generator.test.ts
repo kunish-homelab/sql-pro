@@ -6,7 +6,7 @@ import type {
   TableDiff,
   TableInfo,
   TriggerInfo,
-} from '../../shared/types';
+} from '@shared/types';
 /**
  * Unit tests for MigrationGeneratorService
  * Tests migration SQL generation including CREATE/DROP statements and SQLite limitations
@@ -38,7 +38,8 @@ describe('migrationGeneratorService', () => {
     indexes: IndexInfo[] = [],
     foreignKeys: ForeignKeyInfo[] = [],
     triggers: TriggerInfo[] = [],
-    primaryKey: string[] = []
+    primaryKey: string[] = [],
+    sql = ''
   ): TableInfo => ({
     name,
     schema,
@@ -48,6 +49,7 @@ describe('migrationGeneratorService', () => {
     foreignKeys,
     triggers,
     primaryKey,
+    sql,
   });
 
   // Helper function to create comparison result
@@ -214,10 +216,10 @@ describe('migrationGeneratorService', () => {
       expect(result.success).toBe(true);
       expect(result.sql).toContain('DROP TABLE old_table');
       expect(result.warnings).toHaveLength(1);
-      expect(result.warnings[0]).toContain(
+      expect(result.warnings![0]).toContain(
         'Dropping table "old_table" will permanently delete all data'
       );
-      expect(result.warnings[0]).toContain(
+      expect(result.warnings![0]).toContain(
         'Make sure to backup data before running this migration'
       );
     });
@@ -525,8 +527,10 @@ describe('migrationGeneratorService', () => {
 
       expect(result.success).toBe(true);
       expect(result.warnings).toHaveLength(1);
-      expect(result.warnings[0]).toContain('Table "users" requires recreation');
-      expect(result.warnings[0]).toContain('SQLite limitation');
+      expect(result.warnings![0]).toContain(
+        'Table "users" requires recreation'
+      );
+      expect(result.warnings![0]).toContain('SQLite limitation');
     });
 
     it('should warn about column modification requiring table recreation', () => {
@@ -555,7 +559,9 @@ describe('migrationGeneratorService', () => {
 
       expect(result.success).toBe(true);
       expect(result.warnings).toHaveLength(1);
-      expect(result.warnings[0]).toContain('Table "users" requires recreation');
+      expect(result.warnings![0]).toContain(
+        'Table "users" requires recreation'
+      );
     });
 
     it('should generate table recreation statements for column removal', () => {
@@ -737,7 +743,7 @@ describe('migrationGeneratorService', () => {
       });
 
       expect(result.success).toBe(true);
-      const sql = result.sql;
+      const sql = result.sql!;
 
       // Tables should be created before indexes and triggers
       const tablePos = sql.indexOf('CREATE TABLE users');
@@ -898,7 +904,7 @@ describe('migrationGeneratorService', () => {
       });
 
       expect(result.success).toBe(true);
-      const sql = result.sql;
+      const sql = result.sql!;
 
       // DROP should come before CREATE and ALTER
       const dropPos = sql.indexOf('DROP TABLE old_table');

@@ -118,94 +118,141 @@ export function WelcomeScreen() {
     isEncrypted: boolean;
   } | null>(null);
 
-  const connectToDatabase = async (
-    path: string,
-    password?: string,
-    readOnly?: boolean,
-    settings?: ConnectionSettings
-  ) => {
-    setIsConnecting(true);
-    setError(null);
+  const connectToDatabase = useCallback(
+    async (
+      path: string,
+      password?: string,
+      readOnly?: boolean,
+      settings?: ConnectionSettings
+    ) => {
+      setIsConnecting(true);
+      setError(null);
 
-    try {
-      const result = await sqlPro.db.open({ path, password, readOnly });
+      try {
+        const result = await sqlPro.db.open({ path, password, readOnly });
 
-      if (!result.success) {
-        // Check if database needs a password (using explicit flag from backend)
-        if (result.needsPassword) {
-          // Try to use saved password first
-          const savedPasswordResult = await sqlPro.password.get({
-            dbPath: path,
-          });
-          if (savedPasswordResult.success && savedPasswordResult.password) {
-            // Automatically try with saved password
+        if (!result.success) {
+          // Check if database needs a password (using explicit flag from backend)
+          if (result.needsPassword) {
+            // Try to use saved password first
+            const savedPasswordResult = await sqlPro.password.get({
+              dbPath: path,
+            });
+            if (savedPasswordResult.success && savedPasswordResult.password) {
+              // Automatically try with saved password - use iteration instead of recursion
+              setIsConnecting(false);
+              const retryResult = await sqlPro.db.open({
+                path,
+                password: savedPasswordResult.password,
+              });
+              if (retryResult.success && retryResult.connection) {
+                addConnection({
+                  id: retryResult.connection.id,
+                  path: retryResult.connection.path,
+                  filename: retryResult.connection.filename,
+                  isEncrypted: retryResult.connection.isEncrypted,
+                  isReadOnly: retryResult.connection.isReadOnly,
+                  status: 'connected',
+                });
+                // Load schema
+                setIsLoadingSchema(true);
+                const schemaResult = await sqlPro.db.getSchema({
+                  connectionId: retryResult.connection.id,
+                });
+                if (schemaResult.success) {
+                  setSchema(retryResult.connection.id, {
+                    schemas: schemaResult.schemas || [],
+                    tables: schemaResult.tables || [],
+                    views: schemaResult.views || [],
+                  });
+                }
+                setIsLoadingSchema(false);
+                // Refresh recent connections
+                const connectionsResult =
+                  await sqlPro.app.getRecentConnections();
+                if (
+                  connectionsResult.success &&
+                  connectionsResult.connections
+                ) {
+                  setRecentConnections(connectionsResult.connections);
+                }
+                setPendingPath(null);
+                setPendingSettings(null);
+              }
+              return;
+            }
+
+            // No saved password, show dialog
+            setPendingPath(path);
+            setPasswordDialogOpen(true);
             setIsConnecting(false);
-            await connectToDatabase(path, savedPasswordResult.password);
             return;
           }
-
-          // No saved password, show dialog
-          setPendingPath(path);
-          setPasswordDialogOpen(true);
+          // Show error message (won't trigger password dialog loop)
+          setError(result.error || 'Failed to open database');
           setIsConnecting(false);
           return;
         }
-        // Show error message (won't trigger password dialog loop)
-        setError(result.error || 'Failed to open database');
-        setIsConnecting(false);
-        return;
-      }
 
-      if (result.connection) {
-        // Save connection settings if provided (new connection flow)
-        if (settings) {
-          await sqlPro.connection.update({
+        if (result.connection) {
+          // Save connection settings if provided (new connection flow)
+          if (settings) {
+            await sqlPro.connection.update({
+              path: result.connection.path,
+              displayName: settings.displayName,
+              readOnly: settings.readOnly,
+            });
+          }
+
+          addConnection({
+            id: result.connection.id,
             path: result.connection.path,
-            displayName: settings.displayName,
-            readOnly: settings.readOnly,
+            filename: result.connection.filename,
+            isEncrypted: result.connection.isEncrypted,
+            isReadOnly: result.connection.isReadOnly,
+            status: 'connected',
           });
-        }
 
-        addConnection({
-          id: result.connection.id,
-          path: result.connection.path,
-          filename: result.connection.filename,
-          isEncrypted: result.connection.isEncrypted,
-          isReadOnly: result.connection.isReadOnly,
-          status: 'connected',
-        });
-
-        // Load schema
-        setIsLoadingSchema(true);
-        const schemaResult = await sqlPro.db.getSchema({
-          connectionId: result.connection.id,
-        });
-
-        if (schemaResult.success) {
-          setSchema(result.connection.id, {
-            schemas: schemaResult.schemas || [],
-            tables: schemaResult.tables || [],
-            views: schemaResult.views || [],
+          // Load schema
+          setIsLoadingSchema(true);
+          const schemaResult = await sqlPro.db.getSchema({
+            connectionId: result.connection.id,
           });
-        }
-        setIsLoadingSchema(false);
 
-        // Refresh recent connections list after successful connection
-        const connectionsResult = await sqlPro.app.getRecentConnections();
-        if (connectionsResult.success && connectionsResult.connections) {
-          setRecentConnections(connectionsResult.connections);
-        }
+          if (schemaResult.success) {
+            setSchema(result.connection.id, {
+              schemas: schemaResult.schemas || [],
+              tables: schemaResult.tables || [],
+              views: schemaResult.views || [],
+            });
+          }
+          setIsLoadingSchema(false);
 
-        // Clear pending state
-        setPendingPath(null);
-        setPendingSettings(null);
+          // Refresh recent connections list after successful connection
+          const connectionsResult = await sqlPro.app.getRecentConnections();
+          if (connectionsResult.success && connectionsResult.connections) {
+            setRecentConnections(connectionsResult.connections);
+          }
+
+          // Clear pending state
+          setPendingPath(null);
+          setPendingSettings(null);
+        }
+      } catch (err) {
+        setError(err instanceof Error ? err.message : 'Unknown error');
+      } finally {
+        setIsConnecting(false);
       }
-    } catch (err) {
-      setError(err instanceof Error ? err.message : 'Unknown error');
-    } finally {
-      setIsConnecting(false);
-    }
-  };
+    },
+    [
+      setIsConnecting,
+      setError,
+      addConnection,
+      setSchema,
+      setIsLoadingSchema,
+      setRecentConnections,
+    ]
+  );
 
   // Shared function to open a database file (used by both dialog and drag-drop)
   const openDatabaseFile = useCallback(
@@ -349,33 +396,32 @@ export function WelcomeScreen() {
     }
   };
 
-  const handleRecentClick = async (
-    path: string,
-    isEncrypted: boolean,
-    readOnly?: boolean
-  ) => {
-    if (isEncrypted) {
-      // Check if we have a saved password
-      const savedPasswordResult = await sqlPro.password.get({
-        dbPath: path,
-      });
-      if (savedPasswordResult.success && savedPasswordResult.password) {
-        // Try to connect with saved password and readOnly setting
-        await connectToDatabase(path, savedPasswordResult.password, readOnly);
+  const handleRecentClick = useCallback(
+    async (path: string, isEncrypted: boolean, readOnly?: boolean) => {
+      if (isEncrypted) {
+        // Check if we have a saved password
+        const savedPasswordResult = await sqlPro.password.get({
+          dbPath: path,
+        });
+        if (savedPasswordResult.success && savedPasswordResult.password) {
+          // Try to connect with saved password and readOnly setting
+          await connectToDatabase(path, savedPasswordResult.password, readOnly);
+        } else {
+          // No saved password, show dialog - store readOnly for later use
+          setPendingPath(path);
+          setPendingSettings(
+            readOnly !== undefined
+              ? { displayName: '', readOnly, rememberPassword: false }
+              : null
+          );
+          setPasswordDialogOpen(true);
+        }
       } else {
-        // No saved password, show dialog - store readOnly for later use
-        setPendingPath(path);
-        setPendingSettings(
-          readOnly !== undefined
-            ? { displayName: '', readOnly, rememberPassword: false }
-            : null
-        );
-        setPasswordDialogOpen(true);
+        await connectToDatabase(path, undefined, readOnly);
       }
-    } else {
-      await connectToDatabase(path, undefined, readOnly);
-    }
-  };
+    },
+    [connectToDatabase]
+  );
 
   // Edit connection settings (T031, T033)
   const handleEditConnection = (conn: RecentConnection) => {

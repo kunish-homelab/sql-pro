@@ -530,7 +530,7 @@ function IndexDiffRow({ diff }: { diff: IndexDiff }) {
         <span className="text-muted-foreground">
           ({index?.columns.join(', ')})
         </span>
-        {index?.unique && (
+        {index?.isUnique && (
           <Badge variant="outline" className="text-[10px]">
             UNIQUE
           </Badge>
@@ -585,8 +585,11 @@ function ForeignKeyDiffList({
 
   return (
     <div className="bg-background/50 space-y-1 rounded border p-2">
-      {filteredDiffs.map((diff, idx) => (
-        <ForeignKeyDiffRow key={`${diff.column}-${idx}`} diff={diff} />
+      {filteredDiffs.map((diff) => (
+        <ForeignKeyDiffRow
+          key={`${diff.column}-${diff.diffType}-${diff.target?.referencedTable ?? diff.source?.referencedTable ?? 'none'}`}
+          diff={diff}
+        />
       ))}
     </div>
   );

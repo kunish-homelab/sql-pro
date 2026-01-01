@@ -54,7 +54,6 @@ export function SchemaComparisonPanel({
 
   const [isExportDialogOpen, setIsExportDialogOpen] = useState(false);
   const [showKeyboardShortcuts, setShowKeyboardShortcuts] = useState(false);
-  const _searchInputRef = useRef<HTMLInputElement | null>(null);
 
   // Ref to hold handleCompare function for keyboard shortcuts (defined before useEffect)
   const handleCompareRef = useRef<(() => void) | null>(null);
@@ -342,7 +341,7 @@ export function SchemaComparisonPanel({
             </Card>
 
             {/* Arrow Indicator */}
-            <div className="hidden items-center justify-center md:absolute md:top-[200px] md:left-1/2 md:flex md:-translate-x-1/2">
+            <div className="hidden items-center justify-center md:absolute md:top-50 md:left-1/2 md:flex md:-translate-x-1/2">
               <ArrowLeftRight className="text-muted-foreground h-6 w-6" />
             </div>
 
@@ -367,7 +366,7 @@ export function SchemaComparisonPanel({
               size="lg"
               onClick={handleCompare}
               disabled={!canCompare}
-              className="min-w-[200px]"
+              className="min-w-50"
               title="Compare schemas (⌘↵)"
             >
               {isComparing ? (

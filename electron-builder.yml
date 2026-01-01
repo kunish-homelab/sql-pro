@@ -2,16 +2,8 @@ appId: com.sqlpro.app
 productName: SQL Pro
 copyright: Copyright © 2025 kunish
 
-# Auto-update configuration - publish to GitHub releases
-publish:
-  provider: github
-  owner: kunish-homelab
-  repo: sql-pro
-  releaseType: release
-
 directories:
-  buildResources: resources
-  output: dist
+  buildResources: build
 
 files:
   - from: .
@@ -28,102 +20,41 @@ generateUpdatesFilesForAllChannels: true
 
 # macOS Configuration
 mac:
-  target:
-    - target: dmg
-      arch:
-        - universal
-    - target: zip
-      arch:
-        - universal
   icon: resources/icon.icns
   category: public.app-category.developer-tools
-  entitlements: resources/entitlements.mac.plist
-  entitlementsInherit: resources/entitlements.mac.plist
-  hardenedRuntime: true
-  gatekeeperAssess: false
+  entitlementsInherit: build/entitlements.mac.plist
   notarize: false
-  # Specify the signing identity to avoid picking wrong certificate
-  identity: shuyuan sun
-  # Required for auto-update on macOS
-  artifactName: ${name}-${version}-${os}-${arch}.${ext}
 
 dmg:
-  artifactName: ${name}-${version}-${os}-${arch}.${ext}
-  contents:
-    - x: 130
-      y: 220
-    - x: 410
-      y: 220
-      type: link
-      path: /Applications
+  artifactName: ${name}-${version}.${ext}
 
 # Windows Configuration
 win:
-  target:
-    - target: nsis
-      arch:
-        - x64
-        - arm64
   icon: resources/icon.ico
-  artifactName: ${name}-${version}-${os}-${arch}.${ext}
-  # Sign if certificate is available
-  signAndEditExecutable: true
 
 nsis:
-  oneClick: false
-  perMachine: false
-  allowToChangeInstallationDirectory: true
-  deleteAppDataOnUninstall: false
-  artifactName: ${name}-${version}-${os}-setup-${arch}.${ext}
-  # Allow updating without admin rights when installed per-user
-  allowElevation: true
-  # Create desktop shortcut
-  createDesktopShortcut: true
-  createStartMenuShortcut: true
+  artifactName: ${name}-${version}-setup.${ext}
+  shortcutName: ${productName}
+  uninstallDisplayName: ${productName}
+  createDesktopShortcut: always
 
 # Linux Configuration
 linux:
   target:
-    - target: AppImage
-      arch:
-        - x64
-        - arm64
-    - target: deb
-      arch:
-        - x64
-        - arm64
-    - target: rpm
-      arch:
-        - x64
+    - AppImage
+    - snap
+    - deb
   icon: resources/icons
   category: Development
-  artifactName: ${name}-${version}-${os}-${arch}.${ext}
 
 appImage:
-  artifactName: ${name}-${version}-${os}-${arch}.${ext}
+  artifactName: ${name}-${version}.${ext}
 
-deb:
-  depends:
-    - libgtk-3-0
-    - libnotify4
-    - libnss3
-    - libxss1
-    - libxtst6
-    - xdg-utils
-    - libatspi2.0-0
-    - libuuid1
-    - libsecret-1-0
-  artifactName: ${name}-${version}-${os}-${arch}.${ext}
+npmRebuild: false
 
-rpm:
-  depends:
-    - gtk3
-    - libnotify
-    - nss
-    - libXScrnSaver
-    - libXtst
-    - xdg-utils
-    - at-spi2-core
-    - libuuid
-    - libsecret
-  artifactName: ${name}-${version}-${os}-${arch}.${ext}
+# Auto-update configuration - publish to GitHub releases
+publish:
+  provider: github
+  owner: kunish-homelab
+  repo: sql-pro
+  releaseType: release

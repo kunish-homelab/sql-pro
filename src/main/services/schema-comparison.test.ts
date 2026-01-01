@@ -5,7 +5,7 @@ import type {
   SchemaInfo,
   TableInfo,
   TriggerInfo,
-} from '../../shared/types';
+} from '@shared/types';
 /**
  * Unit tests for SchemaComparisonService
  * Tests schema comparison logic including table, column, index, foreign key, and trigger comparisons
@@ -37,7 +37,8 @@ describe('schemaComparisonService', () => {
     indexes: IndexInfo[] = [],
     foreignKeys: ForeignKeyInfo[] = [],
     triggers: TriggerInfo[] = [],
-    primaryKey: string[] = []
+    primaryKey: string[] = [],
+    sql = ''
   ): TableInfo => ({
     name,
     schema,
@@ -47,6 +48,7 @@ describe('schemaComparisonService', () => {
     foreignKeys,
     triggers,
     primaryKey,
+    sql,
   });
 
   // Helper function to create a schema

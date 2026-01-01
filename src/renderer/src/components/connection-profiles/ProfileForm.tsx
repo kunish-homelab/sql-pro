@@ -31,7 +31,7 @@ export interface ProfileFormProps {
   /** Mode: 'new' for new profiles, 'edit' for existing ones */
   mode?: 'new' | 'edit';
   /** Initial values for edit mode */
-  initialValues?: Partial<ConnectionProfile>;
+  initialValues?: Partial<ConnectionProfile> & { rememberPassword?: boolean };
   /** Database path - used for password storage check */
   dbPath: string;
   /** Original filename from path - used as default displayName */

@@ -1,4 +1,4 @@
-import type { GenerateMigrationSQLResponse } from '../../../../shared/types';
+import type { GenerateMigrationSQLResponse } from '@shared/types';
 import {
   AlertCircle,
   Check,
@@ -50,11 +50,15 @@ export function MigrationPreview({ className }: MigrationPreviewProps) {
   const [showWarnings, setShowWarnings] = useState(true);
 
   // Generate migration SQL when comparison result or options change
+
   useEffect(() => {
     if (!comparisonResult) {
+      // eslint-disable-next-line react-hooks-extra/no-direct-set-state-in-use-effect -- Clearing state when no comparison result
       setMigrationSQL(null);
       return;
     }
+
+    let cancelled = false;
 
     const generateSQL = async () => {
       setIsGenerating(true);
@@ -65,21 +69,31 @@ export function MigrationPreview({ className }: MigrationPreviewProps) {
           includeDropStatements,
         });
 
-        setMigrationSQL(response);
+        if (!cancelled) {
+          setMigrationSQL(response);
+        }
       } catch (err) {
-        setMigrationSQL({
-          success: false,
-          error:
-            err instanceof Error
-              ? err.message
-              : 'Failed to generate migration SQL',
-        });
+        if (!cancelled) {
+          setMigrationSQL({
+            success: false,
+            error:
+              err instanceof Error
+                ? err.message
+                : 'Failed to generate migration SQL',
+          });
+        }
       } finally {
-        setIsGenerating(false);
+        if (!cancelled) {
+          setIsGenerating(false);
+        }
       }
     };
 
     generateSQL();
+
+    return () => {
+      cancelled = true;
+    };
   }, [comparisonResult, reverse, includeDropStatements]);
 
   const handleCopyToClipboard = useCallback(async () => {
@@ -122,7 +136,7 @@ export function MigrationPreview({ className }: MigrationPreviewProps) {
     } catch {
       // Handle error silently
     }
-  }, [migrationSQL?.sql, activeConnectionId]);
+  }, [migrationSQL?.sql]);
 
   const handleInsertIntoEditor = useCallback(() => {
     if (!migrationSQL?.sql || !activeConnectionId) return;
@@ -254,8 +268,8 @@ export function MigrationPreview({ className }: MigrationPreviewProps) {
                 {showWarnings && (
                   <AlertDescription className="mt-2">
                     <ul className="list-inside list-disc space-y-1 text-xs">
-                      {migrationSQL.warnings.map((warning, idx) => (
-                        <li key={idx}>{warning}</li>
+                      {migrationSQL.warnings.map((warning) => (
+                        <li key={warning}>{warning}</li>
                       ))}
                     </ul>
                   </AlertDescription>
@@ -311,7 +325,7 @@ export function MigrationPreview({ className }: MigrationPreviewProps) {
             {migrationSQL.sql && (
               <div className="space-y-2">
                 <Label className="text-xs font-medium">Generated SQL:</Label>
-                <ScrollArea className="h-[400px] rounded-lg border">
+                <ScrollArea className="h-100 rounded-lg border">
                   <div className="p-4">
                     <SqlHighlight
                       code={migrationSQL.sql}

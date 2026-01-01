@@ -38,10 +38,10 @@ export function ImportExportDialog({
 }: ImportExportDialogProps) {
   // Export state
   const [selectedProfileIds, setSelectedProfileIds] = useState<Set<string>>(
-    new Set()
+    () => new Set()
   );
   const [selectedFolderIds, setSelectedFolderIds] = useState<Set<string>>(
-    new Set()
+    () => new Set()
   );
   const [exportResult, setExportResult] = useState<{
     success: boolean;
@@ -378,8 +378,8 @@ export function ImportExportDialog({
                                 Validation Errors:
                               </p>
                               <ul className="text-destructive/80 list-inside list-disc space-y-0.5 text-xs">
-                                {importResult.errors.map((error, index) => (
-                                  <li key={index}>{error}</li>
+                                {importResult.errors.map((error) => (
+                                  <li key={error}>{error}</li>
                                 ))}
                               </ul>
                             </div>

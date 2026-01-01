@@ -319,12 +319,14 @@ export function useCommands() {
             .querySelector<HTMLButtonElement>('[data-tab="compare"]')
             ?.click();
           // Then trigger compare button
-          setTimeout(() => {
+          const timeoutId = setTimeout(() => {
             const compareButton = document.querySelector<HTMLButtonElement>(
               'button:has(svg.lucide-git-compare)'
             );
             compareButton?.click();
           }, 100);
+          // Return cleanup function (though not used in command actions)
+          return () => clearTimeout(timeoutId);
         },
         disabled: () => !connectionStoreRef.current.connection,
       },
@@ -346,12 +348,14 @@ export function useCommands() {
             document
               .querySelector<HTMLButtonElement>('[data-tab="compare"]')
               ?.click();
-            setTimeout(() => {
+            const timeoutId = setTimeout(() => {
               const btn = document.querySelector<HTMLButtonElement>(
                 'button:has(svg.lucide-file-down)'
               );
               btn?.click();
             }, 100);
+            // Return cleanup function (though not used in command actions)
+            return () => clearTimeout(timeoutId);
           }
         },
         disabled: () => !connectionStoreRef.current.connection,
