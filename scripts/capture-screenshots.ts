@@ -38,7 +38,7 @@ interface ScreenshotConfig {
   name: string;
   description: string;
   /** Action to perform before screenshot */
-  setup?: (page: Page) => Promise<void>;
+  setup?: (page: Page, baseUrl: string) => Promise<void>;
   /** Delay before taking screenshot (ms) */
   delay?: number;
   /** Specific element to screenshot (optional) */
@@ -50,9 +50,9 @@ const screenshots: ScreenshotConfig[] = [
     id: 'welcome',
     name: 'welcome',
     description: 'Welcome screen with recent connections',
-    setup: async (page) => {
-      // Navigate to welcome screen with skipAutoConnect to prevent auto-navigation to database
-      await page.goto('http://localhost:5173/#/?skipAutoConnect=true');
+    setup: async (page, baseUrl) => {
+      // Navigate to welcome screen with mock mode and skipAutoConnect to prevent auto-navigation to database
+      await page.goto(`${baseUrl}/#/?mock=true&skipAutoConnect=true`);
       await page.waitForTimeout(1000);
     },
     delay: 500,
@@ -61,9 +61,9 @@ const screenshots: ScreenshotConfig[] = [
     id: 'database',
     name: 'database',
     description: 'Database view with sidebar and table list',
-    setup: async (page) => {
+    setup: async (page, baseUrl) => {
       // Navigate to mock database view
-      await page.goto('http://localhost:5173/#/?mock=true');
+      await page.goto(`${baseUrl}/#/?mock=true`);
       await page.waitForTimeout(2000);
     },
     delay: 500,
@@ -72,8 +72,8 @@ const screenshots: ScreenshotConfig[] = [
     id: 'table',
     name: 'table',
     description: 'Users table with data',
-    setup: async (page) => {
-      await page.goto('http://localhost:5173/#/?mock=true');
+    setup: async (page, baseUrl) => {
+      await page.goto(`${baseUrl}/#/?mock=true`);
       await page.waitForTimeout(2000);
       // Click on users table
       const usersItem = page.locator('text=users').first();
@@ -88,8 +88,8 @@ const screenshots: ScreenshotConfig[] = [
     id: 'products',
     name: 'products',
     description: 'Products table with data',
-    setup: async (page) => {
-      await page.goto('http://localhost:5173/#/?mock=true');
+    setup: async (page, baseUrl) => {
+      await page.goto(`${baseUrl}/#/?mock=true`);
       await page.waitForTimeout(2000);
       // Click on products table
       const productsItem = page.locator('text=products').first();
@@ -104,8 +104,8 @@ const screenshots: ScreenshotConfig[] = [
     id: 'orders',
     name: 'orders',
     description: 'Orders table with data',
-    setup: async (page) => {
-      await page.goto('http://localhost:5173/#/?mock=true');
+    setup: async (page, baseUrl) => {
+      await page.goto(`${baseUrl}/#/?mock=true`);
       await page.waitForTimeout(2000);
       // Click on orders table
       const ordersItem = page.locator('text=orders').first();
@@ -120,8 +120,8 @@ const screenshots: ScreenshotConfig[] = [
     id: 'query',
     name: 'query',
     description: 'SQL query editor with sample query',
-    setup: async (page) => {
-      await page.goto('http://localhost:5173/#/?mock=true');
+    setup: async (page, baseUrl) => {
+      await page.goto(`${baseUrl}/#/?mock=true`);
       await page.waitForTimeout(2000);
       // Click on Query tab
       const queryTab = page
@@ -138,8 +138,8 @@ const screenshots: ScreenshotConfig[] = [
     id: 'sidebar-expanded',
     name: '07-sidebar-tables',
     description: 'Sidebar with tables expanded',
-    setup: async (page) => {
-      await page.goto('http://localhost:5173/#/?mock=true');
+    setup: async (page, baseUrl) => {
+      await page.goto(`${baseUrl}/#/?mock=true`);
       await page.waitForTimeout(2000);
       // Expand tables section if collapsed
       const tablesHeader = page.locator('text=Tables').first();
@@ -154,8 +154,8 @@ const screenshots: ScreenshotConfig[] = [
     id: 'sidebar-views',
     name: '08-sidebar-views',
     description: 'Sidebar with views section',
-    setup: async (page) => {
-      await page.goto('http://localhost:5173/#/?mock=true');
+    setup: async (page, baseUrl) => {
+      await page.goto(`${baseUrl}/#/?mock=true`);
       await page.waitForTimeout(2000);
       // Click on Views section
       const viewsHeader = page.locator('text=Views').first();
@@ -215,7 +215,8 @@ async function setTheme(page: Page, theme: 'light' | 'dark') {
 async function captureScreenshot(
   page: Page,
   config: ScreenshotConfig,
-  theme: 'light' | 'dark'
+  theme: 'light' | 'dark',
+  baseUrl: string
 ) {
   const suffix = theme === 'dark' ? '-dark' : '';
   const filename = `${config.name}${suffix}.png`;
@@ -226,7 +227,7 @@ async function captureScreenshot(
   try {
     // Run setup
     if (config.setup) {
-      await config.setup(page);
+      await config.setup(page, baseUrl);
     }
 
     // Set theme
@@ -251,7 +252,10 @@ async function captureScreenshot(
   }
 }
 
-async function startDevServer(): Promise<ChildProcess> {
+async function startDevServer(): Promise<{
+  process: ChildProcess;
+  port: number;
+}> {
   console.log('🚀 Starting dev server in mock mode...');
 
   const devProcess = spawn('pnpm', ['dev:mock'], {
@@ -267,12 +271,18 @@ async function startDevServer(): Promise<ChildProcess> {
   // Wait for server to be ready by checking the output
   return new Promise((resolve, reject) => {
     let output = '';
+    let port = 5173; // default port
 
     devProcess.stdout?.on('data', (data) => {
       output += data.toString();
-      if (output.includes('Local:') || output.includes('localhost:5173')) {
+      // Extract the actual port from output like "http://localhost:5175/"
+      const portMatch = output.match(/localhost:(\d+)/);
+      if (portMatch) {
+        port = Number.parseInt(portMatch[1], 10);
+      }
+      if (output.includes('Local:') || output.includes('localhost:')) {
         // Server is ready
-        setTimeout(() => resolve(devProcess), 2000);
+        setTimeout(() => resolve({ process: devProcess, port }), 2000);
       }
     });
 
@@ -284,7 +294,7 @@ async function startDevServer(): Promise<ChildProcess> {
 
     // Timeout after 30 seconds
     setTimeout(() => {
-      if (!output.includes('localhost:5173')) {
+      if (!output.includes('localhost:')) {
         reject(new Error('Dev server failed to start within 30 seconds'));
       }
     }, 30000);
@@ -310,11 +320,15 @@ async function captureScreenshots() {
   console.log('\n📸 SQL Pro Screenshot Capture\n');
 
   let devProcess: ChildProcess | null = null;
+  let serverPort = 5173;
 
   try {
     // Start dev server
-    devProcess = await startDevServer();
-    console.log('✅ Dev server ready\n');
+    const server = await startDevServer();
+    devProcess = server.process;
+    serverPort = server.port;
+    const baseUrl = `http://localhost:${serverPort}`;
+    console.log(`✅ Dev server ready at ${baseUrl}\n`);
 
     // Import playwright
     const { chromium } = await import('playwright');
@@ -357,7 +371,7 @@ async function captureScreenshots() {
       console.log(`\n🎯 ${config.description}`);
 
       for (const theme of themes) {
-        await captureScreenshot(page, config, theme);
+        await captureScreenshot(page, config, theme, baseUrl);
       }
     }
 

@@ -625,6 +625,20 @@ const delay = (ms: number) => new Promise((resolve) => setTimeout(resolve, ms));
 // Mock mode state
 let _isMockMode = false;
 
+// Check if mock mode is enabled via URL parameter or environment variable
+function checkMockModeFromURL(): boolean {
+  // Check environment variable first
+  if (import.meta.env.VITE_MOCK_MODE === 'true') {
+    return true;
+  }
+  // Then check URL parameter
+  if (typeof window === 'undefined') return false;
+  const hashParams = new URLSearchParams(
+    window.location.hash.split('?')[1] || ''
+  );
+  return hashParams.get('mock') === 'true';
+}
+
 // Mock connection data for initialization
 const mockConnectionData = {
   connection: {
@@ -637,7 +651,13 @@ const mockConnectionData = {
     connectedAt: new Date(),
   },
   schema: {
-    schemas: [],
+    schemas: [
+      {
+        name: 'main',
+        tables: mockTables,
+        views: mockViews,
+      },
+    ],
     tables: mockTables,
     views: mockViews,
   },
@@ -651,7 +671,7 @@ export async function initMockMode(): Promise<
 }
 
 export function isMockMode(): boolean {
-  return _isMockMode;
+  return _isMockMode || checkMockModeFromURL();
 }
 
 // Mock SQL Pro API
@@ -678,6 +698,14 @@ export const mockSqlProAPI: any = {
     getSchema: async (_request: GetSchemaRequest): Promise<any> => {
       await delay(400);
       return {
+        success: true,
+        schemas: [
+          {
+            name: 'main',
+            tables: mockTables,
+            views: mockViews,
+          },
+        ],
         tables: mockTables,
         views: mockViews,
       };
@@ -689,9 +717,16 @@ export const mockSqlProAPI: any = {
       const pageSize = _request.pageSize || 100;
       const page = _request.page || 1;
       const offset = (page - 1) * pageSize;
+
+      // Find the table schema to get columns
+      const tableSchema = mockTables.find((t) => t.name === tableName);
+      const columns = tableSchema?.columns || [];
+
       return {
+        success: true,
+        columns,
         rows: data.slice(offset, offset + pageSize),
-        totalCount: data.length,
+        totalRows: data.length,
       };
     },
   },
@@ -833,31 +868,31 @@ export const mockSqlProAPI: any = {
     },
   },
   password: {
-    getPassword: async (_request: GetPasswordRequest): Promise<any> => {
+    get: async (_request: GetPasswordRequest): Promise<any> => {
       await delay(200);
       return {
         password: 'mock-password',
       };
     },
-    hasPassword: async (_request: HasPasswordRequest): Promise<any> => {
+    has: async (_request: HasPasswordRequest): Promise<any> => {
       await delay(200);
       return {
         hasPassword: false,
       };
     },
-    savePassword: async (_request: SavePasswordRequest): Promise<any> => {
+    save: async (_request: SavePasswordRequest): Promise<any> => {
       await delay(200);
       return {
         success: true,
       };
     },
-    removePassword: async (_request: RemovePasswordRequest): Promise<any> => {
+    remove: async (_request: RemovePasswordRequest): Promise<any> => {
       await delay(200);
       return {
         success: true,
       };
     },
-    isPasswordStorageAvailable: async (): Promise<any> => {
+    isAvailable: async (): Promise<any> => {
       await delay(200);
       return {
         available: true,
@@ -1090,6 +1125,83 @@ export const mockSqlProAPI: any = {
         success: true,
         filePath: _request.filePath,
       };
+    },
+  },
+
+  // SQL log operations (mock)
+  sqlLog: {
+    get: async (): Promise<any> => {
+      await delay(100);
+      return { logs: [] };
+    },
+    clear: async (): Promise<any> => {
+      await delay(100);
+      return { success: true };
+    },
+    onEntry: (): (() => void) => {
+      // Return a no-op unsubscribe function in mock mode
+      return () => {};
+    },
+  },
+
+  // App operations (mock)
+  app: {
+    getRecentConnections: async (): Promise<any> => {
+      await delay(100);
+      return {
+        success: true,
+        connections: [
+          {
+            id: 'recent-1',
+            path: '/Users/demo/databases/shop.db',
+            filename: 'shop.db',
+            isEncrypted: false,
+            lastOpenedAt: new Date(Date.now() - 1000 * 60 * 30).toISOString(), // 30 minutes ago
+          },
+          {
+            id: 'recent-2',
+            path: '/Users/demo/databases/inventory.db',
+            filename: 'inventory.db',
+            isEncrypted: false,
+            lastOpenedAt: new Date(
+              Date.now() - 1000 * 60 * 60 * 2
+            ).toISOString(), // 2 hours ago
+          },
+          {
+            id: 'recent-3',
+            path: '/Users/demo/databases/analytics.db',
+            filename: 'analytics.db',
+            isEncrypted: true,
+            lastOpenedAt: new Date(
+              Date.now() - 1000 * 60 * 60 * 24
+            ).toISOString(), // 1 day ago
+          },
+          {
+            id: 'recent-4',
+            path: '/Users/demo/projects/webapp/data.sqlite',
+            filename: 'data.sqlite',
+            isEncrypted: false,
+            lastOpenedAt: new Date(
+              Date.now() - 1000 * 60 * 60 * 24 * 3
+            ).toISOString(), // 3 days ago
+          },
+        ],
+      };
+    },
+    getPreferences: async (): Promise<any> => {
+      await delay(50);
+      return {
+        success: true,
+        preferences: {
+          theme: 'dark',
+          fontSize: 14,
+          tabSize: 2,
+        },
+      };
+    },
+    setPreferences: async (): Promise<any> => {
+      await delay(50);
+      return { success: true };
     },
   },
 };
