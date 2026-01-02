@@ -16,6 +16,10 @@ import {
  * Database page route component.
  * Displays the database view and handles navigation when disconnected.
  * Now supports multiple database connections.
+ *
+ * Navigation:
+ * - Data Browser, SQL Query, ER Diagram, Schema Compare, and Data Diff tabs
+ *   are managed in DatabaseView component (not as separate routes)
  */
 export function DatabasePage() {
   const navigate = useNavigate();

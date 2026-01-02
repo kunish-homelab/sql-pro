@@ -8,6 +8,13 @@ export {
 } from './command-palette-store';
 export type { Command } from './command-palette-store';
 export { useConnectionStore } from './connection-store';
+export { useDataDiffStore } from './data-diff-store';
+export type {
+  DataDiffFilters,
+  ExpandedRows,
+  PaginationState,
+  TableSelection,
+} from './data-diff-store';
 export { useDataTabsStore } from './data-tabs-store';
 export type { DataTab } from './data-tabs-store';
 export { useDiagramStore } from './diagram-store';

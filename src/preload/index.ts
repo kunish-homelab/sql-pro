@@ -27,6 +27,8 @@ import type {
   CompareConnectionToSnapshotResponse,
   CompareSnapshotsRequest,
   CompareSnapshotsResponse,
+  CompareTablesRequest,
+  CompareTablesResponse,
   CreateFolderRequest,
   CreateFolderResponse,
   CreateWindowResponse,
@@ -50,6 +52,8 @@ import type {
   FocusWindowResponse,
   GenerateMigrationSQLRequest,
   GenerateMigrationSQLResponse,
+  GenerateSyncSQLRequest,
+  GenerateSyncSQLResponse,
   GetAISettingsResponse,
   GetAllWindowsResponse,
   GetClaudeCodePathsResponse,
@@ -137,8 +141,7 @@ import type {
   UninstallPluginResponse,
   UpdatePluginRequest,
   UpdatePluginResponse,
-} from '../shared/types/plugin';
-import process from 'node:process';
+} from '@shared/types/plugin.d';
 import { electronAPI } from '@electron-toolkit/preload';
 import { IPC_CHANNELS } from '@shared/types';
 import { contextBridge, ipcRenderer, webUtils } from 'electron';
@@ -425,15 +428,79 @@ const sqlProAPI = {
         _event: Electron.IpcRendererEvent,
         status: UpdateStatus
       ) => callback(status);
-      ipcRenderer.on('update-status', handler);
-      return () => ipcRenderer.off('update-status', handler);
+      ipcRenderer.on(IPC_CHANNELS.UPDATE_STATUS_CHANGE, handler);
+      return () => ipcRenderer.off(IPC_CHANNELS.UPDATE_STATUS_CHANGE, handler);
     },
+  },
+
+  // Comparison operations
+  compare: {
+    connections: (
+      request: CompareConnectionsRequest
+    ): Promise<CompareConnectionsResponse> =>
+      ipcRenderer.invoke(IPC_CHANNELS.COMPARE_CONNECTIONS, request),
+    connectionToSnapshot: (
+      request: CompareConnectionToSnapshotRequest
+    ): Promise<CompareConnectionToSnapshotResponse> =>
+      ipcRenderer.invoke(IPC_CHANNELS.COMPARE_CONNECTION_TO_SNAPSHOT, request),
+    snapshots: (
+      request: CompareSnapshotsRequest
+    ): Promise<CompareSnapshotsResponse> =>
+      ipcRenderer.invoke(IPC_CHANNELS.COMPARE_SNAPSHOTS, request),
+    tables: (request: CompareTablesRequest): Promise<CompareTablesResponse> =>
+      ipcRenderer.invoke(IPC_CHANNELS.COMPARE_TABLES, request),
+    exportReport: (
+      request: ExportComparisonReportRequest
+    ): Promise<ExportComparisonReportResponse> =>
+      ipcRenderer.invoke(IPC_CHANNELS.EXPORT_COMPARISON_REPORT, request),
+  },
+
+  // Schema snapshot operations
+  snapshot: {
+    save: (
+      request: SaveSchemaSnapshotRequest
+    ): Promise<SaveSchemaSnapshotResponse> =>
+      ipcRenderer.invoke(IPC_CHANNELS.SAVE_SCHEMA_SNAPSHOT, request),
+    get: (
+      request: GetSchemaSnapshotRequest
+    ): Promise<GetSchemaSnapshotResponse> =>
+      ipcRenderer.invoke(IPC_CHANNELS.GET_SCHEMA_SNAPSHOT, request),
+    getAll: (): Promise<GetSchemaSnapshotsResponse> =>
+      ipcRenderer.invoke(IPC_CHANNELS.GET_SCHEMA_SNAPSHOTS),
+    delete: (
+      request: DeleteSchemaSnapshotRequest
+    ): Promise<DeleteSchemaSnapshotResponse> =>
+      ipcRenderer.invoke(IPC_CHANNELS.DELETE_SCHEMA_SNAPSHOT, request),
+  },
+
+  // Migration operations
+  migration: {
+    generateSQL: (
+      request: GenerateMigrationSQLRequest
+    ): Promise<GenerateMigrationSQLResponse> =>
+      ipcRenderer.invoke(IPC_CHANNELS.GENERATE_MIGRATION_SQL, request),
+    generateSyncSQL: (
+      request: GenerateSyncSQLRequest
+    ): Promise<GenerateSyncSQLResponse> =>
+      ipcRenderer.invoke(IPC_CHANNELS.GENERATE_SYNC_SQL, request),
+  },
+
+  // Data Diff operations (comparing table data)
+  dataDiff: {
+    compareTables: (
+      request: CompareTablesRequest
+    ): Promise<CompareTablesResponse> =>
+      ipcRenderer.invoke(IPC_CHANNELS.DATA_DIFF_COMPARE_TABLES, request),
+    generateSyncSQL: (
+      request: GenerateSyncSQLRequest
+    ): Promise<GenerateSyncSQLResponse> =>
+      ipcRenderer.invoke(IPC_CHANNELS.DATA_DIFF_GENERATE_SYNC_SQL, request),
   },
 
   // Plugin operations
   plugin: {
-    list: (request?: ListPluginsRequest): Promise<ListPluginsResponse> =>
-      ipcRenderer.invoke(IPC_CHANNELS.PLUGIN_LIST, request || {}),
+    list: (request: ListPluginsRequest): Promise<ListPluginsResponse> =>
+      ipcRenderer.invoke(IPC_CHANNELS.PLUGIN_LIST, request),
     get: (request: GetPluginRequest): Promise<GetPluginResponse> =>
       ipcRenderer.invoke(IPC_CHANNELS.PLUGIN_GET, request),
     install: (request: InstallPluginRequest): Promise<InstallPluginResponse> =>
@@ -448,91 +515,29 @@ const sqlProAPI = {
       ipcRenderer.invoke(IPC_CHANNELS.PLUGIN_DISABLE, request),
     update: (request: UpdatePluginRequest): Promise<UpdatePluginResponse> =>
       ipcRenderer.invoke(IPC_CHANNELS.PLUGIN_UPDATE, request),
-    checkUpdates: (
-      request?: CheckUpdatesRequest
-    ): Promise<CheckUpdatesResponse> =>
-      ipcRenderer.invoke(IPC_CHANNELS.PLUGIN_CHECK_UPDATES, request || {}),
     fetchMarketplace: (
-      request?: FetchMarketplaceRequest
+      request: FetchMarketplaceRequest
     ): Promise<FetchMarketplaceResponse> =>
-      ipcRenderer.invoke(IPC_CHANNELS.PLUGIN_MARKETPLACE_FETCH, request || {}),
+      ipcRenderer.invoke(IPC_CHANNELS.PLUGIN_FETCH_MARKETPLACE, request),
     onEvent: (callback: (event: PluginEvent) => void): (() => void) => {
-      const handler = (
-        _event: Electron.IpcRendererEvent,
-        pluginEvent: PluginEvent
-      ) => callback(pluginEvent);
+      const handler = (_event: Electron.IpcRendererEvent, event: PluginEvent) =>
+        callback(event);
       ipcRenderer.on(IPC_CHANNELS.PLUGIN_EVENT, handler);
       return () => ipcRenderer.off(IPC_CHANNELS.PLUGIN_EVENT, handler);
     },
   },
 
-  // Schema snapshot operations
-  schemaSnapshot: {
-    save: (
-      request: SaveSchemaSnapshotRequest
-    ): Promise<SaveSchemaSnapshotResponse> =>
-      ipcRenderer.invoke(IPC_CHANNELS.SCHEMA_SNAPSHOT_SAVE, request),
-    getAll: (): Promise<GetSchemaSnapshotsResponse> =>
-      ipcRenderer.invoke(IPC_CHANNELS.SCHEMA_SNAPSHOT_GET_ALL),
-    get: (
-      request: GetSchemaSnapshotRequest
-    ): Promise<GetSchemaSnapshotResponse> =>
-      ipcRenderer.invoke(IPC_CHANNELS.SCHEMA_SNAPSHOT_GET, request),
-    delete: (
-      request: DeleteSchemaSnapshotRequest
-    ): Promise<DeleteSchemaSnapshotResponse> =>
-      ipcRenderer.invoke(IPC_CHANNELS.SCHEMA_SNAPSHOT_DELETE, request),
-  },
-
-  // Schema comparison operations
-  schemaComparison: {
-    compareConnections: (
-      request: CompareConnectionsRequest
-    ): Promise<CompareConnectionsResponse> =>
-      ipcRenderer.invoke(
-        IPC_CHANNELS.SCHEMA_COMPARISON_COMPARE_CONNECTIONS,
-        request
-      ),
-    compareConnectionToSnapshot: (
-      request: CompareConnectionToSnapshotRequest
-    ): Promise<CompareConnectionToSnapshotResponse> =>
-      ipcRenderer.invoke(
-        IPC_CHANNELS.SCHEMA_COMPARISON_COMPARE_CONNECTION_TO_SNAPSHOT,
-        request
-      ),
-    compareSnapshots: (
-      request: CompareSnapshotsRequest
-    ): Promise<CompareSnapshotsResponse> =>
-      ipcRenderer.invoke(
-        IPC_CHANNELS.SCHEMA_COMPARISON_COMPARE_SNAPSHOTS,
-        request
-      ),
-    generateMigrationSQL: (
-      request: GenerateMigrationSQLRequest
-    ): Promise<GenerateMigrationSQLResponse> =>
-      ipcRenderer.invoke(
-        IPC_CHANNELS.SCHEMA_COMPARISON_GENERATE_MIGRATION_SQL,
-        request
-      ),
-    exportReport: (
-      request: ExportComparisonReportRequest
-    ): Promise<ExportComparisonReportResponse> =>
-      ipcRenderer.invoke(IPC_CHANNELS.SCHEMA_COMPARISON_EXPORT_REPORT, request),
+  // Update check operations
+  marketplace: {
+    checkUpdates: (
+      request: CheckUpdatesRequest
+    ): Promise<CheckUpdatesResponse> =>
+      ipcRenderer.invoke(IPC_CHANNELS.MARKETPLACE_CHECK_UPDATES, request),
   },
 };
 
-// Expose APIs to renderer
-if (process.contextIsolated) {
-  try {
-    contextBridge.exposeInMainWorld('electron', electronAPI);
-    contextBridge.exposeInMainWorld('sqlPro', sqlProAPI);
-  } catch (error) {
-    console.error(error);
-  }
-} else {
-  window.electron = electronAPI;
-  window.sqlPro = sqlProAPI;
-}
+// Expose the custom API to the renderer process
+contextBridge.exposeInMainWorld('sqlPro', sqlProAPI);
 
-// Export types for the renderer
-export type SqlProAPI = typeof sqlProAPI;
+// Expose electron API
+contextBridge.exposeInMainWorld('electron', electronAPI);

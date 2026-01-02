@@ -1,4 +1,4 @@
-import { Code, GitCompare, GitFork, Table } from 'lucide-react';
+import { ArrowLeftRight, Code, GitCompare, GitFork, Table } from 'lucide-react';
 import { useCallback, useEffect, useRef, useState } from 'react';
 import { ShortcutKbd } from '@/components/ui/kbd';
 import { Tabs, TabsContent, TabsList, TabsTrigger } from '@/components/ui/tabs';
@@ -10,6 +10,7 @@ import {
   useSettingsStore,
 } from '@/stores';
 import { ConnectionTabBar } from './ConnectionTabBar';
+import { DataDiffPanel } from './data-diff/DataDiffPanel';
 import { DataTabBar } from './data-table';
 import { DiffPreview } from './DiffPreview';
 import { ERDiagram } from './er-diagram';
@@ -21,7 +22,7 @@ import { Sidebar } from './Sidebar';
 import { TableView } from './TableView';
 import { Toolbar } from './Toolbar';
 
-type TabValue = 'data' | 'query' | 'diagram' | 'compare';
+type TabValue = 'data' | 'query' | 'diagram' | 'compare' | 'dataDiff';
 
 interface DatabaseViewProps {
   onOpenDatabase?: () => void;
@@ -119,6 +120,10 @@ export function DatabaseView({
           case '5':
             e.preventDefault();
             setActiveTab('compare');
+            break;
+          case '6':
+            e.preventDefault();
+            setActiveTab('dataDiff');
             break;
         }
       }
@@ -254,6 +259,23 @@ export function DatabaseView({
                 className="ml-1 hidden sm:inline-flex"
               />
             </TabsTrigger>
+            <TabsTrigger
+              value="dataDiff"
+              data-tab="dataDiff"
+              className={cn(
+                'flex items-center gap-2 border-b-2 px-4 py-2 text-sm font-medium transition-colors',
+                activeTab === 'dataDiff'
+                  ? 'border-primary text-foreground'
+                  : 'text-muted-foreground hover:text-foreground border-transparent'
+              )}
+            >
+              <ArrowLeftRight className="h-4 w-4" />
+              Data Diff
+              <ShortcutKbd
+                binding={{ key: '6', modifiers: { cmd: true } }}
+                className="ml-1 hidden sm:inline-flex"
+              />
+            </TabsTrigger>
           </TabsList>
 
           {/* Tab Content */}
@@ -305,6 +327,13 @@ export function DatabaseView({
             className="h-full min-h-0 flex-1 data-[state=inactive]:hidden"
           >
             <SchemaComparisonPanel />
+          </TabsContent>
+
+          <TabsContent
+            value="dataDiff"
+            className="h-full min-h-0 flex-1 data-[state=inactive]:hidden"
+          >
+            <DataDiffPanel />
           </TabsContent>
         </Tabs>
 

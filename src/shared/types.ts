@@ -1420,6 +1420,155 @@ export interface GenerateMigrationSQLResponse {
   error?: string;
 }
 
+// ============ Data Diff Types ============
+
+/**
+ * Represents a change in a specific column between source and target rows
+ */
+export interface ColumnChange {
+  /** Column name */
+  columnName: string;
+  /** Value in source table */
+  sourceValue: unknown;
+  /** Value in target table */
+  targetValue: unknown;
+}
+
+/**
+ * Represents a difference between source and target rows
+ */
+export interface RowDiff {
+  /** Type of difference */
+  diffType: 'added' | 'removed' | 'modified' | 'unchanged';
+  /** Primary key values for this row */
+  primaryKey: Record<string, unknown>;
+  /** Row data from source table (for added/modified rows) */
+  sourceRow: Record<string, unknown> | null;
+  /** Row data from target table (for removed/modified rows) */
+  targetRow: Record<string, unknown> | null;
+  /** List of changed columns (for modified rows only) */
+  columnChanges?: ColumnChange[];
+}
+
+/**
+ * Pagination options for data comparison
+ */
+export interface DataComparisonPagination {
+  /** Page number (0-based) */
+  page: number;
+  /** Number of rows per page */
+  pageSize: number;
+}
+
+/**
+ * Summary statistics for data comparison
+ */
+export interface DataComparisonSummary {
+  /** Total rows in source table */
+  sourceRows: number;
+  /** Total rows in target table */
+  targetRows: number;
+  /** Number of rows added (in source but not in target) */
+  rowsAdded: number;
+  /** Number of rows removed (in target but not in source) */
+  rowsRemoved: number;
+  /** Number of rows modified (different values) */
+  rowsModified: number;
+  /** Number of identical rows */
+  rowsUnchanged: number;
+}
+
+/**
+ * Result of comparing data between two tables
+ */
+export interface DataComparisonResult {
+  /** Source connection ID */
+  sourceId: string;
+  /** Source display name */
+  sourceName: string;
+  /** Source table name */
+  sourceTable: string;
+  /** Source schema name */
+  sourceSchema: string;
+  /** Target connection ID */
+  targetId: string;
+  /** Target display name */
+  targetName: string;
+  /** Target table name */
+  targetTable: string;
+  /** Target schema name */
+  targetSchema: string;
+  /** Primary key columns used for matching */
+  primaryKeys: string[];
+  /** List of row differences */
+  rowDiffs: RowDiff[];
+  /** Summary statistics */
+  summary: DataComparisonSummary;
+  /** Comparison timestamp */
+  comparedAt: string;
+}
+
+/**
+ * Request to compare data between two tables
+ */
+export interface CompareTablesRequest {
+  /** Source connection ID */
+  sourceConnectionId: string;
+  /** Source table name */
+  sourceTable: string;
+  /** Source schema name */
+  sourceSchema: string;
+  /** Target connection ID */
+  targetConnectionId: string;
+  /** Target table name */
+  targetTable: string;
+  /** Target schema name */
+  targetSchema: string;
+  /** Primary key columns for matching rows */
+  primaryKeys: string[];
+  /** Pagination options */
+  pagination?: DataComparisonPagination;
+}
+
+/**
+ * Response from comparing tables
+ */
+export interface CompareTablesResponse {
+  success: boolean;
+  result?: DataComparisonResult;
+  error?: string;
+}
+
+/**
+ * Request to generate sync SQL from comparison result
+ */
+export interface GenerateSyncSQLRequest {
+  /** The comparison result to generate SQL from */
+  comparisonResult: DataComparisonResult;
+  /** Specific primary key values to include (empty = all rows) */
+  selectedRows?: Array<Record<string, unknown>>;
+  /** Include INSERT statements for added rows */
+  includeInserts?: boolean;
+  /** Include UPDATE statements for modified rows */
+  includeUpdates?: boolean;
+  /** Include DELETE statements for removed rows */
+  includeDeletes?: boolean;
+}
+
+/**
+ * Response from generating sync SQL
+ */
+export interface GenerateSyncSQLResponse {
+  success: boolean;
+  /** Generated SQL statements */
+  sql?: string;
+  /** Individual statements as array */
+  statements?: string[];
+  /** Warnings about the generated SQL */
+  warnings?: string[];
+  error?: string;
+}
+
 export interface ExportComparisonReportRequest {
   comparisonResult: SchemaComparisonResult;
   /** Report format (html, json, markdown) */
@@ -1690,6 +1839,31 @@ export const IPC_CHANNELS = {
   SCHEMA_COMPARISON_GENERATE_MIGRATION_SQL:
     'schema-comparison:generate-migration-sql',
   SCHEMA_COMPARISON_EXPORT_REPORT: 'schema-comparison:export-report',
+
+  // Data Diff
+  DATA_DIFF_COMPARE_TABLES: 'data-diff:compare-tables',
+  DATA_DIFF_GENERATE_SYNC_SQL: 'data-diff:generate-sync-sql',
+
+  // Update Status (events)
+  UPDATE_STATUS_CHANGE: 'update:status-change',
+
+  // Schema Comparison (aliases for preload compatibility)
+  COMPARE_CONNECTIONS: 'schema-comparison:compare-connections',
+  COMPARE_CONNECTION_TO_SNAPSHOT:
+    'schema-comparison:compare-connection-to-snapshot',
+  COMPARE_SNAPSHOTS: 'schema-comparison:compare-snapshots',
+  COMPARE_TABLES: 'data-diff:compare-tables',
+  EXPORT_COMPARISON_REPORT: 'schema-comparison:export-report',
+  SAVE_SCHEMA_SNAPSHOT: 'schema-snapshot:save',
+  GET_SCHEMA_SNAPSHOT: 'schema-snapshot:get',
+  GET_SCHEMA_SNAPSHOTS: 'schema-snapshot:get-all',
+  DELETE_SCHEMA_SNAPSHOT: 'schema-snapshot:delete',
+  GENERATE_MIGRATION_SQL: 'schema-comparison:generate-migration-sql',
+  GENERATE_SYNC_SQL: 'data-diff:generate-sync-sql',
+
+  // Plugin Marketplace
+  PLUGIN_FETCH_MARKETPLACE: 'plugin:marketplace-fetch',
+  MARKETPLACE_CHECK_UPDATES: 'plugin:check-updates',
 
   // Shortcuts
   SHORTCUTS_UPDATE: 'shortcuts:update',

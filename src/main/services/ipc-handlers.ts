@@ -12,6 +12,7 @@ import type {
   CompareConnectionsRequest,
   CompareConnectionToSnapshotRequest,
   CompareSnapshotsRequest,
+  CompareTablesRequest,
   DeleteQueryHistoryRequest,
   DeleteSchemaSnapshotRequest,
   ExecuteQueryRequest,
@@ -19,6 +20,7 @@ import type {
   ExportRequest,
   FocusWindowRequest,
   GenerateMigrationSQLRequest,
+  GenerateSyncSQLRequest,
   GetPasswordRequest,
   GetQueryHistoryRequest,
   GetSchemaRequest,
@@ -63,6 +65,8 @@ import {
   generateSQL,
 } from '@/lib/export-generators';
 import { CATEGORY_ORDER, classifyFont } from '@/lib/font-constants';
+import { dataDiffService } from './data-diff';
+import { dataDiffSyncGeneratorService } from './data-diff-sync-generator';
 import { databaseService } from './database';
 import { migrationGeneratorService } from './migration-generator';
 import { passwordStorageService } from './password-storage';
@@ -1781,6 +1785,54 @@ export function setupIpcHandlers(): void {
             error instanceof Error
               ? error.message
               : 'Failed to export comparison report',
+        };
+      }
+    }
+  );
+
+  // ============ Data Diff Handlers ============
+
+  // Data Diff: Compare Tables
+  ipcMain.handle(
+    IPC_CHANNELS.DATA_DIFF_COMPARE_TABLES,
+    async (_event, request: CompareTablesRequest) => {
+      try {
+        const result = await dataDiffService.compareTableData(
+          request.sourceConnectionId,
+          request.sourceTable,
+          request.sourceSchema ?? 'main',
+          request.targetConnectionId,
+          request.targetTable,
+          request.targetSchema ?? 'main',
+          request.primaryKeys ?? [],
+          request.pagination
+        );
+
+        return { success: true, result };
+      } catch (error) {
+        return {
+          success: false,
+          error:
+            error instanceof Error ? error.message : 'Failed to compare tables',
+        };
+      }
+    }
+  );
+
+  // Data Diff: Generate Sync SQL
+  ipcMain.handle(
+    IPC_CHANNELS.DATA_DIFF_GENERATE_SYNC_SQL,
+    async (_event, request: GenerateSyncSQLRequest) => {
+      try {
+        const result = dataDiffSyncGeneratorService.generateSyncSQL(request);
+        return result;
+      } catch (error) {
+        return {
+          success: false,
+          error:
+            error instanceof Error
+              ? error.message
+              : 'Failed to generate sync SQL',
         };
       }
     }
