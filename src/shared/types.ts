@@ -996,7 +996,11 @@ export type MenuAction =
   | 'switch-to-query'
   | 'toggle-history'
   | 'execute-query'
-  | 'new-window';
+  | 'new-window'
+  | 'export-query'
+  | 'import-query'
+  | 'export-schema'
+  | 'import-schema';
 
 // ============ Pro Features Types ============
 
