@@ -455,6 +455,30 @@ const sqlProAPI = {
       ipcRenderer.invoke(IPC_CHANNELS.EXPORT_COMPARISON_REPORT, request),
   },
 
+  // Schema Comparison operations (alias for compare + migration.generateSQL)
+  schemaComparison: {
+    compareConnections: (
+      request: CompareConnectionsRequest
+    ): Promise<CompareConnectionsResponse> =>
+      ipcRenderer.invoke(IPC_CHANNELS.COMPARE_CONNECTIONS, request),
+    compareConnectionToSnapshot: (
+      request: CompareConnectionToSnapshotRequest
+    ): Promise<CompareConnectionToSnapshotResponse> =>
+      ipcRenderer.invoke(IPC_CHANNELS.COMPARE_CONNECTION_TO_SNAPSHOT, request),
+    compareSnapshots: (
+      request: CompareSnapshotsRequest
+    ): Promise<CompareSnapshotsResponse> =>
+      ipcRenderer.invoke(IPC_CHANNELS.COMPARE_SNAPSHOTS, request),
+    exportReport: (
+      request: ExportComparisonReportRequest
+    ): Promise<ExportComparisonReportResponse> =>
+      ipcRenderer.invoke(IPC_CHANNELS.EXPORT_COMPARISON_REPORT, request),
+    generateMigrationSQL: (
+      request: GenerateMigrationSQLRequest
+    ): Promise<GenerateMigrationSQLResponse> =>
+      ipcRenderer.invoke(IPC_CHANNELS.GENERATE_MIGRATION_SQL, request),
+  },
+
   // Schema snapshot operations
   snapshot: {
     save: (
