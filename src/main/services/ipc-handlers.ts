@@ -2247,6 +2247,10 @@ export function setupIpcHandlers(): void {
                 queryIds: mappedQueryIds,
               });
               if (result.success) {
+                // Update the bidirectional relationship for overwritten collections
+                for (const queryId of mappedQueryIds) {
+                  addQueryToCollection(queryId, existingCollection.id);
+                }
                 collectionsImported++;
               }
               continue;
@@ -2264,7 +2268,11 @@ export function setupIpcHandlers(): void {
           collection.queryIds = mappedQueryIds;
 
           const result = saveCollection(collection);
-          if (result.success) {
+          if (result.success && result.collection) {
+            // Update the bidirectional relationship: add collection to each query
+            for (const queryId of mappedQueryIds) {
+              addQueryToCollection(queryId, result.collection.id);
+            }
             collectionsImported++;
           }
         }
