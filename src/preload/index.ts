@@ -115,6 +115,18 @@ import type {
   UpdateStatus,
   ValidateChangesRequest,
   ValidateChangesResponse,
+  ExportQueryRequest,
+  ExportQueryResponse,
+  ImportQueryRequest,
+  ImportQueryResponse,
+  ExportSchemaRequest,
+  ExportSchemaResponse,
+  ImportSchemaRequest,
+  ImportSchemaResponse,
+  ExportBundleRequest,
+  ExportBundleResponse,
+  ImportBundleRequest,
+  ImportBundleResponse,
 } from '@shared/types';
 import type {
   CheckUpdatesRequest,
@@ -511,6 +523,30 @@ const sqlProAPI = {
       request: ExportComparisonReportRequest
     ): Promise<ExportComparisonReportResponse> =>
       ipcRenderer.invoke(IPC_CHANNELS.SCHEMA_COMPARISON_EXPORT_REPORT, request),
+  },
+
+  // Query & Schema Sharing operations
+  sharing: {
+    exportQuery: (request: ExportQueryRequest): Promise<ExportQueryResponse> =>
+      ipcRenderer.invoke(IPC_CHANNELS.QUERY_EXPORT, request),
+    importQuery: (request: ImportQueryRequest): Promise<ImportQueryResponse> =>
+      ipcRenderer.invoke(IPC_CHANNELS.QUERY_IMPORT, request),
+    exportSchema: (
+      request: ExportSchemaRequest
+    ): Promise<ExportSchemaResponse> =>
+      ipcRenderer.invoke(IPC_CHANNELS.SCHEMA_EXPORT, request),
+    importSchema: (
+      request: ImportSchemaRequest
+    ): Promise<ImportSchemaResponse> =>
+      ipcRenderer.invoke(IPC_CHANNELS.SCHEMA_IMPORT, request),
+    exportBundle: (
+      request: ExportBundleRequest
+    ): Promise<ExportBundleResponse> =>
+      ipcRenderer.invoke(IPC_CHANNELS.BUNDLE_EXPORT, request),
+    importBundle: (
+      request: ImportBundleRequest
+    ): Promise<ImportBundleResponse> =>
+      ipcRenderer.invoke(IPC_CHANNELS.BUNDLE_IMPORT, request),
   },
 };
 
