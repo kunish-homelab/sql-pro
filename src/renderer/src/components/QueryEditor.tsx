@@ -1,6 +1,7 @@
 import {
   AlertCircle,
   BarChart3,
+  Bookmark,
   Clock,
   Code,
   History,
@@ -22,6 +23,7 @@ import React, {
 } from 'react';
 
 import { DataAnalysisPanel, NLToSQLDialog } from '@/components/ai';
+import { SaveQueryDialog } from '@/components/query/SaveQueryDialog';
 import { SettingsDialog } from '@/components/SettingsDialog';
 import { Button } from '@/components/ui/button';
 import {
@@ -128,6 +130,7 @@ export function QueryEditor() {
   const [showNLToSQL, setShowNLToSQL] = useState(false);
   const [showDataAnalysis, setShowDataAnalysis] = useState(false);
   const [showAISettings, setShowAISettings] = useState(false);
+  const [showSaveQuery, setShowSaveQuery] = useState(false);
   const containerRef = useRef<HTMLDivElement>(null);
 
   // AI store
@@ -169,18 +172,27 @@ export function QueryEditor() {
     }
   }, [connection?.path, loadHistory]);
 
-  // Keyboard shortcut for history toggle
+  // Keyboard shortcuts
   useEffect(() => {
     const handleKeyDown = (e: KeyboardEvent) => {
+      // History toggle: Cmd/Ctrl+H
       if ((e.metaKey || e.ctrlKey) && e.key === 'h') {
         e.preventDefault();
         setShowHistory((prev) => !prev);
+      }
+
+      // Save Query: Cmd/Ctrl+S (when editor has content)
+      if ((e.metaKey || e.ctrlKey) && e.key === 's') {
+        e.preventDefault();
+        if (tabQuery.trim()) {
+          setShowSaveQuery(true);
+        }
       }
     };
 
     window.addEventListener('keydown', handleKeyDown);
     return () => window.removeEventListener('keydown', handleKeyDown);
-  }, []);
+  }, [tabQuery]);
 
   const handleExecute = useCallback(async () => {
     if (!connection || !activeConnectionId || !tabQuery.trim() || !activeTabId)
@@ -363,6 +375,20 @@ export function QueryEditor() {
           >
             <Code className="h-4 w-4" />
             Templates
+          </Button>
+          <Button
+            variant="ghost"
+            size="sm"
+            onClick={() => setShowSaveQuery(true)}
+            disabled={!tabQuery.trim()}
+            className="gap-1"
+            title="Save current query"
+          >
+            <Bookmark className="h-4 w-4" />
+            Save Query
+            <kbd className="bg-muted text-muted-foreground ml-1 rounded px-1 py-0.5 font-mono text-[10px]">
+              ⌘S
+            </kbd>
           </Button>
           <Button
             variant="ghost"
@@ -696,6 +722,14 @@ export function QueryEditor() {
 
       {/* AI: Settings Dialog */}
       <SettingsDialog open={showAISettings} onOpenChange={setShowAISettings} />
+
+      {/* Save Query Dialog */}
+      <SaveQueryDialog
+        open={showSaveQuery}
+        onOpenChange={setShowSaveQuery}
+        queryText={tabQuery}
+        dbPath={connection?.path}
+      />
     </div>
   );
 }
