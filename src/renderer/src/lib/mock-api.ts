@@ -1,5 +1,6 @@
 // Mock API for development and testing
 import type {
+  AddQueryToCollectionRequest,
   AnalyzeQueryPlanRequest,
   ApplyChangesRequest,
   ClearQueryHistoryRequest,
@@ -7,31 +8,44 @@ import type {
   CompareConnectionsRequest,
   CompareConnectionToSnapshotRequest,
   CompareSnapshotsRequest,
+  DeleteCollectionRequest,
   DeleteQueryHistoryRequest,
+  DeleteSavedQueryRequest,
   DeleteSchemaSnapshotRequest,
   ExecuteQueryRequest,
+  ExportCollectionsRequest,
   ExportComparisonReportRequest,
   ExportRequest,
   GenerateMigrationSQLRequest,
   GetPasswordRequest,
   GetQueryHistoryRequest,
+  GetSavedQueriesRequest,
   GetSchemaRequest,
   GetSchemaSnapshotRequest,
   GetTableDataRequest,
   HasPasswordRequest,
+  ImportCollectionsRequest,
   OpenDatabaseRequest,
   OpenFileDialogRequest,
   ProActivateRequest,
+  QueryCollection,
   RemoveConnectionRequest,
   RemovePasswordRequest,
+  RemoveQueryFromCollectionRequest,
   SaveAISettingsRequest,
+  SaveCollectionRequest,
+  SavedQuery,
   SaveFileDialogRequest,
   SavePasswordRequest,
   SaveQueryHistoryRequest,
+  SaveSavedQueryRequest,
   SaveSchemaSnapshotRequest,
   SetPreferencesRequest,
   TableInfo,
+  ToggleFavoriteRequest,
+  UpdateCollectionRequest,
   UpdateConnectionRequest,
+  UpdateSavedQueryRequest,
   ValidateChangesRequest,
 } from '@shared/types';
 
@@ -625,6 +639,65 @@ const delay = (ms: number) => new Promise((resolve) => setTimeout(resolve, ms));
 // Mock mode state
 let _isMockMode = false;
 
+// Mock saved queries and collections storage
+let mockSavedQueries: SavedQuery[] = [
+  {
+    id: 'query-1',
+    name: 'Active Users',
+    queryText: 'SELECT * FROM users WHERE is_active = 1',
+    description: 'Get all active users in the system',
+    dbPath: '/Users/demo/databases/shop.db',
+    createdAt: new Date(Date.now() - 86400000 * 7).toISOString(),
+    updatedAt: new Date(Date.now() - 86400000 * 7).toISOString(),
+    isFavorite: true,
+    collectionIds: ['collection-1'],
+  },
+  {
+    id: 'query-2',
+    name: 'Recent Orders',
+    queryText: 'SELECT * FROM orders WHERE created_at > date("now", "-30 days") ORDER BY created_at DESC',
+    description: 'Orders from the last 30 days',
+    dbPath: '/Users/demo/databases/shop.db',
+    createdAt: new Date(Date.now() - 86400000 * 5).toISOString(),
+    updatedAt: new Date(Date.now() - 86400000 * 5).toISOString(),
+    isFavorite: true,
+    collectionIds: ['collection-1', 'collection-2'],
+  },
+  {
+    id: 'query-3',
+    name: 'Product Inventory',
+    queryText: 'SELECT p.*, c.name as category_name FROM products p LEFT JOIN categories c ON p.category_id = c.id ORDER BY p.stock',
+    description: 'Products with stock levels and categories',
+    createdAt: new Date(Date.now() - 86400000 * 3).toISOString(),
+    updatedAt: new Date(Date.now() - 86400000 * 3).toISOString(),
+    isFavorite: false,
+    collectionIds: ['collection-2'],
+  },
+];
+
+let mockCollections: QueryCollection[] = [
+  {
+    id: 'collection-1',
+    name: 'User Management',
+    description: 'Queries related to user operations',
+    color: '#3b82f6',
+    icon: 'users',
+    createdAt: new Date(Date.now() - 86400000 * 10).toISOString(),
+    updatedAt: new Date(Date.now() - 86400000 * 10).toISOString(),
+    queryIds: ['query-1'],
+  },
+  {
+    id: 'collection-2',
+    name: 'Sales & Inventory',
+    description: 'Sales reports and inventory tracking',
+    color: '#10b981',
+    icon: 'shopping-cart',
+    createdAt: new Date(Date.now() - 86400000 * 8).toISOString(),
+    updatedAt: new Date(Date.now() - 86400000 * 8).toISOString(),
+    queryIds: ['query-2', 'query-3'],
+  },
+];
+
 // Mock connection data for initialization
 const mockConnectionData = {
   connection: {
@@ -1089,6 +1162,308 @@ export const mockSqlProAPI: any = {
       return {
         success: true,
         filePath: _request.filePath,
+      };
+    },
+  },
+  savedQueries: {
+    getAll: async (request?: GetSavedQueriesRequest): Promise<any> => {
+      await delay(200);
+      let queries = [...mockSavedQueries];
+
+      // Apply filters
+      if (request?.dbPath) {
+        queries = queries.filter((q) => q.dbPath === request.dbPath);
+      }
+      if (request?.favoritesOnly) {
+        queries = queries.filter((q) => q.isFavorite);
+      }
+      if (request?.collectionId) {
+        queries = queries.filter((q) =>
+          q.collectionIds.includes(request.collectionId!)
+        );
+      }
+
+      return {
+        success: true,
+        queries,
+      };
+    },
+    save: async (request: SaveSavedQueryRequest): Promise<any> => {
+      await delay(200);
+      const now = new Date().toISOString();
+      const newQuery: SavedQuery = {
+        id: request.query.id || `query-${Date.now()}`,
+        name: request.query.name,
+        queryText: request.query.queryText,
+        description: request.query.description,
+        dbPath: request.query.dbPath,
+        createdAt: request.query.createdAt || now,
+        updatedAt: request.query.updatedAt || now,
+        isFavorite: request.query.isFavorite,
+        collectionIds: request.query.collectionIds,
+      };
+
+      mockSavedQueries.push(newQuery);
+
+      return {
+        success: true,
+        query: newQuery,
+      };
+    },
+    update: async (request: UpdateSavedQueryRequest): Promise<any> => {
+      await delay(200);
+      const index = mockSavedQueries.findIndex((q) => q.id === request.id);
+      if (index === -1) {
+        return {
+          success: false,
+          error: 'Query not found',
+        };
+      }
+
+      const updatedQuery = {
+        ...mockSavedQueries[index],
+        ...request.updates,
+        updatedAt: new Date().toISOString(),
+      };
+
+      mockSavedQueries[index] = updatedQuery;
+
+      return {
+        success: true,
+        query: updatedQuery,
+      };
+    },
+    delete: async (request: DeleteSavedQueryRequest): Promise<any> => {
+      await delay(200);
+      const index = mockSavedQueries.findIndex((q) => q.id === request.id);
+      if (index === -1) {
+        return {
+          success: false,
+          error: 'Query not found',
+        };
+      }
+
+      mockSavedQueries.splice(index, 1);
+
+      // Remove query from all collections
+      mockCollections.forEach((collection) => {
+        collection.queryIds = collection.queryIds.filter(
+          (id) => id !== request.id
+        );
+      });
+
+      return {
+        success: true,
+      };
+    },
+    toggleFavorite: async (request: ToggleFavoriteRequest): Promise<any> => {
+      await delay(200);
+      const index = mockSavedQueries.findIndex((q) => q.id === request.id);
+      if (index === -1) {
+        return {
+          success: false,
+          error: 'Query not found',
+        };
+      }
+
+      mockSavedQueries[index] = {
+        ...mockSavedQueries[index],
+        isFavorite: request.isFavorite,
+        updatedAt: new Date().toISOString(),
+      };
+
+      return {
+        success: true,
+        query: mockSavedQueries[index],
+      };
+    },
+  },
+  collections: {
+    getAll: async (): Promise<any> => {
+      await delay(200);
+      return {
+        success: true,
+        collections: [...mockCollections],
+      };
+    },
+    save: async (request: SaveCollectionRequest): Promise<any> => {
+      await delay(200);
+      const now = new Date().toISOString();
+      const newCollection: QueryCollection = {
+        id: request.collection.id || `collection-${Date.now()}`,
+        name: request.collection.name,
+        description: request.collection.description,
+        color: request.collection.color,
+        icon: request.collection.icon,
+        createdAt: request.collection.createdAt || now,
+        updatedAt: request.collection.updatedAt || now,
+        queryIds: request.collection.queryIds || [],
+      };
+
+      mockCollections.push(newCollection);
+
+      return {
+        success: true,
+        collection: newCollection,
+      };
+    },
+    update: async (request: UpdateCollectionRequest): Promise<any> => {
+      await delay(200);
+      const index = mockCollections.findIndex((c) => c.id === request.id);
+      if (index === -1) {
+        return {
+          success: false,
+          error: 'Collection not found',
+        };
+      }
+
+      const updatedCollection = {
+        ...mockCollections[index],
+        ...request.updates,
+        updatedAt: new Date().toISOString(),
+      };
+
+      mockCollections[index] = updatedCollection;
+
+      return {
+        success: true,
+        collection: updatedCollection,
+      };
+    },
+    delete: async (request: DeleteCollectionRequest): Promise<any> => {
+      await delay(200);
+      const index = mockCollections.findIndex((c) => c.id === request.id);
+      if (index === -1) {
+        return {
+          success: false,
+          error: 'Collection not found',
+        };
+      }
+
+      mockCollections.splice(index, 1);
+
+      // Remove collection from all queries
+      mockSavedQueries.forEach((query) => {
+        query.collectionIds = query.collectionIds.filter(
+          (id) => id !== request.id
+        );
+      });
+
+      return {
+        success: true,
+      };
+    },
+    addQuery: async (request: AddQueryToCollectionRequest): Promise<any> => {
+      await delay(200);
+      const collection = mockCollections.find(
+        (c) => c.id === request.collectionId
+      );
+      const query = mockSavedQueries.find((q) => q.id === request.queryId);
+
+      if (!collection) {
+        return {
+          success: false,
+          error: 'Collection not found',
+        };
+      }
+
+      if (!query) {
+        return {
+          success: false,
+          error: 'Query not found',
+        };
+      }
+
+      // Add query to collection if not already present
+      if (!collection.queryIds.includes(request.queryId)) {
+        collection.queryIds.push(request.queryId);
+        collection.updatedAt = new Date().toISOString();
+      }
+
+      // Add collection to query if not already present
+      if (!query.collectionIds.includes(request.collectionId)) {
+        query.collectionIds.push(request.collectionId);
+        query.updatedAt = new Date().toISOString();
+      }
+
+      return {
+        success: true,
+        collection,
+        query,
+      };
+    },
+    removeQuery: async (
+      request: RemoveQueryFromCollectionRequest
+    ): Promise<any> => {
+      await delay(200);
+      const collection = mockCollections.find(
+        (c) => c.id === request.collectionId
+      );
+      const query = mockSavedQueries.find((q) => q.id === request.queryId);
+
+      if (!collection) {
+        return {
+          success: false,
+          error: 'Collection not found',
+        };
+      }
+
+      if (!query) {
+        return {
+          success: false,
+          error: 'Query not found',
+        };
+      }
+
+      // Remove query from collection
+      collection.queryIds = collection.queryIds.filter(
+        (id) => id !== request.queryId
+      );
+      collection.updatedAt = new Date().toISOString();
+
+      // Remove collection from query
+      query.collectionIds = query.collectionIds.filter(
+        (id) => id !== request.collectionId
+      );
+      query.updatedAt = new Date().toISOString();
+
+      return {
+        success: true,
+        collection,
+        query,
+      };
+    },
+    export: async (request: ExportCollectionsRequest): Promise<any> => {
+      await delay(300);
+      let collectionsToExport = mockCollections;
+
+      if (request.collectionIds && request.collectionIds.length > 0) {
+        collectionsToExport = mockCollections.filter((c) =>
+          request.collectionIds!.includes(c.id)
+        );
+      }
+
+      // Count unique queries across all exported collections
+      const queryIds = new Set<string>();
+      collectionsToExport.forEach((c) => {
+        c.queryIds.forEach((id) => queryIds.add(id));
+      });
+
+      return {
+        success: true,
+        filePath: request.filePath,
+        collectionsExported: collectionsToExport.length,
+        queriesExported: queryIds.size,
+      };
+    },
+    import: async (_request: ImportCollectionsRequest): Promise<any> => {
+      await delay(300);
+      // Mock import - pretend to import 2 collections and 5 queries
+      return {
+        success: true,
+        collectionsImported: 2,
+        queriesImported: 5,
+        skipped: 0,
       };
     },
   },
