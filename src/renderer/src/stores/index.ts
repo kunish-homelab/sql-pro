@@ -14,6 +14,7 @@ export { useDiagramStore } from './diagram-store';
 export { ALL_PRO_FEATURES, useProStore } from './pro-store';
 export { useQueryStore } from './query-store';
 export { useQueryTabsStore } from './query-tabs-store';
+export { useSavedQueriesStore } from './saved-queries-store';
 export type {
   QueryTab,
   SplitDirection,
