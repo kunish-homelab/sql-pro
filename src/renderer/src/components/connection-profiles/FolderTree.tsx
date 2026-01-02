@@ -143,19 +143,22 @@ function FolderNode({
               onDragLeave={handleDragLeave}
               onDrop={handleDrop}
             >
-              <CollapsibleTrigger className="h-auto w-auto p-0 hover:bg-transparent">
-                <Button
-                  variant="ghost"
-                  size="sm"
-                  className="h-auto w-auto p-0 hover:bg-transparent"
-                >
-                  {isExpanded ? (
-                    <ChevronDown className="size-4" />
-                  ) : (
-                    <ChevronRight className="size-4" />
-                  )}
-                </Button>
-              </CollapsibleTrigger>
+              <CollapsibleTrigger
+                className="h-auto w-auto p-0 hover:bg-transparent"
+                render={
+                  <Button
+                    variant="ghost"
+                    size="sm"
+                    className="h-auto w-auto p-0 hover:bg-transparent"
+                  >
+                    {isExpanded ? (
+                      <ChevronDown className="size-4" />
+                    ) : (
+                      <ChevronRight className="size-4" />
+                    )}
+                  </Button>
+                }
+              ></CollapsibleTrigger>
               {isExpanded ? (
                 <FolderOpen className="text-muted-foreground size-4" />
               ) : (
