@@ -1,5 +1,8 @@
 import type { SchemaInfo, TableSchema, TriggerSchema } from '@/types/database';
 import {
+  ArrowDownAZ,
+  ArrowUpAZ,
+  Check,
   ChevronDown,
   ChevronRight,
   Code,
@@ -7,10 +10,16 @@ import {
   Database,
   Eye,
   FileSearch,
+  Filter,
+  Pin,
+  PinOff,
   Search,
   Settings,
+  SortAsc,
   Table,
+  Tag,
   Trash2,
+  X,
   Zap,
 } from 'lucide-react';
 import { useCallback, useEffect, useMemo, useRef, useState } from 'react';
@@ -24,15 +33,32 @@ import {
   AlertDialogHeader,
   AlertDialogTitle,
 } from '@/components/ui/alert-dialog';
+import { Badge } from '@/components/ui/badge';
 import { Button } from '@/components/ui/button';
 import {
   ContextMenu,
   ContextMenuContent,
   ContextMenuItem,
   ContextMenuSeparator,
+  ContextMenuSub,
+  ContextMenuSubContent,
+  ContextMenuSubTrigger,
   ContextMenuTrigger,
 } from '@/components/ui/context-menu';
+import {
+  DropdownMenu,
+  DropdownMenuContent,
+  DropdownMenuItem,
+  DropdownMenuSeparator,
+  DropdownMenuTrigger,
+} from '@/components/ui/dropdown-menu';
+import { Input } from '@/components/ui/input';
 import { ShortcutKbd } from '@/components/ui/kbd';
+import {
+  Popover,
+  PopoverContent,
+  PopoverTrigger,
+} from '@/components/ui/popover';
 import { ScrollArea } from '@/components/ui/scroll-area';
 import {
   Tooltip,
@@ -49,6 +75,7 @@ import {
   useSettingsStore,
   useTableDataStore,
   useTableFont,
+  useTableOrganizationStore,
 } from '@/stores';
 import { ConnectionSelector } from './ConnectionSelector';
 import { SettingsDialog } from './SettingsDialog';
@@ -81,6 +108,22 @@ export function Sidebar({
     useTableDataStore();
   const { openTable } = useDataTabsStore();
   const { createTab } = useQueryTabsStore();
+
+  // Table organization store
+  const {
+    sortOption,
+    setSortOption,
+    availableTags,
+    addTag,
+    removeTag,
+    activeTagFilter,
+    setActiveTagFilter,
+    addTableTag,
+    removeTableTag,
+    setTablePinned,
+    getTableKey,
+    getTableMetadata,
+  } = useTableOrganizationStore();
 
   // Expansion state for schemas (key is schema name)
   const [expandedSchemas, setExpandedSchemas] = useState<
@@ -340,6 +383,71 @@ export function Sidebar({
   const filteredSchemas = useMemo(() => {
     if (!schema?.schemas) return [];
 
+    // Helper function to sort tables based on current sort option
+    const sortTables = (tables: TableSchema[]): TableSchema[] => {
+      const sorted = [...tables];
+
+      // First, separate pinned and non-pinned tables
+      const pinned: TableSchema[] = [];
+      const unpinned: TableSchema[] = [];
+
+      for (const table of sorted) {
+        const key = getTableKey(
+          connection?.path || '',
+          table.schema,
+          table.name
+        );
+        const metadata = getTableMetadata(key);
+        if (metadata.pinned) {
+          pinned.push(table);
+        } else {
+          unpinned.push(table);
+        }
+      }
+
+      // Sort unpinned tables based on sort option
+      const sortFn = (a: TableSchema, b: TableSchema): number => {
+        switch (sortOption) {
+          case 'name-asc':
+            return a.name.localeCompare(b.name);
+          case 'name-desc':
+            return b.name.localeCompare(a.name);
+          case 'row-count-asc':
+            return (a.rowCount ?? 0) - (b.rowCount ?? 0);
+          case 'row-count-desc':
+            return (b.rowCount ?? 0) - (a.rowCount ?? 0);
+          case 'custom': {
+            const keyA = getTableKey(connection?.path || '', a.schema, a.name);
+            const keyB = getTableKey(connection?.path || '', b.schema, b.name);
+            const orderA = getTableMetadata(keyA).sortOrder ?? Infinity;
+            const orderB = getTableMetadata(keyB).sortOrder ?? Infinity;
+            return orderA - orderB;
+          }
+          default:
+            return a.name.localeCompare(b.name);
+        }
+      };
+
+      pinned.sort(sortFn);
+      unpinned.sort(sortFn);
+
+      return [...pinned, ...unpinned];
+    };
+
+    // Helper function to filter by active tag
+    const filterByTag = (tables: TableSchema[]): TableSchema[] => {
+      if (!activeTagFilter) return tables;
+      return tables.filter((table) => {
+        const key = getTableKey(
+          connection?.path || '',
+          table.schema,
+          table.name
+        );
+        const metadata = getTableMetadata(key);
+        return metadata.tags.includes(activeTagFilter);
+      });
+    };
+
     return schema.schemas
       .map((s) => {
         // Aggregate all triggers from all tables in this schema
@@ -347,17 +455,30 @@ export function Sidebar({
           (t) => t.triggers || []
         );
 
+        // Filter by search query
+        let tables = s.tables.filter((t) =>
+          t.name.toLowerCase().includes(searchQuery.toLowerCase())
+        );
+        let views = s.views.filter((v) =>
+          v.name.toLowerCase().includes(searchQuery.toLowerCase())
+        );
+        const triggers = allTriggers.filter((tr) =>
+          tr.name.toLowerCase().includes(searchQuery.toLowerCase())
+        );
+
+        // Filter by active tag
+        tables = filterByTag(tables);
+        views = filterByTag(views);
+
+        // Sort tables and views
+        tables = sortTables(tables);
+        views = sortTables(views);
+
         return {
           ...s,
-          tables: s.tables.filter((t) =>
-            t.name.toLowerCase().includes(searchQuery.toLowerCase())
-          ),
-          views: s.views.filter((v) =>
-            v.name.toLowerCase().includes(searchQuery.toLowerCase())
-          ),
-          triggers: allTriggers.filter((tr) =>
-            tr.name.toLowerCase().includes(searchQuery.toLowerCase())
-          ),
+          tables,
+          views,
+          triggers,
         };
       })
       .filter(
@@ -367,7 +488,15 @@ export function Sidebar({
           s.triggers.length > 0 ||
           !searchQuery
       );
-  }, [schema?.schemas, searchQuery]);
+  }, [
+    schema?.schemas,
+    searchQuery,
+    sortOption,
+    activeTagFilter,
+    connection?.path,
+    getTableKey,
+    getTableMetadata,
+  ]);
 
   // Combined list of navigable items for vim navigation
   const navigableItems = useMemo(() => {
@@ -567,6 +696,131 @@ export function Sidebar({
         </div>
       </div>
 
+      {/* Sort and Filter Controls */}
+      <div className="flex min-w-0 flex-wrap items-center gap-1 border-b px-2 pb-2">
+        {/* Sort Dropdown */}
+        <DropdownMenu>
+          <DropdownMenuTrigger asChild>
+            <Button
+              variant="ghost"
+              size="sm"
+              className="h-7 shrink-0 gap-1 px-2"
+            >
+              <SortAsc className="h-3.5 w-3.5 shrink-0" />
+              <span className="text-xs">
+                {sortOption === 'name-asc' && 'A-Z'}
+                {sortOption === 'name-desc' && 'Z-A'}
+                {sortOption === 'row-count-asc' && 'Rows ↑'}
+                {sortOption === 'row-count-desc' && 'Rows ↓'}
+                {sortOption === 'custom' && 'Custom'}
+              </span>
+            </Button>
+          </DropdownMenuTrigger>
+          <DropdownMenuContent align="start">
+            <DropdownMenuItem onClick={() => setSortOption('name-asc')}>
+              <ArrowDownAZ className="mr-2 h-4 w-4" />
+              Name (A-Z)
+              {sortOption === 'name-asc' && (
+                <Check className="ml-auto h-4 w-4" />
+              )}
+            </DropdownMenuItem>
+            <DropdownMenuItem onClick={() => setSortOption('name-desc')}>
+              <ArrowUpAZ className="mr-2 h-4 w-4" />
+              Name (Z-A)
+              {sortOption === 'name-desc' && (
+                <Check className="ml-auto h-4 w-4" />
+              )}
+            </DropdownMenuItem>
+            <DropdownMenuSeparator />
+            <DropdownMenuItem onClick={() => setSortOption('row-count-asc')}>
+              Row Count (Low to High)
+              {sortOption === 'row-count-asc' && (
+                <Check className="ml-auto h-4 w-4" />
+              )}
+            </DropdownMenuItem>
+            <DropdownMenuItem onClick={() => setSortOption('row-count-desc')}>
+              Row Count (High to Low)
+              {sortOption === 'row-count-desc' && (
+                <Check className="ml-auto h-4 w-4" />
+              )}
+            </DropdownMenuItem>
+          </DropdownMenuContent>
+        </DropdownMenu>
+
+        {/* Tag Filter */}
+        <Popover>
+          <PopoverTrigger asChild>
+            <Button
+              variant={activeTagFilter ? 'secondary' : 'ghost'}
+              size="sm"
+              className="h-7 shrink-0 gap-1 px-2"
+            >
+              <Filter className="h-3.5 w-3.5 shrink-0" />
+              {activeTagFilter ? (
+                <Badge
+                  variant="secondary"
+                  className="h-5 max-w-[60px] truncate px-1 text-xs"
+                >
+                  {activeTagFilter}
+                </Badge>
+              ) : (
+                <span className="text-xs">Filter</span>
+              )}
+            </Button>
+          </PopoverTrigger>
+          <PopoverContent align="start" className="w-48 p-2">
+            <div className="space-y-2">
+              <div className="text-sm font-medium">Filter by Tag</div>
+              {availableTags.length === 0 ? (
+                <div className="text-muted-foreground text-xs">
+                  No tags created yet.
+                  <br />
+                  Right-click a table to add tags.
+                </div>
+              ) : (
+                <div className="space-y-1">
+                  {activeTagFilter && (
+                    <Button
+                      variant="ghost"
+                      size="sm"
+                      className="h-7 w-full justify-start gap-2 px-2 text-xs"
+                      onClick={() => setActiveTagFilter(null)}
+                    >
+                      <X className="h-3 w-3" />
+                      Clear filter
+                    </Button>
+                  )}
+                  {availableTags.map((tag) => (
+                    <Button
+                      key={tag}
+                      variant={activeTagFilter === tag ? 'secondary' : 'ghost'}
+                      size="sm"
+                      className="h-7 w-full justify-start gap-2 px-2 text-xs"
+                      onClick={() =>
+                        setActiveTagFilter(activeTagFilter === tag ? null : tag)
+                      }
+                    >
+                      <Tag className="h-3 w-3" />
+                      {tag}
+                      {activeTagFilter === tag && (
+                        <Check className="ml-auto h-3 w-3" />
+                      )}
+                    </Button>
+                  ))}
+                </div>
+              )}
+            </div>
+          </PopoverContent>
+        </Popover>
+
+        {/* Tag Manager */}
+        <TagManager
+          availableTags={availableTags}
+          onAddTag={addTag}
+          onRemoveTag={removeTag}
+        />
+      </div>
+
       {/* Schema Tree */}
       <ScrollArea className="min-h-0 min-w-0 flex-1">
         <div
@@ -601,6 +855,13 @@ export function Sidebar({
                   onOpenInQueryEditor={handleOpenInQueryEditor}
                   onTruncateTable={handleTruncateTableRequest}
                   onDropTable={handleDropTableRequest}
+                  connectionPath={connection?.path || ''}
+                  availableTags={availableTags}
+                  getTableMetadata={getTableMetadata}
+                  getTableKey={getTableKey}
+                  onAddTableTag={addTableTag}
+                  onRemoveTableTag={removeTableTag}
+                  onTogglePinned={setTablePinned}
                 />
               ))}
 
@@ -722,6 +983,18 @@ interface SchemaSectionProps {
   onOpenInQueryEditor: (table: TableSchema) => void;
   onTruncateTable: (table: TableSchema) => void;
   onDropTable: (table: TableSchema) => void;
+  // Tag and organization props
+  connectionPath: string;
+  availableTags: string[];
+  getTableMetadata: (tableKey: string) => { tags: string[]; pinned?: boolean };
+  getTableKey: (
+    connectionPath: string,
+    schemaName: string,
+    tableName: string
+  ) => string;
+  onAddTableTag: (tableKey: string, tag: string) => void;
+  onRemoveTableTag: (tableKey: string, tag: string) => void;
+  onTogglePinned: (tableKey: string, pinned: boolean) => void;
 }
 
 function SchemaSection({
@@ -741,6 +1014,13 @@ function SchemaSection({
   onOpenInQueryEditor,
   onTruncateTable,
   onDropTable,
+  connectionPath,
+  availableTags,
+  getTableMetadata,
+  getTableKey,
+  onAddTableTag,
+  onRemoveTableTag,
+  onTogglePinned,
 }: SchemaSectionProps) {
   const tablesKey = `${schemaInfo.name}:tables`;
   const viewsKey = `${schemaInfo.name}:views`;
@@ -788,6 +1068,12 @@ function SchemaSection({
                 <div className="mt-1 min-w-0 space-y-0.5 overflow-hidden">
                   {schemaInfo.tables.map((table, idx) => {
                     const itemIdx = getItemIndex(schemaInfo.name, 'table', idx);
+                    const tableKey = getTableKey(
+                      connectionPath,
+                      table.schema,
+                      table.name
+                    );
+                    const metadata = getTableMetadata(tableKey);
                     return (
                       <TableItem
                         key={`${table.schema}:${table.name}`}
@@ -805,6 +1091,15 @@ function SchemaSection({
                         onOpenInQueryEditor={() => onOpenInQueryEditor(table)}
                         onTruncateTable={() => onTruncateTable(table)}
                         onDropTable={() => onDropTable(table)}
+                        tableKey={tableKey}
+                        tags={metadata.tags}
+                        isPinned={metadata.pinned}
+                        availableTags={availableTags}
+                        onAddTag={(tag) => onAddTableTag(tableKey, tag)}
+                        onRemoveTag={(tag) => onRemoveTableTag(tableKey, tag)}
+                        onTogglePinned={() =>
+                          onTogglePinned(tableKey, !metadata.pinned)
+                        }
                       />
                     );
                   })}
@@ -831,6 +1126,12 @@ function SchemaSection({
                 <div className="mt-1 space-y-0.5">
                   {schemaInfo.views.map((view, idx) => {
                     const itemIdx = getItemIndex(schemaInfo.name, 'view', idx);
+                    const tableKey = getTableKey(
+                      connectionPath,
+                      view.schema,
+                      view.name
+                    );
+                    const metadata = getTableMetadata(tableKey);
                     return (
                       <TableItem
                         key={`${view.schema}:${view.name}`}
@@ -849,6 +1150,15 @@ function SchemaSection({
                         onTruncateTable={() => onTruncateTable(view)}
                         onDropTable={() => onDropTable(view)}
                         isView
+                        tableKey={tableKey}
+                        tags={metadata.tags}
+                        isPinned={metadata.pinned}
+                        availableTags={availableTags}
+                        onAddTag={(tag) => onAddTableTag(tableKey, tag)}
+                        onRemoveTag={(tag) => onRemoveTableTag(tableKey, tag)}
+                        onTogglePinned={() =>
+                          onTogglePinned(tableKey, !metadata.pinned)
+                        }
                       />
                     );
                   })}
@@ -900,6 +1210,14 @@ interface TableItemProps {
   onTruncateTable: () => void;
   onDropTable: () => void;
   isView?: boolean;
+  // Tag and organization props
+  tableKey: string;
+  tags: string[];
+  isPinned?: boolean;
+  availableTags: string[];
+  onAddTag: (tag: string) => void;
+  onRemoveTag: (tag: string) => void;
+  onTogglePinned: () => void;
 }
 
 function TableItem({
@@ -913,7 +1231,22 @@ function TableItem({
   onTruncateTable,
   onDropTable,
   isView,
+  tags,
+  isPinned,
+  availableTags,
+  onAddTag,
+  onRemoveTag,
+  onTogglePinned,
 }: TableItemProps) {
+  const [newTagInput, setNewTagInput] = useState('');
+
+  const handleAddNewTag = () => {
+    if (newTagInput.trim()) {
+      onAddTag(newTagInput.trim());
+      setNewTagInput('');
+    }
+  };
+
   return (
     <ContextMenu>
       <ContextMenuTrigger>
@@ -927,6 +1260,7 @@ function TableItem({
             isFocused && !isSelected && 'ring-primary/50 ring-2 ring-inset'
           )}
         >
+          {isPinned && <Pin className="text-primary h-3 w-3 shrink-0" />}
           {isView ? (
             <Eye className="text-muted-foreground h-4 w-4 shrink-0" />
           ) : (
@@ -935,6 +1269,24 @@ function TableItem({
           <span className="min-w-0 flex-1 truncate text-left">
             {table.name}
           </span>
+          {tags.length > 0 && (
+            <div className="flex shrink-0 gap-0.5">
+              {tags.slice(0, 2).map((tag) => (
+                <Badge
+                  key={tag}
+                  variant="outline"
+                  className="h-4 px-1 text-[10px]"
+                >
+                  {tag}
+                </Badge>
+              ))}
+              {tags.length > 2 && (
+                <Badge variant="outline" className="h-4 px-1 text-[10px]">
+                  +{tags.length - 2}
+                </Badge>
+              )}
+            </div>
+          )}
           {table.rowCount !== undefined && (
             <span className="text-muted-foreground shrink-0 tabular-nums">
               {table.rowCount.toLocaleString()}
@@ -947,6 +1299,87 @@ function TableItem({
           <FileSearch className="size-4" />
           Open in Query Editor
         </ContextMenuItem>
+        <ContextMenuSeparator />
+        <ContextMenuItem onClick={onTogglePinned}>
+          {isPinned ? (
+            <>
+              <PinOff className="size-4" />
+              Unpin
+            </>
+          ) : (
+            <>
+              <Pin className="size-4" />
+              Pin to Top
+            </>
+          )}
+        </ContextMenuItem>
+        <ContextMenuSub>
+          <ContextMenuSubTrigger>
+            <Tag className="size-4" />
+            Tags
+          </ContextMenuSubTrigger>
+          <ContextMenuSubContent className="w-48">
+            {/* Current tags */}
+            {tags.length > 0 && (
+              <>
+                <div className="text-muted-foreground px-2 py-1 text-xs font-medium">
+                  Current Tags
+                </div>
+                {tags.map((tag) => (
+                  <ContextMenuItem key={tag} onClick={() => onRemoveTag(tag)}>
+                    <X className="text-destructive size-4" />
+                    {tag}
+                  </ContextMenuItem>
+                ))}
+                <ContextMenuSeparator />
+              </>
+            )}
+            {/* Available tags to add */}
+            {availableTags.filter((t) => !tags.includes(t)).length > 0 && (
+              <>
+                <div className="text-muted-foreground px-2 py-1 text-xs font-medium">
+                  Add Tag
+                </div>
+                {availableTags
+                  .filter((t) => !tags.includes(t))
+                  .map((tag) => (
+                    <ContextMenuItem key={tag} onClick={() => onAddTag(tag)}>
+                      <Tag className="size-4" />
+                      {tag}
+                    </ContextMenuItem>
+                  ))}
+                <ContextMenuSeparator />
+              </>
+            )}
+            {/* Create new tag */}
+            <div className="p-2">
+              <div className="flex gap-1">
+                <Input
+                  placeholder="New tag..."
+                  value={newTagInput}
+                  onChange={(e) => setNewTagInput(e.target.value)}
+                  onKeyDown={(e) => {
+                    e.stopPropagation();
+                    if (e.key === 'Enter') {
+                      e.preventDefault();
+                      handleAddNewTag();
+                    }
+                  }}
+                  className="h-7 text-xs"
+                />
+                <Button
+                  size="sm"
+                  variant="ghost"
+                  className="h-7 px-2"
+                  onClick={handleAddNewTag}
+                  disabled={!newTagInput.trim()}
+                >
+                  <Check className="h-3 w-3" />
+                </Button>
+              </div>
+            </div>
+          </ContextMenuSubContent>
+        </ContextMenuSub>
         <ContextMenuSeparator />
         <ContextMenuItem onClick={onCopyTableName}>
           <Copy className="size-4" />
@@ -985,5 +1418,105 @@ function TriggerItem({ trigger }: TriggerItemProps) {
         {trigger.timing} {trigger.event}
       </span>
     </div>
+  );
+}
+
+// Tag Manager Component
+interface TagManagerProps {
+  availableTags: string[];
+  onAddTag: (tag: string) => void;
+  onRemoveTag: (tag: string) => void;
+}
+
+function TagManager({ availableTags, onAddTag, onRemoveTag }: TagManagerProps) {
+  const [newTagInput, setNewTagInput] = useState('');
+  const [isOpen, setIsOpen] = useState(false);
+
+  const handleAddTag = () => {
+    if (newTagInput.trim()) {
+      onAddTag(newTagInput.trim());
+      setNewTagInput('');
+    }
+  };
+
+  return (
+    <Popover open={isOpen} onOpenChange={setIsOpen}>
+      <PopoverTrigger asChild>
+        <Button variant="ghost" size="sm" className="h-7 shrink-0 gap-1 px-2">
+          <Tag className="h-3.5 w-3.5 shrink-0" />
+          <span className="text-xs">Tags</span>
+          {availableTags.length > 0 && (
+            <Badge variant="secondary" className="h-4 px-1 text-[10px]">
+              {availableTags.length}
+            </Badge>
+          )}
+        </Button>
+      </PopoverTrigger>
+      <PopoverContent align="start" className="w-56 p-2">
+        <div className="space-y-2">
+          <div className="text-sm font-medium">Manage Tags</div>
+
+          {/* Add new tag */}
+          <div className="flex gap-1">
+            <Input
+              placeholder="New tag name..."
+              value={newTagInput}
+              onChange={(e) => setNewTagInput(e.target.value)}
+              onKeyDown={(e) => {
+                e.stopPropagation();
+                if (e.key === 'Enter') {
+                  e.preventDefault();
+                  handleAddTag();
+                }
+              }}
+              className="h-7 text-xs"
+            />
+            <Button
+              size="sm"
+              variant="secondary"
+              className="h-7 px-2"
+              onClick={handleAddTag}
+              disabled={!newTagInput.trim()}
+            >
+              <Check className="h-3 w-3" />
+            </Button>
+          </div>
+
+          {/* Existing tags */}
+          {availableTags.length > 0 ? (
+            <div className="space-y-1">
+              <div className="text-muted-foreground text-xs">
+                Existing tags:
+              </div>
+              <div className="max-h-32 space-y-0.5 overflow-y-auto">
+                {availableTags.map((tag) => (
+                  <div
+                    key={tag}
+                    className="hover:bg-destructive/10 group flex items-center justify-between rounded px-2 py-1"
+                  >
+                    <div className="flex items-center gap-2">
+                      <Tag className="text-muted-foreground h-3 w-3" />
+                      <span className="text-sm">{tag}</span>
+                    </div>
+                    <Button
+                      variant="ghost"
+                      size="sm"
+                      className="text-muted-foreground hover:text-destructive h-5 w-5 p-0 opacity-0 group-hover:opacity-100"
+                      onClick={() => onRemoveTag(tag)}
+                    >
+                      <X className="h-3 w-3" />
+                    </Button>
+                  </div>
+                ))}
+              </div>
+            </div>
+          ) : (
+            <div className="text-muted-foreground text-xs">
+              No tags yet. Create one above or right-click a table to add tags.
+            </div>
+          )}
+        </div>
+      </PopoverContent>
+    </Popover>
   );
 }

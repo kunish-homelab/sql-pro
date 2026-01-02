@@ -69,5 +69,15 @@ export type {
   PageSizeOption,
 } from './settings-store';
 export { useTableDataStore } from './table-data-store';
+export {
+  useActiveTagFilter,
+  useAvailableTags,
+  useSortOption,
+  useTableOrganizationStore,
+} from './table-organization-store';
+export type {
+  TableMetadata,
+  TableSortOption,
+} from './table-organization-store';
 export { useThemeStore } from './theme-store';
 export { useUndoRedoStore } from './undo-redo-store';
