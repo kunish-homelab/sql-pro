@@ -1884,8 +1884,31 @@ export function setupIpcHandlers(): void {
   ipcMain.handle(
     IPC_CHANNELS.SCHEMA_EXPORT,
     createHandler(async (request: ExportSchemaRequest) => {
+      // Fetch current schema from database service
+      const schemaResult = databaseService.getSchema(request.connectionId);
+      if (!schemaResult.success) {
+        throw new Error(schemaResult.error || 'Failed to get schema');
+      }
+      if (!schemaResult.schemas) {
+        throw new Error('No schema data available');
+      }
+
+      // Get connection info for database name
+      const connection = databaseService.getConnection(request.connectionId);
+      if (!connection) {
+        throw new Error('Connection not found');
+      }
+
+      // Merge database schema with request metadata
+      const schemaToExport = {
+        ...request.schema,
+        schemas: schemaResult.schemas,
+        databaseName: request.schema.databaseName || connection.filename,
+        databaseType: request.schema.databaseType || 'sqlite',
+      };
+
       // Export schema to shareable format
-      const { data } = await exportSchema(request.schema);
+      const { data } = await exportSchema(schemaToExport);
 
       // Serialize with optional compression
       const { result, compressionInfo } = await serializeShareableData(
