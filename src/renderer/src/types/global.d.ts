@@ -1,13 +1,3 @@
-import type { ElectronAPI } from '@electron-toolkit/preload';
-import type { SqlProAPI } from '../../../preload/index';
-
-declare global {
-  interface Window {
-    electron: ElectronAPI;
-    sqlPro: SqlProAPI;
-  }
-}
-
 // Vite environment variables
 interface ImportMetaEnv {
   readonly VITE_MOCK_MODE?: string;

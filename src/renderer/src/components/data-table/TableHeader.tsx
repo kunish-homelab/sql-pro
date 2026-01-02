@@ -319,6 +319,8 @@ interface TableHeaderProps {
   onResetColumnSize?: (columnId: string) => void;
   onTogglePin?: (columnId: string) => void;
   grouping?: string[];
+  /** Number of grouped rows - used to trigger re-render when grouping changes */
+  groupCount?: number;
   /** Sorting state - used to trigger re-render when sorting changes */
   sorting?: { column: string; direction: 'asc' | 'desc' } | null;
   /** Column sizing info - used to trigger re-render during resize */
@@ -342,6 +344,7 @@ export const TableHeader = memo(
     onResetColumnSize,
     onTogglePin,
     grouping = [],
+    groupCount: _groupCount, // Used to trigger re-render when grouping changes
     sorting: _sorting, // Used to trigger re-render when sorting changes
     columnSizingInfo: _columnSizingInfo, // Used to trigger re-render during resize
     filters = [],

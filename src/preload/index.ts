@@ -137,7 +137,7 @@ import type {
   UninstallPluginResponse,
   UpdatePluginRequest,
   UpdatePluginResponse,
-} from '@/types/plugin.d';
+} from '@/types/plugin';
 import process from 'node:process';
 import { electronAPI } from '@electron-toolkit/preload';
 import { IPC_CHANNELS } from '@shared/types';

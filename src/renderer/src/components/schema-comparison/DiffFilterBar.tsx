@@ -209,7 +209,7 @@ export function DiffFilterBar({ className }: DiffFilterBarProps) {
       <Separator orientation="vertical" className="h-6" />
 
       {/* Search Input */}
-      <div className="relative min-w-[200px] flex-1">
+      <div className="relative min-w-50 flex-1">
         <Search className="text-muted-foreground absolute top-1/2 left-2.5 h-4 w-4 -translate-y-1/2" />
         <Input
           type="text"

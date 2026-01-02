@@ -700,7 +700,7 @@ export function Sidebar({
       <div className="flex min-w-0 flex-wrap items-center gap-1 border-b px-2 pb-2">
         {/* Sort Dropdown */}
         <DropdownMenu>
-          <DropdownMenuTrigger asChild>
+          <DropdownMenuTrigger>
             <Button
               variant="ghost"
               size="sm"
@@ -749,25 +749,29 @@ export function Sidebar({
 
         {/* Tag Filter */}
         <Popover>
-          <PopoverTrigger asChild>
-            <Button
-              variant={activeTagFilter ? 'secondary' : 'ghost'}
-              size="sm"
-              className="h-7 shrink-0 gap-1 px-2"
-            >
-              <Filter className="h-3.5 w-3.5 shrink-0" />
-              {activeTagFilter ? (
-                <Badge
-                  variant="secondary"
-                  className="h-5 max-w-[60px] truncate px-1 text-xs"
-                >
-                  {activeTagFilter}
-                </Badge>
-              ) : (
-                <span className="text-xs">Filter</span>
-              )}
-            </Button>
-          </PopoverTrigger>
+          <PopoverTrigger
+            nativeButton
+            render={
+              <Button
+                variant={activeTagFilter ? 'secondary' : 'ghost'}
+                size="sm"
+                className="h-7 shrink-0 gap-1 px-2"
+              >
+                <Filter className="h-3.5 w-3.5 shrink-0" />
+                {activeTagFilter ? (
+                  <Badge
+                    variant="secondary"
+                    className="h-5 max-w-15 truncate px-1 text-xs"
+                  >
+                    {activeTagFilter}
+                  </Badge>
+                ) : (
+                  <span className="text-xs">Filter</span>
+                )}
+              </Button>
+            }
+          />
+
           <PopoverContent align="start" className="w-48 p-2">
             <div className="space-y-2">
               <div className="text-sm font-medium">Filter by Tag</div>
@@ -1314,7 +1318,7 @@ function TableItem({
           )}
         </ContextMenuItem>
         <ContextMenuSub>
-          <ContextMenuSubTrigger>
+          <ContextMenuSubTrigger nativeButton={false}>
             <Tag className="size-4" />
             Tags
           </ContextMenuSubTrigger>
@@ -1441,17 +1445,20 @@ function TagManager({ availableTags, onAddTag, onRemoveTag }: TagManagerProps) {
 
   return (
     <Popover open={isOpen} onOpenChange={setIsOpen}>
-      <PopoverTrigger asChild>
-        <Button variant="ghost" size="sm" className="h-7 shrink-0 gap-1 px-2">
-          <Tag className="h-3.5 w-3.5 shrink-0" />
-          <span className="text-xs">Tags</span>
-          {availableTags.length > 0 && (
-            <Badge variant="secondary" className="h-4 px-1 text-[10px]">
-              {availableTags.length}
-            </Badge>
-          )}
-        </Button>
-      </PopoverTrigger>
+      <PopoverTrigger
+        nativeButton
+        render={
+          <Button variant="ghost" size="sm" className="h-7 shrink-0 gap-1 px-2">
+            <Tag className="h-3.5 w-3.5 shrink-0" />
+            <span className="text-xs">Tags</span>
+            {availableTags.length > 0 && (
+              <Badge variant="secondary" className="h-4 px-1 text-[10px]">
+                {availableTags.length}
+              </Badge>
+            )}
+          </Button>
+        }
+      />
       <PopoverContent align="start" className="w-56 p-2">
         <div className="space-y-2">
           <div className="text-sm font-medium">Manage Tags</div>

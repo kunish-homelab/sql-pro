@@ -1,6 +1,5 @@
 import type { SchemaComparisonResult } from '@shared/types';
 import { FileCode, FileDown, FileJson, FileText, Loader2 } from 'lucide-react';
-
 import { useCallback, useState } from 'react';
 import { Button } from '@/components/ui/button';
 import { Checkbox } from '@/components/ui/checkbox';

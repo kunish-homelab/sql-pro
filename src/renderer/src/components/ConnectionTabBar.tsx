@@ -189,7 +189,7 @@ const ConnectionTab = memo(
         </ContextMenuTrigger>
         <ContextMenuContent>
           <ContextMenuSub>
-            <ContextMenuSubTrigger>
+            <ContextMenuSubTrigger nativeButton={false}>
               <Palette className="mr-2 h-4 w-4" />
               Set Color
             </ContextMenuSubTrigger>
