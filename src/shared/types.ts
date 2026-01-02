@@ -1837,6 +1837,14 @@ export interface IPCChannels {
     ExportComparisonReportRequest,
     ExportComparisonReportResponse,
   ];
+
+  // Query & Schema Sharing
+  'query:export': [ExportQueryRequest, ExportQueryResponse];
+  'query:import': [ImportQueryRequest, ImportQueryResponse];
+  'schema:export': [ExportSchemaRequest, ExportSchemaResponse];
+  'schema:import': [ImportSchemaRequest, ImportSchemaResponse];
+  'bundle:export': [ExportBundleRequest, ExportBundleResponse];
+  'bundle:import': [ImportBundleRequest, ImportBundleResponse];
 }
 
 // ============ IPC Channel Constants ============
