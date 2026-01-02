@@ -7,6 +7,7 @@ import {
   History,
   Loader2,
   Play,
+  Save,
   Search,
   Sparkles,
   Trash2,
@@ -27,6 +28,12 @@ import { SaveQueryDialog } from '@/components/query/SaveQueryDialog';
 import { SavedQueriesPanel } from '@/components/query/SavedQueriesPanel';
 import { SettingsDialog } from '@/components/SettingsDialog';
 import { Button } from '@/components/ui/button';
+import {
+  ContextMenu,
+  ContextMenuContent,
+  ContextMenuItem,
+  ContextMenuTrigger,
+} from '@/components/ui/context-menu';
 import {
   Dialog,
   DialogContent,
@@ -134,6 +141,7 @@ export function QueryEditor() {
   const [showDataAnalysis, setShowDataAnalysis] = useState(false);
   const [showAISettings, setShowAISettings] = useState(false);
   const [showSaveQuery, setShowSaveQuery] = useState(false);
+  const [queryToSave, setQueryToSave] = useState<string | null>(null);
   const containerRef = useRef<HTMLDivElement>(null);
 
   // AI store
@@ -313,6 +321,11 @@ export function QueryEditor() {
       clearHistory(connection.path);
       setShowClearConfirm(false);
     }
+  };
+
+  const handleSaveFromHistory = (queryText: string) => {
+    setQueryToSave(queryText);
+    setShowSaveQuery(true);
   };
 
   const handleAnalyze = useCallback(
@@ -673,46 +686,57 @@ export function QueryEditor() {
                         </p>
                       ) : (
                         filteredHistory.map((item) => (
-                          <div
-                            key={item.id}
-                            className={cn(
-                              'hover:bg-accent group relative w-full rounded-md px-3 py-2 text-left text-sm transition-colors',
-                              !item.success && 'border-destructive border-l-2'
-                            )}
-                          >
-                            <button
-                              onClick={() => handleHistorySelect(item.queryText)}
-                              className="w-full text-left"
-                            >
-                              <div className="flex items-center gap-2 pr-6">
-                                {item.success ? (
-                                  <span className="text-xs text-green-600">
-                                    {formatDuration(item.durationMs)}
-                                  </span>
-                                ) : (
-                                  <span className="text-destructive text-xs">
-                                    Failed
-                                  </span>
+                          <ContextMenu key={item.id}>
+                            <ContextMenuTrigger>
+                              <div
+                                className={cn(
+                                  'hover:bg-accent group relative w-full rounded-md px-3 py-2 text-left text-sm transition-colors',
+                                  !item.success && 'border-destructive border-l-2'
                                 )}
-                                <span className="text-muted-foreground text-xs">
-                                  {new Date(item.executedAt).toLocaleTimeString()}
-                                </span>
+                              >
+                                <button
+                                  onClick={() => handleHistorySelect(item.queryText)}
+                                  className="w-full text-left"
+                                >
+                                  <div className="flex items-center gap-2 pr-6">
+                                    {item.success ? (
+                                      <span className="text-xs text-green-600">
+                                        {formatDuration(item.durationMs)}
+                                      </span>
+                                    ) : (
+                                      <span className="text-destructive text-xs">
+                                        Failed
+                                      </span>
+                                    )}
+                                    <span className="text-muted-foreground text-xs">
+                                      {new Date(item.executedAt).toLocaleTimeString()}
+                                    </span>
+                                  </div>
+                                  <SqlHighlight
+                                    code={item.queryText}
+                                    maxLines={3}
+                                    className="mt-1 pr-6"
+                                  />
+                                </button>
+                                <Button
+                                  variant="ghost"
+                                  size="icon"
+                                  className="absolute top-1/2 right-1 h-6 w-6 -translate-y-1/2 opacity-0 transition-opacity group-hover:opacity-100"
+                                  onClick={(e) => handleHistoryDelete(e, item.id)}
+                                >
+                                  <X className="h-3 w-3" />
+                                </Button>
                               </div>
-                              <SqlHighlight
-                                code={item.queryText}
-                                maxLines={3}
-                                className="mt-1 pr-6"
-                              />
-                            </button>
-                            <Button
-                              variant="ghost"
-                              size="icon"
-                              className="absolute top-1/2 right-1 h-6 w-6 -translate-y-1/2 opacity-0 transition-opacity group-hover:opacity-100"
-                              onClick={(e) => handleHistoryDelete(e, item.id)}
-                            >
-                              <X className="h-3 w-3" />
-                            </Button>
-                          </div>
+                            </ContextMenuTrigger>
+                            <ContextMenuContent>
+                              <ContextMenuItem
+                                onClick={() => handleSaveFromHistory(item.queryText)}
+                              >
+                                <Save className="mr-2 h-4 w-4" />
+                                Save to Collection
+                              </ContextMenuItem>
+                            </ContextMenuContent>
+                          </ContextMenu>
                         ))
                       )}
                     </div>
@@ -801,8 +825,13 @@ export function QueryEditor() {
       {/* Save Query Dialog */}
       <SaveQueryDialog
         open={showSaveQuery}
-        onOpenChange={setShowSaveQuery}
-        queryText={tabQuery}
+        onOpenChange={(open) => {
+          setShowSaveQuery(open);
+          if (!open) {
+            setQueryToSave(null);
+          }
+        }}
+        queryText={queryToSave || tabQuery}
         dbPath={connection?.path}
       />
     </div>
