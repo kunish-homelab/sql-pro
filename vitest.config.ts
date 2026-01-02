@@ -1,6 +1,14 @@
 import { defineConfig } from 'vitest/config';
+import path from 'node:path';
 
 export default defineConfig({
+  resolve: {
+    alias: {
+      '@': path.resolve(__dirname, './src/main'),
+      '@shared': path.resolve(__dirname, './src/shared'),
+      '@renderer': path.resolve(__dirname, './src/renderer/src'),
+    },
+  },
   test: {
     globals: true,
     environment: 'happy-dom',
