@@ -4,6 +4,8 @@ import {
   Check,
   ChevronDown,
   ChevronRight,
+  Code,
+  Copy,
   Database,
   Edit3,
   Plus,
@@ -12,16 +14,18 @@ import {
   Undo2,
   X,
 } from 'lucide-react';
-import { useEffect, useMemo, useState } from 'react';
+import { useCallback, useEffect, useMemo, useState } from 'react';
 import { Badge } from '@/components/ui/badge';
 import { Button } from '@/components/ui/button';
 import { ScrollArea } from '@/components/ui/scroll-area';
+import { SqlHighlight } from '@/components/ui/sql-highlight';
 import {
   Tooltip,
   TooltipContent,
   TooltipTrigger,
 } from '@/components/ui/tooltip';
 import { usePendingChanges } from '@/hooks/usePendingChanges';
+import { generateSQLScript } from '@/lib/sql-generator';
 import { cn } from '@/lib/utils';
 import { useConnectionStore } from '@/stores';
 
@@ -64,6 +68,24 @@ export function DiffPreview({ onClose, onApplied }: DiffPreviewProps) {
   const [expandedChanges, setExpandedChanges] = useState<Set<string>>(
     () => new Set()
   );
+  // Toggle between diff view and SQL preview
+  const [showSqlPreview, setShowSqlPreview] = useState(false);
+  // Copy feedback state
+  const [copied, setCopied] = useState(false);
+
+  // Generate full SQL script for all changes
+  const sqlScript = useMemo(() => generateSQLScript(changes), [changes]);
+
+  // Copy SQL to clipboard
+  const copyToClipboard = useCallback(async () => {
+    try {
+      await navigator.clipboard.writeText(sqlScript);
+      setCopied(true);
+      setTimeout(() => setCopied(false), 2000);
+    } catch (err) {
+      console.error('Failed to copy SQL:', err);
+    }
+  }, [sqlScript]);
 
   // Group changes by table
   const tableGroups = useMemo((): TableGroup[] => {
@@ -197,128 +219,178 @@ export function DiffPreview({ onClose, onApplied }: DiffPreviewProps) {
         </Button>
       </div>
 
-      {/* Summary Badges */}
-      <div className="flex flex-wrap gap-2 border-b px-4 py-2">
-        {totalInserts > 0 && (
-          <Badge
-            variant="outline"
-            className="border-green-500/50 bg-green-500/10 text-green-600 dark:text-green-400"
-          >
-            <Plus className="mr-1 h-3 w-3" />
-            {totalInserts} INSERT
-          </Badge>
-        )}
-        {totalUpdates > 0 && (
-          <Badge
-            variant="outline"
-            className="border-amber-500/50 bg-amber-500/10 text-amber-600 dark:text-amber-400"
-          >
-            <Edit3 className="mr-1 h-3 w-3" />
-            {totalUpdates} UPDATE
-          </Badge>
-        )}
-        {totalDeletes > 0 && (
-          <Badge
-            variant="outline"
-            className="border-red-500/50 bg-red-500/10 text-red-600 dark:text-red-400"
-          >
-            <Trash2 className="mr-1 h-3 w-3" />
-            {totalDeletes} DELETE
-          </Badge>
-        )}
+      {/* Summary Badges and View Toggle */}
+      <div className="flex flex-wrap items-center justify-between gap-2 border-b px-4 py-2">
+        <div className="flex flex-wrap gap-2">
+          {totalInserts > 0 && (
+            <Badge
+              variant="outline"
+              className="border-green-500/50 bg-green-500/10 text-green-600 dark:text-green-400"
+            >
+              <Plus className="mr-1 h-3 w-3" />
+              {totalInserts} INSERT
+            </Badge>
+          )}
+          {totalUpdates > 0 && (
+            <Badge
+              variant="outline"
+              className="border-amber-500/50 bg-amber-500/10 text-amber-600 dark:text-amber-400"
+            >
+              <Edit3 className="mr-1 h-3 w-3" />
+              {totalUpdates} UPDATE
+            </Badge>
+          )}
+          {totalDeletes > 0 && (
+            <Badge
+              variant="outline"
+              className="border-red-500/50 bg-red-500/10 text-red-600 dark:text-red-400"
+            >
+              <Trash2 className="mr-1 h-3 w-3" />
+              {totalDeletes} DELETE
+            </Badge>
+          )}
+        </div>
+        <Tooltip>
+          <TooltipTrigger>
+            <Button
+              variant={showSqlPreview ? 'secondary' : 'ghost'}
+              size="sm"
+              className="h-7 gap-1 px-2"
+              onClick={() => setShowSqlPreview(!showSqlPreview)}
+            >
+              <Code className="h-3.5 w-3.5" />
+              <span className="text-xs">SQL</span>
+            </Button>
+          </TooltipTrigger>
+          <TooltipContent side="left">
+            {showSqlPreview ? 'Show diff view' : 'Preview SQL statements'}
+          </TooltipContent>
+        </Tooltip>
       </div>
 
-      {/* Changes List - Grouped by Table */}
-      <ScrollArea className="flex-1">
-        <div className="p-2">
-          {tableGroups.map((group) => {
-            const tableKey = `${group.schema || 'main'}.${group.table}`;
-            const isExpanded = expandedTables.has(tableKey);
-            const hasErrors = group.changes.some(
-              (c) => validationErrors.has(c.id) || !c.isValid
-            );
-
-            return (
-              <div key={tableKey} className="mb-2">
-                {/* Table Header */}
-                <div
-                  className={cn(
-                    'bg-muted/50 hover:bg-muted flex cursor-pointer items-center gap-2 rounded-t-md border px-3 py-2 transition-colors',
-                    !isExpanded && 'rounded-b-md'
-                  )}
-                  onClick={() => toggleTableExpanded(tableKey)}
+      {/* SQL Preview View */}
+      {showSqlPreview ? (
+        <div className="flex flex-1 flex-col overflow-hidden">
+          <div className="flex items-center justify-between border-b px-4 py-2">
+            <span className="text-muted-foreground text-xs font-medium">
+              SQL Preview
+            </span>
+            <Tooltip>
+              <TooltipTrigger>
+                <Button
+                  variant="ghost"
+                  size="sm"
+                  className="h-7 gap-1 px-2"
+                  onClick={copyToClipboard}
                 >
-                  {isExpanded ? (
-                    <ChevronDown className="h-4 w-4 shrink-0" />
-                  ) : (
-                    <ChevronRight className="h-4 w-4 shrink-0" />
-                  )}
-                  <Table2 className="text-muted-foreground h-4 w-4 shrink-0" />
-                  <span className="min-w-0 flex-1 truncate font-medium">
-                    {group.table}
-                  </span>
-
-                  {/* Mini badges */}
-                  <div className="flex shrink-0 items-center gap-1">
-                    {group.insertCount > 0 && (
-                      <span className="flex h-5 w-5 items-center justify-center rounded bg-green-500/20 text-xs text-green-600">
-                        +{group.insertCount}
-                      </span>
-                    )}
-                    {group.updateCount > 0 && (
-                      <span className="flex h-5 w-5 items-center justify-center rounded bg-amber-500/20 text-xs text-amber-600">
-                        ~{group.updateCount}
-                      </span>
-                    )}
-                    {group.deleteCount > 0 && (
-                      <span className="flex h-5 w-5 items-center justify-center rounded bg-red-500/20 text-xs text-red-600">
-                        -{group.deleteCount}
-                      </span>
-                    )}
-                    {hasErrors && (
-                      <AlertCircle className="text-destructive h-4 w-4" />
-                    )}
-                  </div>
-
-                  {/* Remove all table changes */}
-                  <Tooltip>
-                    <TooltipTrigger>
-                      <button
-                        onClick={(e) => {
-                          e.stopPropagation();
-                          removeTableChanges(group);
-                        }}
-                        className="text-muted-foreground hover:text-destructive hover:bg-destructive/10 rounded p-1 transition-colors"
-                      >
-                        <X className="h-3.5 w-3.5" />
-                      </button>
-                    </TooltipTrigger>
-                    <TooltipContent side="left">
-                      Discard all changes to {group.table}
-                    </TooltipContent>
-                  </Tooltip>
-                </div>
-
-                {/* Table Changes */}
-                {isExpanded && (
-                  <div className="space-y-px rounded-b-md border-x border-b">
-                    {group.changes.map((change) => (
-                      <ChangeItem
-                        key={change.id}
-                        change={change}
-                        isExpanded={expandedChanges.has(change.id)}
-                        onToggle={() => toggleChangeExpanded(change.id)}
-                        onRemove={() => removeChange(change.id)}
-                        validationError={validationErrors.get(change.id)}
-                      />
-                    ))}
-                  </div>
-                )}
-              </div>
-            );
-          })}
+                  <Copy className="h-3.5 w-3.5" />
+                  <span className="text-xs">{copied ? 'Copied!' : 'Copy'}</span>
+                </Button>
+              </TooltipTrigger>
+              <TooltipContent side="left">Copy SQL to clipboard</TooltipContent>
+            </Tooltip>
+          </div>
+          <ScrollArea className="flex-1">
+            <div className="p-4">
+              <SqlHighlight code={sqlScript} className="text-xs" />
+            </div>
+          </ScrollArea>
         </div>
-      </ScrollArea>
+      ) : (
+        <>
+          {/* Changes List - Grouped by Table */}
+          <ScrollArea className="flex-1">
+            <div className="p-2">
+              {tableGroups.map((group) => {
+                const tableKey = `${group.schema || 'main'}.${group.table}`;
+                const isExpanded = expandedTables.has(tableKey);
+                const hasErrors = group.changes.some(
+                  (c) => validationErrors.has(c.id) || !c.isValid
+                );
+
+                return (
+                  <div key={tableKey} className="mb-2">
+                    {/* Table Header */}
+                    <div
+                      className={cn(
+                        'bg-muted/50 hover:bg-muted flex cursor-pointer items-center gap-2 rounded-t-md border px-3 py-2 transition-colors',
+                        !isExpanded && 'rounded-b-md'
+                      )}
+                      onClick={() => toggleTableExpanded(tableKey)}
+                    >
+                      {isExpanded ? (
+                        <ChevronDown className="h-4 w-4 shrink-0" />
+                      ) : (
+                        <ChevronRight className="h-4 w-4 shrink-0" />
+                      )}
+                      <Table2 className="text-muted-foreground h-4 w-4 shrink-0" />
+                      <span className="min-w-0 flex-1 truncate font-medium">
+                        {group.table}
+                      </span>
+
+                      {/* Mini badges */}
+                      <div className="flex shrink-0 items-center gap-1">
+                        {group.insertCount > 0 && (
+                          <span className="flex h-5 w-5 items-center justify-center rounded bg-green-500/20 text-xs text-green-600">
+                            +{group.insertCount}
+                          </span>
+                        )}
+                        {group.updateCount > 0 && (
+                          <span className="flex h-5 w-5 items-center justify-center rounded bg-amber-500/20 text-xs text-amber-600">
+                            ~{group.updateCount}
+                          </span>
+                        )}
+                        {group.deleteCount > 0 && (
+                          <span className="flex h-5 w-5 items-center justify-center rounded bg-red-500/20 text-xs text-red-600">
+                            -{group.deleteCount}
+                          </span>
+                        )}
+                        {hasErrors && (
+                          <AlertCircle className="text-destructive h-4 w-4" />
+                        )}
+                      </div>
+
+                      {/* Remove all table changes */}
+                      <Tooltip>
+                        <TooltipTrigger>
+                          <button
+                            onClick={(e) => {
+                              e.stopPropagation();
+                              removeTableChanges(group);
+                            }}
+                            className="text-muted-foreground hover:text-destructive hover:bg-destructive/10 rounded p-1 transition-colors"
+                          >
+                            <X className="h-3.5 w-3.5" />
+                          </button>
+                        </TooltipTrigger>
+                        <TooltipContent side="left">
+                          Discard all changes to {group.table}
+                        </TooltipContent>
+                      </Tooltip>
+                    </div>
+
+                    {/* Table Changes */}
+                    {isExpanded && (
+                      <div className="space-y-px rounded-b-md border-x border-b">
+                        {group.changes.map((change) => (
+                          <ChangeItem
+                            key={change.id}
+                            change={change}
+                            isExpanded={expandedChanges.has(change.id)}
+                            onToggle={() => toggleChangeExpanded(change.id)}
+                            onRemove={() => removeChange(change.id)}
+                            validationError={validationErrors.get(change.id)}
+                          />
+                        ))}
+                      </div>
+                    )}
+                  </div>
+                );
+              })}
+            </div>
+          </ScrollArea>
+        </>
+      )}
 
       {/* Validation Error */}
       {invalidCount > 0 && (
