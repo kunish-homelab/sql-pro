@@ -2,6 +2,10 @@
 
 Welcome to SQL Pro! This guide will help you get up and running quickly with our open-source SQLite database manager.
 
+::: tip New User?
+Follow this guide in order: **Installation** → **First Connection** → **Explore Features**
+:::
+
 ## What You'll Learn
 
 This getting started guide covers everything you need to begin using SQL Pro effectively:
@@ -50,10 +54,22 @@ Browse tables, run queries, and edit data with SQL Pro's intuitive interface.
 
 After completing the getting started guides, explore these resources:
 
-- [Features](/features/) - Discover all the powerful features SQL Pro offers
-- [Keyboard Shortcuts](/shortcuts) - Speed up your workflow with keyboard navigation
-- [Troubleshooting](/troubleshooting) - Find solutions to common issues
+### Core Features
+- 📝 [Query Editor](/features/query-editor) - Write and execute SQL with powerful editing tools
+- 🗄️ [Schema Browser](/features/schema-browser) - Navigate your database structure
+- ✏️ [Data Editing](/features/data-editing) - Edit data inline with diff preview
+- 🎯 [ER Diagrams](/features/er-diagram) - Visualize table relationships
+- 📜 [Query History](/features/query-history) - Access and search past queries
 
-::: info Need Help?
-If you run into any issues, check out our [Troubleshooting guide](/troubleshooting) or [open an issue on GitHub](https://github.com/kunish-homelab/sql-pro/issues).
+### Advanced Topics
+- ⌨️ [Keyboard Shortcuts](/shortcuts) - Speed up your workflow
+- 🔒 [SQLCipher Support](/features/sqlcipher) - Work with encrypted databases
+- 🔌 [Plugin Development](/plugin-development) - Extend SQL Pro's functionality
+- 🛠️ [Troubleshooting](/troubleshooting) - Find solutions to common issues
+
+### Get Help
+::: info Need Assistance?
+- 💬 [GitHub Discussions](https://github.com/kunish-homelab/sql-pro/discussions) - Community support
+- 🐛 [Report an Issue](https://github.com/kunish-homelab/sql-pro/issues) - Bug reports and feature requests
+- 📚 [Full Documentation](/) - Complete feature documentation
 :::

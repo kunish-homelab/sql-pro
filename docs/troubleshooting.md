@@ -2,6 +2,10 @@
 
 This guide covers common issues you might encounter when using SQL Pro and provides step-by-step solutions to resolve them.
 
+::: tip Quick Find
+Use the search function (<kbd>Cmd/Ctrl + K</kbd>) to quickly find solutions for your specific issue. Most common issues are covered in the table of contents below.
+:::
+
 [[toc]]
 
 ## Installation Issues
