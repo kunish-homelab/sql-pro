@@ -15,6 +15,7 @@ import { Card, CardContent, CardHeader, CardTitle } from '@/components/ui/card';
 import { ShortcutKbd } from '@/components/ui/kbd';
 import { ScrollArea } from '@/components/ui/scroll-area';
 import { sqlPro } from '@/lib/api';
+import { cn } from '@/lib/utils';
 import { useSchemaComparisonStore } from '@/stores';
 import { DiffFilterBar } from './DiffFilterBar';
 import { DiffSummary } from './DiffSummary';
@@ -243,7 +244,7 @@ export function SchemaComparisonPanel({
   const canCompare = source && target && !isComparing;
 
   return (
-    <div className={className}>
+    <div className={cn('h-full', className)}>
       <ScrollArea className="h-full">
         <div className="space-y-6 p-6">
           {/* Header */}
