@@ -162,13 +162,14 @@ export function MonacoSqlEditor({
         () => onExecuteRef.current()
       );
 
-      // Register Cmd/Ctrl+Shift+F shortcut for SQL formatting
+      // Register Cmd/Ctrl+Option/Alt+F shortcut for SQL formatting
+      // Note: Cmd+Shift+F on macOS types special character 'Ï', so we use Option/Alt instead
       editor.addAction({
         id: 'sql-format',
         label: 'Format SQL',
         keybindings: [
           monacoInstance.KeyMod.CtrlCmd |
-            monacoInstance.KeyMod.Shift |
+            monacoInstance.KeyMod.Alt |
             monacoInstance.KeyCode.KeyF,
         ],
         run: (ed) => {

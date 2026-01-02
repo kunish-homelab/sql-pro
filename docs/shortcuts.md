@@ -51,10 +51,10 @@ Shortcuts available when editing SQL queries.
 
 ### Query Execution
 
-| Action        | macOS                                            | Windows/Linux                                     |
-| ------------- | ------------------------------------------------ | ------------------------------------------------- |
-| Execute query | <kbd>Cmd</kbd> + <kbd>Enter</kbd>                | <kbd>Ctrl</kbd> + <kbd>Enter</kbd>                |
-| Format SQL    | <kbd>Cmd</kbd> + <kbd>Shift</kbd> + <kbd>F</kbd> | <kbd>Ctrl</kbd> + <kbd>Shift</kbd> + <kbd>F</kbd> |
+| Action        | macOS                                             | Windows/Linux                                   |
+| ------------- | ------------------------------------------------- | ----------------------------------------------- |
+| Execute query | <kbd>Cmd</kbd> + <kbd>Enter</kbd>                 | <kbd>Ctrl</kbd> + <kbd>Enter</kbd>              |
+| Format SQL    | <kbd>Cmd</kbd> + <kbd>Option</kbd> + <kbd>F</kbd> | <kbd>Ctrl</kbd> + <kbd>Alt</kbd> + <kbd>F</kbd> |
 
 ### Find and Replace
 
