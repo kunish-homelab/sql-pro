@@ -29,6 +29,7 @@ import React, {
 import { DataAnalysisPanel, NLToSQLDialog } from '@/components/ai';
 import { SettingsDialog } from '@/components/SettingsDialog';
 import {
+  QueryBundleExportDialog,
   QueryExportDialog,
   QueryImportDialog,
 } from '@/components/sharing';
@@ -139,6 +140,7 @@ export function QueryEditor() {
   const [showAISettings, setShowAISettings] = useState(false);
   const [showQueryExport, setShowQueryExport] = useState(false);
   const [showQueryImport, setShowQueryImport] = useState(false);
+  const [showQueryBundleExport, setShowQueryBundleExport] = useState(false);
   const [historySelectionMode, setHistorySelectionMode] = useState(false);
   const [selectedHistoryIds, setSelectedHistoryIds] = useState<Set<string>>(
     new Set()
@@ -336,18 +338,8 @@ export function QueryEditor() {
   };
 
   const handleExportSelected = () => {
-    // Get the selected history items
-    const selectedQueries = filteredHistory.filter((item) =>
-      selectedHistoryIds.has(item.id)
-    );
-
-    // TODO: Open QueryBundleExportDialog with selectedQueries
-    // This will be implemented in subtask 6.2
-    // For now, this prepares the data structure for batch export
-    if (selectedQueries.length === 0) return;
-
-    // Placeholder for QueryBundleExportDialog integration
-    // Will show dialog with selectedQueries data in subtask 6.2
+    if (selectedHistoryIds.size === 0) return;
+    setShowQueryBundleExport(true);
   };
 
   const handleAnalyze = useCallback(
@@ -900,6 +892,23 @@ export function QueryEditor() {
         onImportComplete={(query) => {
           handleQueryChange(query.sql);
           setShowQueryImport(false);
+        }}
+      />
+
+      {/* Query Bundle Export Dialog */}
+      <QueryBundleExportDialog
+        open={showQueryBundleExport}
+        onOpenChange={setShowQueryBundleExport}
+        queries={filteredHistory.filter((item) =>
+          selectedHistoryIds.has(item.id)
+        )}
+        initialDatabaseContext={
+          connection?.filename || connection?.path || ''
+        }
+        onExportComplete={() => {
+          setShowQueryBundleExport(false);
+          setHistorySelectionMode(false);
+          setSelectedHistoryIds(new Set());
         }}
       />
     </div>

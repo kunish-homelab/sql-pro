@@ -6,3 +6,5 @@ export { SchemaExportDialog } from './SchemaExportDialog';
 export type { SchemaExportDialogProps } from './SchemaExportDialog';
 export { SchemaImportDialog } from './SchemaImportDialog';
 export type { SchemaImportDialogProps } from './SchemaImportDialog';
+export { QueryBundleExportDialog } from './QueryBundleExportDialog';
+export type { QueryBundleExportDialogProps } from './QueryBundleExportDialog';
