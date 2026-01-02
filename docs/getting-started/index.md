@@ -55,6 +55,7 @@ Browse tables, run queries, and edit data with SQL Pro's intuitive interface.
 After completing the getting started guides, explore these resources:
 
 ### Core Features
+
 - 📝 [Query Editor](/features/query-editor) - Write and execute SQL with powerful editing tools
 - 🗄️ [Schema Browser](/features/schema-browser) - Navigate your database structure
 - ✏️ [Data Editing](/features/data-editing) - Edit data inline with diff preview
@@ -62,14 +63,17 @@ After completing the getting started guides, explore these resources:
 - 📜 [Query History](/features/query-history) - Access and search past queries
 
 ### Advanced Topics
+
 - ⌨️ [Keyboard Shortcuts](/shortcuts) - Speed up your workflow
 - 🔒 [SQLCipher Support](/features/sqlcipher) - Work with encrypted databases
 - 🔌 [Plugin Development](/plugin-development) - Extend SQL Pro's functionality
 - 🛠️ [Troubleshooting](/troubleshooting) - Find solutions to common issues
 
 ### Get Help
+
 ::: info Need Assistance?
+
 - 💬 [GitHub Discussions](https://github.com/kunish-homelab/sql-pro/discussions) - Community support
 - 🐛 [Report an Issue](https://github.com/kunish-homelab/sql-pro/issues) - Bug reports and feature requests
 - 📚 [Full Documentation](/) - Complete feature documentation
-:::
+  :::

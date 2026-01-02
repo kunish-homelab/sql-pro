@@ -24,12 +24,14 @@
 <td width="50%">
 
 ### 🗄️ Database Management
+
 - **SQLite & SQLCipher** support
 - **Encrypted databases** with secure password storage
 - **Multiple connections** with tab-based interface
 - **Recent databases** quick access
 
 ### 📝 Query Tools
+
 - **Monaco editor** with syntax highlighting
 - **Intelligent autocomplete** for tables and columns
 - **Vim mode** for power users
@@ -39,12 +41,14 @@
 <td width="50%">
 
 ### ✏️ Data Operations
+
 - **Inline editing** in data grid
 - **Diff preview** before applying changes
 - **Bulk operations** for multiple rows
 - **Advanced filtering** across all columns
 
 ### 🎨 Visualization
+
 - **ER diagrams** with relationships
 - **Schema browser** with structure view
 - **Dark/Light theme** auto-switching
@@ -87,13 +91,13 @@
 
 Download the latest release for your platform:
 
-| Platform | Download | Architecture |
-|----------|----------|--------------|
-| 🍎 macOS (Apple Silicon) | [sql-pro-x.x.x-arm64.dmg](https://github.com/kunish-homelab/sql-pro/releases) | M1/M2/M3/M4 |
-| 🍎 macOS (Intel) | [sql-pro-x.x.x-x64.dmg](https://github.com/kunish-homelab/sql-pro/releases) | Intel |
-| 🪟 Windows | [sql-pro-x.x.x-setup-x64.exe](https://github.com/kunish-homelab/sql-pro/releases) | x64 |
-| 🐧 Linux (AppImage) | [sql-pro-x.x.x-x64.AppImage](https://github.com/kunish-homelab/sql-pro/releases) | x64 |
-| 🐧 Linux (deb) | [sql-pro-x.x.x-x64.deb](https://github.com/kunish-homelab/sql-pro/releases) | x64 |
+| Platform                 | Download                                                                          | Architecture |
+| ------------------------ | --------------------------------------------------------------------------------- | ------------ |
+| 🍎 macOS (Apple Silicon) | [sql-pro-x.x.x-arm64.dmg](https://github.com/kunish-homelab/sql-pro/releases)     | M1/M2/M3/M4  |
+| 🍎 macOS (Intel)         | [sql-pro-x.x.x-x64.dmg](https://github.com/kunish-homelab/sql-pro/releases)       | Intel        |
+| 🪟 Windows               | [sql-pro-x.x.x-setup-x64.exe](https://github.com/kunish-homelab/sql-pro/releases) | x64          |
+| 🐧 Linux (AppImage)      | [sql-pro-x.x.x-x64.AppImage](https://github.com/kunish-homelab/sql-pro/releases)  | x64          |
+| 🐧 Linux (deb)           | [sql-pro-x.x.x-x64.deb](https://github.com/kunish-homelab/sql-pro/releases)       | x64          |
 
 > 💡 **New to SQL Pro?** Check out our [Getting Started Guide](https://kunish-homelab.github.io/sql-pro/getting-started/) for detailed installation instructions and first-time setup.
 
@@ -130,13 +134,13 @@ pnpm build:linux  # Linux
 
 ### Essential Keyboard Shortcuts
 
-| Action | macOS | Windows/Linux |
-|--------|-------|---------------|
-| Execute query | `Cmd + Enter` | `Ctrl + Enter` |
-| Apply changes | `Cmd + S` | `Ctrl + S` |
-| Open database | `Cmd + O` | `Ctrl + O` |
-| Command palette | `Cmd + K` | `Ctrl + K` |
-| Toggle sidebar | `Cmd + B` | `Ctrl + B` |
+| Action          | macOS         | Windows/Linux  |
+| --------------- | ------------- | -------------- |
+| Execute query   | `Cmd + Enter` | `Ctrl + Enter` |
+| Apply changes   | `Cmd + S`     | `Ctrl + S`     |
+| Open database   | `Cmd + O`     | `Ctrl + O`     |
+| Command palette | `Cmd + K`     | `Ctrl + K`     |
+| Toggle sidebar  | `Cmd + B`     | `Ctrl + B`     |
 
 > ⌨️ **[See all shortcuts →](https://kunish-homelab.github.io/sql-pro/shortcuts)**
 
@@ -196,13 +200,14 @@ pnpm build:icons      # Generate app icons
 
 The project uses [Vitest](https://vitest.dev/) with comprehensive test coverage:
 
-| Category | Coverage | Description |
-|----------|----------|-------------|
-| Utilities | 99%+ | Core utility functions |
-| Stores | 80%+ | State management |
+| Category  | Coverage      | Description                |
+| --------- | ------------- | -------------------------- |
+| Utilities | 99%+          | Core utility functions     |
+| Stores    | 80%+          | State management           |
 | SQL Logic | Comprehensive | SQL parsing and formatting |
 
 Run tests during development:
+
 ```bash
 pnpm test              # Watch mode with auto-reload
 pnpm test:coverage     # Generate detailed coverage report
@@ -244,6 +249,7 @@ pnpm dev
 ```
 
 Please read [CONTRIBUTING.md](CONTRIBUTING.md) for detailed guidelines, including:
+
 - Code style and conventions
 - Testing requirements
 - Commit message format
@@ -256,7 +262,7 @@ We're actively developing SQL Pro with exciting features planned. See our [detai
 ### Current Focus (Q1 2025)
 
 - 🔌 **Plugin System** - Extensible architecture for custom functionality
-- 📊 **Query Optimizer** - AI-powered query analysis and suggestions  
+- 📊 **Query Optimizer** - AI-powered query analysis and suggestions
 - 🔄 **Multi-tab Editor** - Work with multiple queries simultaneously
 - 📥 **Data Import/Export** - Enhanced CSV, JSON, and Excel support
 - 🔍 **Full-text Search** - Fast search across all database content

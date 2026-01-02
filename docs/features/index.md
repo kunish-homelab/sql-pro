@@ -183,17 +183,20 @@ SQL Pro is designed for power users who prefer keyboard navigation. Every major 
 Ready to dive deeper into SQL Pro?
 
 ### Learn More
+
 - 📚 [Getting Started Guide](/getting-started/) - New user setup and first connection
 - ⌨️ [Keyboard Shortcuts](/shortcuts) - Master keyboard navigation for faster workflows
 - 🔌 [Plugin Development](/plugin-development) - Extend SQL Pro with custom plugins
 - 🛠️ [Troubleshooting](/troubleshooting) - Solutions for common issues
 
 ### Get Involved
+
 - 💬 [GitHub Discussions](https://github.com/kunish-homelab/sql-pro/discussions) - Ask questions and share ideas
 - 🐛 [Report an Issue](https://github.com/kunish-homelab/sql-pro/issues) - Found a bug? Let us know
 - 🤝 [Contributing Guide](https://github.com/kunish-homelab/sql-pro/blob/main/CONTRIBUTING.md) - Help improve SQL Pro
 
 ### Stay Updated
+
 - ⭐ [Star on GitHub](https://github.com/kunish-homelab/sql-pro) - Show your support
 - 📦 [Latest Releases](https://github.com/kunish-homelab/sql-pro/releases) - Download the newest version
 - 📝 [Changelog](https://github.com/kunish-homelab/sql-pro/blob/main/CHANGELOG.md) - See what's new

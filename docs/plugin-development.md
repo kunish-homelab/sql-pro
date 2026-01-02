@@ -3,10 +3,11 @@
 This comprehensive guide covers everything you need to know to build plugins for SQL Pro. Whether you're creating a simple utility or a complex extension, this guide will help you get started and follow best practices.
 
 ::: info Developer Resources
+
 - 📖 [Plugin API Reference](/plugin-api) - Complete API documentation
 - 🎯 [Example Plugins](#example-plugins) - Ready-to-use templates
 - 💬 [Discussions](https://github.com/kunish-homelab/sql-pro/discussions) - Get help from the community
-:::
+  :::
 
 [[toc]]
 

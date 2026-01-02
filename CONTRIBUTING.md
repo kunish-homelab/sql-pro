@@ -29,6 +29,7 @@ Before you begin, ensure you have the following installed:
 - **Git**
 
 Optional (for icon generation):
+
 - **ImageMagick**
 - **librsvg**
 
@@ -37,17 +38,20 @@ Optional (for icon generation):
 1. **Fork the repository** on GitHub
 
 2. **Clone your fork:**
+
    ```bash
    git clone https://github.com/YOUR_USERNAME/sql-pro.git
    cd sql-pro
    ```
 
 3. **Add upstream remote:**
+
    ```bash
    git remote add upstream https://github.com/kunish-homelab/sql-pro.git
    ```
 
 4. **Install dependencies:**
+
    ```bash
    pnpm install
    ```
@@ -170,17 +174,20 @@ Fixes #456
 ### Before Submitting
 
 1. **Update your branch** with the latest upstream changes:
+
    ```bash
    git fetch upstream
    git rebase upstream/main
    ```
 
 2. **Run tests:**
+
    ```bash
    pnpm test:run
    ```
 
 3. **Run linting and type checking:**
+
    ```bash
    pnpm lint
    pnpm typecheck
@@ -194,6 +201,7 @@ Fixes #456
 ### Creating a Pull Request
 
 1. **Push your branch:**
+
    ```bash
    git push origin feature/your-feature-name
    ```
@@ -208,23 +216,28 @@ Fixes #456
 
 ```markdown
 ## Description
+
 Brief description of your changes
 
 ## Type of Change
+
 - [ ] Bug fix
 - [ ] New feature
 - [ ] Breaking change
 - [ ] Documentation update
 
 ## Testing
+
 - [ ] Tests pass locally
 - [ ] Added new tests for changes
 - [ ] Manual testing completed
 
 ## Screenshots (if applicable)
+
 Add screenshots for UI changes
 
 ## Related Issues
+
 Closes #123
 ```
 
@@ -262,20 +275,20 @@ pnpm test:ui
 Example test:
 
 ```typescript
-import { describe, it, expect } from 'vitest'
-import { formatBytes } from './utils'
+import { describe, it, expect } from 'vitest';
+import { formatBytes } from './utils';
 
 describe('formatBytes', () => {
   it('formats bytes correctly', () => {
-    expect(formatBytes(0)).toBe('0 B')
-    expect(formatBytes(1024)).toBe('1 KB')
-    expect(formatBytes(1048576)).toBe('1 MB')
-  })
+    expect(formatBytes(0)).toBe('0 B');
+    expect(formatBytes(1024)).toBe('1 KB');
+    expect(formatBytes(1048576)).toBe('1 MB');
+  });
 
   it('handles negative values', () => {
-    expect(formatBytes(-1024)).toBe('-1 KB')
-  })
-})
+    expect(formatBytes(-1024)).toBe('-1 KB');
+  });
+});
 ```
 
 ### Test Coverage Goals
@@ -305,6 +318,7 @@ pnpm docs:build
 ```
 
 When adding features:
+
 - Update relevant documentation pages
 - Add screenshots if UI is involved
 - Update the changelog
@@ -340,6 +354,7 @@ For feature requests, describe:
 ## Recognition
 
 Contributors are recognized in:
+
 - GitHub contributors page
 - Release notes for their contributions
 - Special acknowledgment for significant contributions

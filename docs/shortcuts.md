@@ -305,7 +305,7 @@ SQL Pro attempts to prevent these defaults when focused, but if you experience c
 Now that you know the keyboard shortcuts:
 
 - 📝 **[Query Editor Features](/features/query-editor)** - Learn SQL editor shortcuts in context
-- ✏️ **[Data Editing Guide](/features/data-editing)** - Master grid navigation shortcuts  
+- ✏️ **[Data Editing Guide](/features/data-editing)** - Master grid navigation shortcuts
 - ⚙️ **[Customizing Shortcuts](#customizing-shortcuts)** - Create your own shortcut configuration
 - 🎯 **[Vim Mode](/features/query-editor#vim-mode)** - Advanced keyboard navigation
 
@@ -316,6 +316,7 @@ Most features in SQL Pro are optimized for keyboard use. Combine shortcuts with 
 ---
 
 **More Resources:**
+
 - [Getting Started](/getting-started/) - New user guide
 - [Features](/features/) - All SQL Pro features
 - [Troubleshooting](/troubleshooting) - Common issues and solutions

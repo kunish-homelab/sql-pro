@@ -12,8 +12,21 @@ export default defineConfig({
     ['meta', { name: 'og:type', content: 'website' }],
     ['meta', { name: 'og:locale', content: 'en' }],
     ['meta', { name: 'og:site_name', content: 'SQL Pro' }],
-    ['meta', { name: 'og:title', content: 'SQL Pro - Professional SQLite Database Manager' }],
-    ['meta', { name: 'og:description', content: 'Open-source database management with SQLCipher support, diff preview, and powerful query tools' }],
+    [
+      'meta',
+      {
+        name: 'og:title',
+        content: 'SQL Pro - Professional SQLite Database Manager',
+      },
+    ],
+    [
+      'meta',
+      {
+        name: 'og:description',
+        content:
+          'Open-source database management with SQLCipher support, diff preview, and powerful query tools',
+      },
+    ],
   ],
 
   themeConfig: {
@@ -35,8 +48,14 @@ export default defineConfig({
         text: 'More',
         items: [
           { text: 'Troubleshooting', link: '/troubleshooting' },
-          { text: 'Changelog', link: 'https://github.com/kunish-homelab/sql-pro/blob/main/CHANGELOG.md' },
-          { text: 'Contributing', link: 'https://github.com/kunish-homelab/sql-pro/blob/main/CONTRIBUTING.md' },
+          {
+            text: 'Changelog',
+            link: 'https://github.com/kunish-homelab/sql-pro/blob/main/CHANGELOG.md',
+          },
+          {
+            text: 'Contributing',
+            link: 'https://github.com/kunish-homelab/sql-pro/blob/main/CONTRIBUTING.md',
+          },
         ],
       },
     ],
