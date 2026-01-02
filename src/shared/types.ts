@@ -1434,6 +1434,294 @@ export interface ExportComparisonReportResponse {
   error?: string;
 }
 
+// ============ Query & Schema Sharing Types ============
+
+/**
+ * Metadata information for shareable items.
+ * Includes version for compatibility validation.
+ */
+export interface ShareableMetadata {
+  /** Schema version for format compatibility (semver) */
+  version: string;
+  /** Timestamp when export was created (ISO string) */
+  exportedAt: string;
+  /** Application version that created the export */
+  appVersion?: string;
+  /** Optional user or team identifier */
+  author?: string;
+  /** Whether the export is compressed */
+  compressed?: boolean;
+}
+
+/**
+ * Single query export with metadata and documentation.
+ * Used for sharing individual queries between users.
+ */
+export interface ShareableQuery {
+  /** Unique identifier for the query */
+  id: string;
+  /** User-provided query name */
+  name: string;
+  /** Query description */
+  description?: string;
+  /** SQL query text */
+  sql: string;
+  /** Database context (e.g., database name or type) */
+  databaseContext?: string;
+  /** Database type (sqlite, postgres, mysql, etc.) */
+  databaseType?: string;
+  /** Tags for categorization */
+  tags?: string[];
+  /** Optional documentation or usage notes */
+  documentation?: string;
+  /** When the query was created (ISO string) */
+  createdAt: string;
+  /** When the query was last modified (ISO string) */
+  modifiedAt?: string;
+  /** Original author or creator */
+  author?: string;
+  /** Metadata for versioning and compatibility */
+  metadata: ShareableMetadata;
+}
+
+/**
+ * Schema export format types.
+ */
+export type SchemaExportFormat = 'json' | 'sql';
+
+/**
+ * Options for schema export.
+ */
+export interface SchemaExportOptions {
+  /** Export format (json or sql) */
+  format: SchemaExportFormat;
+  /** Include indexes in export */
+  includeIndexes?: boolean;
+  /** Include triggers in export */
+  includeTriggers?: boolean;
+  /** Include foreign keys in export */
+  includeForeignKeys?: boolean;
+  /** Specific tables to export (exports all if not specified) */
+  tables?: string[];
+  /** Include CREATE TABLE statements */
+  includeCreateStatements?: boolean;
+  /** Include table comments/documentation */
+  includeComments?: boolean;
+}
+
+/**
+ * Schema definition export for sharing database structures.
+ * Can be exported in JSON or SQL format.
+ */
+export interface ShareableSchema {
+  /** Unique identifier for the schema export */
+  id: string;
+  /** User-provided schema name */
+  name: string;
+  /** Schema description */
+  description?: string;
+  /** Database name or identifier */
+  databaseName?: string;
+  /** Database type (sqlite, postgres, mysql, etc.) */
+  databaseType?: string;
+  /** Export format used */
+  format: SchemaExportFormat;
+  /** Schema information (when format is 'json') */
+  schemas?: SchemaInfo[];
+  /** SQL statements (when format is 'sql') */
+  sqlStatements?: string[];
+  /** Export options used */
+  options: SchemaExportOptions;
+  /** Optional documentation */
+  documentation?: string;
+  /** When the schema was exported (ISO string) */
+  createdAt: string;
+  /** Original author or creator */
+  author?: string;
+  /** Metadata for versioning and compatibility */
+  metadata: ShareableMetadata;
+}
+
+/**
+ * Bundle of multiple queries for batch sharing.
+ * Useful for sharing query collections or templates.
+ */
+export interface ShareableBundle {
+  /** Unique identifier for the bundle */
+  id: string;
+  /** Bundle name */
+  name: string;
+  /** Bundle description */
+  description?: string;
+  /** Collection of queries in the bundle */
+  queries: Array<{
+    /** Query ID within bundle */
+    id: string;
+    /** Query name */
+    name: string;
+    /** Query description */
+    description?: string;
+    /** SQL query text */
+    sql: string;
+    /** Optional query-specific notes */
+    notes?: string;
+    /** Tags for this query */
+    tags?: string[];
+    /** Order index in bundle */
+    order?: number;
+  }>;
+  /** Database context for all queries */
+  databaseContext?: string;
+  /** Database type */
+  databaseType?: string;
+  /** Bundle-level tags */
+  tags?: string[];
+  /** Optional documentation */
+  documentation?: string;
+  /** When the bundle was created (ISO string) */
+  createdAt: string;
+  /** Original author or creator */
+  author?: string;
+  /** Metadata for versioning and compatibility */
+  metadata: ShareableMetadata;
+}
+
+/**
+ * Compression information for large exports.
+ */
+export interface CompressionInfo {
+  /** Whether the data is compressed */
+  compressed: boolean;
+  /** Compression algorithm used (e.g., 'gzip') */
+  algorithm?: string;
+  /** Original size in bytes before compression */
+  originalSize?: number;
+  /** Compressed size in bytes */
+  compressedSize?: number;
+}
+
+/**
+ * Validation result for imported shareable items.
+ */
+export interface ShareableValidationResult {
+  /** Whether the item is valid */
+  valid: boolean;
+  /** Validation errors (if any) */
+  errors?: string[];
+  /** Validation warnings (non-critical issues) */
+  warnings?: string[];
+  /** Whether the version is compatible */
+  versionCompatible?: boolean;
+  /** Detected compression info */
+  compressionInfo?: CompressionInfo;
+}
+
+// ============ Query & Schema Sharing IPC Types ============
+
+export interface ExportQueryRequest {
+  /** Query data to export */
+  query: Omit<ShareableQuery, 'id' | 'metadata' | 'createdAt'>;
+  /** File path to save the export (optional, will prompt if not provided) */
+  filePath?: string;
+  /** Whether to compress the export (auto-compress if size > 100KB by default) */
+  compress?: boolean;
+}
+
+export interface ExportQueryResponse {
+  success: boolean;
+  /** Path where the query was exported */
+  filePath?: string;
+  /** Compression info if compressed */
+  compressionInfo?: CompressionInfo;
+  error?: string;
+}
+
+export interface ImportQueryRequest {
+  /** File path to import from (optional, will prompt if not provided) */
+  filePath?: string;
+  /** Raw JSON data to import (alternative to filePath) */
+  data?: string;
+}
+
+export interface ImportQueryResponse {
+  success: boolean;
+  /** Imported query data */
+  query?: ShareableQuery;
+  /** Validation result */
+  validation?: ShareableValidationResult;
+  error?: string;
+}
+
+export interface ExportSchemaRequest {
+  /** Connection ID to export schema from */
+  connectionId: string;
+  /** Schema data to export */
+  schema: Omit<ShareableSchema, 'id' | 'metadata' | 'createdAt'>;
+  /** File path to save the export (optional, will prompt if not provided) */
+  filePath?: string;
+  /** Whether to compress the export */
+  compress?: boolean;
+}
+
+export interface ExportSchemaResponse {
+  success: boolean;
+  /** Path where the schema was exported */
+  filePath?: string;
+  /** Compression info if compressed */
+  compressionInfo?: CompressionInfo;
+  error?: string;
+}
+
+export interface ImportSchemaRequest {
+  /** File path to import from (optional, will prompt if not provided) */
+  filePath?: string;
+  /** Raw JSON data to import (alternative to filePath) */
+  data?: string;
+}
+
+export interface ImportSchemaResponse {
+  success: boolean;
+  /** Imported schema data */
+  schema?: ShareableSchema;
+  /** Validation result */
+  validation?: ShareableValidationResult;
+  error?: string;
+}
+
+export interface ExportBundleRequest {
+  /** Bundle data to export */
+  bundle: Omit<ShareableBundle, 'id' | 'metadata' | 'createdAt'>;
+  /** File path to save the export (optional, will prompt if not provided) */
+  filePath?: string;
+  /** Whether to compress the export */
+  compress?: boolean;
+}
+
+export interface ExportBundleResponse {
+  success: boolean;
+  /** Path where the bundle was exported */
+  filePath?: string;
+  /** Compression info if compressed */
+  compressionInfo?: CompressionInfo;
+  error?: string;
+}
+
+export interface ImportBundleRequest {
+  /** File path to import from (optional, will prompt if not provided) */
+  filePath?: string;
+  /** Raw JSON data to import (alternative to filePath) */
+  data?: string;
+}
+
+export interface ImportBundleResponse {
+  success: boolean;
+  /** Imported bundle data */
+  bundle?: ShareableBundle;
+  /** Validation result */
+  validation?: ShareableValidationResult;
+  error?: string;
+}
+
 // ============ IPC Channel Definitions ============
 
 export interface IPCChannels {
@@ -1687,4 +1975,12 @@ export const IPC_CHANNELS = {
   SCHEMA_COMPARISON_GENERATE_MIGRATION_SQL:
     'schema-comparison:generate-migration-sql',
   SCHEMA_COMPARISON_EXPORT_REPORT: 'schema-comparison:export-report',
+
+  // Query & Schema Sharing
+  QUERY_EXPORT: 'query:export',
+  QUERY_IMPORT: 'query:import',
+  SCHEMA_EXPORT: 'schema:export',
+  SCHEMA_IMPORT: 'schema:import',
+  BUNDLE_EXPORT: 'bundle:export',
+  BUNDLE_IMPORT: 'bundle:import',
 } as const;
