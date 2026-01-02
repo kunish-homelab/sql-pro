@@ -24,7 +24,7 @@ import type {
   QueryError,
   QueryErrorHook,
   QueryResults,
-} from '@/types/plugin';
+} from '@shared/types/plugin';
 import process from 'node:process';
 import EventEmitter from 'eventemitter3';
 
@@ -977,13 +977,13 @@ class PluginRuntime extends EventEmitter {
   }
 
   private handleGetCurrentConnection():
-    | import('../../types/plugin').ConnectionInfo
+    | import('@shared/types/plugin').ConnectionInfo
     | null {
     // Placeholder - will be connected to database service
     return null;
   }
 
-  private handleGetAppInfo(): import('../../types/plugin').AppInfo {
+  private handleGetAppInfo(): import('@shared/types/plugin').AppInfo {
     // This will be filled in when the runtime is initialized
     return {
       version: '1.0.0',

@@ -7,7 +7,7 @@
  * Following the service module pattern from database.ts
  */
 
-import type { PluginInfo, PluginManifest } from '@/types/plugin';
+import type { PluginInfo, PluginManifest } from '@shared/types/plugin';
 import type { ManifestValidationResult } from '@/utils/plugins/validate-manifest';
 import { Buffer } from 'node:buffer';
 import { exec } from 'node:child_process';

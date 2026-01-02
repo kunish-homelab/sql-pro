@@ -13,7 +13,11 @@
  * 5. Verify query entries are logged to storage
  */
 
-import type { QueryContext, QueryError, QueryResults } from '@/types/plugin';
+import type {
+  QueryContext,
+  QueryError,
+  QueryResults,
+} from '@shared/types/plugin';
 import { afterEach, beforeEach, describe, expect, it, vi } from 'vitest';
 
 import { queryLifecycleService } from '@/plugin-api/QueryLifecycleAPI';

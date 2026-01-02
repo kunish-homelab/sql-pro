@@ -15,7 +15,7 @@ import type {
   MenuItemOptions,
   NotificationOptions,
   PanelOptions,
-} from '@/types/plugin';
+} from '@shared/types/plugin';
 import { IPC_CHANNELS } from '@shared/types';
 import { BrowserWindow } from 'electron';
 import EventEmitter from 'eventemitter3';

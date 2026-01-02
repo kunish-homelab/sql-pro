@@ -1,4 +1,8 @@
-import type { PluginEvent, PluginInfo, PluginManifest } from '@/types/plugin';
+import type {
+  PluginEvent,
+  PluginInfo,
+  PluginManifest,
+} from '@shared/types/plugin';
 /**
  * Plugin Lifecycle Integration Tests
  *

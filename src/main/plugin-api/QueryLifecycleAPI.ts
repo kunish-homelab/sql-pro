@@ -16,7 +16,7 @@ import type {
   QueryError,
   QueryErrorHook,
   QueryResults,
-} from '@/types/plugin';
+} from '@shared/types/plugin';
 import EventEmitter from 'eventemitter3';
 
 // ============ Types ============

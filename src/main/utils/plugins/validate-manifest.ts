@@ -1,4 +1,4 @@
-import type { PluginManifest, PluginPermission } from '@/types/plugin';
+import type { PluginManifest, PluginPermission } from '@shared/types/plugin';
 import Ajv from 'ajv';
 
 /**

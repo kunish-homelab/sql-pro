@@ -1,4 +1,4 @@
-import type { PluginManifest } from '@/types/plugin';
+import type { PluginManifest } from '@shared/types/plugin';
 // Import mocked modules AFTER mocking
 import * as fs from 'node:fs';
 

@@ -153,8 +153,12 @@ export const useConnectionStore = create<ConnectionState>()(
             connections: newConnections,
             activeConnectionId: connection.id,
             connectionTabOrder: newTabOrder,
+            // Clear selected table when switching to new connection
+            selectedTable: null,
+            selectedSchemaObject: null,
             // Legacy compatibility
             connection,
+            schema: null,
             error: null,
           };
         }),

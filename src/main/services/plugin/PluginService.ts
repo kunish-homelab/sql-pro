@@ -23,7 +23,7 @@ import type {
   PluginListing,
   PluginState,
   PluginUpdate,
-} from '@/types/plugin';
+} from '@shared/types/plugin';
 import { Buffer } from 'node:buffer';
 import Store from 'electron-store';
 import EventEmitter from 'eventemitter3';
@@ -1162,9 +1162,9 @@ class PluginService extends EventEmitter {
    * Returns the potentially modified query context.
    */
   async executeBeforeQueryHooks(
-    context: import('../../types/plugin').QueryContext
+    context: import('@shared/types/plugin').QueryContext
   ): Promise<{
-    context: import('../../types/plugin').QueryContext;
+    context: import('@shared/types/plugin').QueryContext;
     cancelled: boolean;
     cancelReason?: string;
   }> {
@@ -1175,9 +1175,9 @@ class PluginService extends EventEmitter {
    * Execute after-query hooks for all loaded plugins.
    */
   async executeAfterQueryHooks(
-    results: import('../../types/plugin').QueryResults,
-    context: import('../../types/plugin').QueryContext
-  ): Promise<import('../../types/plugin').QueryResults> {
+    results: import('@shared/types/plugin').QueryResults,
+    context: import('@shared/types/plugin').QueryContext
+  ): Promise<import('@shared/types/plugin').QueryResults> {
     return pluginRuntime.executeAfterQueryHooks(results, context);
   }
 
@@ -1185,7 +1185,7 @@ class PluginService extends EventEmitter {
    * Execute query error hooks for all loaded plugins.
    */
   async executeQueryErrorHooks(
-    error: import('../../types/plugin').QueryError
+    error: import('@shared/types/plugin').QueryError
   ): Promise<void> {
     return pluginRuntime.executeQueryErrorHooks(error);
   }

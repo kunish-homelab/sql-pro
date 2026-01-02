@@ -14,7 +14,7 @@ import type {
   PluginManifest,
   PluginRegistryEntry,
   PluginState,
-} from '@/types/plugin';
+} from '@shared/types/plugin';
 import Store from 'electron-store';
 import EventEmitter from 'eventemitter3';
 

@@ -3,7 +3,7 @@ import type {
   QueryContext,
   QueryError,
   QueryResults,
-} from '@/types/plugin';
+} from '@shared/types/plugin';
 /**
  * Tests for PluginRuntime service.
  *
