@@ -187,7 +187,7 @@ export function QueryEditor() {
   useEffect(() => {
     const handleKeyDown = (e: KeyboardEvent) => {
       // History toggle: Cmd/Ctrl+H
-      if ((e.metaKey || e.ctrlKey) && e.key === 'h') {
+      if ((e.metaKey || e.ctrlKey) && e.key === 'h' && !e.shiftKey) {
         e.preventDefault();
         if (showSidePanel && sidePanelTab === 'history') {
           setShowSidePanel(false);
@@ -197,8 +197,19 @@ export function QueryEditor() {
         }
       }
 
+      // Saved Queries toggle: Cmd/Ctrl+Shift+F
+      if ((e.metaKey || e.ctrlKey) && e.shiftKey && e.key === 'F') {
+        e.preventDefault();
+        if (showSidePanel && sidePanelTab === 'saved') {
+          setShowSidePanel(false);
+        } else {
+          setSidePanelTab('saved');
+          setShowSidePanel(true);
+        }
+      }
+
       // Save Query: Cmd/Ctrl+S (when editor has content)
-      if ((e.metaKey || e.ctrlKey) && e.key === 's') {
+      if ((e.metaKey || e.ctrlKey) && e.key === 's' && !e.shiftKey) {
         e.preventDefault();
         if (tabQuery.trim()) {
           setShowSaveQuery(true);
@@ -409,6 +420,7 @@ export function QueryEditor() {
             disabled={!tabQuery.trim()}
             className="gap-1"
             title="Save current query"
+            data-action="save-query"
           >
             <Bookmark className="h-4 w-4" />
             Save Query
@@ -452,6 +464,9 @@ export function QueryEditor() {
           >
             <Bookmark className="h-4 w-4" />
             Saved
+            <kbd className="bg-muted text-muted-foreground ml-1 rounded px-1 py-0.5 font-mono text-[10px]">
+              ⇧⌘F
+            </kbd>
           </Button>
           <Button
             variant="ghost"

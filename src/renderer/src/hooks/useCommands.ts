@@ -1,6 +1,7 @@
 import type { Command } from '@/stores';
 import { useNavigate } from '@tanstack/react-router';
 import {
+  Bookmark,
   Code,
   Database,
   FileDown,
@@ -201,6 +202,20 @@ export function useCommands() {
           button?.click();
         },
       },
+      {
+        id: 'view.toggle-saved-queries',
+        label: 'Toggle Saved Queries',
+        shortcut: formatShortcut('F', { cmd: true, shift: true }),
+        icon: Search,
+        category: 'view',
+        keywords: ['saved', 'queries', 'favorites', 'collections'],
+        action: () => {
+          const button = document.querySelector<HTMLButtonElement>(
+            'button[data-action="toggle-saved-queries"]'
+          );
+          button?.click();
+        },
+      },
 
       // Action commands
       {
@@ -261,6 +276,21 @@ export function useCommands() {
         action: () => {
           const button = document.querySelector<HTMLButtonElement>(
             'button[data-action="execute-query"]'
+          );
+          button?.click();
+        },
+        disabled: () => !connectionStoreRef.current.connection,
+      },
+      {
+        id: 'action.save-query',
+        label: 'Save Query',
+        shortcut: formatShortcut('S', { cmd: true }),
+        icon: Bookmark,
+        category: 'actions',
+        keywords: ['save', 'query', 'bookmark', 'collection'],
+        action: () => {
+          const button = document.querySelector<HTMLButtonElement>(
+            'button[data-action="save-query"]'
           );
           button?.click();
         },
