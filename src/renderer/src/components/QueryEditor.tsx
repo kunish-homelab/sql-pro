@@ -3,10 +3,13 @@ import {
   BarChart3,
   Clock,
   Code,
+  FileDown,
+  FileUp,
   History,
   Loader2,
   Play,
   Search,
+  Share2,
   Sparkles,
   Trash2,
   Wand2,
@@ -23,6 +26,10 @@ import React, {
 
 import { DataAnalysisPanel, NLToSQLDialog } from '@/components/ai';
 import { SettingsDialog } from '@/components/SettingsDialog';
+import {
+  QueryExportDialog,
+  QueryImportDialog,
+} from '@/components/sharing';
 import { Button } from '@/components/ui/button';
 import {
   Dialog,
@@ -128,6 +135,8 @@ export function QueryEditor() {
   const [showNLToSQL, setShowNLToSQL] = useState(false);
   const [showDataAnalysis, setShowDataAnalysis] = useState(false);
   const [showAISettings, setShowAISettings] = useState(false);
+  const [showQueryExport, setShowQueryExport] = useState(false);
+  const [showQueryImport, setShowQueryImport] = useState(false);
   const containerRef = useRef<HTMLDivElement>(null);
 
   // AI store
@@ -352,6 +361,28 @@ export function QueryEditor() {
               >
                 <BarChart3 className="mr-2 h-4 w-4" />
                 Analyze Results
+              </DropdownMenuItem>
+            </DropdownMenuContent>
+          </DropdownMenu>
+          {/* Share Dropdown */}
+          <DropdownMenu>
+            <DropdownMenuTrigger>
+              <Button variant="ghost" size="sm" className="gap-1">
+                <Share2 className="h-4 w-4" />
+                Share
+              </Button>
+            </DropdownMenuTrigger>
+            <DropdownMenuContent align="end" className="min-w-40">
+              <DropdownMenuItem
+                onClick={() => setShowQueryExport(true)}
+                disabled={!tabQuery.trim()}
+              >
+                <FileDown className="mr-2 h-4 w-4" />
+                Export Query
+              </DropdownMenuItem>
+              <DropdownMenuItem onClick={() => setShowQueryImport(true)}>
+                <FileUp className="mr-2 h-4 w-4" />
+                Import Query
               </DropdownMenuItem>
             </DropdownMenuContent>
           </DropdownMenu>
@@ -696,6 +727,27 @@ export function QueryEditor() {
 
       {/* AI: Settings Dialog */}
       <SettingsDialog open={showAISettings} onOpenChange={setShowAISettings} />
+
+      {/* Query Export Dialog */}
+      <QueryExportDialog
+        open={showQueryExport}
+        onOpenChange={setShowQueryExport}
+        sql={tabQuery}
+        initialDatabaseContext={connection?.filename || connection?.path || ''}
+        onExportComplete={() => {
+          setShowQueryExport(false);
+        }}
+      />
+
+      {/* Query Import Dialog */}
+      <QueryImportDialog
+        open={showQueryImport}
+        onOpenChange={setShowQueryImport}
+        onImportComplete={(query) => {
+          handleQueryChange(query.sql);
+          setShowQueryImport(false);
+        }}
+      />
     </div>
   );
 }
