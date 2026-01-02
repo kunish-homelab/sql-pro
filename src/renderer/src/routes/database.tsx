@@ -4,6 +4,12 @@ import { useCallback, useEffect, useState } from 'react';
 import { ConnectionSettingsDialog } from '@/components/ConnectionSettingsDialog';
 import { DatabaseView } from '@/components/DatabaseView';
 import { PasswordDialog } from '@/components/PasswordDialog';
+import {
+  QueryExportDialog,
+  QueryImportDialog,
+  SchemaExportDialog,
+  SchemaImportDialog,
+} from '@/components/sharing';
 import { sqlPro } from '@/lib/api';
 import {
   useChangesStore,
@@ -46,6 +52,12 @@ export function DatabasePage() {
   const [pendingIsEncrypted, setPendingIsEncrypted] = useState(false);
   const [pendingSettings, setPendingSettings] =
     useState<ConnectionSettings | null>(null);
+
+  // Sharing dialog states
+  const [queryExportDialogOpen, setQueryExportDialogOpen] = useState(false);
+  const [queryImportDialogOpen, setQueryImportDialogOpen] = useState(false);
+  const [schemaExportDialogOpen, setSchemaExportDialogOpen] = useState(false);
+  const [schemaImportDialogOpen, setSchemaImportDialogOpen] = useState(false);
 
   // Navigate back to welcome when no connections
   useEffect(() => {
@@ -302,6 +314,66 @@ export function DatabasePage() {
         dbPath={pendingPath || ''}
         onSubmit={handlePasswordSubmit}
       />
+
+      {/* Hidden trigger buttons for menu actions */}
+      <button
+        data-action="export-query"
+        className="hidden"
+        onClick={() => setQueryExportDialogOpen(true)}
+        aria-hidden="true"
+      />
+      <button
+        data-action="import-query"
+        className="hidden"
+        onClick={() => setQueryImportDialogOpen(true)}
+        aria-hidden="true"
+      />
+      <button
+        data-action="export-schema"
+        className="hidden"
+        onClick={() => setSchemaExportDialogOpen(true)}
+        aria-hidden="true"
+      />
+      <button
+        data-action="import-schema"
+        className="hidden"
+        onClick={() => setSchemaImportDialogOpen(true)}
+        aria-hidden="true"
+      />
+
+      {/* Sharing Dialogs */}
+      {activeConnectionId && (
+        <>
+          <QueryExportDialog
+            open={queryExportDialogOpen}
+            onOpenChange={setQueryExportDialogOpen}
+            sql=""
+            initialDatabaseContext={connection?.filename || ''}
+          />
+          <QueryImportDialog
+            open={queryImportDialogOpen}
+            onOpenChange={setQueryImportDialogOpen}
+            onImportComplete={() => {
+              // Query import from menu - no specific action needed
+              setQueryImportDialogOpen(false);
+            }}
+          />
+          <SchemaExportDialog
+            open={schemaExportDialogOpen}
+            onOpenChange={setSchemaExportDialogOpen}
+            connectionId={activeConnectionId}
+            databaseName={connection?.filename || ''}
+          />
+          <SchemaImportDialog
+            open={schemaImportDialogOpen}
+            onOpenChange={setSchemaImportDialogOpen}
+            onImportComplete={() => {
+              // Schema import from menu - no specific action needed
+              setSchemaImportDialogOpen(false);
+            }}
+          />
+        </>
+      )}
     </>
   );
 }

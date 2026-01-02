@@ -375,7 +375,7 @@ export function SchemaImportDialog({
                               <span className="font-medium">Tables:</span>{' '}
                               {stats.tables}
                             </div>
-                            {stats.views > 0 && (
+                            {(stats.views ?? 0) > 0 && (
                               <div>
                                 <span className="font-medium">Views:</span>{' '}
                                 {stats.views}
@@ -404,7 +404,7 @@ export function SchemaImportDialog({
                                 {stats.indexes}
                               </div>
                             )}
-                            {stats.triggers > 0 && (
+                            {(stats.triggers ?? 0) > 0 && (
                               <div>
                                 <span className="font-medium">Triggers:</span>{' '}
                                 {stats.triggers}

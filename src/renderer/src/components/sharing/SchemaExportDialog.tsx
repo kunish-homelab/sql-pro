@@ -342,7 +342,11 @@ export function SchemaExportDialog({
                 </Label>
                 <Select
                   value={format}
-                  onValueChange={(value: 'json' | 'sql') => setFormat(value)}
+                  onValueChange={(value) => {
+                    if (value === 'json' || value === 'sql') {
+                      setFormat(value);
+                    }
+                  }}
                   disabled={isExporting || isLoadingSchema}
                 >
                   <SelectTrigger id="format">
