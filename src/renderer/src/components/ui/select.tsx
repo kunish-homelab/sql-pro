@@ -20,6 +20,7 @@ function SelectGroup({ className, ...props }: SelectPrimitive.Group.Props) {
 
 interface SelectValueProps extends SelectPrimitive.Value.Props {
   placeholder?: string;
+  children?: React.ReactNode;
 }
 
 function SelectValue({

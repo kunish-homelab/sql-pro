@@ -212,14 +212,20 @@ export function ProfileForm({
           Folder <span className="text-muted-foreground">(optional)</span>
         </label>
         <Select
-          value={folderId ?? ''}
-          onValueChange={(value) => setFolderId(value || undefined)}
+          value={folderId ?? '__none__'}
+          onValueChange={(value) =>
+            setFolderId(value === '__none__' ? undefined : (value ?? undefined))
+          }
         >
           <SelectTrigger id="folder" className="w-full">
-            <SelectValue placeholder="No folder (root level)" />
+            <SelectValue placeholder="No folder (root level)">
+              {folderId
+                ? getFolderPath(folders.find((f) => f.id === folderId)!)
+                : 'No folder (root level)'}
+            </SelectValue>
           </SelectTrigger>
           <SelectContent>
-            <SelectItem value="">No folder (root level)</SelectItem>
+            <SelectItem value="__none__">No folder (root level)</SelectItem>
             {rootFolders.map((folder) => (
               <SelectItem key={folder.id} value={folder.id}>
                 {getFolderPath(folder)}
