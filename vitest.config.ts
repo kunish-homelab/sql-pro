@@ -3,11 +3,14 @@ import path from 'node:path';
 
 export default defineConfig({
   resolve: {
-    alias: {
-      '@': path.resolve(__dirname, './src/main'),
-      '@shared': path.resolve(__dirname, './src/shared'),
-      '@renderer': path.resolve(__dirname, './src/renderer/src'),
-    },
+    alias: [
+      // Renderer paths - must come before main to handle renderer tests correctly
+      { find: '@renderer', replacement: path.resolve(__dirname, './src/renderer/src') },
+      // Main paths - for renderer tests, @ should point to renderer
+      { find: '@', replacement: path.resolve(__dirname, './src/renderer/src') },
+      // Shared paths
+      { find: '@shared', replacement: path.resolve(__dirname, './src/shared') },
+    ],
   },
   test: {
     globals: true,
