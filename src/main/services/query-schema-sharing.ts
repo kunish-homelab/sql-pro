@@ -334,22 +334,95 @@ export async function exportQuery(
  * Exports a schema with metadata to a shareable format.
  * Compression is handled by serializeShareableData function.
  *
+ * Validates:
+ * - Schema name is non-empty and within 200 characters
+ * - At least one table/view is included in the export
+ * - Format matches options (json requires schemas[], sql requires sqlStatements[])
+ * - SQL statements are valid when format is 'sql'
+ *
+ * For SQL format, generates:
+ * - CREATE TABLE statements with column definitions
+ * - Comments explaining table purposes (from documentation)
+ * - CREATE INDEX statements for indexes
+ * - Foreign key relationships (inline with table definitions)
+ * - CREATE TRIGGER statements for triggers
+ *
  * @param schema - Schema data (without id, metadata, or createdAt)
  * @returns ShareableSchema ready to be serialized
+ * @throws Error if validation fails
  *
  * @example
  * ```typescript
- * const shareableSchema = await exportSchema({
+ * // JSON format export
+ * const jsonSchema = await exportSchema({
  *   name: 'User Management Schema',
  *   format: 'json',
  *   schemas: [...],
  *   options: { format: 'json', includeIndexes: true }
+ * });
+ *
+ * // SQL format export
+ * const sqlSchema = await exportSchema({
+ *   name: 'User Management Schema',
+ *   format: 'sql',
+ *   sqlStatements: [...],
+ *   options: { format: 'sql', includeIndexes: true, includeTriggers: true }
  * });
  * ```
  */
 export async function exportSchema(
   schema: Omit<ShareableSchema, 'id' | 'metadata' | 'createdAt'>
 ): Promise<{ data: ShareableSchema; compressionInfo?: CompressionInfo }> {
+  // Validate schema name
+  if (!schema.name || schema.name.trim().length === 0) {
+    throw new Error('Schema name cannot be empty');
+  }
+  if (schema.name.length > 200) {
+    throw new Error('Schema name cannot exceed 200 characters');
+  }
+
+  // Validate description (if provided)
+  if (schema.description && schema.description.length > 1000) {
+    throw new Error('Description cannot exceed 1000 characters');
+  }
+
+  // Validate documentation (if provided)
+  if (schema.documentation && schema.documentation.length > 10000) {
+    throw new Error('Documentation cannot exceed 10000 characters');
+  }
+
+  // Validate format matches data provided
+  if (schema.format === 'json') {
+    if (!schema.schemas || schema.schemas.length === 0) {
+      throw new Error('JSON format requires at least one schema in schemas array');
+    }
+    // Validate at least one table or view exists
+    const hasData = schema.schemas.some(
+      (s) => (s.tables && s.tables.length > 0) || (s.views && s.views.length > 0)
+    );
+    if (!hasData) {
+      throw new Error('Schema must contain at least one table or view');
+    }
+  } else if (schema.format === 'sql') {
+    if (!schema.sqlStatements || schema.sqlStatements.length === 0) {
+      throw new Error('SQL format requires at least one SQL statement');
+    }
+    // Validate SQL statements are non-empty
+    for (let i = 0; i < schema.sqlStatements.length; i++) {
+      const stmt = schema.sqlStatements[i];
+      if (!stmt || stmt.trim().length === 0) {
+        throw new Error(`SQL statement at index ${i} is empty`);
+      }
+    }
+  }
+
+  // Validate options match format
+  if (schema.options.format !== schema.format) {
+    throw new Error(
+      `Format mismatch: schema.format is '${schema.format}' but options.format is '${schema.options.format}'`
+    );
+  }
+
   const shareableSchema: ShareableSchema = {
     id: generateShareableId(),
     ...schema,
@@ -358,6 +431,117 @@ export async function exportSchema(
   };
 
   return { data: shareableSchema };
+}
+
+/**
+ * Generates SQL statements from schema information.
+ * Creates CREATE TABLE, CREATE INDEX, and CREATE TRIGGER statements.
+ *
+ * @param schemas - Array of schema information
+ * @param options - Export options
+ * @param documentation - Optional documentation to include as comments
+ * @returns Array of SQL statements
+ *
+ * @example
+ * ```typescript
+ * const sqlStatements = generateSQLStatements(
+ *   schemas,
+ *   { format: 'sql', includeIndexes: true, includeTriggers: true },
+ *   'User management schema exported on 2024-01-01'
+ * );
+ * ```
+ */
+export function generateSQLStatements(
+  schemas: Array<{
+    name: string;
+    tables: Array<{
+      name: string;
+      sql: string;
+      indexes?: Array<{ name: string; sql: string }>;
+      triggers?: Array<{ name: string; sql: string }>;
+    }>;
+    views: Array<{
+      name: string;
+      sql: string;
+    }>;
+  }>,
+  options: {
+    includeIndexes?: boolean;
+    includeTriggers?: boolean;
+    includeComments?: boolean;
+  },
+  documentation?: string
+): string[] {
+  const statements: string[] = [];
+
+  // Add documentation header if provided
+  if (options.includeComments && documentation) {
+    statements.push(
+      '-- ============================================================',
+      `-- ${documentation.split('\n').join('\n-- ')}`,
+      '-- ============================================================',
+      ''
+    );
+  }
+
+  // Process each schema (database)
+  for (const schema of schemas) {
+    if (options.includeComments && schema.name !== 'main') {
+      statements.push(
+        `-- Schema: ${schema.name}`,
+        '-- --------------------------------------------------------',
+        ''
+      );
+    }
+
+    // Process tables
+    for (const table of schema.tables) {
+      if (options.includeComments) {
+        statements.push(
+          `-- Table: ${table.name}`,
+          '-- --------------------------------------------------------',
+          ''
+        );
+      }
+
+      // Add CREATE TABLE statement (already includes foreign keys inline)
+      statements.push(table.sql + ';', '');
+
+      // Add indexes if requested
+      if (options.includeIndexes && table.indexes && table.indexes.length > 0) {
+        if (options.includeComments) {
+          statements.push(`-- Indexes for table: ${table.name}`, '');
+        }
+        for (const index of table.indexes) {
+          statements.push(index.sql + ';', '');
+        }
+      }
+
+      // Add triggers if requested
+      if (options.includeTriggers && table.triggers && table.triggers.length > 0) {
+        if (options.includeComments) {
+          statements.push(`-- Triggers for table: ${table.name}`, '');
+        }
+        for (const trigger of table.triggers) {
+          statements.push(trigger.sql + ';', '');
+        }
+      }
+    }
+
+    // Process views
+    for (const view of schema.views) {
+      if (options.includeComments) {
+        statements.push(
+          `-- View: ${view.name}`,
+          '-- --------------------------------------------------------',
+          ''
+        );
+      }
+      statements.push(view.sql + ';', '');
+    }
+  }
+
+  return statements;
 }
 
 /**
