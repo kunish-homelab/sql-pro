@@ -6,17 +6,23 @@ import {
   FileDown,
   FileText,
   GitCompare,
+  GitFork,
   HelpCircle,
   History,
   Keyboard,
   Monitor,
   Moon,
   PanelLeft,
+  PanelLeftClose,
+  Plus,
   RefreshCw,
+  Save,
   Search,
   Settings,
   Sun,
   Table,
+  Trash2,
+  Undo2,
   X,
 } from 'lucide-react';
 import { useEffect, useRef } from 'react';
@@ -87,8 +93,16 @@ export function useCommands() {
   useEffect(() => {
     const handleKeyDown = (e: KeyboardEvent) => {
       const { getShortcut } = shortcutsStoreRef.current;
+      const { activeConnectionId } = connectionStoreRef.current;
 
-      // Command palette shortcut
+      // Skip shortcuts when typing in inputs (except for specific shortcuts)
+      const target = e.target as HTMLElement;
+      const isInputField =
+        target.tagName === 'INPUT' ||
+        target.tagName === 'TEXTAREA' ||
+        target.isContentEditable;
+
+      // Command palette shortcut - works everywhere
       const commandPaletteBinding = getShortcut('action.command-palette');
       if (matchesBinding(e, commandPaletteBinding)) {
         e.preventDefault();
@@ -96,16 +110,121 @@ export function useCommands() {
         return;
       }
 
+      // Focus search shortcut - works everywhere
+      const focusSearchBinding = getShortcut('action.focus-search');
+      if (matchesBinding(e, focusSearchBinding)) {
+        e.preventDefault();
+        const searchInput = document.querySelector<HTMLInputElement>(
+          'input[placeholder*="Search"]'
+        );
+        if (searchInput) {
+          searchInput.focus();
+          searchInput.select();
+        }
+        return;
+      }
+
+      // Skip other shortcuts if typing in input
+      if (isInputField) return;
+
       // Refresh table shortcut (prevent browser refresh)
       const refreshTableBinding = getShortcut('action.refresh-table');
       if (matchesBinding(e, refreshTableBinding)) {
         e.preventDefault();
-        const { activeConnectionId } = connectionStoreRef.current;
         if (activeConnectionId) {
           queryClient.invalidateQueries({
             queryKey: ['tableData', activeConnectionId],
           });
         }
+        return;
+      }
+
+      // Toggle sidebar shortcut
+      const toggleSidebarBinding = getShortcut('nav.toggle-sidebar');
+      if (matchesBinding(e, toggleSidebarBinding)) {
+        e.preventDefault();
+        const sidebarToggle = document.querySelector<HTMLButtonElement>(
+          'button[data-action="toggle-sidebar"]'
+        );
+        sidebarToggle?.click();
+        return;
+      }
+
+      // Toggle schema details panel shortcut
+      const toggleSchemaDetailsBinding = getShortcut(
+        'view.toggle-schema-details'
+      );
+      if (matchesBinding(e, toggleSchemaDetailsBinding)) {
+        e.preventDefault();
+        const schemaToggle = document.querySelector<HTMLButtonElement>(
+          'button[data-action="toggle-schema-details"]'
+        );
+        schemaToggle?.click();
+        return;
+      }
+
+      // Save changes shortcut
+      const saveChangesBinding = getShortcut('action.save-changes');
+      if (matchesBinding(e, saveChangesBinding)) {
+        e.preventDefault();
+        const saveButton = document.querySelector<HTMLButtonElement>(
+          'button[data-action="save-changes"]'
+        );
+        saveButton?.click();
+        return;
+      }
+
+      // Discard changes shortcut
+      const discardChangesBinding = getShortcut('action.discard-changes');
+      if (matchesBinding(e, discardChangesBinding)) {
+        e.preventDefault();
+        const discardButton = document.querySelector<HTMLButtonElement>(
+          'button[data-action="discard-changes"]'
+        );
+        discardButton?.click();
+        return;
+      }
+
+      // Add row shortcut
+      const addRowBinding = getShortcut('action.add-row');
+      if (matchesBinding(e, addRowBinding)) {
+        e.preventDefault();
+        const addRowButton = document.querySelector<HTMLButtonElement>(
+          'button[data-action="add-row"]'
+        );
+        addRowButton?.click();
+        return;
+      }
+
+      // Delete row shortcut
+      const deleteRowBinding = getShortcut('action.delete-row');
+      if (matchesBinding(e, deleteRowBinding)) {
+        e.preventDefault();
+        const deleteRowButton = document.querySelector<HTMLButtonElement>(
+          'button[data-action="delete-row"]'
+        );
+        deleteRowButton?.click();
+        return;
+      }
+
+      // Export data shortcut
+      const exportDataBinding = getShortcut('action.export-data');
+      if (matchesBinding(e, exportDataBinding)) {
+        e.preventDefault();
+        const exportButton = document.querySelector<HTMLButtonElement>(
+          'button[data-action="export-data"]'
+        );
+        exportButton?.click();
+        return;
+      }
+
+      // ER Diagram shortcut
+      const erDiagramBinding = getShortcut('nav.er-diagram');
+      if (matchesBinding(e, erDiagramBinding)) {
+        e.preventDefault();
+        document
+          .querySelector<HTMLButtonElement>('[data-tab="diagram"]')
+          ?.click();
       }
     };
 
@@ -177,6 +296,33 @@ export function useCommands() {
             ?.click();
         },
       },
+      {
+        id: 'nav.er-diagram',
+        label: 'Open ER Diagram',
+        shortcut: getShortcutDisplay('nav.er-diagram'),
+        icon: GitFork,
+        category: 'navigation',
+        keywords: ['er', 'diagram', 'entity', 'relationship', 'schema'],
+        action: () => {
+          document
+            .querySelector<HTMLButtonElement>('[data-tab="diagram"]')
+            ?.click();
+        },
+      },
+      {
+        id: 'nav.toggle-sidebar',
+        label: 'Toggle Sidebar',
+        shortcut: getShortcutDisplay('nav.toggle-sidebar'),
+        icon: PanelLeftClose,
+        category: 'navigation',
+        keywords: ['sidebar', 'toggle', 'hide', 'show', 'panel'],
+        action: () => {
+          const sidebarToggle = document.querySelector<HTMLButtonElement>(
+            'button[data-action="toggle-sidebar"]'
+          );
+          sidebarToggle?.click();
+        },
+      },
 
       // View commands
       {
@@ -216,6 +362,20 @@ export function useCommands() {
         action: () => {
           const button = document.querySelector<HTMLButtonElement>(
             'button[data-action="toggle-history"]'
+          );
+          button?.click();
+        },
+      },
+      {
+        id: 'view.toggle-schema-details',
+        label: 'Toggle Schema Details',
+        shortcut: getShortcutDisplay('view.toggle-schema-details'),
+        icon: Table,
+        category: 'view',
+        keywords: ['schema', 'details', 'info', 'columns', 'indexes'],
+        action: () => {
+          const button = document.querySelector<HTMLButtonElement>(
+            'button[data-action="toggle-schema-details"]'
           );
           button?.click();
         },
@@ -302,6 +462,7 @@ export function useCommands() {
       {
         id: 'action.disconnect',
         label: 'Close Database',
+        shortcut: getShortcutDisplay('action.close-database'),
         icon: X,
         category: 'actions',
         keywords: ['disconnect', 'close', 'database'],
@@ -324,6 +485,98 @@ export function useCommands() {
           }
         },
         disabled: () => !connectionStoreRef.current.connection,
+      },
+      {
+        id: 'action.save-changes',
+        label: 'Save Changes',
+        shortcut: getShortcutDisplay('action.save-changes'),
+        icon: Save,
+        category: 'actions',
+        keywords: ['save', 'apply', 'commit', 'changes'],
+        action: () => {
+          const button = document.querySelector<HTMLButtonElement>(
+            'button[data-action="save-changes"]'
+          );
+          button?.click();
+        },
+        disabled: () => !changesStoreRef.current.hasChanges(),
+      },
+      {
+        id: 'action.discard-changes',
+        label: 'Discard Changes',
+        shortcut: getShortcutDisplay('action.discard-changes'),
+        icon: Undo2,
+        category: 'actions',
+        keywords: ['discard', 'revert', 'undo', 'cancel', 'changes'],
+        action: () => {
+          const button = document.querySelector<HTMLButtonElement>(
+            'button[data-action="discard-changes"]'
+          );
+          button?.click();
+        },
+        disabled: () => !changesStoreRef.current.hasChanges(),
+      },
+      {
+        id: 'action.add-row',
+        label: 'Add Row',
+        shortcut: getShortcutDisplay('action.add-row'),
+        icon: Plus,
+        category: 'actions',
+        keywords: ['add', 'new', 'insert', 'row', 'record'],
+        action: () => {
+          const button = document.querySelector<HTMLButtonElement>(
+            'button[data-action="add-row"]'
+          );
+          button?.click();
+        },
+        disabled: () => !connectionStoreRef.current.selectedTable,
+      },
+      {
+        id: 'action.delete-row',
+        label: 'Delete Row',
+        shortcut: getShortcutDisplay('action.delete-row'),
+        icon: Trash2,
+        category: 'actions',
+        keywords: ['delete', 'remove', 'row', 'record'],
+        action: () => {
+          const button = document.querySelector<HTMLButtonElement>(
+            'button[data-action="delete-row"]'
+          );
+          button?.click();
+        },
+        disabled: () => !connectionStoreRef.current.selectedTable,
+      },
+      {
+        id: 'action.export-data',
+        label: 'Export Data',
+        shortcut: getShortcutDisplay('action.export-data'),
+        icon: FileDown,
+        category: 'actions',
+        keywords: ['export', 'download', 'csv', 'json', 'excel'],
+        action: () => {
+          const button = document.querySelector<HTMLButtonElement>(
+            'button[data-action="export-data"]'
+          );
+          button?.click();
+        },
+        disabled: () => !connectionStoreRef.current.selectedTable,
+      },
+      {
+        id: 'action.focus-search',
+        label: 'Focus Search',
+        shortcut: getShortcutDisplay('action.focus-search'),
+        icon: Search,
+        category: 'actions',
+        keywords: ['search', 'find', 'filter', 'focus'],
+        action: () => {
+          const searchInput = document.querySelector<HTMLInputElement>(
+            'input[placeholder*="Search"]'
+          );
+          if (searchInput) {
+            searchInput.focus();
+            searchInput.select();
+          }
+        },
       },
       {
         id: 'action.compare-schemas',

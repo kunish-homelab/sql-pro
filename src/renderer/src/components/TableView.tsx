@@ -533,6 +533,7 @@ export function TableView({
               onClick={() => setShowExportDialog(true)}
               className="gap-2"
               disabled={rows.length === 0}
+              data-action="export-data"
             >
               <Download className="h-4 w-4" />
               Export
@@ -545,6 +546,7 @@ export function TableView({
                 size="sm"
                 onClick={handleAddRow}
                 className="gap-2"
+                data-action="add-row"
               >
                 <Plus className="h-4 w-4" />
                 Add Row
@@ -572,11 +574,12 @@ export function TableView({
                   size="sm"
                   onClick={() => onDetailsToggle?.(!showDetailsPanel)}
                   className="gap-1.5"
+                  data-action="toggle-schema-details"
                 >
                   <Info className="h-4 w-4" />
                   <span className="hidden sm:inline">Schema</span>
                   <ShortcutKbd
-                    binding={{ key: '4', modifiers: { cmd: true } }}
+                    action="view.toggle-schema-details"
                     className="hidden sm:inline-flex"
                   />
                 </Button>

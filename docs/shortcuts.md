@@ -11,6 +11,8 @@ SQL Pro is designed for keyboard-driven productivity. This reference documents a
 | Open Settings       | <kbd>Cmd</kbd> + <kbd>,</kbd>     | <kbd>Ctrl</kbd> + <kbd>,</kbd>     |
 | Open Database       | <kbd>Cmd</kbd> + <kbd>O</kbd>     | <kbd>Ctrl</kbd> + <kbd>O</kbd>     |
 | Show Shortcuts Help | <kbd>Cmd</kbd> + <kbd>/</kbd>     | <kbd>Ctrl</kbd> + <kbd>/</kbd>     |
+| Focus Search        | <kbd>Cmd</kbd> + <kbd>F</kbd>     | <kbd>Ctrl</kbd> + <kbd>F</kbd>     |
+| Toggle Sidebar      | <kbd>Cmd</kbd> + <kbd>B</kbd>     | <kbd>Ctrl</kbd> + <kbd>B</kbd>     |
 
 ## Navigation
 
@@ -20,8 +22,12 @@ Navigate between different areas of the application.
 | --------------------- | ------------------------------------------------ | ------------------------------------------------- |
 | Open Data Browser     | <kbd>Cmd</kbd> + <kbd>1</kbd>                    | <kbd>Ctrl</kbd> + <kbd>1</kbd>                    |
 | Open SQL Query Editor | <kbd>Cmd</kbd> + <kbd>2</kbd>                    | <kbd>Ctrl</kbd> + <kbd>2</kbd>                    |
+| Open ER Diagram       | <kbd>Cmd</kbd> + <kbd>3</kbd>                    | <kbd>Ctrl</kbd> + <kbd>3</kbd>                    |
+| Toggle Schema Details | <kbd>Cmd</kbd> + <kbd>4</kbd>                    | <kbd>Ctrl</kbd> + <kbd>4</kbd>                    |
+| Open Schema Compare   | <kbd>Cmd</kbd> + <kbd>5</kbd>                    | <kbd>Ctrl</kbd> + <kbd>5</kbd>                    |
 | Search Tables         | <kbd>Cmd</kbd> + <kbd>Shift</kbd> + <kbd>P</kbd> | <kbd>Ctrl</kbd> + <kbd>Shift</kbd> + <kbd>P</kbd> |
 | Toggle Query History  | <kbd>Cmd</kbd> + <kbd>H</kbd>                    | <kbd>Ctrl</kbd> + <kbd>H</kbd>                    |
+| Toggle Sidebar        | <kbd>Cmd</kbd> + <kbd>B</kbd>                    | <kbd>Ctrl</kbd> + <kbd>B</kbd>                    |
 
 ::: tip Command Palette
 Press <kbd>Cmd/Ctrl</kbd> + <kbd>K</kbd> to open the Command Palette for quick access to all commands. Type to search and press Enter to execute.
@@ -115,9 +121,17 @@ Global action shortcuts available throughout the application.
 | Refresh Schema          | <kbd>Cmd</kbd> + <kbd>Shift</kbd> + <kbd>R</kbd> | <kbd>Ctrl</kbd> + <kbd>Shift</kbd> + <kbd>R</kbd> |
 | Refresh Table           | <kbd>Cmd</kbd> + <kbd>R</kbd>                    | <kbd>Ctrl</kbd> + <kbd>R</kbd>                    |
 | View Unsaved Changes    | <kbd>Cmd</kbd> + <kbd>Shift</kbd> + <kbd>S</kbd> | <kbd>Ctrl</kbd> + <kbd>Shift</kbd> + <kbd>S</kbd> |
+| Save Changes            | <kbd>Cmd</kbd> + <kbd>S</kbd>                    | <kbd>Ctrl</kbd> + <kbd>S</kbd>                    |
+| Discard Changes         | <kbd>Cmd</kbd> + <kbd>Shift</kbd> + <kbd>Z</kbd> | <kbd>Ctrl</kbd> + <kbd>Shift</kbd> + <kbd>Z</kbd> |
+| Add Row                 | <kbd>Cmd</kbd> + <kbd>N</kbd>                    | <kbd>Ctrl</kbd> + <kbd>N</kbd>                    |
+| Delete Row              | <kbd>Cmd</kbd> + <kbd>Backspace</kbd>            | <kbd>Ctrl</kbd> + <kbd>Backspace</kbd>            |
+| Export Data             | <kbd>Cmd</kbd> + <kbd>Shift</kbd> + <kbd>E</kbd> | <kbd>Ctrl</kbd> + <kbd>Shift</kbd> + <kbd>E</kbd> |
+| Focus Search            | <kbd>Cmd</kbd> + <kbd>F</kbd>                    | <kbd>Ctrl</kbd> + <kbd>F</kbd>                    |
+| Close Database          | <kbd>Cmd</kbd> + <kbd>W</kbd>                    | <kbd>Ctrl</kbd> + <kbd>W</kbd>                    |
 | Open Database           | <kbd>Cmd</kbd> + <kbd>O</kbd>                    | <kbd>Ctrl</kbd> + <kbd>O</kbd>                    |
 | Open Settings           | <kbd>Cmd</kbd> + <kbd>,</kbd>                    | <kbd>Ctrl</kbd> + <kbd>,</kbd>                    |
 | Show Keyboard Shortcuts | <kbd>Cmd</kbd> + <kbd>/</kbd>                    | <kbd>Ctrl</kbd> + <kbd>/</kbd>                    |
+| New Window              | <kbd>Cmd</kbd> + <kbd>Shift</kbd> + <kbd>N</kbd> | <kbd>Ctrl</kbd> + <kbd>Shift</kbd> + <kbd>N</kbd> |
 
 ## Vim Mode
 

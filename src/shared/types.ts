@@ -1724,8 +1724,11 @@ export type ShortcutAction =
   | 'nav.query-editor'
   | 'nav.search-tables'
   | 'nav.schema-compare'
+  | 'nav.er-diagram'
+  | 'nav.toggle-sidebar'
   // View
   | 'view.toggle-history'
+  | 'view.toggle-schema-details'
   // Actions
   | 'action.command-palette'
   | 'action.refresh-schema'
@@ -1734,6 +1737,13 @@ export type ShortcutAction =
   | 'action.view-changes'
   | 'action.open-database'
   | 'action.new-window'
+  | 'action.close-database'
+  | 'action.save-changes'
+  | 'action.discard-changes'
+  | 'action.add-row'
+  | 'action.delete-row'
+  | 'action.export-data'
+  | 'action.focus-search'
   // Settings
   | 'settings.open'
   // Help
@@ -1799,7 +1809,10 @@ export const DEFAULT_SHORTCUTS: ShortcutPreset = {
   'nav.query-editor': { key: '2', modifiers: { cmd: true } },
   'nav.search-tables': { key: 'p', modifiers: { cmd: true, shift: true } },
   'nav.schema-compare': { key: '5', modifiers: { cmd: true } },
+  'nav.er-diagram': { key: '3', modifiers: { cmd: true } },
+  'nav.toggle-sidebar': { key: 'b', modifiers: { cmd: true } },
   'view.toggle-history': { key: 'h', modifiers: { cmd: true } },
+  'view.toggle-schema-details': { key: '4', modifiers: { cmd: true } },
   'action.command-palette': { key: 'k', modifiers: { cmd: true } },
   'action.refresh-schema': { key: 'r', modifiers: { cmd: true, shift: true } },
   'action.refresh-table': { key: 'r', modifiers: { cmd: true } },
@@ -1807,6 +1820,13 @@ export const DEFAULT_SHORTCUTS: ShortcutPreset = {
   'action.view-changes': { key: 's', modifiers: { cmd: true, shift: true } },
   'action.open-database': { key: 'o', modifiers: { cmd: true } },
   'action.new-window': { key: 'n', modifiers: { cmd: true, shift: true } },
+  'action.close-database': { key: 'w', modifiers: { cmd: true } },
+  'action.save-changes': { key: 's', modifiers: { cmd: true } },
+  'action.discard-changes': { key: 'z', modifiers: { cmd: true, shift: true } },
+  'action.add-row': { key: 'n', modifiers: { cmd: true } },
+  'action.delete-row': { key: 'Backspace', modifiers: { cmd: true } },
+  'action.export-data': { key: 'e', modifiers: { cmd: true, shift: true } },
+  'action.focus-search': { key: 'f', modifiers: { cmd: true } },
   'settings.open': { key: ',', modifiers: { cmd: true } },
   'help.shortcuts': { key: '/', modifiers: { cmd: true } },
 };

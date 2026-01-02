@@ -411,6 +411,7 @@ export function DiffPreview({ onClose, onApplied }: DiffPreviewProps) {
           className="flex-1"
           onClick={handleDiscard}
           disabled={isApplying}
+          data-action="discard-changes"
         >
           <Undo2 className="mr-1.5 h-3.5 w-3.5" />
           Discard
@@ -420,6 +421,7 @@ export function DiffPreview({ onClose, onApplied }: DiffPreviewProps) {
           className="flex-1"
           onClick={handleApply}
           disabled={isApplying || isValidating}
+          data-action="save-changes"
         >
           <Check className="mr-1.5 h-3.5 w-3.5" />
           {isApplying

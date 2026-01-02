@@ -1,4 +1,4 @@
-import type {ShortcutAction} from '@/stores/keyboard-shortcuts-store';
+import type { ShortcutAction } from '@/stores/keyboard-shortcuts-store';
 import {
   ArrowUp,
   Command,
@@ -18,8 +18,7 @@ import { cn } from '@/lib/utils';
 import {
   formatShortcutBinding,
   isMac,
-  
-  useKeyboardShortcutsStore
+  useKeyboardShortcutsStore,
 } from '@/stores/keyboard-shortcuts-store';
 
 interface ShortcutItem {
@@ -45,16 +44,41 @@ const staticShortcuts: ShortcutItem[] = [
   { keys: ['Page↑'], description: 'Previous page', category: 'navigation' },
   { keys: ['Page↓'], description: 'Next page', category: 'navigation' },
 
-  // Editing
+  // Editing - with action IDs for dynamic shortcuts
   { keys: ['Enter'], description: 'Edit cell', category: 'editing' },
   { keys: ['Escape'], description: 'Cancel edit', category: 'editing' },
-  { keys: ['⌘', 'S'], description: 'Save changes', category: 'editing' },
-  { keys: ['⌘', 'Z'], description: 'Undo change', category: 'editing' },
-  { keys: ['Delete'], description: 'Delete row', category: 'editing' },
-  { keys: ['⌘', 'N'], description: 'New row', category: 'editing' },
+  {
+    keys: [],
+    description: 'Save changes',
+    category: 'editing',
+    action: 'action.save-changes',
+  },
+  {
+    keys: [],
+    description: 'Discard changes',
+    category: 'editing',
+    action: 'action.discard-changes',
+  },
+  {
+    keys: [],
+    description: 'Add row',
+    category: 'editing',
+    action: 'action.add-row',
+  },
+  {
+    keys: [],
+    description: 'Delete row',
+    category: 'editing',
+    action: 'action.delete-row',
+  },
 
   // Search & Filter
-  { keys: ['⌘', 'F'], description: 'Search in table', category: 'search' },
+  {
+    keys: [],
+    description: 'Search in table',
+    category: 'search',
+    action: 'action.focus-search',
+  },
   { keys: ['⌘', 'G'], description: 'Find next', category: 'search' },
   { keys: ['⇧', '⌘', 'G'], description: 'Find previous', category: 'search' },
 
@@ -71,7 +95,18 @@ const staticShortcuts: ShortcutItem[] = [
     category: 'general',
     action: 'action.refresh-table',
   },
-  { keys: ['⌘', 'E'], description: 'Export data', category: 'general' },
+  {
+    keys: [],
+    description: 'Export data',
+    category: 'general',
+    action: 'action.export-data',
+  },
+  {
+    keys: [],
+    description: 'Toggle sidebar',
+    category: 'general',
+    action: 'nav.toggle-sidebar',
+  },
   { keys: ['?'], description: 'Show shortcuts', category: 'general' },
 ];
 
