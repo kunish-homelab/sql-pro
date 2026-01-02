@@ -1,7 +1,7 @@
 /**
  * Tests for query and schema sharing service.
  */
-import { beforeEach, describe, expect, it } from 'vitest';
+import { describe, expect, it } from 'vitest';
 import {
   exportQuery,
   exportSchema,
@@ -634,6 +634,231 @@ describe('Query and Schema Sharing Service', () => {
       expect(result.validation.valid).toBe(true);
       expect(result.bundle.name).toBe('Test Bundle');
       expect(result.bundle.queries.length).toBe(1);
+    });
+  });
+
+  describe('Compression (100KB threshold)', () => {
+    it('should not compress data smaller than 100KB', async () => {
+      const query = await exportQuery({
+        name: 'Small Query',
+        sql: 'SELECT * FROM users WHERE id = 1',
+        description: 'A small test query',
+      });
+
+      const serialized = await serializeShareableData(query.data);
+
+      expect(serialized.compressionInfo).toBeUndefined();
+      expect(serialized.result).toContain('"name": "Small Query"');
+      // Should be valid JSON
+      expect(() => JSON.parse(serialized.result)).not.toThrow();
+    });
+
+    it('should automatically compress data larger than 100KB', async () => {
+      // Create a query with SQL larger than 100KB
+      // Need to account for the entire JSON structure size, not just SQL
+      const largeSql = 'SELECT * FROM users WHERE id IN (' + '12345,'.repeat(50000) + '1)';
+      const query = await exportQuery({
+        name: 'Large Query',
+        sql: largeSql,
+        description: 'A large test query with many values',
+      });
+
+      const serialized = await serializeShareableData(query.data);
+
+      expect(serialized.compressionInfo).toBeDefined();
+      expect(serialized.compressionInfo?.compressed).toBe(true);
+      expect(serialized.compressionInfo?.algorithm).toBe('gzip');
+      expect(serialized.compressionInfo?.originalSize).toBeGreaterThanOrEqual(100 * 1024);
+      expect(serialized.compressionInfo?.compressedSize).toBeLessThan(
+        serialized.compressionInfo?.originalSize ?? 0
+      );
+      // Should be base64 encoded, not plain JSON
+      expect(() => JSON.parse(serialized.result)).toThrow();
+    });
+
+    it('should compress data right at the 100KB threshold', async () => {
+      // Create exactly 100KB of data
+      const targetSize = 100 * 1024;
+      const baseSql = 'SELECT * FROM users WHERE ';
+      const query = await exportQuery({
+        name: 'Threshold Query',
+        sql: baseSql + 'x'.repeat(targetSize - 200), // Account for other JSON fields
+      });
+
+      const serialized = await serializeShareableData(query.data);
+
+      // Should be compressed since it's >= threshold
+      expect(serialized.compressionInfo).toBeDefined();
+      expect(serialized.compressionInfo?.compressed).toBe(true);
+    });
+
+    it('should decompress and import compressed queries correctly', async () => {
+      const largeSql = 'SELECT * FROM users WHERE name LIKE ' + "'test%' OR ".repeat(30000) + "'end'";
+      const query = await exportQuery({
+        name: 'Large Compressed Query',
+        sql: largeSql,
+        description: 'Large query that will be compressed',
+        tags: ['large', 'test'],
+        databaseContext: 'production',
+      });
+
+      // Serialize with compression
+      const serialized = await serializeShareableData(query.data);
+      expect(serialized.compressionInfo?.compressed).toBe(true);
+
+      // Import the compressed data
+      const imported = await importQuery(serialized.result);
+
+      expect(imported.validation.valid).toBe(true);
+      expect(imported.validation.compressionInfo?.compressed).toBe(true);
+      expect(imported.validation.compressionInfo?.algorithm).toBe('gzip');
+      expect(imported.query.name).toBe('Large Compressed Query');
+      expect(imported.query.sql).toBe(largeSql);
+      expect(imported.query.description).toBe('Large query that will be compressed');
+      expect(imported.query.tags).toEqual(['large', 'test']);
+    });
+
+    it('should decompress and import compressed schemas correctly', async () => {
+      // Create a large schema with many tables
+      const tables = Array.from({ length: 100 }, (_, i) => ({
+        name: `table_${i}`,
+        schema: 'main',
+        type: 'table' as const,
+        columns: Array.from({ length: 50 }, (_, j) => ({
+          name: `column_${j}`,
+          type: 'TEXT',
+          nullable: true,
+          defaultValue: null,
+          isPrimaryKey: false,
+        })),
+        primaryKey: ['id'],
+        foreignKeys: [],
+        indexes: [],
+        triggers: [],
+        sql: `CREATE TABLE table_${i} (id INTEGER PRIMARY KEY, ${Array.from({ length: 50 }, (_, j) => `column_${j} TEXT`).join(', ')})`,
+      }));
+
+      const schema = await exportSchema({
+        name: 'Large Schema',
+        format: 'json',
+        schemas: [{ name: 'main', tables, views: [] }],
+        description: 'A large schema export',
+        options: { format: 'json', includeIndexes: true },
+      });
+
+      // Serialize with compression (should auto-compress due to size)
+      const serialized = await serializeShareableData(schema.data);
+      expect(serialized.compressionInfo?.compressed).toBe(true);
+
+      // Import the compressed data
+      const imported = await importSchema(serialized.result);
+
+      expect(imported.validation.valid).toBe(true);
+      expect(imported.validation.compressionInfo?.compressed).toBe(true);
+      expect(imported.schema.name).toBe('Large Schema');
+      expect(imported.schema.schemas?.[0]?.tables.length).toBe(100);
+    });
+
+    it('should decompress and import compressed bundles correctly', async () => {
+      // Create a bundle with many large queries
+      const queries = Array.from({ length: 50 }, (_, i) => ({
+        id: `query-${i}`,
+        name: `Query ${i}`,
+        sql: 'SELECT * FROM users WHERE ' + `id = ${i} AND name LIKE '%test%' `.repeat(500),
+        notes: `Query notes ${i}`,
+        tags: ['tag1', 'tag2'],
+      }));
+
+      const bundle = await exportBundle({
+        name: 'Large Bundle',
+        queries,
+        description: 'A bundle with many queries',
+      });
+
+      // Serialize with compression
+      const serialized = await serializeShareableData(bundle.data);
+      expect(serialized.compressionInfo?.compressed).toBe(true);
+
+      // Import the compressed data
+      const imported = await importBundle(serialized.result);
+
+      expect(imported.validation.valid).toBe(true);
+      expect(imported.validation.compressionInfo?.compressed).toBe(true);
+      expect(imported.bundle.name).toBe('Large Bundle');
+      expect(imported.bundle.queries.length).toBe(50);
+    });
+
+    it('should handle forced compression for small data', async () => {
+      const query = await exportQuery({
+        name: 'Small Query',
+        sql: 'SELECT * FROM users',
+      });
+
+      // Force compression even though data is small
+      const serialized = await serializeShareableData(query.data, true);
+
+      expect(serialized.compressionInfo?.compressed).toBe(true);
+      expect(serialized.compressionInfo?.algorithm).toBe('gzip');
+
+      // Import should still work
+      const imported = await importQuery(serialized.result);
+      expect(imported.validation.valid).toBe(true);
+      expect(imported.query.name).toBe('Small Query');
+    });
+
+    it('should handle disabled compression for large data', async () => {
+      const largeSql = 'SELECT * FROM users WHERE id IN (' + '1,'.repeat(30000) + '1)';
+      const query = await exportQuery({
+        name: 'Large Query',
+        sql: largeSql,
+      });
+
+      // Disable compression even though data is large
+      const serialized = await serializeShareableData(query.data, false);
+
+      expect(serialized.compressionInfo).toBeUndefined();
+      // Should be valid JSON
+      expect(() => JSON.parse(serialized.result)).not.toThrow();
+
+      // Import should still work
+      const imported = await importQuery(serialized.result);
+      expect(imported.validation.valid).toBe(true);
+      expect(imported.query.name).toBe('Large Query');
+    });
+
+    it('should preserve metadata compression flag after compression', async () => {
+      const largeSql = 'SELECT * FROM users WHERE ' + 'id = 1 OR '.repeat(20000) + 'id = 2';
+      const query = await exportQuery({
+        name: 'Large Query',
+        sql: largeSql,
+      });
+
+      const serialized = await serializeShareableData(query.data);
+      const imported = await importQuery(serialized.result);
+
+      // The imported query should have compressed flag in metadata
+      expect(imported.query.metadata.compressed).toBe(true);
+    });
+
+    it('should report accurate compression statistics', async () => {
+      // Create data with high compressibility (repeated pattern)
+      const repetitiveSql = 'SELECT * FROM users WHERE name = "test" AND '.repeat(10000) + 'id = 1';
+      const query = await exportQuery({
+        name: 'Repetitive Query',
+        sql: repetitiveSql,
+      });
+
+      const serialized = await serializeShareableData(query.data);
+
+      expect(serialized.compressionInfo).toBeDefined();
+      expect(serialized.compressionInfo?.originalSize).toBeGreaterThan(100 * 1024);
+      expect(serialized.compressionInfo?.compressedSize).toBeLessThan(
+        serialized.compressionInfo?.originalSize ?? 0
+      );
+      // High compression ratio expected for repetitive data
+      const compressionRatio = (serialized.compressionInfo?.compressedSize ?? 0) /
+        (serialized.compressionInfo?.originalSize ?? 1);
+      expect(compressionRatio).toBeLessThan(0.1); // Should compress to less than 10% of original
     });
   });
 });
