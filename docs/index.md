@@ -26,23 +26,23 @@ features:
 
   - icon: 📝
     title: Powerful SQL Editor
-    details: Monaco-based editor with syntax highlighting, intelligent autocomplete, and persistent query history with search capabilities.
+    details: Monaco-based editor with syntax highlighting, intelligent autocomplete, Vim mode, and persistent query history with search capabilities.
 
   - icon: 🔍
     title: Schema Browser
-    details: Browse tables, views, and indexes with ease. Navigate your database structure efficiently with an intuitive sidebar.
+    details: Browse tables, views, and indexes with ease. Navigate your database structure efficiently with an intuitive sidebar and quick search.
 
   - icon: ✏️
     title: Inline Data Editing
-    details: Edit data directly in the table view with cell-level editing. Review all changes with diff preview before applying them.
+    details: Edit data directly in the table view with cell-level editing. Review all changes with visual diff preview before applying them.
 
   - icon: 🎯
-    title: ER Diagram
-    details: Interactive entity-relationship diagram with drag-and-drop positioning. Visualize table relationships at a glance.
+    title: Interactive ER Diagram
+    details: Visualize entity-relationship diagrams with drag-and-drop positioning. Understand table relationships and foreign keys at a glance.
 
   - icon: 🎨
     title: Beautiful Interface
-    details: Automatic dark/light theme switching based on system preferences. Clean, modern design that works the way you expect.
+    details: Automatic dark/light theme switching based on system preferences. Clean, modern design with customizable keyboard shortcuts.
 ---
 
 ## Quick Start
