@@ -7,6 +7,7 @@ import {
   useChangesStore,
   useConnectionStore,
   useDataTabsStore,
+  useSettingsStore,
 } from '@/stores';
 import { ConnectionTabBar } from './ConnectionTabBar';
 import { DataTabBar } from './data-table';
@@ -43,6 +44,7 @@ export function DatabaseView({
     tabsByConnection,
     setActiveConnectionId: setDataTabsActiveConnection,
   } = useDataTabsStore();
+  const { sidebarCollapsed, toggleSidebar } = useSettingsStore();
 
   const [activeTab, setActiveTab] = useState<TabValue>('data');
   const [showChangesPanel, setShowChangesPanel] = useState(false);
@@ -130,10 +132,22 @@ export function DatabaseView({
   const handleOpenSidebar = useCallback(() => {
     // Focus the sidebar search or just ensure data tab is active
     setActiveTab('data');
-  }, []);
+    // Also ensure sidebar is visible
+    if (sidebarCollapsed) {
+      toggleSidebar();
+    }
+  }, [sidebarCollapsed, toggleSidebar]);
 
   return (
     <div className="flex h-full flex-col">
+      {/* Hidden button for keyboard shortcut to toggle sidebar */}
+      <button
+        data-action="toggle-sidebar"
+        onClick={toggleSidebar}
+        className="sr-only"
+        aria-label="Toggle Sidebar"
+      />
+
       {/* Connection Tab Bar */}
       <ConnectionTabBar />
 
@@ -143,19 +157,21 @@ export function DatabaseView({
       {/* Main Content */}
       <div className="flex min-h-0 flex-1 overflow-hidden">
         {/* Sidebar - Resizable */}
-        <ResizablePanel
-          side="left"
-          defaultWidth={256}
-          minWidth={180}
-          maxWidth={400}
-          storageKey="sidebar"
-        >
-          <Sidebar
-            onOpenDatabase={onOpenDatabase}
-            onOpenRecentConnection={onOpenRecentConnection}
-            onSwitchToQuery={() => setActiveTab('query')}
-          />
-        </ResizablePanel>
+        {!sidebarCollapsed && (
+          <ResizablePanel
+            side="left"
+            defaultWidth={256}
+            minWidth={180}
+            maxWidth={400}
+            storageKey="sidebar"
+          >
+            <Sidebar
+              onOpenDatabase={onOpenDatabase}
+              onOpenRecentConnection={onOpenRecentConnection}
+              onSwitchToQuery={() => setActiveTab('query')}
+            />
+          </ResizablePanel>
+        )}
 
         {/* Content Area with Tabs */}
         <Tabs

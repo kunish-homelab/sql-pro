@@ -44,6 +44,9 @@ interface SettingsState {
   // Session settings
   restoreSession: boolean;
 
+  // Sidebar settings
+  sidebarCollapsed: boolean;
+
   // Actions
   setEditorVimMode: (enabled: boolean) => void;
   setAppVimMode: (enabled: boolean) => void;
@@ -52,6 +55,8 @@ interface SettingsState {
   setTabSize: (size: number) => void;
   setPageSize: (size: PageSizeOption) => void;
   setRestoreSession: (enabled: boolean) => void;
+  setSidebarCollapsed: (collapsed: boolean) => void;
+  toggleSidebar: () => void;
 }
 
 const DEFAULT_FONT_CONFIG: FontConfig = {
@@ -119,6 +124,8 @@ export const useSettingsStore = create<SettingsState>()(
 
       restoreSession: true,
 
+      sidebarCollapsed: false,
+
       setEditorVimMode: (enabled) => set({ editorVimMode: enabled }),
 
       setAppVimMode: (enabled) => set({ appVimMode: enabled }),
@@ -176,6 +183,11 @@ export const useSettingsStore = create<SettingsState>()(
       setPageSize: (size) => set({ pageSize: size }),
 
       setRestoreSession: (enabled) => set({ restoreSession: enabled }),
+
+      setSidebarCollapsed: (collapsed) => set({ sidebarCollapsed: collapsed }),
+
+      toggleSidebar: () =>
+        set((state) => ({ sidebarCollapsed: !state.sidebarCollapsed })),
     }),
     {
       name: 'sql-pro-settings',
