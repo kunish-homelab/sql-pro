@@ -1,5 +1,6 @@
 export { DEFAULT_MODELS, useAIStore } from './ai-store';
 export { useChangesStore } from './changes-store';
+export { useCollectionsStore } from './collections-store';
 export {
   formatShortcut,
   getFilteredCommands,
