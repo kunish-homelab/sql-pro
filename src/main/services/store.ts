@@ -2,7 +2,9 @@ import type {
   AISettings,
   ProFeatureType,
   ProStatus,
+  QueryCollection,
   QueryHistoryEntry,
+  SavedQuery,
   SchemaSnapshot,
 } from '@shared/types';
 import process from 'node:process';
@@ -52,6 +54,14 @@ interface SchemaSnapshotStore {
   [snapshotId: string]: SchemaSnapshot;
 }
 
+interface SavedQueryStore {
+  [queryId: string]: SavedQuery;
+}
+
+interface CollectionStore {
+  [collectionId: string]: QueryCollection;
+}
+
 // ============ Store Schema ============
 
 interface StoreSchema {
@@ -63,6 +73,8 @@ interface StoreSchema {
   connectionProfiles: StoredConnectionProfile[];
   profileFolders: StoredProfileFolder[];
   schemaSnapshots: SchemaSnapshotStore;
+  savedQueries: SavedQueryStore;
+  collections: CollectionStore;
 }
 
 // ============ Default Values ============
@@ -87,6 +99,8 @@ const store = new Store<StoreSchema>({
     connectionProfiles: [],
     profileFolders: [],
     schemaSnapshots: {},
+    savedQueries: {},
+    collections: {},
   },
   // Enable schema migration
   migrations: {
@@ -594,6 +608,480 @@ export function deleteSchemaSnapshot(snapshotId: string): {
   delete snapshots[snapshotId];
   store.set('schemaSnapshots', snapshots);
   return { success: true };
+}
+
+// ============ Saved Queries ============
+
+export function getSavedQueries(options?: {
+  dbPath?: string;
+  favoritesOnly?: boolean;
+  collectionId?: string;
+}): SavedQuery[] {
+  const queries = store.get('savedQueries', {});
+  let result = Object.values(queries);
+
+  // Filter by dbPath if provided
+  if (options?.dbPath) {
+    result = result.filter((q) => q.dbPath === options.dbPath);
+  }
+
+  // Filter by favorites if requested
+  if (options?.favoritesOnly) {
+    result = result.filter((q) => q.isFavorite);
+  }
+
+  // Filter by collection if requested
+  if (options?.collectionId) {
+    const collectionId = options.collectionId;
+    result = result.filter((q) => q.collectionIds.includes(collectionId));
+  }
+
+  // Sort by updatedAt (most recent first)
+  return result.sort(
+    (a, b) => new Date(b.updatedAt).getTime() - new Date(a.updatedAt).getTime()
+  );
+}
+
+export function saveSavedQuery(
+  query: Omit<SavedQuery, 'id' | 'createdAt' | 'updatedAt'> & {
+    id?: string;
+    createdAt?: string;
+    updatedAt?: string;
+  }
+): { success: boolean; query?: SavedQuery; error?: string } {
+  try {
+    const queries = store.get('savedQueries', {});
+    const now = new Date().toISOString();
+
+    // Generate ID if not provided
+    const queryId = query.id || crypto.randomUUID();
+
+    // Check if query with this ID already exists
+    const existing = queries[queryId];
+
+    const newQuery: SavedQuery = {
+      ...query,
+      id: queryId,
+      createdAt: query.createdAt || existing?.createdAt || now,
+      updatedAt: query.updatedAt || now,
+      isFavorite: query.isFavorite ?? false,
+      collectionIds: query.collectionIds ?? [],
+    };
+
+    // Validate query name
+    if (!newQuery.name || newQuery.name.trim().length === 0) {
+      return { success: false, error: 'INVALID_QUERY_NAME' };
+    }
+    if (newQuery.name.length > 200) {
+      return { success: false, error: 'QUERY_NAME_TOO_LONG' };
+    }
+
+    // Validate query text
+    if (!newQuery.queryText || newQuery.queryText.trim().length === 0) {
+      return { success: false, error: 'INVALID_QUERY_TEXT' };
+    }
+
+    queries[queryId] = newQuery;
+    store.set('savedQueries', queries);
+
+    // Update collections if needed
+    if (newQuery.collectionIds.length > 0) {
+      const collections = store.get('collections', {});
+      let collectionsUpdated = false;
+
+      for (const collectionId of newQuery.collectionIds) {
+        const collection = collections[collectionId];
+        if (collection && !collection.queryIds.includes(queryId)) {
+          collection.queryIds.push(queryId);
+          collection.updatedAt = now;
+          collectionsUpdated = true;
+        }
+      }
+
+      if (collectionsUpdated) {
+        store.set('collections', collections);
+      }
+    }
+
+    return { success: true, query: newQuery };
+  } catch (error) {
+    return {
+      success: false,
+      error: error instanceof Error ? error.message : 'UNKNOWN_ERROR',
+    };
+  }
+}
+
+export function updateSavedQuery(
+  id: string,
+  updates: Partial<Omit<SavedQuery, 'id' | 'createdAt'>>
+): { success: boolean; query?: SavedQuery; error?: string } {
+  const queries = store.get('savedQueries', {});
+  const query = queries[id];
+
+  if (!query) {
+    return { success: false, error: 'QUERY_NOT_FOUND' };
+  }
+
+  // Validate name if provided
+  if (updates.name !== undefined) {
+    if (updates.name.trim().length === 0) {
+      return { success: false, error: 'INVALID_QUERY_NAME' };
+    }
+    if (updates.name.length > 200) {
+      return { success: false, error: 'QUERY_NAME_TOO_LONG' };
+    }
+  }
+
+  // Validate query text if provided
+  if (updates.queryText !== undefined && updates.queryText.trim().length === 0) {
+    return { success: false, error: 'INVALID_QUERY_TEXT' };
+  }
+
+  const now = new Date().toISOString();
+
+  // Handle collection changes
+  if (updates.collectionIds !== undefined) {
+    const collections = store.get('collections', {});
+    const oldCollectionIds = query.collectionIds || [];
+    const newCollectionIds = updates.collectionIds || [];
+
+    // Remove query from old collections
+    for (const collectionId of oldCollectionIds) {
+      if (!newCollectionIds.includes(collectionId)) {
+        const collection = collections[collectionId];
+        if (collection) {
+          collection.queryIds = collection.queryIds.filter((qId) => qId !== id);
+          collection.updatedAt = now;
+        }
+      }
+    }
+
+    // Add query to new collections
+    for (const collectionId of newCollectionIds) {
+      if (!oldCollectionIds.includes(collectionId)) {
+        const collection = collections[collectionId];
+        if (collection && !collection.queryIds.includes(id)) {
+          collection.queryIds.push(id);
+          collection.updatedAt = now;
+        }
+      }
+    }
+
+    store.set('collections', collections);
+  }
+
+  // Update the query
+  const updatedQuery: SavedQuery = {
+    ...query,
+    ...updates,
+    updatedAt: now,
+  };
+
+  queries[id] = updatedQuery;
+  store.set('savedQueries', queries);
+
+  return { success: true, query: updatedQuery };
+}
+
+export function deleteSavedQuery(id: string): {
+  success: boolean;
+  error?: string;
+} {
+  const queries = store.get('savedQueries', {});
+  const query = queries[id];
+
+  if (!query) {
+    // Query not found, but not an error
+    return { success: true };
+  }
+
+  // Remove query from all collections
+  const collections = store.get('collections', {});
+  let collectionsUpdated = false;
+  const now = new Date().toISOString();
+
+  for (const collectionId of query.collectionIds || []) {
+    const collection = collections[collectionId];
+    if (collection) {
+      collection.queryIds = collection.queryIds.filter((qId) => qId !== id);
+      collection.updatedAt = now;
+      collectionsUpdated = true;
+    }
+  }
+
+  if (collectionsUpdated) {
+    store.set('collections', collections);
+  }
+
+  delete queries[id];
+  store.set('savedQueries', queries);
+
+  return { success: true };
+}
+
+// ============ Collections ============
+
+export function getCollections(): QueryCollection[] {
+  const collections = store.get('collections', {});
+  return Object.values(collections).sort(
+    (a, b) => new Date(b.updatedAt).getTime() - new Date(a.updatedAt).getTime()
+  );
+}
+
+export function saveCollection(
+  collection: Omit<QueryCollection, 'id' | 'createdAt' | 'updatedAt'> & {
+    id?: string;
+    createdAt?: string;
+    updatedAt?: string;
+  }
+): { success: boolean; collection?: QueryCollection; error?: string } {
+  try {
+    const collections = store.get('collections', {});
+    const now = new Date().toISOString();
+
+    // Generate ID if not provided
+    const collectionId = collection.id || crypto.randomUUID();
+
+    // Check if collection with this ID already exists
+    const existing = collections[collectionId];
+
+    const newCollection: QueryCollection = {
+      ...collection,
+      id: collectionId,
+      createdAt: collection.createdAt || existing?.createdAt || now,
+      updatedAt: collection.updatedAt || now,
+      queryIds: collection.queryIds ?? [],
+    };
+
+    // Validate collection name
+    if (!newCollection.name || newCollection.name.trim().length === 0) {
+      return { success: false, error: 'INVALID_COLLECTION_NAME' };
+    }
+    if (newCollection.name.length > 200) {
+      return { success: false, error: 'COLLECTION_NAME_TOO_LONG' };
+    }
+
+    collections[collectionId] = newCollection;
+    store.set('collections', collections);
+
+    // Update queries if needed
+    if (newCollection.queryIds.length > 0) {
+      const queries = store.get('savedQueries', {});
+      let queriesUpdated = false;
+
+      for (const queryId of newCollection.queryIds) {
+        const query = queries[queryId];
+        if (query && !query.collectionIds.includes(collectionId)) {
+          query.collectionIds.push(collectionId);
+          query.updatedAt = now;
+          queriesUpdated = true;
+        }
+      }
+
+      if (queriesUpdated) {
+        store.set('savedQueries', queries);
+      }
+    }
+
+    return { success: true, collection: newCollection };
+  } catch (error) {
+    return {
+      success: false,
+      error: error instanceof Error ? error.message : 'UNKNOWN_ERROR',
+    };
+  }
+}
+
+export function updateCollection(
+  id: string,
+  updates: Partial<Omit<QueryCollection, 'id' | 'createdAt'>>
+): { success: boolean; collection?: QueryCollection; error?: string } {
+  const collections = store.get('collections', {});
+  const collection = collections[id];
+
+  if (!collection) {
+    return { success: false, error: 'COLLECTION_NOT_FOUND' };
+  }
+
+  // Validate name if provided
+  if (updates.name !== undefined) {
+    if (updates.name.trim().length === 0) {
+      return { success: false, error: 'INVALID_COLLECTION_NAME' };
+    }
+    if (updates.name.length > 200) {
+      return { success: false, error: 'COLLECTION_NAME_TOO_LONG' };
+    }
+  }
+
+  const now = new Date().toISOString();
+
+  // Handle query changes
+  if (updates.queryIds !== undefined) {
+    const queries = store.get('savedQueries', {});
+    const oldQueryIds = collection.queryIds || [];
+    const newQueryIds = updates.queryIds || [];
+
+    // Remove collection from old queries
+    for (const queryId of oldQueryIds) {
+      if (!newQueryIds.includes(queryId)) {
+        const query = queries[queryId];
+        if (query) {
+          query.collectionIds = query.collectionIds.filter((cId) => cId !== id);
+          query.updatedAt = now;
+        }
+      }
+    }
+
+    // Add collection to new queries
+    for (const queryId of newQueryIds) {
+      if (!oldQueryIds.includes(queryId)) {
+        const query = queries[queryId];
+        if (query && !query.collectionIds.includes(id)) {
+          query.collectionIds.push(id);
+          query.updatedAt = now;
+        }
+      }
+    }
+
+    store.set('savedQueries', queries);
+  }
+
+  // Update the collection
+  const updatedCollection: QueryCollection = {
+    ...collection,
+    ...updates,
+    updatedAt: now,
+  };
+
+  collections[id] = updatedCollection;
+  store.set('collections', collections);
+
+  return { success: true, collection: updatedCollection };
+}
+
+export function deleteCollection(id: string): {
+  success: boolean;
+  error?: string;
+} {
+  const collections = store.get('collections', {});
+  const collection = collections[id];
+
+  if (!collection) {
+    // Collection not found, but not an error
+    return { success: true };
+  }
+
+  // Remove collection from all queries
+  const queries = store.get('savedQueries', {});
+  let queriesUpdated = false;
+  const now = new Date().toISOString();
+
+  for (const queryId of collection.queryIds || []) {
+    const query = queries[queryId];
+    if (query) {
+      query.collectionIds = query.collectionIds.filter((cId) => cId !== id);
+      query.updatedAt = now;
+      queriesUpdated = true;
+    }
+  }
+
+  if (queriesUpdated) {
+    store.set('savedQueries', queries);
+  }
+
+  delete collections[id];
+  store.set('collections', collections);
+
+  return { success: true };
+}
+
+// ============ Collection-Query Relationship Management ============
+
+export function addQueryToCollection(
+  queryId: string,
+  collectionId: string
+): {
+  success: boolean;
+  query?: SavedQuery;
+  collection?: QueryCollection;
+  error?: string;
+} {
+  const queries = store.get('savedQueries', {});
+  const collections = store.get('collections', {});
+
+  const query = queries[queryId];
+  const collection = collections[collectionId];
+
+  if (!query) {
+    return { success: false, error: 'QUERY_NOT_FOUND' };
+  }
+
+  if (!collection) {
+    return { success: false, error: 'COLLECTION_NOT_FOUND' };
+  }
+
+  const now = new Date().toISOString();
+
+  // Add to query's collection list
+  if (!query.collectionIds.includes(collectionId)) {
+    query.collectionIds.push(collectionId);
+    query.updatedAt = now;
+    queries[queryId] = query;
+  }
+
+  // Add to collection's query list
+  if (!collection.queryIds.includes(queryId)) {
+    collection.queryIds.push(queryId);
+    collection.updatedAt = now;
+    collections[collectionId] = collection;
+  }
+
+  store.set('savedQueries', queries);
+  store.set('collections', collections);
+
+  return { success: true, query, collection };
+}
+
+export function removeQueryFromCollection(
+  queryId: string,
+  collectionId: string
+): {
+  success: boolean;
+  query?: SavedQuery;
+  collection?: QueryCollection;
+  error?: string;
+} {
+  const queries = store.get('savedQueries', {});
+  const collections = store.get('collections', {});
+
+  const query = queries[queryId];
+  const collection = collections[collectionId];
+
+  if (!query) {
+    return { success: false, error: 'QUERY_NOT_FOUND' };
+  }
+
+  if (!collection) {
+    return { success: false, error: 'COLLECTION_NOT_FOUND' };
+  }
+
+  const now = new Date().toISOString();
+
+  // Remove from query's collection list
+  query.collectionIds = query.collectionIds.filter((id) => id !== collectionId);
+  query.updatedAt = now;
+  queries[queryId] = query;
+
+  // Remove from collection's query list
+  collection.queryIds = collection.queryIds.filter((id) => id !== queryId);
+  collection.updatedAt = now;
+  collections[collectionId] = collection;
+
+  store.set('savedQueries', queries);
+  store.set('collections', collections);
+
+  return { success: true, query, collection };
 }
 
 // ============ Utility Functions ============
