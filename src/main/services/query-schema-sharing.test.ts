@@ -1072,6 +1072,300 @@ describe('Query and Schema Sharing Service', () => {
     });
   });
 
+  describe('Version Compatibility Validation', () => {
+    it('should reject query with invalid version format', async () => {
+      const query = {
+        id: '550e8400-e29b-41d4-a716-446655440000',
+        name: 'Test Query',
+        sql: 'SELECT * FROM users',
+        createdAt: '2024-01-01T00:00:00Z',
+        metadata: {
+          version: 'invalid-version',
+          exportedAt: '2024-01-01T00:00:00Z',
+        },
+      };
+
+      // Zod validation catches invalid version format before custom validation
+      await expect(importQuery(JSON.stringify(query))).rejects.toThrow('Schema validation failed');
+    });
+
+    it('should reject query with missing version', async () => {
+      const query = {
+        id: '550e8400-e29b-41d4-a716-446655440000',
+        name: 'Test Query',
+        sql: 'SELECT * FROM users',
+        createdAt: '2024-01-01T00:00:00Z',
+        metadata: {
+          exportedAt: '2024-01-01T00:00:00Z',
+        },
+      };
+
+      await expect(importQuery(JSON.stringify(query))).rejects.toThrow('Schema validation failed');
+    });
+
+    it('should reject query with incompatible major version', async () => {
+      const query: ShareableQuery = {
+        id: '550e8400-e29b-41d4-a716-446655440000',
+        name: 'Test Query',
+        sql: 'SELECT * FROM users',
+        createdAt: '2024-01-01T00:00:00Z',
+        metadata: {
+          version: '2.0.0', // Major version 2 vs current 1
+          exportedAt: '2024-01-01T00:00:00Z',
+        },
+      };
+
+      const result = await importQuery(JSON.stringify(query));
+
+      expect(result.validation.valid).toBe(false);
+      expect(result.validation.errors).toBeDefined();
+      const versionError = result.validation.errors?.find((e) =>
+        e.includes('Incompatible version')
+      );
+      expect(versionError).toBeDefined();
+      expect(versionError).toContain('Major versions must match');
+    });
+
+    it('should warn about minor version mismatch but still import', async () => {
+      const query: ShareableQuery = {
+        id: '550e8400-e29b-41d4-a716-446655440000',
+        name: 'Test Query',
+        sql: 'SELECT * FROM users',
+        createdAt: '2024-01-01T00:00:00Z',
+        metadata: {
+          version: '1.1.0', // Minor version 1 vs current 0
+          exportedAt: '2024-01-01T00:00:00Z',
+        },
+      };
+
+      const result = await importQuery(JSON.stringify(query));
+
+      expect(result.validation.valid).toBe(true);
+      expect(result.validation.warnings).toBeDefined();
+      const versionWarning = result.validation.warnings?.find((w) =>
+        w.includes('Version mismatch')
+      );
+      expect(versionWarning).toBeDefined();
+      expect(versionWarning).toContain('Import should still work');
+    });
+
+    it('should warn about patch version mismatch but still import', async () => {
+      const query: ShareableQuery = {
+        id: '550e8400-e29b-41d4-a716-446655440000',
+        name: 'Test Query',
+        sql: 'SELECT * FROM users',
+        createdAt: '2024-01-01T00:00:00Z',
+        metadata: {
+          version: '1.0.1', // Patch version 1 vs current 0
+          exportedAt: '2024-01-01T00:00:00Z',
+        },
+      };
+
+      const result = await importQuery(JSON.stringify(query));
+
+      expect(result.validation.valid).toBe(true);
+      expect(result.validation.warnings).toBeDefined();
+      const versionWarning = result.validation.warnings?.find((w) =>
+        w.includes('Version mismatch')
+      );
+      expect(versionWarning).toBeDefined();
+    });
+
+    it('should accept matching version without warnings', async () => {
+      const query: ShareableQuery = {
+        id: '550e8400-e29b-41d4-a716-446655440000',
+        name: 'Test Query',
+        sql: 'SELECT * FROM users',
+        createdAt: '2024-01-01T00:00:00Z',
+        metadata: {
+          version: '1.0.0', // Exact match
+          exportedAt: '2024-01-01T00:00:00Z',
+        },
+      };
+
+      const result = await importQuery(JSON.stringify(query));
+
+      expect(result.validation.valid).toBe(true);
+      // No version-related warnings
+      const versionWarnings = result.validation.warnings?.filter((w) =>
+        w.includes('version')
+      );
+      expect(versionWarnings?.length || 0).toBe(0);
+    });
+
+    it('should reject schema with incompatible major version', async () => {
+      const schema: ShareableSchema = {
+        id: '550e8400-e29b-41d4-a716-446655440001',
+        name: 'Test Schema',
+        format: 'sql',
+        sqlStatements: ['CREATE TABLE users (id INTEGER)'],
+        options: { format: 'sql' },
+        createdAt: '2024-01-01T00:00:00Z',
+        metadata: {
+          version: '3.0.0', // Major version 3 vs current 1
+          exportedAt: '2024-01-01T00:00:00Z',
+        },
+      };
+
+      const result = await importSchema(JSON.stringify(schema));
+
+      expect(result.validation.valid).toBe(false);
+      expect(result.validation.errors).toBeDefined();
+      const versionError = result.validation.errors?.find((e) =>
+        e.includes('Incompatible version')
+      );
+      expect(versionError).toBeDefined();
+    });
+
+    it('should reject bundle with incompatible major version', async () => {
+      const bundle: ShareableBundle = {
+        id: '550e8400-e29b-41d4-a716-446655440003',
+        name: 'Test Bundle',
+        queries: [
+          {
+            id: '1',
+            name: 'Query 1',
+            sql: 'SELECT * FROM users',
+          },
+        ],
+        createdAt: '2024-01-01T00:00:00Z',
+        metadata: {
+          version: '0.5.0', // Major version 0 vs current 1
+          exportedAt: '2024-01-01T00:00:00Z',
+        },
+      };
+
+      const result = await importBundle(JSON.stringify(bundle));
+
+      expect(result.validation.valid).toBe(false);
+      expect(result.validation.errors).toBeDefined();
+      const versionError = result.validation.errors?.find((e) =>
+        e.includes('Incompatible version')
+      );
+      expect(versionError).toBeDefined();
+    });
+  });
+
+  describe('Additional Edge Cases', () => {
+    it('should handle corrupt compressed data gracefully', async () => {
+      // Create invalid base64 that looks like gzip header but is corrupted
+      const corruptData = Buffer.from([0x1f, 0x8b, 0x00, 0xff, 0xff, 0xff]).toString('base64');
+
+      await expect(importQuery(corruptData)).rejects.toThrow();
+    });
+
+    it('should reject empty data', async () => {
+      await expect(importQuery('')).rejects.toThrow('Import data is empty');
+    });
+
+    it('should reject null data', async () => {
+      await expect(importQuery(JSON.stringify(null))).rejects.toThrow();
+    });
+
+    it('should reject array instead of object', async () => {
+      await expect(importQuery(JSON.stringify([{ name: 'test' }]))).rejects.toThrow();
+    });
+
+    it('should handle extremely long query names via Zod validation', async () => {
+      const query = {
+        id: '550e8400-e29b-41d4-a716-446655440000',
+        name: 'x'.repeat(500),
+        sql: 'SELECT * FROM users',
+        createdAt: '2024-01-01T00:00:00Z',
+        metadata: {
+          version: '1.0.0',
+          exportedAt: '2024-01-01T00:00:00Z',
+        },
+      };
+
+      await expect(importQuery(JSON.stringify(query))).rejects.toThrow('Schema validation failed');
+    });
+
+    it('should handle SQL injection patterns in query without treating them as dangerous during import', async () => {
+      // Note: Import validation focuses on structure, not SQL injection prevention
+      // Actual SQL injection prevention happens during query execution
+      const query: ShareableQuery = {
+        id: '550e8400-e29b-41d4-a716-446655440000',
+        name: 'Potential Injection',
+        sql: "SELECT * FROM users WHERE name = '' OR '1'='1'",
+        createdAt: '2024-01-01T00:00:00Z',
+        metadata: {
+          version: '1.0.0',
+          exportedAt: '2024-01-01T00:00:00Z',
+        },
+      };
+
+      const result = await importQuery(JSON.stringify(query));
+
+      // Should import successfully - SQL injection prevention is not part of import validation
+      expect(result.validation.valid).toBe(true);
+      expect(result.query.sql).toBe("SELECT * FROM users WHERE name = '' OR '1'='1'");
+    });
+
+    it('should handle query with special Unicode characters', async () => {
+      const query: ShareableQuery = {
+        id: '550e8400-e29b-41d4-a716-446655440000',
+        name: 'Unicode Test 你好 🚀',
+        sql: 'SELECT * FROM users WHERE name = "测试"',
+        description: 'Test with émojis and åccents',
+        createdAt: '2024-01-01T00:00:00Z',
+        metadata: {
+          version: '1.0.0',
+          exportedAt: '2024-01-01T00:00:00Z',
+        },
+      };
+
+      const serialized = JSON.stringify(query);
+      const result = await importQuery(serialized);
+
+      expect(result.validation.valid).toBe(true);
+      expect(result.query.name).toBe('Unicode Test 你好 🚀');
+      expect(result.query.description).toBe('Test with émojis and åccents');
+    });
+
+    it('should handle bundle with no queries via Zod validation', async () => {
+      const bundle = {
+        id: '550e8400-e29b-41d4-a716-446655440003',
+        name: 'Empty Bundle',
+        queries: [], // Empty queries array
+        createdAt: '2024-01-01T00:00:00Z',
+        metadata: {
+          version: '1.0.0',
+          exportedAt: '2024-01-01T00:00:00Z',
+        },
+      };
+
+      await expect(importBundle(JSON.stringify(bundle))).rejects.toThrow('Schema validation failed');
+    });
+
+    it('should handle schema with format mismatch between format field and data', async () => {
+      const schema: ShareableSchema = {
+        id: '550e8400-e29b-41d4-a716-446655440001',
+        name: 'Mismatched Schema',
+        format: 'json', // Says JSON
+        sqlStatements: ['CREATE TABLE users (id INTEGER)'], // But provides SQL
+        // schemas array is missing
+        options: { format: 'json' },
+        createdAt: '2024-01-01T00:00:00Z',
+        metadata: {
+          version: '1.0.0',
+          exportedAt: '2024-01-01T00:00:00Z',
+        },
+      };
+
+      const result = await importSchema(JSON.stringify(schema));
+
+      expect(result.validation.valid).toBe(false);
+      expect(result.validation.errors).toBeDefined();
+      expect(result.validation.errors!.length).toBeGreaterThan(0);
+      // Check that some validation error was caught
+      const hasFormatError = result.validation.errors?.some((e) =>
+        e.toLowerCase().includes('schema') || e.toLowerCase().includes('format')
+      );
+      expect(hasFormatError).toBe(true);
+    });
+  });
+
   describe('Compression (100KB threshold)', () => {
     it('should not compress data smaller than 100KB', async () => {
       const query = await exportQuery({
