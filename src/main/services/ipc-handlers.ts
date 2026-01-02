@@ -15,8 +15,11 @@ import type {
   DeleteQueryHistoryRequest,
   DeleteSchemaSnapshotRequest,
   ExecuteQueryRequest,
+  ExportBundleRequest,
   ExportComparisonReportRequest,
+  ExportQueryRequest,
   ExportRequest,
+  ExportSchemaRequest,
   FocusWindowRequest,
   GenerateMigrationSQLRequest,
   GetPasswordRequest,
@@ -25,6 +28,9 @@ import type {
   GetSchemaSnapshotRequest,
   GetTableDataRequest,
   HasPasswordRequest,
+  ImportBundleRequest,
+  ImportQueryRequest,
+  ImportSchemaRequest,
   OpenDatabaseRequest,
   OpenFileDialogRequest,
   ProActivateRequest,
@@ -66,6 +72,15 @@ import { CATEGORY_ORDER, classifyFont } from '@/lib/font-constants';
 import { databaseService } from './database';
 import { migrationGeneratorService } from './migration-generator';
 import { passwordStorageService } from './password-storage';
+import {
+  exportBundle,
+  exportQuery,
+  exportSchema,
+  importBundle,
+  importQuery,
+  importSchema,
+  serializeShareableData,
+} from './query-schema-sharing';
 import { schemaComparisonService } from './schema-comparison';
 import { sqlLogger } from './sql-logger';
 import {
@@ -1784,6 +1799,239 @@ export function setupIpcHandlers(): void {
         };
       }
     }
+  );
+
+  // ============ Query & Schema Sharing Handlers ============
+
+  // Query Sharing: Export
+  ipcMain.handle(
+    IPC_CHANNELS.QUERY_EXPORT,
+    createHandler(async (request: ExportQueryRequest) => {
+      // Export query to shareable format
+      const { data } = await exportQuery(request.query);
+
+      // Serialize with optional compression
+      const { result, compressionInfo } = await serializeShareableData(
+        data,
+        request.compress
+      );
+
+      // Handle file path
+      let filePath = request.filePath;
+      if (!filePath) {
+        const dialogResult = await dialog.showSaveDialog({
+          title: 'Export Query',
+          defaultPath: `${request.query.name || 'query'}.sqlpro-query.json`,
+          filters: [
+            { name: 'SQL Pro Query', extensions: ['json'] },
+            { name: 'All Files', extensions: ['*'] },
+          ],
+        });
+
+        if (dialogResult.canceled || !dialogResult.filePath) {
+          throw new Error('Export canceled by user');
+        }
+
+        filePath = dialogResult.filePath;
+      }
+
+      // Write to file
+      fs.writeFileSync(filePath, result, 'utf-8');
+
+      return { filePath, compressionInfo };
+    })
+  );
+
+  // Query Sharing: Import
+  ipcMain.handle(
+    IPC_CHANNELS.QUERY_IMPORT,
+    createHandler(async (request: ImportQueryRequest) => {
+      let data: string;
+
+      // Get data from file or request
+      if (request.data) {
+        data = request.data;
+      } else {
+        let filePath = request.filePath;
+        if (!filePath) {
+          const dialogResult = await dialog.showOpenDialog({
+            title: 'Import Query',
+            filters: [
+              { name: 'SQL Pro Query', extensions: ['json'] },
+              { name: 'All Files', extensions: ['*'] },
+            ],
+            properties: ['openFile'],
+          });
+
+          if (dialogResult.canceled || dialogResult.filePaths.length === 0) {
+            throw new Error('Import canceled by user');
+          }
+
+          filePath = dialogResult.filePaths[0];
+        }
+
+        data = fs.readFileSync(filePath, 'utf-8');
+      }
+
+      // Import and validate
+      const { query, validation } = await importQuery(data);
+
+      return { query, validation };
+    })
+  );
+
+  // Schema Sharing: Export
+  ipcMain.handle(
+    IPC_CHANNELS.SCHEMA_EXPORT,
+    createHandler(async (request: ExportSchemaRequest) => {
+      // Export schema to shareable format
+      const { data } = await exportSchema(request.schema);
+
+      // Serialize with optional compression
+      const { result, compressionInfo } = await serializeShareableData(
+        data,
+        request.compress
+      );
+
+      // Handle file path
+      let filePath = request.filePath;
+      if (!filePath) {
+        const dialogResult = await dialog.showSaveDialog({
+          title: 'Export Schema',
+          defaultPath: `${request.schema.name || 'schema'}.sqlpro-schema.json`,
+          filters: [
+            { name: 'SQL Pro Schema', extensions: ['json'] },
+            { name: 'All Files', extensions: ['*'] },
+          ],
+        });
+
+        if (dialogResult.canceled || !dialogResult.filePath) {
+          throw new Error('Export canceled by user');
+        }
+
+        filePath = dialogResult.filePath;
+      }
+
+      // Write to file
+      fs.writeFileSync(filePath, result, 'utf-8');
+
+      return { filePath, compressionInfo };
+    })
+  );
+
+  // Schema Sharing: Import
+  ipcMain.handle(
+    IPC_CHANNELS.SCHEMA_IMPORT,
+    createHandler(async (request: ImportSchemaRequest) => {
+      let data: string;
+
+      // Get data from file or request
+      if (request.data) {
+        data = request.data;
+      } else {
+        let filePath = request.filePath;
+        if (!filePath) {
+          const dialogResult = await dialog.showOpenDialog({
+            title: 'Import Schema',
+            filters: [
+              { name: 'SQL Pro Schema', extensions: ['json'] },
+              { name: 'All Files', extensions: ['*'] },
+            ],
+            properties: ['openFile'],
+          });
+
+          if (dialogResult.canceled || dialogResult.filePaths.length === 0) {
+            throw new Error('Import canceled by user');
+          }
+
+          filePath = dialogResult.filePaths[0];
+        }
+
+        data = fs.readFileSync(filePath, 'utf-8');
+      }
+
+      // Import and validate
+      const { schema, validation } = await importSchema(data);
+
+      return { schema, validation };
+    })
+  );
+
+  // Bundle Sharing: Export
+  ipcMain.handle(
+    IPC_CHANNELS.BUNDLE_EXPORT,
+    createHandler(async (request: ExportBundleRequest) => {
+      // Export bundle to shareable format
+      const { data } = await exportBundle(request.bundle);
+
+      // Serialize with optional compression
+      const { result, compressionInfo } = await serializeShareableData(
+        data,
+        request.compress
+      );
+
+      // Handle file path
+      let filePath = request.filePath;
+      if (!filePath) {
+        const dialogResult = await dialog.showSaveDialog({
+          title: 'Export Query Bundle',
+          defaultPath: `${request.bundle.name || 'bundle'}.sqlpro-bundle.json`,
+          filters: [
+            { name: 'SQL Pro Bundle', extensions: ['json'] },
+            { name: 'All Files', extensions: ['*'] },
+          ],
+        });
+
+        if (dialogResult.canceled || !dialogResult.filePath) {
+          throw new Error('Export canceled by user');
+        }
+
+        filePath = dialogResult.filePath;
+      }
+
+      // Write to file
+      fs.writeFileSync(filePath, result, 'utf-8');
+
+      return { filePath, compressionInfo };
+    })
+  );
+
+  // Bundle Sharing: Import
+  ipcMain.handle(
+    IPC_CHANNELS.BUNDLE_IMPORT,
+    createHandler(async (request: ImportBundleRequest) => {
+      let data: string;
+
+      // Get data from file or request
+      if (request.data) {
+        data = request.data;
+      } else {
+        let filePath = request.filePath;
+        if (!filePath) {
+          const dialogResult = await dialog.showOpenDialog({
+            title: 'Import Query Bundle',
+            filters: [
+              { name: 'SQL Pro Bundle', extensions: ['json'] },
+              { name: 'All Files', extensions: ['*'] },
+            ],
+            properties: ['openFile'],
+          });
+
+          if (dialogResult.canceled || dialogResult.filePaths.length === 0) {
+            throw new Error('Import canceled by user');
+          }
+
+          filePath = dialogResult.filePaths[0];
+        }
+
+        data = fs.readFileSync(filePath, 'utf-8');
+      }
+
+      // Import and validate
+      const { bundle, validation } = await importBundle(data);
+
+      return { bundle, validation };
+    })
   );
 }
 
