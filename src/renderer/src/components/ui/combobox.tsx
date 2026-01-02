@@ -238,9 +238,11 @@ function ComboboxChip({
   className,
   children,
   showRemove = true,
+  onRemove,
   ...props
 }: ComboboxPrimitive.Chip.Props & {
   showRemove?: boolean;
+  onRemove?: () => void;
 }) {
   return (
     <ComboboxPrimitive.Chip
@@ -254,7 +256,7 @@ function ComboboxChip({
       {children}
       {showRemove && (
         <ComboboxPrimitive.ChipRemove
-          render={<Button variant="ghost" size="icon-xs" />}
+          render={<Button variant="ghost" size="icon-xs" onClick={onRemove} />}
           className="-ml-1 opacity-50 hover:opacity-100"
           data-slot="combobox-chip-remove"
         >

@@ -1,12 +1,14 @@
-import { resolve } from 'node:path';
+import path from 'node:path';
 import { defineConfig } from 'vitest/config';
 
 export default defineConfig({
   resolve: {
-    alias: {
-      '@shared': resolve(__dirname, 'src/shared'),
-      '@': resolve(__dirname, 'src/renderer/src'),
-    },
+    alias: [
+      // Main paths - for renderer tests, @ should point to renderer
+      { find: '@', replacement: path.resolve(__dirname, './src/renderer/src') },
+      // Shared paths
+      { find: '@shared', replacement: path.resolve(__dirname, './src/shared') },
+    ],
   },
   test: {
     watch: false,

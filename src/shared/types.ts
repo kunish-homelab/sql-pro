@@ -1878,6 +1878,217 @@ export interface ImportBundleResponse {
   error?: string;
 }
 
+// ============ Saved Queries & Collections Types ============
+
+/**
+ * Saved query that can be organized in collections and marked as favorite
+ */
+export interface SavedQuery {
+  /** Unique identifier for the saved query */
+  id: string;
+  /** User-defined name for the query */
+  name: string;
+  /** Full SQL query text */
+  queryText: string;
+  /** Optional description of what the query does */
+  description?: string;
+  /** Database file path this query was created for (optional, can be cross-database) */
+  dbPath?: string;
+  /** When the query was created (ISO string) */
+  createdAt: string;
+  /** When the query was last updated (ISO string) */
+  updatedAt: string;
+  /** Whether this query is marked as a favorite */
+  isFavorite: boolean;
+  /** IDs of collections this query belongs to */
+  collectionIds: string[];
+}
+
+/**
+ * Collection for organizing saved queries
+ */
+export interface QueryCollection {
+  /** Unique identifier for the collection */
+  id: string;
+  /** User-defined name for the collection */
+  name: string;
+  /** Optional description of the collection's purpose */
+  description?: string;
+  /** Color for the collection (hex code) */
+  color?: string;
+  /** Icon identifier for the collection */
+  icon?: string;
+  /** When the collection was created (ISO string) */
+  createdAt: string;
+  /** When the collection was last updated (ISO string) */
+  updatedAt: string;
+  /** IDs of queries in this collection */
+  queryIds: string[];
+}
+
+// Saved Query IPC types
+export interface GetSavedQueriesRequest {
+  /** Optional database path to filter queries */
+  dbPath?: string;
+  /** Filter to only favorites */
+  favoritesOnly?: boolean;
+  /** Filter to specific collection */
+  collectionId?: string;
+}
+
+export interface GetSavedQueriesResponse {
+  success: boolean;
+  queries?: SavedQuery[];
+  error?: string;
+}
+
+export interface SaveSavedQueryRequest {
+  query: Omit<SavedQuery, 'id' | 'createdAt' | 'updatedAt'> & {
+    id?: string;
+    createdAt?: string;
+    updatedAt?: string;
+  };
+}
+
+export interface SaveSavedQueryResponse {
+  success: boolean;
+  query?: SavedQuery;
+  error?: string;
+}
+
+export interface UpdateSavedQueryRequest {
+  id: string;
+  updates: Partial<Omit<SavedQuery, 'id' | 'createdAt'>>;
+}
+
+export interface UpdateSavedQueryResponse {
+  success: boolean;
+  query?: SavedQuery;
+  error?: string;
+}
+
+export interface DeleteSavedQueryRequest {
+  id: string;
+}
+
+export interface DeleteSavedQueryResponse {
+  success: boolean;
+  error?: string;
+}
+
+export interface ToggleFavoriteRequest {
+  id: string;
+  isFavorite: boolean;
+}
+
+export interface ToggleFavoriteResponse {
+  success: boolean;
+  query?: SavedQuery;
+  error?: string;
+}
+
+// Collection IPC types
+export interface GetCollectionsResponse {
+  success: boolean;
+  collections?: QueryCollection[];
+  error?: string;
+}
+
+export interface SaveCollectionRequest {
+  collection: Omit<QueryCollection, 'id' | 'createdAt' | 'updatedAt'> & {
+    id?: string;
+    createdAt?: string;
+    updatedAt?: string;
+  };
+}
+
+export interface SaveCollectionResponse {
+  success: boolean;
+  collection?: QueryCollection;
+  error?: string;
+}
+
+export interface UpdateCollectionRequest {
+  id: string;
+  updates: Partial<Omit<QueryCollection, 'id' | 'createdAt'>>;
+}
+
+export interface UpdateCollectionResponse {
+  success: boolean;
+  collection?: QueryCollection;
+  error?: string;
+}
+
+export interface DeleteCollectionRequest {
+  id: string;
+}
+
+export interface DeleteCollectionResponse {
+  success: boolean;
+  error?: string;
+}
+
+export interface AddQueryToCollectionRequest {
+  queryId: string;
+  collectionId: string;
+}
+
+export interface AddQueryToCollectionResponse {
+  success: boolean;
+  query?: SavedQuery;
+  collection?: QueryCollection;
+  error?: string;
+}
+
+export interface RemoveQueryFromCollectionRequest {
+  queryId: string;
+  collectionId: string;
+}
+
+export interface RemoveQueryFromCollectionResponse {
+  success: boolean;
+  query?: SavedQuery;
+  collection?: QueryCollection;
+  error?: string;
+}
+
+// Export/Import types
+export interface ExportCollectionsRequest {
+  /** Collection IDs to export (all if not specified) */
+  collectionIds?: string[];
+  /** File path to save the export */
+  filePath: string;
+}
+
+export interface ExportCollectionsResponse {
+  success: boolean;
+  /** Path where the file was saved */
+  filePath?: string;
+  /** Number of collections exported */
+  collectionsExported?: number;
+  /** Number of queries exported */
+  queriesExported?: number;
+  error?: string;
+}
+
+export interface ImportCollectionsRequest {
+  /** File path to import from */
+  filePath: string;
+  /** Strategy for handling duplicates: 'skip', 'rename', 'overwrite' */
+  duplicateStrategy?: 'skip' | 'rename' | 'overwrite';
+}
+
+export interface ImportCollectionsResponse {
+  success: boolean;
+  /** Number of collections imported */
+  collectionsImported?: number;
+  /** Number of queries imported */
+  queriesImported?: number;
+  /** Number of items skipped due to duplicates */
+  skipped?: number;
+  error?: string;
+}
+
 // ============ IPC Channel Definitions ============
 
 export interface IPCChannels {
@@ -2175,6 +2386,23 @@ export const IPC_CHANNELS = {
   SCHEMA_IMPORT: 'schema:import',
   BUNDLE_EXPORT: 'bundle:export',
   BUNDLE_IMPORT: 'bundle:import',
+
+  // Saved Queries
+  SAVED_QUERY_GET_ALL: 'saved-query:get-all',
+  SAVED_QUERY_SAVE: 'saved-query:save',
+  SAVED_QUERY_UPDATE: 'saved-query:update',
+  SAVED_QUERY_DELETE: 'saved-query:delete',
+  SAVED_QUERY_TOGGLE_FAVORITE: 'saved-query:toggle-favorite',
+
+  // Collections
+  COLLECTION_GET_ALL: 'collection:get-all',
+  COLLECTION_SAVE: 'collection:save',
+  COLLECTION_UPDATE: 'collection:update',
+  COLLECTION_DELETE: 'collection:delete',
+  COLLECTION_ADD_QUERY: 'collection:add-query',
+  COLLECTION_REMOVE_QUERY: 'collection:remove-query',
+  COLLECTION_EXPORT: 'collection:export',
+  COLLECTION_IMPORT: 'collection:import',
 } as const;
 
 // ============ Keyboard Shortcuts Types ============

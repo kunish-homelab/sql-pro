@@ -344,7 +344,7 @@ export function QueryBundleExportDialog({
                 <h4 className="text-sm font-semibold">
                   Individual Queries ({queries.length})
                 </h4>
-                <ScrollArea className="h-[300px] pr-4">
+                <ScrollArea className="h-75 pr-4">
                   <div className="space-y-4">
                     {queries.map((query, index) => {
                       const metadata = getQueryMetadata(query.id);

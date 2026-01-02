@@ -1,6 +1,7 @@
 import {
   AlertCircle,
   BarChart3,
+  Bookmark,
   CheckSquare,
   Clock,
   Code,
@@ -9,6 +10,7 @@ import {
   History,
   Loader2,
   Play,
+  Save,
   Search,
   Share2,
   Sparkles,
@@ -25,8 +27,9 @@ import React, {
   useRef,
   useState,
 } from 'react';
-
 import { DataAnalysisPanel, NLToSQLDialog } from '@/components/ai';
+import { SavedQueriesPanel } from '@/components/query/SavedQueriesPanel';
+import { SaveQueryDialog } from '@/components/query/SaveQueryDialog';
 import { SettingsDialog } from '@/components/SettingsDialog';
 import {
   QueryBundleExportDialog,
@@ -34,6 +37,12 @@ import {
   QueryImportDialog,
 } from '@/components/sharing';
 import { Button } from '@/components/ui/button';
+import {
+  ContextMenu,
+  ContextMenuContent,
+  ContextMenuItem,
+  ContextMenuTrigger,
+} from '@/components/ui/context-menu';
 import {
   Dialog,
   DialogContent,
@@ -57,6 +66,7 @@ import {
 } from '@/components/ui/resizable';
 import { ScrollArea } from '@/components/ui/scroll-area';
 import { SqlHighlight } from '@/components/ui/sql-highlight';
+import { Tabs, TabsContent, TabsList, TabsTrigger } from '@/components/ui/tabs';
 import { sqlPro } from '@/lib/api';
 import { generateSuggestions } from '@/lib/query-plan-analyzer';
 import { cn } from '@/lib/utils';
@@ -131,7 +141,10 @@ export function QueryEditor() {
   };
   const activePaneId = connectionTabState?.activePaneId || 'pane-main';
 
-  const [showHistory, setShowHistory] = useState(false);
+  const [showSidePanel, setShowSidePanel] = useState(false);
+  const [sidePanelTab, setSidePanelTab] = useState<'history' | 'saved'>(
+    'history'
+  );
   const [historySearch, setHistorySearch] = useState('');
   const [showClearConfirm, setShowClearConfirm] = useState(false);
   const [showTemplates, setShowTemplates] = useState(false);
@@ -146,6 +159,8 @@ export function QueryEditor() {
   const [selectedHistoryIds, setSelectedHistoryIds] = useState<Set<string>>(
     () => new Set()
   );
+  const [showSaveQuery, setShowSaveQuery] = useState(false);
+  const [queryToSave, setQueryToSave] = useState<string | null>(null);
   const containerRef = useRef<HTMLDivElement>(null);
 
   // AI store
@@ -187,18 +202,43 @@ export function QueryEditor() {
     }
   }, [connection?.path, loadHistory]);
 
-  // Keyboard shortcut for history toggle
+  // Keyboard shortcuts
   useEffect(() => {
     const handleKeyDown = (e: KeyboardEvent) => {
-      if ((e.metaKey || e.ctrlKey) && e.key === 'h') {
+      // History toggle: Cmd/Ctrl+H
+      if ((e.metaKey || e.ctrlKey) && e.key === 'h' && !e.shiftKey) {
         e.preventDefault();
-        setShowHistory((prev) => !prev);
+        if (showSidePanel && sidePanelTab === 'history') {
+          setShowSidePanel(false);
+        } else {
+          setSidePanelTab('history');
+          setShowSidePanel(true);
+        }
+      }
+
+      // Saved Queries toggle: Cmd/Ctrl+Shift+F
+      if ((e.metaKey || e.ctrlKey) && e.shiftKey && e.key === 'F') {
+        e.preventDefault();
+        if (showSidePanel && sidePanelTab === 'saved') {
+          setShowSidePanel(false);
+        } else {
+          setSidePanelTab('saved');
+          setShowSidePanel(true);
+        }
+      }
+
+      // Save Query: Cmd/Ctrl+S (when editor has content)
+      if ((e.metaKey || e.ctrlKey) && e.key === 's' && !e.shiftKey) {
+        e.preventDefault();
+        if (tabQuery.trim()) {
+          setShowSaveQuery(true);
+        }
       }
     };
 
     window.addEventListener('keydown', handleKeyDown);
     return () => window.removeEventListener('keydown', handleKeyDown);
-  }, []);
+  }, [tabQuery, showSidePanel, sidePanelTab]);
 
   const handleExecute = useCallback(async () => {
     if (!connection || !activeConnectionId || !tabQuery.trim() || !activeTabId)
@@ -291,7 +331,12 @@ export function QueryEditor() {
 
   const handleHistorySelect = (query: string) => {
     handleQueryChange(query);
-    setShowHistory(false);
+    setShowSidePanel(false);
+  };
+
+  const handleSavedQueryLoad = (query: { queryText: string }) => {
+    handleQueryChange(query.queryText);
+    setShowSidePanel(false);
   };
 
   const handleHistoryDelete = (e: React.MouseEvent, entryId: string) => {
@@ -341,6 +386,11 @@ export function QueryEditor() {
   const handleExportSelected = () => {
     if (selectedHistoryIds.size === 0) return;
     setShowQueryBundleExport(true);
+  };
+
+  const handleSaveFromHistory = (queryText: string) => {
+    setQueryToSave(queryText);
+    setShowSaveQuery(true);
   };
 
   const handleAnalyze = useCallback(
@@ -442,13 +492,55 @@ export function QueryEditor() {
           <Button
             variant="ghost"
             size="sm"
-            onClick={() => setShowHistory(!showHistory)}
+            onClick={() => setShowSaveQuery(true)}
+            disabled={!tabQuery.trim()}
+            className="gap-1"
+            title="Save current query"
+            data-action="save-query"
+          >
+            <Bookmark className="h-4 w-4" />
+            Save Query
+            <kbd className="bg-muted text-muted-foreground ml-1 rounded px-1 py-0.5 font-mono text-[10px]">
+              ⌘S
+            </kbd>
+          </Button>
+          <Button
+            variant="ghost"
+            size="sm"
+            onClick={() => {
+              if (showSidePanel && sidePanelTab === 'history') {
+                setShowSidePanel(false);
+              } else {
+                setSidePanelTab('history');
+                setShowSidePanel(true);
+              }
+            }}
             className="gap-1"
             data-action="toggle-history"
           >
             <History className="h-4 w-4" />
             History
             <ShortcutKbd action="view.toggle-history" className="ml-1" />
+          </Button>
+          <Button
+            variant="ghost"
+            size="sm"
+            onClick={() => {
+              if (showSidePanel && sidePanelTab === 'saved') {
+                setShowSidePanel(false);
+              } else {
+                setSidePanelTab('saved');
+                setShowSidePanel(true);
+              }
+            }}
+            className="gap-1"
+            data-action="toggle-saved-queries"
+          >
+            <Bookmark className="h-4 w-4" />
+            Saved
+            <kbd className="bg-muted text-muted-foreground ml-1 rounded px-1 py-0.5 font-mono text-[10px]">
+              ⇧⌘F
+            </kbd>
           </Button>
           <Button
             variant="ghost"
@@ -599,209 +691,267 @@ export function QueryEditor() {
           </>
         )}
 
-        {/* History Panel - Resizable */}
-        {showHistory && (
+        {/* Side Panel (History & Saved Queries) - Resizable */}
+        {showSidePanel && (
           <ResizablePanel
             side="right"
             defaultWidth={384}
             minWidth={280}
             maxWidth={600}
-            storageKey="query-history-panel"
+            storageKey="query-side-panel"
           >
             <div className="bg-background flex h-full flex-col border-l">
-              <div className="flex shrink-0 items-center justify-between border-b px-4 py-2">
-                <h3 className="font-medium">
-                  {historySelectionMode
-                    ? `Selected (${selectedHistoryIds.size})`
-                    : 'Query History'}
-                </h3>
-                <div className="flex items-center gap-1">
-                  {historySelectionMode ? (
-                    <>
-                      <Button
-                        variant="ghost"
-                        size="sm"
-                        className="h-8 text-xs"
-                        onClick={
-                          selectedHistoryIds.size === filteredHistory.length
-                            ? handleDeselectAllHistory
-                            : handleSelectAllHistory
-                        }
-                        disabled={filteredHistory.length === 0}
-                      >
-                        {selectedHistoryIds.size === filteredHistory.length
-                          ? 'Deselect All'
-                          : 'Select All'}
-                      </Button>
-                      <Button
-                        variant="ghost"
-                        size="sm"
-                        className="h-8 gap-1 text-xs"
-                        onClick={handleExportSelected}
-                        disabled={selectedHistoryIds.size === 0}
-                      >
-                        <FileDown className="h-3.5 w-3.5" />
-                        Export
-                      </Button>
-                      <Button
-                        variant="ghost"
-                        size="sm"
-                        className="h-8 text-xs"
-                        onClick={handleExitSelectionMode}
-                      >
-                        Cancel
-                      </Button>
-                    </>
-                  ) : (
-                    <>
-                      <Button
-                        variant="ghost"
-                        size="icon"
-                        className="h-8 w-8"
-                        onClick={handleEnterSelectionMode}
-                        disabled={history.length === 0}
-                        title="Select multiple queries"
-                      >
-                        <CheckSquare className="h-4 w-4" />
-                      </Button>
-                      <Button
-                        variant="ghost"
-                        size="icon"
-                        className="h-8 w-8"
-                        onClick={() => setShowClearConfirm(true)}
-                        disabled={history.length === 0}
-                        title="Clear all history"
-                      >
-                        <Trash2 className="h-4 w-4" />
-                      </Button>
-                      <Button
-                        variant="ghost"
-                        size="icon"
-                        className="h-8 w-8"
-                        onClick={() => setShowHistory(false)}
-                      >
-                        <X className="h-4 w-4" />
-                      </Button>
-                    </>
-                  )}
+              <Tabs
+                value={sidePanelTab}
+                onValueChange={(v) => setSidePanelTab(v as 'history' | 'saved')}
+                className="flex h-full flex-col"
+              >
+                {/* Tab Header */}
+                <div className="flex shrink-0 items-center justify-between border-b">
+                  <TabsList className="h-auto border-0 bg-transparent p-0">
+                    <TabsTrigger
+                      value="history"
+                      className="data-[state=active]:border-primary flex items-center gap-2 rounded-none border-b-2 border-transparent px-4 py-2.5 data-[state=active]:bg-transparent"
+                    >
+                      <History className="h-4 w-4" />
+                      History
+                    </TabsTrigger>
+                    <TabsTrigger
+                      value="saved"
+                      className="data-[state=active]:border-primary flex items-center gap-2 rounded-none border-b-2 border-transparent px-4 py-2.5 data-[state=active]:bg-transparent"
+                    >
+                      <Bookmark className="h-4 w-4" />
+                      Saved
+                    </TabsTrigger>
+                  </TabsList>
+                  <Button
+                    variant="ghost"
+                    size="icon"
+                    className="mr-2 h-8 w-8"
+                    onClick={() => setShowSidePanel(false)}
+                  >
+                    <X className="h-4 w-4" />
+                  </Button>
                 </div>
-              </div>
-              {/* Search Input */}
-              <div className="shrink-0 border-b px-3 py-2">
-                <div className="relative">
-                  <Search className="text-muted-foreground absolute top-1/2 left-2.5 h-4 w-4 -translate-y-1/2" />
-                  <Input
-                    type="text"
-                    placeholder="Search history..."
-                    value={historySearch}
-                    onChange={(e) => setHistorySearch(e.target.value)}
-                    className="h-8 pl-8 text-sm"
-                  />
-                </div>
-              </div>
-              <ScrollArea className="min-h-0 flex-1">
-                <div className="space-y-1 p-2">
-                  {filteredHistory.length === 0 ? (
-                    <p className="text-muted-foreground py-8 text-center text-sm">
-                      {historySearch.trim()
-                        ? 'No matching queries'
-                        : 'No queries yet'}
-                    </p>
-                  ) : (
-                    filteredHistory.map((item) => {
-                      const isSelected = selectedHistoryIds.has(item.id);
-                      return (
-                        <div
-                          key={item.id}
-                          className={cn(
-                            'hover:bg-accent group relative w-full rounded-md text-left text-sm transition-colors',
-                            !item.success && 'border-destructive border-l-2',
-                            historySelectionMode && 'px-2 py-2',
-                            !historySelectionMode && 'px-3 py-2'
-                          )}
-                        >
-                          {historySelectionMode ? (
-                            <div
-                              className="flex cursor-pointer items-start gap-2"
-                              onClick={() => handleToggleHistoryItem(item.id)}
-                            >
-                              <div className="pt-0.5">
-                                {isSelected ? (
-                                  <CheckSquare className="text-primary h-4 w-4" />
-                                ) : (
-                                  <Square className="text-muted-foreground h-4 w-4" />
-                                )}
-                              </div>
-                              <div className="min-w-0 flex-1">
-                                <div className="flex items-center gap-2">
-                                  {item.success ? (
-                                    <span className="text-xs text-green-600">
-                                      {formatDuration(item.durationMs)}
-                                    </span>
-                                  ) : (
-                                    <span className="text-destructive text-xs">
-                                      Failed
-                                    </span>
+
+                {/* History Tab Content */}
+                <TabsContent
+                  value="history"
+                  className="mt-0 flex h-0 flex-1 flex-col overflow-hidden data-[state=inactive]:hidden"
+                >
+                  <div className="flex shrink-0 items-center justify-between border-b px-4 py-2">
+                    <h3 className="font-medium">
+                      {historySelectionMode
+                        ? `Selected (${selectedHistoryIds.size})`
+                        : 'Query History'}
+                    </h3>
+                    <div className="flex items-center gap-1">
+                      {historySelectionMode ? (
+                        <>
+                          <Button
+                            variant="ghost"
+                            size="sm"
+                            className="h-8 text-xs"
+                            onClick={
+                              selectedHistoryIds.size === filteredHistory.length
+                                ? handleDeselectAllHistory
+                                : handleSelectAllHistory
+                            }
+                            disabled={filteredHistory.length === 0}
+                          >
+                            {selectedHistoryIds.size === filteredHistory.length
+                              ? 'Deselect All'
+                              : 'Select All'}
+                          </Button>
+                          <Button
+                            variant="ghost"
+                            size="sm"
+                            className="h-8 gap-1 text-xs"
+                            onClick={handleExportSelected}
+                            disabled={selectedHistoryIds.size === 0}
+                          >
+                            <FileDown className="h-3.5 w-3.5" />
+                            Export
+                          </Button>
+                          <Button
+                            variant="ghost"
+                            size="sm"
+                            className="h-8 text-xs"
+                            onClick={handleExitSelectionMode}
+                          >
+                            Cancel
+                          </Button>
+                        </>
+                      ) : (
+                        <>
+                          <Button
+                            variant="ghost"
+                            size="icon"
+                            className="h-8 w-8"
+                            onClick={handleEnterSelectionMode}
+                            disabled={history.length === 0}
+                            title="Select multiple queries"
+                          >
+                            <CheckSquare className="h-4 w-4" />
+                          </Button>
+                          <Button
+                            variant="ghost"
+                            size="icon"
+                            className="h-8 w-8"
+                            onClick={() => setShowClearConfirm(true)}
+                            disabled={history.length === 0}
+                            title="Clear all history"
+                          >
+                            <Trash2 className="h-4 w-4" />
+                          </Button>
+                        </>
+                      )}
+                    </div>
+                  </div>
+                  {/* Search Input */}
+                  <div className="shrink-0 border-b px-3 py-2">
+                    <div className="relative">
+                      <Search className="text-muted-foreground absolute top-1/2 left-2.5 h-4 w-4 -translate-y-1/2" />
+                      <Input
+                        type="text"
+                        placeholder="Search history..."
+                        value={historySearch}
+                        onChange={(e) => setHistorySearch(e.target.value)}
+                        className="h-8 pl-8 text-sm"
+                      />
+                    </div>
+                  </div>
+                  <ScrollArea className="min-h-0 flex-1">
+                    <div className="space-y-1 p-2">
+                      {filteredHistory.length === 0 ? (
+                        <p className="text-muted-foreground py-8 text-center text-sm">
+                          {historySearch.trim()
+                            ? 'No matching queries'
+                            : 'No queries yet'}
+                        </p>
+                      ) : (
+                        filteredHistory.map((item) => {
+                          const isSelected = selectedHistoryIds.has(item.id);
+                          return (
+                            <ContextMenu key={item.id}>
+                              <ContextMenuTrigger>
+                                <div
+                                  className={cn(
+                                    'hover:bg-accent group relative w-full rounded-md text-left text-sm transition-colors',
+                                    !item.success &&
+                                      'border-destructive border-l-2',
+                                    historySelectionMode && 'px-2 py-2',
+                                    !historySelectionMode && 'px-3 py-2'
                                   )}
-                                  <span className="text-muted-foreground text-xs">
-                                    {new Date(
-                                      item.executedAt
-                                    ).toLocaleTimeString()}
-                                  </span>
-                                </div>
-                                <SqlHighlight
-                                  code={item.queryText}
-                                  maxLines={3}
-                                  className="mt-1"
-                                />
-                              </div>
-                            </div>
-                          ) : (
-                            <>
-                              <button
-                                onClick={() =>
-                                  handleHistorySelect(item.queryText)
-                                }
-                                className="w-full text-left"
-                              >
-                                <div className="flex items-center gap-2 pr-6">
-                                  {item.success ? (
-                                    <span className="text-xs text-green-600">
-                                      {formatDuration(item.durationMs)}
-                                    </span>
+                                >
+                                  {historySelectionMode ? (
+                                    <div
+                                      className="flex cursor-pointer items-start gap-2"
+                                      onClick={() =>
+                                        handleToggleHistoryItem(item.id)
+                                      }
+                                    >
+                                      <div className="pt-0.5">
+                                        {isSelected ? (
+                                          <CheckSquare className="text-primary h-4 w-4" />
+                                        ) : (
+                                          <Square className="text-muted-foreground h-4 w-4" />
+                                        )}
+                                      </div>
+                                      <div className="min-w-0 flex-1">
+                                        <div className="flex items-center gap-2">
+                                          {item.success ? (
+                                            <span className="text-xs text-green-600">
+                                              {formatDuration(item.durationMs)}
+                                            </span>
+                                          ) : (
+                                            <span className="text-destructive text-xs">
+                                              Failed
+                                            </span>
+                                          )}
+                                          <span className="text-muted-foreground text-xs">
+                                            {new Date(
+                                              item.executedAt
+                                            ).toLocaleTimeString()}
+                                          </span>
+                                        </div>
+                                        <SqlHighlight
+                                          code={item.queryText}
+                                          maxLines={3}
+                                          className="mt-1"
+                                        />
+                                      </div>
+                                    </div>
                                   ) : (
-                                    <span className="text-destructive text-xs">
-                                      Failed
-                                    </span>
+                                    <>
+                                      <button
+                                        onClick={() =>
+                                          handleHistorySelect(item.queryText)
+                                        }
+                                        className="w-full text-left"
+                                      >
+                                        <div className="flex items-center gap-2 pr-6">
+                                          {item.success ? (
+                                            <span className="text-xs text-green-600">
+                                              {formatDuration(item.durationMs)}
+                                            </span>
+                                          ) : (
+                                            <span className="text-destructive text-xs">
+                                              Failed
+                                            </span>
+                                          )}
+                                          <span className="text-muted-foreground text-xs">
+                                            {new Date(
+                                              item.executedAt
+                                            ).toLocaleTimeString()}
+                                          </span>
+                                        </div>
+                                        <SqlHighlight
+                                          code={item.queryText}
+                                          maxLines={3}
+                                          className="mt-1 pr-6"
+                                        />
+                                      </button>
+                                      <Button
+                                        variant="ghost"
+                                        size="icon"
+                                        className="absolute top-1/2 right-1 h-6 w-6 -translate-y-1/2 opacity-0 transition-opacity group-hover:opacity-100"
+                                        onClick={(e) =>
+                                          handleHistoryDelete(e, item.id)
+                                        }
+                                      >
+                                        <X className="h-3 w-3" />
+                                      </Button>
+                                    </>
                                   )}
-                                  <span className="text-muted-foreground text-xs">
-                                    {new Date(
-                                      item.executedAt
-                                    ).toLocaleTimeString()}
-                                  </span>
                                 </div>
-                                <SqlHighlight
-                                  code={item.queryText}
-                                  maxLines={3}
-                                  className="mt-1 pr-6"
-                                />
-                              </button>
-                              <Button
-                                variant="ghost"
-                                size="icon"
-                                className="absolute top-1/2 right-1 h-6 w-6 -translate-y-1/2 opacity-0 transition-opacity group-hover:opacity-100"
-                                onClick={(e) => handleHistoryDelete(e, item.id)}
-                              >
-                                <X className="h-3 w-3" />
-                              </Button>
-                            </>
-                          )}
-                        </div>
-                      );
-                    })
-                  )}
-                </div>
-              </ScrollArea>
+                              </ContextMenuTrigger>
+                              <ContextMenuContent>
+                                <ContextMenuItem
+                                  onClick={() =>
+                                    handleSaveFromHistory(item.queryText)
+                                  }
+                                >
+                                  <Save className="mr-2 h-4 w-4" />
+                                  Save to Collection
+                                </ContextMenuItem>
+                              </ContextMenuContent>
+                            </ContextMenu>
+                          );
+                        })
+                      )}
+                    </div>
+                  </ScrollArea>
+                </TabsContent>
+
+                {/* Saved Queries Tab Content */}
+                <TabsContent
+                  value="saved"
+                  className="mt-0 h-0 flex-1 overflow-hidden data-[state=inactive]:hidden"
+                >
+                  <SavedQueriesPanel onLoadQuery={handleSavedQueryLoad} />
+                </TabsContent>
+              </Tabs>
             </div>
           </ResizablePanel>
         )}
@@ -907,6 +1057,19 @@ export function QueryEditor() {
           setHistorySelectionMode(false);
           setSelectedHistoryIds(new Set());
         }}
+      />
+
+      {/* Save Query Dialog */}
+      <SaveQueryDialog
+        open={showSaveQuery}
+        onOpenChange={(open) => {
+          setShowSaveQuery(open);
+          if (!open) {
+            setQueryToSave(null);
+          }
+        }}
+        queryText={queryToSave || tabQuery}
+        dbPath={connection?.path}
       />
     </div>
   );

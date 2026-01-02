@@ -1,5 +1,6 @@
 export { DEFAULT_MODELS, useAIStore } from './ai-store';
 export { useChangesStore } from './changes-store';
+export { useCollectionsStore } from './collections-store';
 export {
   formatShortcut,
   getFilteredCommands,
@@ -55,6 +56,7 @@ export {
   useQueryTemplatesStore,
 } from './query-templates-store';
 export type { QueryTemplate, TemplateCategory } from './query-templates-store';
+export { useSavedQueriesStore } from './saved-queries-store';
 export { useSchemaComparisonStore } from './schema-comparison-store';
 export type {
   ComparisonSource,

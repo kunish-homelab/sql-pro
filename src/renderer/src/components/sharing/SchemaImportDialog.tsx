@@ -182,7 +182,7 @@ export function SchemaImportDialog({
                 {/* Version Compatibility */}
                 {!versionCompatible && (
                   <div className="bg-destructive/10 flex items-start gap-3 rounded-lg p-4">
-                    <AlertCircle className="text-destructive h-5 w-5 flex-shrink-0" />
+                    <AlertCircle className="text-destructive h-5 w-5 shrink-0" />
                     <div className="flex-1">
                       <p className="text-destructive font-medium">
                         Version Incompatible
@@ -198,7 +198,7 @@ export function SchemaImportDialog({
                 {/* Compression Info */}
                 {importResult.validation?.compressionInfo?.compressed && (
                   <div className="bg-muted flex items-start gap-3 rounded-lg p-3">
-                    <CheckCircle2 className="text-muted-foreground h-5 w-5 flex-shrink-0" />
+                    <CheckCircle2 className="text-muted-foreground h-5 w-5 shrink-0" />
                     <div className="flex-1">
                       <p className="text-sm font-medium">
                         Compressed File Detected
@@ -232,7 +232,7 @@ export function SchemaImportDialog({
                 {hasErrors && (
                   <div className="bg-destructive/10 space-y-2 rounded-lg p-4">
                     <div className="flex items-start gap-3">
-                      <AlertCircle className="text-destructive h-5 w-5 flex-shrink-0" />
+                      <AlertCircle className="text-destructive h-5 w-5 shrink-0" />
                       <div className="flex-1">
                         <p className="text-destructive font-medium">
                           Validation Errors
@@ -255,7 +255,7 @@ export function SchemaImportDialog({
                 {hasWarnings && (
                   <div className="space-y-2 rounded-lg border border-yellow-500/30 bg-yellow-50 p-4 dark:bg-yellow-950/30">
                     <div className="flex items-start gap-3">
-                      <AlertTriangle className="h-5 w-5 flex-shrink-0 text-yellow-600 dark:text-yellow-400" />
+                      <AlertTriangle className="h-5 w-5 shrink-0 text-yellow-600 dark:text-yellow-400" />
                       <div className="flex-1">
                         <p className="font-medium text-yellow-900 dark:text-yellow-100">
                           Warnings
@@ -276,7 +276,7 @@ export function SchemaImportDialog({
                 {/* Success Status */}
                 {isValid && !hasErrors && !hasWarnings && (
                   <div className="flex items-start gap-3 rounded-lg bg-green-50 p-4 dark:bg-green-950">
-                    <CheckCircle2 className="h-5 w-5 flex-shrink-0 text-green-600 dark:text-green-400" />
+                    <CheckCircle2 className="h-5 w-5 shrink-0 text-green-600 dark:text-green-400" />
                     <div className="flex-1">
                       <p className="font-medium text-green-900 dark:text-green-100">
                         Validation Successful
@@ -564,7 +564,7 @@ export function SchemaImportDialog({
                   {isValid && stats && stats.tables > 0 && (
                     <div className="space-y-2 rounded-lg border border-yellow-500/30 bg-yellow-50 p-3 dark:bg-yellow-950/30">
                       <div className="flex items-start gap-2">
-                        <AlertTriangle className="h-4 w-4 flex-shrink-0 text-yellow-600 dark:text-yellow-400" />
+                        <AlertTriangle className="h-4 w-4 shrink-0 text-yellow-600 dark:text-yellow-400" />
                         <div className="flex-1">
                           <p className="text-sm font-medium text-yellow-900 dark:text-yellow-100">
                             Schema Conflict Warning

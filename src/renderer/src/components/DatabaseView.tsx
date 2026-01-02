@@ -1,3 +1,4 @@
+import type { SavedQuery } from '@shared/types';
 import { ArrowLeftRight, Code, GitCompare, GitFork, Table } from 'lucide-react';
 import { useCallback, useEffect, useRef, useState } from 'react';
 import { ShortcutKbd } from '@/components/ui/kbd';
@@ -7,6 +8,8 @@ import {
   useChangesStore,
   useConnectionStore,
   useDataTabsStore,
+  useQueryStore,
+  useQueryTabsStore,
   useSettingsStore,
 } from '@/stores';
 import { ConnectionTabBar } from './ConnectionTabBar';
@@ -46,6 +49,9 @@ export function DatabaseView({
     setActiveConnectionId: setDataTabsActiveConnection,
   } = useDataTabsStore();
   const { sidebarCollapsed, toggleSidebar } = useSettingsStore();
+  const { setCurrentQuery } = useQueryStore();
+  const { getActiveTab: getActiveQueryTab, updateTabQuery } =
+    useQueryTabsStore();
 
   const [activeTab, setActiveTab] = useState<TabValue>('data');
   const [showChangesPanel, setShowChangesPanel] = useState(false);
@@ -143,6 +149,28 @@ export function DatabaseView({
     }
   }, [sidebarCollapsed, toggleSidebar]);
 
+  // Handler to load a favorite query from toolbar
+  const handleLoadFavoriteQuery = useCallback(
+    (query: SavedQuery) => {
+      // Switch to query tab
+      setActiveTab('query');
+      // Load query into editor
+      setCurrentQuery(query.queryText);
+      // Update active tab query if in multi-tab mode
+      if (activeConnectionId) {
+        const activeQueryTab = getActiveQueryTab(activeConnectionId);
+        if (activeQueryTab) {
+          updateTabQuery(
+            activeConnectionId,
+            activeQueryTab.id,
+            query.queryText
+          );
+        }
+      }
+    },
+    [activeConnectionId, getActiveQueryTab, setCurrentQuery, updateTabQuery]
+  );
+
   return (
     <div className="flex h-full flex-col">
       {/* Hidden button for keyboard shortcut to toggle sidebar */}
@@ -157,7 +185,10 @@ export function DatabaseView({
       <ConnectionTabBar />
 
       {/* Toolbar */}
-      <Toolbar onOpenChanges={() => setShowChangesPanel(true)} />
+      <Toolbar
+        onOpenChanges={() => setShowChangesPanel(true)}
+        onLoadFavoriteQuery={handleLoadFavoriteQuery}
+      />
 
       {/* Main Content */}
       <div className="flex min-h-0 flex-1 overflow-hidden">
