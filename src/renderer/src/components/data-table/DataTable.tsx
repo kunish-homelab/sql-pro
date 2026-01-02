@@ -303,10 +303,8 @@ export const DataTable = function DataTable({
       >
         {/* Column group for width control - use CSS variables for dynamic sizing */}
         <colgroup>
-          {/* Selection column */}
-          {enableSelection && (
-            <col style={{ width: 40, minWidth: 40, maxWidth: 40 }} />
-          )}
+          {/* Selection column - auto width based on content */}
+          {enableSelection && <col />}
           {table.getVisibleLeafColumns().map((column) => (
             <col
               key={column.id}

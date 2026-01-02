@@ -65,8 +65,7 @@ const DataRow = memo(
         {/* Selection cell */}
         {enableSelection && (
           <td
-            className="bg-background sticky left-0 z-10 w-10 border-r px-2"
-            style={{ width: 40, minWidth: 40, maxWidth: 40 }}
+            className="bg-background sticky left-0 z-10 border-r px-3"
             onClick={(e) => e.stopPropagation()}
           >
             <Checkbox
@@ -170,9 +169,11 @@ export const TableBody = memo(
     enableSelection = false,
   }: TableBodyProps) => {
     // Calculate pinned offsets
+    // Selection column width: checkbox (16px) + padding (12px * 2) + border (1px) ≈ 41px
+    const SELECTION_COLUMN_WIDTH = 41;
     const pinnedOffsets = useMemo(() => {
       const offsets: Record<string, number> = {};
-      let offset = enableSelection ? 40 : 0; // Account for selection column
+      let offset = enableSelection ? SELECTION_COLUMN_WIDTH : 0; // Account for selection column
       for (const colId of pinnedColumns) {
         offsets[colId] = offset;
         offset += getColumnSize?.(colId) ?? 150;

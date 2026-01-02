@@ -363,8 +363,10 @@ export const TableHeader = memo(
     );
 
     // Calculate pinned offsets
+    // Selection column width: checkbox (16px) + padding (12px * 2) + border (1px) ≈ 41px
+    const SELECTION_COLUMN_WIDTH = 41;
     const pinnedOffsets: Record<string, number> = {};
-    let offset = enableSelection ? 40 : 0; // Account for selection column
+    let offset = enableSelection ? SELECTION_COLUMN_WIDTH : 0; // Account for selection column
     for (const colId of pinnedColumns) {
       pinnedOffsets[colId] = offset;
       const col = table.getColumn(colId);
@@ -388,10 +390,7 @@ export const TableHeader = memo(
           <tr key={headerGroup.id}>
             {/* Selection column header */}
             {enableSelection && (
-              <th
-                className="bg-background sticky left-0 z-10 h-9 w-10 border-r px-2"
-                style={{ width: 40, minWidth: 40, maxWidth: 40 }}
-              >
+              <th className="bg-background sticky left-0 z-10 h-9 border-r px-3">
                 <Checkbox
                   checked={table.getIsAllPageRowsSelected()}
                   indeterminate={
