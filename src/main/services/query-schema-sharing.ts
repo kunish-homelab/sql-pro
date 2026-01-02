@@ -219,8 +219,15 @@ const ShareableBundleSchema = z.object({
  * Exports a query with metadata to a shareable format.
  * Compression is handled by serializeShareableData function.
  *
+ * Validates:
+ * - Query name is non-empty and within 200 characters
+ * - SQL is non-empty and contains valid characters
+ * - Tags are properly formatted (if provided)
+ * - Database context is valid (if provided)
+ *
  * @param query - Query data (without id, metadata, or createdAt)
  * @returns ShareableQuery ready to be serialized
+ * @throws Error if validation fails
  *
  * @example
  * ```typescript
@@ -228,17 +235,95 @@ const ShareableBundleSchema = z.object({
  *   name: 'Find active users',
  *   sql: 'SELECT * FROM users WHERE active = 1',
  *   description: 'Returns all active users',
- *   tags: ['users', 'active']
+ *   tags: ['users', 'active'],
+ *   databaseContext: 'production',
+ *   documentation: 'Use this query to find all active users in the system'
  * });
  * ```
  */
 export async function exportQuery(
   query: Omit<ShareableQuery, 'id' | 'metadata' | 'createdAt'>
 ): Promise<{ data: ShareableQuery; compressionInfo?: CompressionInfo }> {
+  // Validate query name
+  if (!query.name || query.name.trim().length === 0) {
+    throw new Error('Query name cannot be empty');
+  }
+  if (query.name.length > 200) {
+    throw new Error('Query name cannot exceed 200 characters');
+  }
+
+  // Validate SQL
+  if (!query.sql || query.sql.trim().length === 0) {
+    throw new Error('Query SQL cannot be empty');
+  }
+
+  // Basic SQL syntax check - ensure it contains valid SQL keywords
+  // Strip SQL comments (-- and /* */) before checking
+  const sqlWithoutComments = query.sql
+    .replace(/--[^\n]*/g, '') // Remove single-line comments
+    .replace(/\/\*[\s\S]*?\*\//g, '') // Remove multi-line comments
+    .trim()
+    .toUpperCase();
+
+  if (sqlWithoutComments.length === 0) {
+    throw new Error('Query SQL contains only comments');
+  }
+
+  const hasValidSQLKeyword =
+    sqlWithoutComments.startsWith('SELECT') ||
+    sqlWithoutComments.startsWith('INSERT') ||
+    sqlWithoutComments.startsWith('UPDATE') ||
+    sqlWithoutComments.startsWith('DELETE') ||
+    sqlWithoutComments.startsWith('CREATE') ||
+    sqlWithoutComments.startsWith('ALTER') ||
+    sqlWithoutComments.startsWith('DROP') ||
+    sqlWithoutComments.startsWith('WITH') ||
+    sqlWithoutComments.startsWith('PRAGMA') ||
+    sqlWithoutComments.startsWith('EXPLAIN');
+
+  if (!hasValidSQLKeyword) {
+    throw new Error(
+      'Query SQL must start with a valid SQL keyword (SELECT, INSERT, UPDATE, DELETE, CREATE, ALTER, DROP, WITH, PRAGMA, or EXPLAIN)'
+    );
+  }
+
+  // Validate tags (if provided)
+  if (query.tags) {
+    if (!Array.isArray(query.tags)) {
+      throw new Error('Tags must be an array of strings');
+    }
+    for (const tag of query.tags) {
+      if (typeof tag !== 'string' || tag.trim().length === 0) {
+        throw new Error('Each tag must be a non-empty string');
+      }
+      if (tag.length > 50) {
+        throw new Error('Tag cannot exceed 50 characters');
+      }
+    }
+  }
+
+  // Validate database context (if provided)
+  if (query.databaseContext && query.databaseContext.length > 200) {
+    throw new Error('Database context cannot exceed 200 characters');
+  }
+
+  // Validate description (if provided)
+  if (query.description && query.description.length > 1000) {
+    throw new Error('Description cannot exceed 1000 characters');
+  }
+
+  // Validate documentation (if provided)
+  if (query.documentation && query.documentation.length > 10000) {
+    throw new Error('Documentation cannot exceed 10000 characters');
+  }
+
+  // Create shareable query with generated fields
   const shareableQuery: ShareableQuery = {
     id: generateShareableId(),
     ...query,
     createdAt: new Date().toISOString(),
+    // Set modifiedAt to createdAt if not provided
+    modifiedAt: query.modifiedAt || new Date().toISOString(),
     metadata: createMetadata(false),
   };
 
