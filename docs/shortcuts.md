@@ -302,7 +302,21 @@ SQL Pro attempts to prevent these defaults when focused, but if you experience c
 
 ## Next Steps
 
-- [Get Started with SQL Pro](/getting-started/) - New user guide
-- [Query Editor Features](/features/query-editor) - Learn SQL editor shortcuts in context
-- [Data Editing Guide](/features/data-editing) - Master grid navigation shortcuts
-- [Vim Mode Configuration](/features/query-editor#vim-mode) - Configure Vim mode and other options
+Now that you know the keyboard shortcuts:
+
+- 📝 **[Query Editor Features](/features/query-editor)** - Learn SQL editor shortcuts in context
+- ✏️ **[Data Editing Guide](/features/data-editing)** - Master grid navigation shortcuts
+- ⚙️ **[Customizing Shortcuts](#customizing-shortcuts)** - Create your own shortcut configuration
+- 🎯 **[Vim Mode](/features/query-editor#vim-mode)** - Advanced keyboard navigation
+
+::: tip Productivity Tips
+Most features in SQL Pro are optimized for keyboard use. Combine shortcuts with the Command Palette (<kbd>Cmd/Ctrl + K</kbd>) for the fastest workflow.
+:::
+
+---
+
+**More Resources:**
+
+- [Getting Started](/getting-started/) - New user guide
+- [Features](/features/) - All SQL Pro features
+- [Troubleshooting](/troubleshooting) - Common issues and solutions

@@ -2,6 +2,10 @@
 
 SQL Pro is a professional SQLite database manager packed with powerful features designed for developers, data analysts, and database administrators. This guide provides an overview of all major features and links to detailed documentation for each.
 
+::: info Quick Navigation
+Jump to: [Query Editor](#query-editor) • [Schema Browser](#schema-browser) • [Data Editing](#data-editing) • [ER Diagram](#er-diagram) • [Query History](#query-history) • [SQLCipher](#sqlcipher)
+:::
+
 ## Core Features
 
 SQL Pro combines essential database management tools with advanced features that set it apart from other SQLite tools.
@@ -176,7 +180,23 @@ SQL Pro is designed for power users who prefer keyboard navigation. Every major 
 
 ## Next Steps
 
-- [Get Started](/getting-started/) - Install SQL Pro and connect to your first database
-- [Query Editor](/features/query-editor) - Master the SQL editor
-- [Keyboard Shortcuts](/shortcuts) - Learn all available shortcuts
-- [Troubleshooting](/troubleshooting) - Solutions for common issues
+Ready to dive deeper into SQL Pro?
+
+### Learn More
+
+- 📚 [Getting Started Guide](/getting-started/) - New user setup and first connection
+- ⌨️ [Keyboard Shortcuts](/shortcuts) - Master keyboard navigation for faster workflows
+- 🔌 [Plugin Development](/plugin-development) - Extend SQL Pro with custom plugins
+- 🛠️ [Troubleshooting](/troubleshooting) - Solutions for common issues
+
+### Get Involved
+
+- 💬 [GitHub Discussions](https://github.com/kunish-homelab/sql-pro/discussions) - Ask questions and share ideas
+- 🐛 [Report an Issue](https://github.com/kunish-homelab/sql-pro/issues) - Found a bug? Let us know
+- 🤝 [Contributing Guide](https://github.com/kunish-homelab/sql-pro/blob/main/CONTRIBUTING.md) - Help improve SQL Pro
+
+### Stay Updated
+
+- ⭐ [Star on GitHub](https://github.com/kunish-homelab/sql-pro) - Show your support
+- 📦 [Latest Releases](https://github.com/kunish-homelab/sql-pro/releases) - Download the newest version
+- 📝 [Changelog](https://github.com/kunish-homelab/sql-pro/blob/main/CHANGELOG.md) - See what's new

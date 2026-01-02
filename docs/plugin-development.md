@@ -2,6 +2,15 @@
 
 This comprehensive guide covers everything you need to know to build plugins for SQL Pro. Whether you're creating a simple utility or a complex extension, this guide will help you get started and follow best practices.
 
+::: info Developer Resources
+
+- 📖 [Plugin API Reference](/plugin-api) - Complete API documentation
+- 🎯 [Example Plugins](#example-plugins) - Ready-to-use templates
+- 💬 [Discussions](https://github.com/kunish-homelab/sql-pro/discussions) - Get help from the community
+  :::
+
+[[toc]]
+
 ## Overview
 
 SQL Pro's plugin system allows you to extend the application with custom functionality, including:
@@ -880,11 +889,22 @@ SQL Pro plugins run in a sandboxed environment with the following restrictions:
 
 ## Getting Help
 
-- **Documentation**: See the [Plugin API Reference](/plugin-api) for complete API documentation
-- **Examples**: Browse the example plugins in `plugin-sdk/templates/`
-- **Issues**: Report bugs or request features on [GitHub Issues](https://github.com/kunish-homelab/sql-pro/issues)
-- **Discussions**: Ask questions in [GitHub Discussions](https://github.com/kunish-homelab/sql-pro/discussions)
+Need assistance with plugin development?
 
-::: info Contributing
-Want to improve the plugin system? Contributions are welcome! See the [Contributing Guide](https://github.com/kunish-homelab/sql-pro/blob/main/CONTRIBUTING.md) for details.
+- **[Plugin API Reference](/plugin-api)** - Complete API documentation with all methods and types
+- **[Example Plugins](#example-plugins)** - Browse the example plugins in `plugin-sdk/templates/`
+- **[GitHub Issues](https://github.com/kunish-homelab/sql-pro/issues)** - Report bugs or request features
+- **[GitHub Discussions](https://github.com/kunish-homelab/sql-pro/discussions)** - Ask questions and share ideas
+
+::: info Contributing to the Plugin System
+Want to improve the plugin system itself? Check our [Contributing Guide](https://github.com/kunish-homelab/sql-pro/blob/main/CONTRIBUTING.md) for details on how to contribute to SQL Pro's core.
 :::
+
+---
+
+## Next Steps
+
+- 📖 **[Plugin API Reference](/plugin-api)** - Dive into detailed API documentation
+- 🎯 **[Example Plugins](#example-plugins)** - Start with ready-to-use templates
+- 🚀 **[Getting Started](/getting-started/)** - New to SQL Pro? Start here
+- 📚 **[Features](/features/)** - Explore all SQL Pro features
