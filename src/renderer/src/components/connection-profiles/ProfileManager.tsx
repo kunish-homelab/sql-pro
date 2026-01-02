@@ -6,6 +6,7 @@ import {
   FileText,
   FolderPlus,
   KeyRound,
+  Plus,
   Search,
   Tag,
   X,
@@ -79,6 +80,14 @@ export function ProfileManager({
     null
   );
   const [folderName, setFolderName] = useState('');
+
+  // Add connection dialog states
+  const [addConnectionDialogOpen, setAddConnectionDialogOpen] = useState(false);
+  const [pendingNewConnection, setPendingNewConnection] = useState<{
+    path: string;
+    filename: string;
+    isEncrypted: boolean;
+  } | null>(null);
 
   // Check if keychain is available
   const checkKeychainAvailability = useCallback(async () => {
@@ -497,6 +506,64 @@ export function ProfileManager({
     [profiles, updateProfile]
   );
 
+  // Handle add connection - open file dialog
+  const handleAddConnection = useCallback(async () => {
+    try {
+      const result = await sqlPro.dialog.openFile();
+      if (result.success && !result.canceled && result.filePath) {
+        const filename = result.filePath.split('/').pop() || result.filePath;
+        const isEncrypted = result.isEncrypted ?? false;
+
+        setPendingNewConnection({
+          path: result.filePath,
+          filename,
+          isEncrypted,
+        });
+        setAddConnectionDialogOpen(true);
+      }
+    } catch (err) {
+      setError(
+        err instanceof Error ? err.message : 'Failed to open file dialog'
+      );
+    }
+  }, []);
+
+  // Handle add connection form submit
+  const handleAddConnectionSubmit = useCallback(
+    async (data: ProfileFormData) => {
+      if (!pendingNewConnection) return;
+
+      try {
+        const newProfile: ConnectionProfile = {
+          id: crypto.randomUUID(),
+          path: pendingNewConnection.path,
+          filename: pendingNewConnection.filename,
+          displayName: data.displayName,
+          isEncrypted: pendingNewConnection.isEncrypted,
+          folderId: data.folderId,
+          tags: data.tags,
+          notes: data.notes,
+          readOnly: data.readOnly,
+          isSaved: true,
+          lastOpened: new Date().toISOString(),
+          createdAt: new Date().toISOString(),
+        };
+
+        const result = await sqlPro.profile.save({ profile: newProfile });
+        if (result.success && result.profile) {
+          addProfile(result.profile);
+          setAddConnectionDialogOpen(false);
+          setPendingNewConnection(null);
+        } else {
+          setError(result.error || 'Failed to save profile');
+        }
+      } catch (err) {
+        setError(err instanceof Error ? err.message : 'Unknown error');
+      }
+    },
+    [pendingNewConnection, addProfile]
+  );
+
   // Get selected profile for details panel
   const selectedProfile = selectedProfileId
     ? profiles.get(selectedProfileId)
@@ -508,14 +575,20 @@ export function ProfileManager({
       <div className="border-b p-4">
         <div className="mb-3 flex items-center justify-between">
           <h2 className="text-lg font-semibold">Connection Profiles</h2>
-          <Button
-            size="sm"
-            variant="outline"
-            onClick={() => handleCreateFolder()}
-          >
-            <FolderPlus className="size-4" />
-            New Folder
-          </Button>
+          <div className="flex items-center gap-2">
+            <Button size="sm" variant="default" onClick={handleAddConnection}>
+              <Plus className="size-4" />
+              Add Connection
+            </Button>
+            <Button
+              size="sm"
+              variant="outline"
+              onClick={() => handleCreateFolder()}
+            >
+              <FolderPlus className="size-4" />
+              New Folder
+            </Button>
+          </div>
         </div>
 
         {/* Search bar */}
@@ -827,6 +900,37 @@ export function ProfileManager({
               </Button>
             </div>
           </form>
+        </DialogContent>
+      </Dialog>
+
+      {/* Add Connection Dialog */}
+      <Dialog
+        open={addConnectionDialogOpen}
+        onOpenChange={(open) => {
+          setAddConnectionDialogOpen(open);
+          if (!open) {
+            setPendingNewConnection(null);
+          }
+        }}
+      >
+        <DialogContent>
+          <DialogHeader>
+            <DialogTitle>Add Connection to Profiles</DialogTitle>
+          </DialogHeader>
+          {pendingNewConnection && (
+            <ProfileForm
+              mode="new"
+              dbPath={pendingNewConnection.path}
+              filename={pendingNewConnection.filename}
+              isEncrypted={pendingNewConnection.isEncrypted}
+              folders={Array.from(folders.values())}
+              onSubmit={handleAddConnectionSubmit}
+              onCancel={() => {
+                setAddConnectionDialogOpen(false);
+                setPendingNewConnection(null);
+              }}
+            />
+          )}
         </DialogContent>
       </Dialog>
     </div>

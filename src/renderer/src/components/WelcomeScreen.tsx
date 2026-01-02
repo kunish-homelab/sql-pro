@@ -84,12 +84,14 @@ export function WelcomeScreen() {
     recentConnections,
     isConnecting,
     error,
+    folders,
     addConnection,
     setSchema,
     setIsConnecting,
     setIsLoadingSchema,
     setError,
     setRecentConnections,
+    setFolders,
   } = useConnectionStore();
   const { theme, setTheme } = useThemeStore();
 
@@ -117,6 +119,21 @@ export function WelcomeScreen() {
     filename: string;
     isEncrypted: boolean;
   } | null>(null);
+
+  // Load folders on mount
+  useEffect(() => {
+    const loadFolders = async () => {
+      try {
+        const result = await sqlPro.folder.getAll({});
+        if (result.success && result.folders) {
+          setFolders(result.folders);
+        }
+      } catch {
+        // Silently fail - folders are optional
+      }
+    };
+    loadFolders();
+  }, [setFolders]);
 
   const connectToDatabase = useCallback(
     async (
@@ -716,15 +733,21 @@ export function WelcomeScreen() {
                           <MoreVertical className="h-4 w-4" />
                         </Button>
                       </DropdownMenuTrigger>
-                      <DropdownMenuContent align="end" side="bottom">
+                      <DropdownMenuContent
+                        align="end"
+                        side="bottom"
+                        className="w-auto"
+                      >
                         <DropdownMenuItem
                           onClick={() => handleEditConnection(conn)}
+                          className="whitespace-nowrap"
                         >
                           <Settings className="mr-2 h-4 w-4" />
                           <span>Edit</span>
                         </DropdownMenuItem>
                         <DropdownMenuItem
                           onClick={() => handleSaveAsProfile(conn)}
+                          className="whitespace-nowrap"
                         >
                           <BookmarkPlus className="mr-2 h-4 w-4" />
                           <span>Save as Profile</span>
@@ -732,7 +755,7 @@ export function WelcomeScreen() {
                         <DropdownMenuSeparator />
                         <DropdownMenuItem
                           onClick={() => handleRemoveConnection(conn)}
-                          className="text-destructive focus:text-destructive"
+                          className="text-destructive focus:text-destructive whitespace-nowrap"
                         >
                           <Trash2 className="mr-2 h-4 w-4" />
                           <span>Remove</span>
@@ -795,7 +818,7 @@ export function WelcomeScreen() {
               dbPath={profileToSave.path}
               filename={profileToSave.filename}
               isEncrypted={profileToSave.isEncrypted}
-              folders={[]}
+              folders={Array.from(folders.values())}
               onSubmit={handleSaveProfileSubmit}
               onCancel={() => {
                 setSaveProfileDialogOpen(false);
