@@ -69,33 +69,43 @@ import { passwordStorageService } from './password-storage';
 import { schemaComparisonService } from './schema-comparison';
 import { sqlLogger } from './sql-logger';
 import {
+  addQueryToCollection,
   addRecentConnection,
   clearProStatus,
   clearQueryHistory,
+  deleteCollection,
   deleteFolder,
   deleteProfile,
   deleteQueryHistoryEntry,
+  deleteSavedQuery,
   deleteSchemaSnapshot,
   getAISettings,
+  getCollections,
   getFolders,
   getPreferences,
   getProfiles,
   getProStatus,
   getQueryHistory,
   getRecentConnections,
+  getSavedQueries,
   getSchemaSnapshot,
   getSchemaSnapshots,
+  removeQueryFromCollection,
   removeRecentConnection,
   saveAISettings,
+  saveCollection,
   saveFolder,
   saveProfile,
   saveProStatus,
   saveQueryHistoryEntry,
+  saveSavedQuery,
   saveSchemaSnapshot,
   setPreferences,
+  updateCollection,
   updateFolder,
   updateProfile,
   updateRecentConnection,
+  updateSavedQuery,
 } from './store';
 import {
   checkForUpdates,
@@ -1781,6 +1791,497 @@ export function setupIpcHandlers(): void {
             error instanceof Error
               ? error.message
               : 'Failed to export comparison report',
+        };
+      }
+    }
+  );
+
+  // ============ Saved Query Handlers ============
+
+  // Saved Query: Get All
+  ipcMain.handle(
+    IPC_CHANNELS.SAVED_QUERY_GET_ALL,
+    async (
+      _event,
+      request: {
+        dbPath?: string;
+        favoritesOnly?: boolean;
+        collectionId?: string;
+      }
+    ) => {
+      try {
+        const queries = getSavedQueries({
+          dbPath: request.dbPath,
+          favoritesOnly: request.favoritesOnly,
+          collectionId: request.collectionId,
+        });
+        return { success: true, queries };
+      } catch (error) {
+        return {
+          success: false,
+          error:
+            error instanceof Error
+              ? error.message
+              : 'Failed to get saved queries',
+        };
+      }
+    }
+  );
+
+  // Saved Query: Save
+  ipcMain.handle(
+    IPC_CHANNELS.SAVED_QUERY_SAVE,
+    async (_event, request: { query: Record<string, unknown> }) => {
+      try {
+        const result = saveSavedQuery(
+          request.query as Parameters<typeof saveSavedQuery>[0]
+        );
+        if (!result.success) {
+          return {
+            success: false,
+            error: result.error || 'Failed to save query',
+          };
+        }
+        return { success: true, query: result.query };
+      } catch (error) {
+        return {
+          success: false,
+          error:
+            error instanceof Error ? error.message : 'Failed to save query',
+        };
+      }
+    }
+  );
+
+  // Saved Query: Update
+  ipcMain.handle(
+    IPC_CHANNELS.SAVED_QUERY_UPDATE,
+    async (
+      _event,
+      request: { id: string; updates: Record<string, unknown> }
+    ) => {
+      try {
+        const result = updateSavedQuery(
+          request.id,
+          request.updates as Parameters<typeof updateSavedQuery>[1]
+        );
+        if (!result.success) {
+          return {
+            success: false,
+            error: result.error || 'Failed to update query',
+          };
+        }
+        return { success: true, query: result.query };
+      } catch (error) {
+        return {
+          success: false,
+          error:
+            error instanceof Error ? error.message : 'Failed to update query',
+        };
+      }
+    }
+  );
+
+  // Saved Query: Delete
+  ipcMain.handle(
+    IPC_CHANNELS.SAVED_QUERY_DELETE,
+    async (_event, request: { id: string }) => {
+      try {
+        const result = deleteSavedQuery(request.id);
+        if (!result.success) {
+          return {
+            success: false,
+            error: result.error || 'Failed to delete query',
+          };
+        }
+        return { success: true };
+      } catch (error) {
+        return {
+          success: false,
+          error:
+            error instanceof Error ? error.message : 'Failed to delete query',
+        };
+      }
+    }
+  );
+
+  // Saved Query: Toggle Favorite
+  ipcMain.handle(
+    IPC_CHANNELS.SAVED_QUERY_TOGGLE_FAVORITE,
+    async (_event, request: { id: string; isFavorite: boolean }) => {
+      try {
+        const result = updateSavedQuery(request.id, {
+          isFavorite: request.isFavorite,
+        });
+        if (!result.success) {
+          return {
+            success: false,
+            error: result.error || 'Failed to toggle favorite',
+          };
+        }
+        return { success: true, query: result.query };
+      } catch (error) {
+        return {
+          success: false,
+          error:
+            error instanceof Error
+              ? error.message
+              : 'Failed to toggle favorite',
+        };
+      }
+    }
+  );
+
+  // ============ Collection Handlers ============
+
+  // Collection: Get All
+  ipcMain.handle(IPC_CHANNELS.COLLECTION_GET_ALL, async () => {
+    try {
+      const collections = getCollections();
+      return { success: true, collections };
+    } catch (error) {
+      return {
+        success: false,
+        error:
+          error instanceof Error ? error.message : 'Failed to get collections',
+      };
+    }
+  });
+
+  // Collection: Save
+  ipcMain.handle(
+    IPC_CHANNELS.COLLECTION_SAVE,
+    async (_event, request: { collection: Record<string, unknown> }) => {
+      try {
+        const result = saveCollection(
+          request.collection as Parameters<typeof saveCollection>[0]
+        );
+        if (!result.success) {
+          return {
+            success: false,
+            error: result.error || 'Failed to save collection',
+          };
+        }
+        return { success: true, collection: result.collection };
+      } catch (error) {
+        return {
+          success: false,
+          error:
+            error instanceof Error
+              ? error.message
+              : 'Failed to save collection',
+        };
+      }
+    }
+  );
+
+  // Collection: Update
+  ipcMain.handle(
+    IPC_CHANNELS.COLLECTION_UPDATE,
+    async (
+      _event,
+      request: { id: string; updates: Record<string, unknown> }
+    ) => {
+      try {
+        const result = updateCollection(
+          request.id,
+          request.updates as Parameters<typeof updateCollection>[1]
+        );
+        if (!result.success) {
+          return {
+            success: false,
+            error: result.error || 'Failed to update collection',
+          };
+        }
+        return { success: true, collection: result.collection };
+      } catch (error) {
+        return {
+          success: false,
+          error:
+            error instanceof Error
+              ? error.message
+              : 'Failed to update collection',
+        };
+      }
+    }
+  );
+
+  // Collection: Delete
+  ipcMain.handle(
+    IPC_CHANNELS.COLLECTION_DELETE,
+    async (_event, request: { id: string }) => {
+      try {
+        const result = deleteCollection(request.id);
+        if (!result.success) {
+          return {
+            success: false,
+            error: result.error || 'Failed to delete collection',
+          };
+        }
+        return { success: true };
+      } catch (error) {
+        return {
+          success: false,
+          error:
+            error instanceof Error
+              ? error.message
+              : 'Failed to delete collection',
+        };
+      }
+    }
+  );
+
+  // Collection: Add Query
+  ipcMain.handle(
+    IPC_CHANNELS.COLLECTION_ADD_QUERY,
+    async (_event, request: { queryId: string; collectionId: string }) => {
+      try {
+        const result = addQueryToCollection(
+          request.queryId,
+          request.collectionId
+        );
+        if (!result.success) {
+          return {
+            success: false,
+            error: result.error || 'Failed to add query to collection',
+          };
+        }
+        return {
+          success: true,
+          query: result.query,
+          collection: result.collection,
+        };
+      } catch (error) {
+        return {
+          success: false,
+          error:
+            error instanceof Error
+              ? error.message
+              : 'Failed to add query to collection',
+        };
+      }
+    }
+  );
+
+  // Collection: Remove Query
+  ipcMain.handle(
+    IPC_CHANNELS.COLLECTION_REMOVE_QUERY,
+    async (_event, request: { queryId: string; collectionId: string }) => {
+      try {
+        const result = removeQueryFromCollection(
+          request.queryId,
+          request.collectionId
+        );
+        if (!result.success) {
+          return {
+            success: false,
+            error: result.error || 'Failed to remove query from collection',
+          };
+        }
+        return {
+          success: true,
+          query: result.query,
+          collection: result.collection,
+        };
+      } catch (error) {
+        return {
+          success: false,
+          error:
+            error instanceof Error
+              ? error.message
+              : 'Failed to remove query from collection',
+        };
+      }
+    }
+  );
+
+  // Collection: Export
+  ipcMain.handle(
+    IPC_CHANNELS.COLLECTION_EXPORT,
+    async (
+      _event,
+      request: { collectionIds?: string[]; filePath: string }
+    ) => {
+      try {
+        // Get all collections if no specific IDs provided
+        const allCollections = getCollections();
+        const collectionsToExport = request.collectionIds
+          ? allCollections.filter((c) => request.collectionIds!.includes(c.id))
+          : allCollections;
+
+        // Get all queries that belong to these collections
+        const queryIds = new Set<string>();
+        collectionsToExport.forEach((c) => {
+          c.queryIds.forEach((qId) => queryIds.add(qId));
+        });
+
+        const allQueries = getSavedQueries();
+        const queriesToExport = allQueries.filter((q) => queryIds.has(q.id));
+
+        // Create export data structure
+        const exportData = {
+          version: '1.0',
+          exportedAt: new Date().toISOString(),
+          collections: collectionsToExport,
+          queries: queriesToExport,
+        };
+
+        // Write to file
+        fs.writeFileSync(
+          request.filePath,
+          JSON.stringify(exportData, null, 2),
+          'utf-8'
+        );
+
+        return {
+          success: true,
+          filePath: request.filePath,
+          collectionsExported: collectionsToExport.length,
+          queriesExported: queriesToExport.length,
+        };
+      } catch (error) {
+        return {
+          success: false,
+          error:
+            error instanceof Error
+              ? error.message
+              : 'Failed to export collections',
+        };
+      }
+    }
+  );
+
+  // Collection: Import
+  ipcMain.handle(
+    IPC_CHANNELS.COLLECTION_IMPORT,
+    async (
+      _event,
+      request: { filePath: string; duplicateStrategy?: string }
+    ) => {
+      try {
+        // Read import file
+        const fileContent = fs.readFileSync(request.filePath, 'utf-8');
+        const importData = JSON.parse(fileContent);
+
+        // Validate import data structure
+        if (
+          !importData.version ||
+          !importData.collections ||
+          !importData.queries
+        ) {
+          return {
+            success: false,
+            error: 'Invalid import file format',
+          };
+        }
+
+        const strategy = request.duplicateStrategy || 'skip';
+        let collectionsImported = 0;
+        let queriesImported = 0;
+        let skipped = 0;
+
+        // Import queries first
+        const existingQueries = getSavedQueries();
+        const queryIdMap = new Map<string, string>(); // old ID -> new ID
+
+        for (const query of importData.queries) {
+          const existingQuery = existingQueries.find(
+            (q) => q.name === query.name && q.queryText === query.queryText
+          );
+
+          if (existingQuery) {
+            if (strategy === 'skip') {
+              queryIdMap.set(query.id, existingQuery.id);
+              skipped++;
+              continue;
+            } else if (strategy === 'rename') {
+              query.name = `${query.name} (imported)`;
+            } else if (strategy === 'overwrite') {
+              const result = updateSavedQuery(existingQuery.id, {
+                ...query,
+                id: existingQuery.id,
+              });
+              if (result.success) {
+                queryIdMap.set(query.id, existingQuery.id);
+                queriesImported++;
+              }
+              continue;
+            }
+          }
+
+          const oldId = query.id;
+          delete query.id; // Let the store generate a new ID
+          delete query.createdAt;
+          delete query.updatedAt;
+          query.collectionIds = []; // Will be set when collections are imported
+
+          const result = saveSavedQuery(query);
+          if (result.success && result.query) {
+            queryIdMap.set(oldId, result.query.id);
+            queriesImported++;
+          }
+        }
+
+        // Import collections
+        const existingCollections = getCollections();
+
+        for (const collection of importData.collections) {
+          const existingCollection = existingCollections.find(
+            (c) => c.name === collection.name
+          );
+
+          if (existingCollection) {
+            if (strategy === 'skip') {
+              skipped++;
+              continue;
+            } else if (strategy === 'rename') {
+              collection.name = `${collection.name} (imported)`;
+            } else if (strategy === 'overwrite') {
+              // Map old query IDs to new ones
+              const mappedQueryIds = collection.queryIds
+                .map((qId: string) => queryIdMap.get(qId))
+                .filter((id: string | undefined) => id !== undefined);
+
+              const result = updateCollection(existingCollection.id, {
+                ...collection,
+                queryIds: mappedQueryIds,
+              });
+              if (result.success) {
+                collectionsImported++;
+              }
+              continue;
+            }
+          }
+
+          // Map old query IDs to new ones
+          const mappedQueryIds = collection.queryIds
+            .map((qId: string) => queryIdMap.get(qId))
+            .filter((id: string | undefined) => id !== undefined);
+
+          delete collection.id; // Let the store generate a new ID
+          delete collection.createdAt;
+          delete collection.updatedAt;
+          collection.queryIds = mappedQueryIds;
+
+          const result = saveCollection(collection);
+          if (result.success) {
+            collectionsImported++;
+          }
+        }
+
+        return {
+          success: true,
+          collectionsImported,
+          queriesImported,
+          skipped,
+        };
+      } catch (error) {
+        return {
+          success: false,
+          error:
+            error instanceof Error
+              ? error.message
+              : 'Failed to import collections',
         };
       }
     }
