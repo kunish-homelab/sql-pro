@@ -1,3 +1,4 @@
+import type { SavedQuery } from '@shared/types';
 import {
   Database,
   FileText,
@@ -9,6 +10,7 @@ import {
   Sun,
   X,
 } from 'lucide-react';
+import { FavoritesQuickPanel } from '@/components/query/FavoritesQuickPanel';
 import { Button } from '@/components/ui/button';
 import { Separator } from '@/components/ui/separator';
 import {
@@ -27,9 +29,10 @@ import { useSqlLogStore } from '@/stores/sql-log-store';
 
 interface ToolbarProps {
   onOpenChanges?: () => void;
+  onLoadFavoriteQuery?: (query: SavedQuery) => void;
 }
 
-export function Toolbar({ onOpenChanges }: ToolbarProps) {
+export function Toolbar({ onOpenChanges, onLoadFavoriteQuery }: ToolbarProps) {
   const {
     connection,
     activeConnectionId,
@@ -153,6 +156,9 @@ export function Toolbar({ onOpenChanges }: ToolbarProps) {
 
       {/* Right side actions - won't shrink */}
       <div className="flex shrink-0 items-center gap-2">
+        {/* Favorites Quick Access */}
+        <FavoritesQuickPanel onLoadQuery={onLoadFavoriteQuery} />
+
         {/* Pending Changes Indicator - Clickable */}
         {hasChanges() && (
           <button

@@ -1,3 +1,4 @@
+import type { SavedQuery } from '@shared/types';
 import { Code, GitCompare, GitFork, Table } from 'lucide-react';
 import { useCallback, useEffect, useRef, useState } from 'react';
 import { Tabs, TabsContent, TabsList, TabsTrigger } from '@/components/ui/tabs';
@@ -6,6 +7,8 @@ import {
   useChangesStore,
   useConnectionStore,
   useDataTabsStore,
+  useQueryStore,
+  useQueryTabsStore,
 } from '@/stores';
 import { ConnectionTabBar } from './ConnectionTabBar';
 import { DataTabBar } from './data-table';
@@ -42,6 +45,8 @@ export function DatabaseView({
     tabsByConnection,
     setActiveConnectionId: setDataTabsActiveConnection,
   } = useDataTabsStore();
+  const { setCurrentQuery } = useQueryStore();
+  const { getActiveTab: getActiveQueryTab, updateTabQuery } = useQueryTabsStore();
 
   const [activeTab, setActiveTab] = useState<TabValue>('data');
   const [showChangesPanel, setShowChangesPanel] = useState(false);
@@ -131,13 +136,34 @@ export function DatabaseView({
     setActiveTab('data');
   }, []);
 
+  // Handler to load a favorite query from toolbar
+  const handleLoadFavoriteQuery = useCallback(
+    (query: SavedQuery) => {
+      // Switch to query tab
+      setActiveTab('query');
+      // Load query into editor
+      setCurrentQuery(query.queryText);
+      // Update active tab query if in multi-tab mode
+      if (activeConnectionId) {
+        const activeQueryTab = getActiveQueryTab(activeConnectionId);
+        if (activeQueryTab) {
+          updateTabQuery(activeConnectionId, activeQueryTab.id, query.queryText);
+        }
+      }
+    },
+    [activeConnectionId, getActiveQueryTab, setCurrentQuery, updateTabQuery]
+  );
+
   return (
     <div className="flex h-full flex-col">
       {/* Connection Tab Bar */}
       <ConnectionTabBar />
 
       {/* Toolbar */}
-      <Toolbar onOpenChanges={() => setShowChangesPanel(true)} />
+      <Toolbar
+        onOpenChanges={() => setShowChangesPanel(true)}
+        onLoadFavoriteQuery={handleLoadFavoriteQuery}
+      />
 
       {/* Main Content */}
       <div className="flex min-h-0 flex-1 overflow-hidden">
