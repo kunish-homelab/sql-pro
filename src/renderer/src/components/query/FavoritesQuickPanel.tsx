@@ -1,5 +1,5 @@
 import type { SavedQuery } from '@shared/types';
-import { FileText, Loader2, Star } from 'lucide-react';
+import { FileText, Star } from 'lucide-react';
 import { useCallback, useEffect, useMemo } from 'react';
 import { Button } from '@/components/ui/button';
 import {
@@ -10,6 +10,7 @@ import {
   PopoverTrigger,
 } from '@/components/ui/popover';
 import { ScrollArea } from '@/components/ui/scroll-area';
+import { Skeleton } from '@/components/ui/skeleton';
 import { useSavedQueriesStore } from '@/stores/saved-queries-store';
 
 interface FavoritesQuickPanelProps {
@@ -57,8 +58,25 @@ export function FavoritesQuickPanel({
   const content = (
     <div className="flex flex-col">
       {isLoading ? (
-        <div className="flex items-center justify-center py-8">
-          <Loader2 className="h-5 w-5 animate-spin text-muted-foreground" />
+        // Skeleton loading state
+        <div className="space-y-1 p-1">
+          {Array.from({ length: 3 }).map((_, index) => (
+            <div
+              key={index}
+              className="px-3 py-2.5 rounded-md"
+            >
+              <div className="flex items-start gap-2">
+                {/* Icon skeleton */}
+                <Skeleton className="h-8 w-8 rounded flex-shrink-0" />
+
+                {/* Content skeleton */}
+                <div className="flex-1 min-w-0 space-y-1.5">
+                  <Skeleton className="h-4 w-3/4" />
+                  <Skeleton className="h-5 w-full rounded" />
+                </div>
+              </div>
+            </div>
+          ))}
         </div>
       ) : favoriteQueries.length === 0 ? (
         <div className="text-center py-8 px-4">

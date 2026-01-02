@@ -49,6 +49,7 @@ import {
 import { Input } from '@/components/ui/input';
 import { Label } from '@/components/ui/label';
 import { ScrollArea } from '@/components/ui/scroll-area';
+import { Skeleton } from '@/components/ui/skeleton';
 import { Textarea } from '@/components/ui/textarea';
 import { Toggle } from '@/components/ui/toggle';
 import { useCollectionsStore } from '@/stores/collections-store';
@@ -322,9 +323,33 @@ export function SavedQueriesPanel({ onLoadQuery }: SavedQueriesPanelProps) {
       <ScrollArea className="flex-1">
         <div className="p-4 space-y-3">
           {isLoading ? (
-            <div className="flex items-center justify-center py-12">
-              <Loader2 className="h-6 w-6 animate-spin text-muted-foreground" />
-            </div>
+            // Skeleton loading state
+            <>
+              {Array.from({ length: 3 }).map((_, index) => (
+                <Card key={index} size="sm">
+                  <CardHeader>
+                    <div className="flex items-start gap-3">
+                      {/* Icon skeleton */}
+                      <Skeleton className="h-10 w-10 rounded-lg flex-shrink-0" />
+
+                      {/* Content skeleton */}
+                      <div className="flex-1 min-w-0 space-y-2">
+                        <Skeleton className="h-5 w-3/4" />
+                        <Skeleton className="h-4 w-full" />
+                        <Skeleton className="h-8 w-full rounded" />
+                        <div className="flex items-center gap-4">
+                          <Skeleton className="h-3 w-24" />
+                          <Skeleton className="h-3 w-32" />
+                        </div>
+                      </div>
+
+                      {/* Action skeleton */}
+                      <Skeleton className="h-8 w-8 rounded flex-shrink-0" />
+                    </div>
+                  </CardHeader>
+                </Card>
+              ))}
+            </>
           ) : filteredQueries.length === 0 ? (
             <div className="text-center py-12">
               <Bookmark className="mx-auto h-12 w-12 text-muted-foreground/50" />
