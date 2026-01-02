@@ -6,6 +6,7 @@ import {
   Copy,
   Database,
   Eye,
+  FileDown,
   FileSearch,
   Search,
   Settings,
@@ -51,6 +52,7 @@ import {
 } from '@/stores';
 import { ConnectionSelector } from './ConnectionSelector';
 import { SettingsDialog } from './SettingsDialog';
+import { SchemaExportDialog } from './sharing/SchemaExportDialog';
 
 interface SidebarProps {
   onOpenDatabase?: () => void;
@@ -101,6 +103,9 @@ export function Sidebar({
     null
   );
   const [tableToDrop, setTableToDrop] = useState<TableSchema | null>(null);
+
+  // Schema export dialog state
+  const [showSchemaExport, setShowSchemaExport] = useState(false);
 
   // Font settings for sidebar
   const tableFont = useTableFont();
@@ -264,6 +269,11 @@ export function Sidebar({
     },
     [activeConnectionId, createTab, onSwitchToQuery]
   );
+
+  // Show schema export dialog
+  const handleExportSchema = useCallback(() => {
+    setShowSchemaExport(true);
+  }, []);
 
   // Show truncate confirmation dialog
   const handleTruncateTableRequest = useCallback((table: TableSchema) => {
@@ -598,6 +608,7 @@ export function Sidebar({
                   onCopyTableName={handleCopyTableName}
                   onCopyCreateStatement={handleCopyCreateStatement}
                   onOpenInQueryEditor={handleOpenInQueryEditor}
+                  onExportSchema={handleExportSchema}
                   onTruncateTable={handleTruncateTableRequest}
                   onDropTable={handleDropTableRequest}
                 />
@@ -696,6 +707,16 @@ export function Sidebar({
           </AlertDialogFooter>
         </AlertDialogContent>
       </AlertDialog>
+
+      {/* Schema Export Dialog */}
+      {activeConnectionId && (
+        <SchemaExportDialog
+          open={showSchemaExport}
+          onOpenChange={setShowSchemaExport}
+          connectionId={activeConnectionId}
+          databaseName={connection?.filename || connection?.path || ''}
+        />
+      )}
     </div>
   );
 }
@@ -719,6 +740,7 @@ interface SchemaSectionProps {
   onCopyTableName: (table: TableSchema) => void;
   onCopyCreateStatement: (table: TableSchema) => void;
   onOpenInQueryEditor: (table: TableSchema) => void;
+  onExportSchema: () => void;
   onTruncateTable: (table: TableSchema) => void;
   onDropTable: (table: TableSchema) => void;
 }
@@ -738,6 +760,7 @@ function SchemaSection({
   onCopyTableName,
   onCopyCreateStatement,
   onOpenInQueryEditor,
+  onExportSchema,
   onTruncateTable,
   onDropTable,
 }: SchemaSectionProps) {
@@ -802,6 +825,7 @@ function SchemaSection({
                           onCopyCreateStatement(table)
                         }
                         onOpenInQueryEditor={() => onOpenInQueryEditor(table)}
+                        onExportSchema={onExportSchema}
                         onTruncateTable={() => onTruncateTable(table)}
                         onDropTable={() => onDropTable(table)}
                       />
@@ -845,6 +869,7 @@ function SchemaSection({
                           onCopyCreateStatement(view)
                         }
                         onOpenInQueryEditor={() => onOpenInQueryEditor(view)}
+                        onExportSchema={onExportSchema}
                         onTruncateTable={() => onTruncateTable(view)}
                         onDropTable={() => onDropTable(view)}
                         isView
@@ -896,6 +921,7 @@ interface TableItemProps {
   onCopyTableName: () => void;
   onCopyCreateStatement: () => void;
   onOpenInQueryEditor: () => void;
+  onExportSchema: () => void;
   onTruncateTable: () => void;
   onDropTable: () => void;
   isView?: boolean;
@@ -909,6 +935,7 @@ function TableItem({
   onCopyTableName,
   onCopyCreateStatement,
   onOpenInQueryEditor,
+  onExportSchema,
   onTruncateTable,
   onDropTable,
   isView,
@@ -954,6 +981,11 @@ function TableItem({
         <ContextMenuItem onClick={onCopyCreateStatement} disabled={!table.sql}>
           <Code className="size-4" />
           Copy CREATE Statement
+        </ContextMenuItem>
+        <ContextMenuSeparator />
+        <ContextMenuItem onClick={onExportSchema}>
+          <FileDown className="size-4" />
+          Export Schema
         </ContextMenuItem>
         <ContextMenuSeparator />
         {!isView && (
