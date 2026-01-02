@@ -237,9 +237,9 @@ export function DataDiffPanel({ className }: DataDiffPanelProps) {
                 </CardTitle>
               </CardHeader>
               <CardContent>
-                <div className="grid gap-2 text-sm sm:grid-cols-2">
+                <div className="grid gap-x-8 gap-y-2 text-sm sm:grid-cols-2 lg:grid-cols-3">
                   <div className="flex items-center justify-between gap-4">
-                    <span className="text-muted-foreground">
+                    <span className="text-muted-foreground whitespace-nowrap">
                       Run comparison
                     </span>
                     <ShortcutKbd
@@ -247,7 +247,7 @@ export function DataDiffPanel({ className }: DataDiffPanelProps) {
                     />
                   </div>
                   <div className="flex items-center justify-between gap-4">
-                    <span className="text-muted-foreground">
+                    <span className="text-muted-foreground whitespace-nowrap">
                       Toggle only differences
                     </span>
                     <ShortcutKbd
@@ -255,7 +255,9 @@ export function DataDiffPanel({ className }: DataDiffPanelProps) {
                     />
                   </div>
                   <div className="flex items-center justify-between gap-4">
-                    <span className="text-muted-foreground">Reset filters</span>
+                    <span className="text-muted-foreground whitespace-nowrap">
+                      Reset filters
+                    </span>
                     <ShortcutKbd
                       binding={{ key: 'r', modifiers: { cmd: true } }}
                     />
@@ -296,8 +298,14 @@ export function DataDiffPanel({ className }: DataDiffPanelProps) {
                       });
                     }}
                   >
-                    <SelectTrigger>
-                      <SelectValue placeholder="Select connection..." />
+                    <SelectTrigger className="w-full">
+                      <SelectValue placeholder="Select connection...">
+                        {source?.connectionId
+                          ? connections.find(
+                              (c) => c.id === source.connectionId
+                            )?.filename
+                          : null}
+                      </SelectValue>
                     </SelectTrigger>
                     <SelectContent>
                       {connections.map((conn) => (
@@ -327,8 +335,15 @@ export function DataDiffPanel({ className }: DataDiffPanelProps) {
                       !source?.connectionId || sourceTables.length === 0
                     }
                   >
-                    <SelectTrigger>
-                      <SelectValue placeholder="Select table..." />
+                    <SelectTrigger className="w-full">
+                      <SelectValue placeholder="Select table...">
+                        {source?.tableName ? (
+                          <div className="flex items-center gap-2">
+                            <Table2 className="h-3 w-3 shrink-0" />
+                            <span className="truncate">{source.tableName}</span>
+                          </div>
+                        ) : null}
+                      </SelectValue>
                     </SelectTrigger>
                     <SelectContent>
                       {sourceTables.map((table) => (
@@ -379,8 +394,14 @@ export function DataDiffPanel({ className }: DataDiffPanelProps) {
                       });
                     }}
                   >
-                    <SelectTrigger>
-                      <SelectValue placeholder="Select connection..." />
+                    <SelectTrigger className="w-full">
+                      <SelectValue placeholder="Select connection...">
+                        {target?.connectionId
+                          ? connections.find(
+                              (c) => c.id === target.connectionId
+                            )?.filename
+                          : null}
+                      </SelectValue>
                     </SelectTrigger>
                     <SelectContent>
                       {connections.map((conn) => (
@@ -410,8 +431,15 @@ export function DataDiffPanel({ className }: DataDiffPanelProps) {
                       !target?.connectionId || targetTables.length === 0
                     }
                   >
-                    <SelectTrigger>
-                      <SelectValue placeholder="Select table..." />
+                    <SelectTrigger className="w-full">
+                      <SelectValue placeholder="Select table...">
+                        {target?.tableName ? (
+                          <div className="flex items-center gap-2">
+                            <Table2 className="h-3 w-3 shrink-0" />
+                            <span className="truncate">{target.tableName}</span>
+                          </div>
+                        ) : null}
+                      </SelectValue>
                     </SelectTrigger>
                     <SelectContent>
                       {targetTables.map((table) => (
