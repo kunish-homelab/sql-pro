@@ -42,12 +42,18 @@ import type {
   DeleteSchemaSnapshotResponse,
   ExecuteQueryRequest,
   ExecuteQueryResponse,
+  ExportBundleRequest,
+  ExportBundleResponse,
   ExportComparisonReportRequest,
   ExportComparisonReportResponse,
   ExportProfilesRequest,
   ExportProfilesResponse,
+  ExportQueryRequest,
+  ExportQueryResponse,
   ExportRequest,
   ExportResponse,
+  ExportSchemaRequest,
+  ExportSchemaResponse,
   FocusWindowRequest,
   FocusWindowResponse,
   GenerateMigrationSQLRequest,
@@ -79,8 +85,14 @@ import type {
   GetTableDataResponse,
   HasPasswordRequest,
   HasPasswordResponse,
+  ImportBundleRequest,
+  ImportBundleResponse,
   ImportProfilesRequest,
   ImportProfilesResponse,
+  ImportQueryRequest,
+  ImportQueryResponse,
+  ImportSchemaRequest,
+  ImportSchemaResponse,
   IsPasswordStorageAvailableResponse,
   MenuAction,
   OpenDatabaseRequest,
@@ -557,6 +569,30 @@ const sqlProAPI = {
       request: CheckUpdatesRequest
     ): Promise<CheckUpdatesResponse> =>
       ipcRenderer.invoke(IPC_CHANNELS.MARKETPLACE_CHECK_UPDATES, request),
+  },
+
+  // Query & Schema Sharing operations
+  sharing: {
+    exportQuery: (request: ExportQueryRequest): Promise<ExportQueryResponse> =>
+      ipcRenderer.invoke(IPC_CHANNELS.QUERY_EXPORT, request),
+    importQuery: (request: ImportQueryRequest): Promise<ImportQueryResponse> =>
+      ipcRenderer.invoke(IPC_CHANNELS.QUERY_IMPORT, request),
+    exportSchema: (
+      request: ExportSchemaRequest
+    ): Promise<ExportSchemaResponse> =>
+      ipcRenderer.invoke(IPC_CHANNELS.SCHEMA_EXPORT, request),
+    importSchema: (
+      request: ImportSchemaRequest
+    ): Promise<ImportSchemaResponse> =>
+      ipcRenderer.invoke(IPC_CHANNELS.SCHEMA_IMPORT, request),
+    exportBundle: (
+      request: ExportBundleRequest
+    ): Promise<ExportBundleResponse> =>
+      ipcRenderer.invoke(IPC_CHANNELS.BUNDLE_EXPORT, request),
+    importBundle: (
+      request: ImportBundleRequest
+    ): Promise<ImportBundleResponse> =>
+      ipcRenderer.invoke(IPC_CHANNELS.BUNDLE_IMPORT, request),
   },
 };
 

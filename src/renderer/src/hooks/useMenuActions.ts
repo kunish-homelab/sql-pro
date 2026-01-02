@@ -228,6 +228,38 @@ export function useMenuActions() {
           // Note: This opens settings, user can then navigate to shortcuts tab
           break;
         }
+
+        case 'export-query': {
+          const exportQueryButton = document.querySelector<HTMLButtonElement>(
+            'button[data-action="export-query"]'
+          );
+          exportQueryButton?.click();
+          break;
+        }
+
+        case 'import-query': {
+          const importQueryButton = document.querySelector<HTMLButtonElement>(
+            'button[data-action="import-query"]'
+          );
+          importQueryButton?.click();
+          break;
+        }
+
+        case 'export-schema': {
+          const exportSchemaButton = document.querySelector<HTMLButtonElement>(
+            'button[data-action="export-schema"]'
+          );
+          exportSchemaButton?.click();
+          break;
+        }
+
+        case 'import-schema': {
+          const importSchemaButton = document.querySelector<HTMLButtonElement>(
+            'button[data-action="import-schema"]'
+          );
+          importSchemaButton?.click();
+          break;
+        }
       }
     });
 

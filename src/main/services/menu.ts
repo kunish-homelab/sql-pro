@@ -93,6 +93,26 @@ export function createApplicationMenu(): void {
           click: () => sendMenuAction('refresh-table'),
         },
         { type: 'separator' },
+        {
+          label: 'Export Query...',
+          accelerator: 'CmdOrCtrl+Shift+E',
+          click: () => sendMenuAction('export-query'),
+        },
+        {
+          label: 'Import Query...',
+          accelerator: 'CmdOrCtrl+Shift+I',
+          click: () => sendMenuAction('import-query'),
+        },
+        { type: 'separator' },
+        {
+          label: 'Export Schema...',
+          click: () => sendMenuAction('export-schema'),
+        },
+        {
+          label: 'Import Schema...',
+          click: () => sendMenuAction('import-schema'),
+        },
+        { type: 'separator' },
         ...(isMac
           ? []
           : [
