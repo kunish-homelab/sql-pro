@@ -11,6 +11,7 @@ import {
   HelpCircle,
   History,
   Keyboard,
+  Link,
   Monitor,
   Moon,
   PanelLeft,
@@ -20,6 +21,8 @@ import {
   Save,
   Search,
   Settings,
+  SkipBack,
+  SkipForward,
   Sun,
   Table,
   Trash2,
@@ -227,6 +230,55 @@ export function useCommands() {
         document
           .querySelector<HTMLButtonElement>('[data-tab="diagram"]')
           ?.click();
+        return;
+      }
+
+      // Recent connections shortcut (Ctrl+R)
+      const recentConnectionsBinding = getShortcut('conn.recent-connections');
+      if (matchesBinding(e, recentConnectionsBinding)) {
+        e.preventDefault();
+        // Open command palette with connection filter
+        toggle();
+        // Set timeout to filter after palette opens
+        setTimeout(() => {
+          const input = document.querySelector<HTMLInputElement>(
+            '[data-command-palette-input]'
+          );
+          if (input) {
+            input.value = 'connection';
+            input.dispatchEvent(new Event('input', { bubbles: true }));
+          }
+        }, 50);
+        return;
+      }
+
+      // Next connection shortcut (Cmd+Tab)
+      const nextConnectionBinding = getShortcut('conn.next-connection');
+      if (matchesBinding(e, nextConnectionBinding)) {
+        e.preventDefault();
+        const { connectionTabOrder, activeConnectionId, setActiveConnection } =
+          connectionStoreRef.current;
+        if (connectionTabOrder.length > 1 && activeConnectionId) {
+          const currentIndex = connectionTabOrder.indexOf(activeConnectionId);
+          const nextIndex = (currentIndex + 1) % connectionTabOrder.length;
+          setActiveConnection(connectionTabOrder[nextIndex]);
+        }
+        return;
+      }
+
+      // Previous connection shortcut (Cmd+Shift+Tab)
+      const prevConnectionBinding = getShortcut('conn.prev-connection');
+      if (matchesBinding(e, prevConnectionBinding)) {
+        e.preventDefault();
+        const { connectionTabOrder, activeConnectionId, setActiveConnection } =
+          connectionStoreRef.current;
+        if (connectionTabOrder.length > 1 && activeConnectionId) {
+          const currentIndex = connectionTabOrder.indexOf(activeConnectionId);
+          const prevIndex =
+            (currentIndex - 1 + connectionTabOrder.length) %
+            connectionTabOrder.length;
+          setActiveConnection(connectionTabOrder[prevIndex]);
+        }
       }
     };
 
@@ -324,6 +376,65 @@ export function useCommands() {
           );
           sidebarToggle?.click();
         },
+      },
+
+      // Connection commands
+      {
+        id: 'conn.recent-connections',
+        label: 'Recent Connections',
+        shortcut: getShortcutDisplay('conn.recent-connections'),
+        icon: Link,
+        category: 'navigation',
+        keywords: ['recent', 'connection', 'database', 'switch'],
+        action: () => {
+          navigate({ to: '/' });
+        },
+      },
+      {
+        id: 'conn.next-connection',
+        label: 'Next Connection',
+        shortcut: getShortcutDisplay('conn.next-connection'),
+        icon: SkipForward,
+        category: 'navigation',
+        keywords: ['next', 'connection', 'switch', 'tab'],
+        action: () => {
+          const {
+            connectionTabOrder,
+            activeConnectionId,
+            setActiveConnection,
+          } = connectionStoreRef.current;
+          if (connectionTabOrder.length > 1 && activeConnectionId) {
+            const currentIndex = connectionTabOrder.indexOf(activeConnectionId);
+            const nextIndex = (currentIndex + 1) % connectionTabOrder.length;
+            setActiveConnection(connectionTabOrder[nextIndex]);
+          }
+        },
+        disabled: () =>
+          connectionStoreRef.current.connectionTabOrder.length <= 1,
+      },
+      {
+        id: 'conn.prev-connection',
+        label: 'Previous Connection',
+        shortcut: getShortcutDisplay('conn.prev-connection'),
+        icon: SkipBack,
+        category: 'navigation',
+        keywords: ['previous', 'connection', 'switch', 'tab'],
+        action: () => {
+          const {
+            connectionTabOrder,
+            activeConnectionId,
+            setActiveConnection,
+          } = connectionStoreRef.current;
+          if (connectionTabOrder.length > 1 && activeConnectionId) {
+            const currentIndex = connectionTabOrder.indexOf(activeConnectionId);
+            const prevIndex =
+              (currentIndex - 1 + connectionTabOrder.length) %
+              connectionTabOrder.length;
+            setActiveConnection(connectionTabOrder[prevIndex]);
+          }
+        },
+        disabled: () =>
+          connectionStoreRef.current.connectionTabOrder.length <= 1,
       },
 
       // View commands

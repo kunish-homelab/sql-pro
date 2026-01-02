@@ -77,6 +77,28 @@ export const SHORTCUT_ACTIONS: ShortcutActionMeta[] = [
     category: 'navigation',
     scope: 'global',
   },
+  // Connection
+  {
+    id: 'conn.recent-connections',
+    label: 'Recent Connections',
+    description: 'Show recent database connections',
+    category: 'navigation',
+    scope: 'global',
+  },
+  {
+    id: 'conn.next-connection',
+    label: 'Next Connection',
+    description: 'Switch to the next database connection',
+    category: 'navigation',
+    scope: 'global',
+  },
+  {
+    id: 'conn.prev-connection',
+    label: 'Previous Connection',
+    description: 'Switch to the previous database connection',
+    category: 'navigation',
+    scope: 'global',
+  },
   // View
   {
     id: 'view.toggle-history',
@@ -222,6 +244,9 @@ export const VSCODE_SHORTCUTS: ShortcutPreset = {
   'nav.schema-compare': { key: '5', modifiers: { cmd: true } },
   'nav.er-diagram': { key: '3', modifiers: { cmd: true } },
   'nav.toggle-sidebar': { key: 'b', modifiers: { cmd: true } },
+  'conn.recent-connections': { key: 'r', modifiers: { ctrl: true } },
+  'conn.next-connection': { key: ']', modifiers: { cmd: true } },
+  'conn.prev-connection': { key: '[', modifiers: { cmd: true } },
   'view.toggle-history': { key: 'h', modifiers: { cmd: true, shift: true } },
   'view.toggle-schema-details': { key: '4', modifiers: { cmd: true } },
   'action.command-palette': { key: 'p', modifiers: { cmd: true, shift: true } },
@@ -252,6 +277,9 @@ export const SUBLIME_SHORTCUTS: ShortcutPreset = {
   'nav.schema-compare': { key: '5', modifiers: { cmd: true } },
   'nav.er-diagram': { key: '3', modifiers: { cmd: true } },
   'nav.toggle-sidebar': { key: 'k', modifiers: { cmd: true } },
+  'conn.recent-connections': { key: 'r', modifiers: { ctrl: true } },
+  'conn.next-connection': { key: ']', modifiers: { cmd: true } },
+  'conn.prev-connection': { key: '[', modifiers: { cmd: true } },
   'view.toggle-history': { key: 'h', modifiers: { cmd: true, alt: true } },
   'view.toggle-schema-details': { key: '4', modifiers: { cmd: true } },
   'action.command-palette': { key: 'p', modifiers: { cmd: true, shift: true } },
@@ -380,8 +408,24 @@ export function matchesBinding(
 ): boolean {
   if (!binding) return false;
 
+  // Handle cmd modifier (maps to Meta on macOS, Ctrl on Windows/Linux)
   const cmdOrCtrl = e.metaKey || e.ctrlKey;
-  const matchesCmdOrCtrl = binding.modifiers.cmd ? cmdOrCtrl : !cmdOrCtrl;
+
+  // Handle explicit ctrl modifier (only checks ctrlKey)
+  const hasCtrlModifier = binding.modifiers.ctrl && !binding.modifiers.cmd;
+
+  let matchesModifiers: boolean;
+  if (hasCtrlModifier) {
+    // When ctrl is explicitly set (without cmd), only match ctrlKey
+    matchesModifiers = e.ctrlKey && !e.metaKey;
+  } else if (binding.modifiers.cmd) {
+    // When cmd is set, match either metaKey or ctrlKey
+    matchesModifiers = cmdOrCtrl;
+  } else {
+    // No cmd or ctrl modifier - make sure neither is pressed
+    matchesModifiers = !cmdOrCtrl;
+  }
+
   const matchesShift = binding.modifiers.shift ? e.shiftKey : !e.shiftKey;
   const matchesAlt = binding.modifiers.alt ? e.altKey : !e.altKey;
 
@@ -391,7 +435,7 @@ export function matchesBinding(
     binding.key.length === 1 ? binding.key.toLowerCase() : binding.key;
 
   return (
-    matchesCmdOrCtrl && matchesShift && matchesAlt && eventKey === bindingKey
+    matchesModifiers && matchesShift && matchesAlt && eventKey === bindingKey
   );
 }
 

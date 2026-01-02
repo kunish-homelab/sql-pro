@@ -2436,6 +2436,10 @@ export type ShortcutAction =
   | 'nav.schema-compare'
   | 'nav.er-diagram'
   | 'nav.toggle-sidebar'
+  // Connection
+  | 'conn.recent-connections'
+  | 'conn.next-connection'
+  | 'conn.prev-connection'
   // View
   | 'view.toggle-history'
   | 'view.toggle-schema-details'
@@ -2521,6 +2525,9 @@ export const DEFAULT_SHORTCUTS: ShortcutPreset = {
   'nav.schema-compare': { key: '5', modifiers: { cmd: true } },
   'nav.er-diagram': { key: '3', modifiers: { cmd: true } },
   'nav.toggle-sidebar': { key: 'b', modifiers: { cmd: true } },
+  'conn.recent-connections': { key: 'r', modifiers: { ctrl: true } },
+  'conn.next-connection': { key: ']', modifiers: { cmd: true } },
+  'conn.prev-connection': { key: '[', modifiers: { cmd: true } },
   'view.toggle-history': { key: 'h', modifiers: { cmd: true } },
   'view.toggle-schema-details': { key: '4', modifiers: { cmd: true } },
   'action.command-palette': { key: 'k', modifiers: { cmd: true } },

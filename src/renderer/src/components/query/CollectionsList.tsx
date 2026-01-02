@@ -257,7 +257,7 @@ export function CollectionsList() {
                   <CardHeader>
                     <div className="flex items-start gap-3">
                       {/* Color indicator & Icon skeleton */}
-                      <Skeleton className="h-10 w-10 flex-shrink-0 rounded-lg" />
+                      <Skeleton className="h-10 w-10 shrink-0 rounded-lg" />
 
                       {/* Content skeleton */}
                       <div className="min-w-0 flex-1 space-y-2">
@@ -267,7 +267,7 @@ export function CollectionsList() {
                       </div>
 
                       {/* Action skeleton */}
-                      <Skeleton className="h-8 w-8 flex-shrink-0 rounded" />
+                      <Skeleton className="h-8 w-8 shrink-0 rounded" />
                     </div>
                   </CardHeader>
                 </Card>

@@ -425,14 +425,14 @@ export function QueryEditor() {
       <QueryTabBar />
 
       {/* Editor Header */}
-      <div className="flex items-center justify-between border-b px-4 py-2">
-        <div className="flex items-center gap-2">
+      <div className="flex min-w-0 items-center justify-between gap-4 border-b px-4 py-2">
+        <div className="flex shrink-0 items-center gap-2">
           <h2 className="font-medium">SQL Query</h2>
-          <span className="text-muted-foreground text-xs">
+          <span className="text-muted-foreground hidden text-xs sm:inline">
             Cmd/Ctrl+Enter to execute
           </span>
         </div>
-        <div className="flex items-center gap-2">
+        <div className="flex min-w-0 flex-1 flex-wrap items-center justify-end gap-1">
           {/* AI Features Dropdown */}
           <DropdownMenu>
             <DropdownMenuTrigger>

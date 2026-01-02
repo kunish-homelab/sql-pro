@@ -64,7 +64,7 @@ export function FavoritesQuickPanel({
             <div key={index} className="rounded-md px-3 py-2.5">
               <div className="flex items-start gap-2">
                 {/* Icon skeleton */}
-                <Skeleton className="h-8 w-8 flex-shrink-0 rounded" />
+                <Skeleton className="h-8 w-8 shrink-0 rounded" />
 
                 {/* Content skeleton */}
                 <div className="min-w-0 flex-1 space-y-1.5">
@@ -101,14 +101,14 @@ export function FavoritesQuickPanel({
                 >
                   <div className="flex items-start gap-2">
                     {/* Icon */}
-                    <div className="bg-primary/10 text-primary mt-0.5 flex h-8 w-8 flex-shrink-0 items-center justify-center rounded">
+                    <div className="bg-primary/10 text-primary mt-0.5 flex h-8 w-8 shrink-0 items-center justify-center rounded">
                       <FileText className="h-4 w-4" />
                     </div>
 
                     {/* Content */}
                     <div className="min-w-0 flex-1">
                       <div className="flex items-center gap-1.5">
-                        <Star className="h-3 w-3 flex-shrink-0 fill-yellow-400 text-yellow-400" />
+                        <Star className="h-3 w-3 shrink-0 fill-yellow-400 text-yellow-400" />
                         <span className="truncate text-sm font-medium">
                           {query.name}
                         </span>
