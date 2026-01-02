@@ -716,15 +716,21 @@ export function Sidebar({
               </span>
             </Button>
           </DropdownMenuTrigger>
-          <DropdownMenuContent align="start">
-            <DropdownMenuItem onClick={() => setSortOption('name-asc')}>
+          <DropdownMenuContent align="start" className="w-auto">
+            <DropdownMenuItem
+              onClick={() => setSortOption('name-asc')}
+              className="whitespace-nowrap"
+            >
               <ArrowDownAZ className="mr-2 h-4 w-4" />
               Name (A-Z)
               {sortOption === 'name-asc' && (
                 <Check className="ml-auto h-4 w-4" />
               )}
             </DropdownMenuItem>
-            <DropdownMenuItem onClick={() => setSortOption('name-desc')}>
+            <DropdownMenuItem
+              onClick={() => setSortOption('name-desc')}
+              className="whitespace-nowrap"
+            >
               <ArrowUpAZ className="mr-2 h-4 w-4" />
               Name (Z-A)
               {sortOption === 'name-desc' && (
@@ -732,13 +738,19 @@ export function Sidebar({
               )}
             </DropdownMenuItem>
             <DropdownMenuSeparator />
-            <DropdownMenuItem onClick={() => setSortOption('row-count-asc')}>
+            <DropdownMenuItem
+              onClick={() => setSortOption('row-count-asc')}
+              className="whitespace-nowrap"
+            >
               Row Count (Low to High)
               {sortOption === 'row-count-asc' && (
                 <Check className="ml-auto h-4 w-4" />
               )}
             </DropdownMenuItem>
-            <DropdownMenuItem onClick={() => setSortOption('row-count-desc')}>
+            <DropdownMenuItem
+              onClick={() => setSortOption('row-count-desc')}
+              className="whitespace-nowrap"
+            >
               Row Count (High to Low)
               {sortOption === 'row-count-desc' && (
                 <Check className="ml-auto h-4 w-4" />
