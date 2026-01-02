@@ -722,7 +722,131 @@ function validateVersionCompatibility(
 }
 
 /**
+ * Validates dangerous SQL patterns that might pose security risks.
+ * Returns warnings for potentially dangerous SQL operations.
+ */
+function validateSQLSafety(sql: string): string[] {
+  const warnings: string[] = [];
+  const upperSQL = sql.toUpperCase();
+
+  // Check for potentially dangerous operations
+  if (upperSQL.includes('DROP TABLE') || upperSQL.includes('DROP DATABASE')) {
+    warnings.push(
+      'Query contains DROP statement - use caution when executing'
+    );
+  }
+
+  if (upperSQL.includes('DELETE FROM') && !upperSQL.includes('WHERE')) {
+    warnings.push(
+      'Query contains DELETE without WHERE clause - this will delete all rows'
+    );
+  }
+
+  if (upperSQL.includes('UPDATE ') && !upperSQL.includes('WHERE')) {
+    warnings.push(
+      'Query contains UPDATE without WHERE clause - this will update all rows'
+    );
+  }
+
+  if (upperSQL.includes('PRAGMA')) {
+    warnings.push(
+      'Query contains PRAGMA statement - ensure you understand the implications'
+    );
+  }
+
+  return warnings;
+}
+
+/**
+ * Validates the structure and content of a query for import.
+ * Performs comprehensive field-level validation beyond basic schema checking.
+ */
+function validateQueryStructure(query: ShareableQuery): {
+  errors: string[];
+  warnings: string[];
+} {
+  const errors: string[] = [];
+  const warnings: string[] = [];
+
+  // Validate name
+  if (!query.name || query.name.trim().length === 0) {
+    errors.push('Query name is empty');
+  } else if (query.name.length > 200) {
+    warnings.push('Query name exceeds 200 characters and may be truncated');
+  }
+
+  // Validate SQL
+  if (!query.sql || query.sql.trim().length === 0) {
+    errors.push('Query SQL is empty');
+  } else {
+    // Check SQL safety
+    warnings.push(...validateSQLSafety(query.sql));
+
+    // Validate SQL has some basic structure (not just whitespace/comments)
+    const sqlWithoutComments = query.sql
+      .replace(/--[^\n]*/g, '')
+      .replace(/\/\*[\s\S]*?\*\//g, '')
+      .trim();
+
+    if (sqlWithoutComments.length === 0) {
+      errors.push('Query SQL contains only comments - no executable statements');
+    }
+  }
+
+  // Validate tags (if present)
+  if (query.tags && Array.isArray(query.tags)) {
+    query.tags.forEach((tag, index) => {
+      if (typeof tag !== 'string' || tag.trim().length === 0) {
+        warnings.push(`Tag at index ${index} is empty or invalid - will be ignored`);
+      } else if (tag.length > 50) {
+        warnings.push(`Tag "${tag}" exceeds 50 characters and may be truncated`);
+      }
+    });
+  }
+
+  // Validate database context (if present)
+  if (query.databaseContext && query.databaseContext.length > 200) {
+    warnings.push('Database context exceeds 200 characters and may be truncated');
+  }
+
+  // Validate description (if present)
+  if (query.description && query.description.length > 1000) {
+    warnings.push('Description exceeds 1000 characters and may be truncated');
+  }
+
+  // Validate documentation (if present)
+  if (query.documentation && query.documentation.length > 10000) {
+    warnings.push('Documentation exceeds 10000 characters and may be truncated');
+  }
+
+  // Validate timestamps
+  if (query.createdAt) {
+    const createdDate = new Date(query.createdAt);
+    if (isNaN(createdDate.getTime())) {
+      warnings.push('Invalid createdAt timestamp format');
+    }
+  }
+
+  if (query.modifiedAt) {
+    const modifiedDate = new Date(query.modifiedAt);
+    if (isNaN(modifiedDate.getTime())) {
+      warnings.push('Invalid modifiedAt timestamp format');
+    }
+  }
+
+  return { errors, warnings };
+}
+
+/**
  * Imports and validates a query from JSON data.
+ *
+ * Performs comprehensive validation including:
+ * - JSON parsing and decompression (if compressed)
+ * - Schema validation using Zod
+ * - Version compatibility checking
+ * - Field-level data structure validation
+ * - SQL safety checks (dangerous patterns)
+ * - Length and format validations for all fields
  *
  * @param jsonString - JSON string or compressed data
  * @returns Validated query and validation result
@@ -732,6 +856,8 @@ function validateVersionCompatibility(
  * const result = await importQuery(jsonData);
  * if (result.validation.valid) {
  *   console.log('Imported query:', result.query.name);
+ * } else {
+ *   console.error('Validation errors:', result.validation.errors);
  * }
  * ```
  */
@@ -756,15 +882,10 @@ export async function importQuery(jsonString: string): Promise<{
       warnings.push(...versionCheck.warnings);
     }
 
-    // Validate query has SQL
-    if (!query.sql || query.sql.trim().length === 0) {
-      errors.push('Query SQL is empty');
-    }
-
-    // Additional validations
-    if (query.name.length > 200) {
-      warnings.push('Query name exceeds 200 characters and may be truncated');
-    }
+    // Perform detailed structure validation
+    const structureValidation = validateQueryStructure(query);
+    errors.push(...structureValidation.errors);
+    warnings.push(...structureValidation.warnings);
 
     const validation: ShareableValidationResult = {
       valid: errors.length === 0,
@@ -794,10 +915,120 @@ export async function importQuery(jsonString: string): Promise<{
 }
 
 /**
+ * Validates the structure and content of a schema for import.
+ * Performs comprehensive field-level validation beyond basic schema checking.
+ */
+function validateSchemaStructure(schema: ShareableSchema): {
+  errors: string[];
+  warnings: string[];
+} {
+  const errors: string[] = [];
+  const warnings: string[] = [];
+
+  // Validate name
+  if (!schema.name || schema.name.trim().length === 0) {
+    errors.push('Schema name is empty');
+  } else if (schema.name.length > 200) {
+    warnings.push('Schema name exceeds 200 characters and may be truncated');
+  }
+
+  // Validate description (if present)
+  if (schema.description && schema.description.length > 1000) {
+    warnings.push('Description exceeds 1000 characters and may be truncated');
+  }
+
+  // Validate documentation (if present)
+  if (schema.documentation && schema.documentation.length > 10000) {
+    warnings.push('Documentation exceeds 10000 characters and may be truncated');
+  }
+
+  // Validate format-specific data
+  if (schema.format === 'json') {
+    if (!schema.schemas || schema.schemas.length === 0) {
+      errors.push('JSON format schema must contain at least one schema definition');
+    } else {
+      // Validate each schema has tables or views
+      const hasData = schema.schemas.some(
+        (s) => (s.tables && s.tables.length > 0) || (s.views && s.views.length > 0)
+      );
+      if (!hasData) {
+        errors.push('Schema must contain at least one table or view');
+      }
+
+      // Count total tables and views
+      let totalTables = 0;
+      let totalViews = 0;
+      schema.schemas.forEach((s) => {
+        if (s.tables) totalTables += s.tables.length;
+        if (s.views) totalViews += s.views.length;
+      });
+
+      if (totalTables === 0 && totalViews === 0) {
+        errors.push('Schema contains no tables or views to import');
+      }
+    }
+  } else if (schema.format === 'sql') {
+    if (!schema.sqlStatements || schema.sqlStatements.length === 0) {
+      errors.push('SQL format schema must contain at least one SQL statement');
+    } else {
+      // Validate SQL statements are non-empty
+      let emptyCount = 0;
+      schema.sqlStatements.forEach((stmt, index) => {
+        if (!stmt || stmt.trim().length === 0) {
+          emptyCount++;
+          warnings.push(`SQL statement at index ${index} is empty`);
+        }
+      });
+
+      if (emptyCount === schema.sqlStatements.length) {
+        errors.push('All SQL statements are empty');
+      }
+    }
+  }
+
+  // Validate options match format
+  if (schema.options.format !== schema.format) {
+    errors.push(
+      `Format mismatch: schema.format is '${schema.format}' but options.format is '${schema.options.format}'`
+    );
+  }
+
+  // Validate timestamp
+  if (schema.createdAt) {
+    const createdDate = new Date(schema.createdAt);
+    if (isNaN(createdDate.getTime())) {
+      warnings.push('Invalid createdAt timestamp format');
+    }
+  }
+
+  return { errors, warnings };
+}
+
+/**
  * Imports and validates a schema from JSON data.
+ *
+ * Performs comprehensive validation including:
+ * - JSON parsing and decompression (if compressed)
+ * - Schema validation using Zod
+ * - Version compatibility checking
+ * - Field-level data structure validation
+ * - Format-specific validations (JSON vs SQL)
+ * - Data integrity checks (tables, views, statements)
+ * - Length and format validations for all fields
  *
  * @param jsonString - JSON string or compressed data
  * @returns Validated schema and validation result
+ *
+ * @example
+ * ```typescript
+ * const result = await importSchema(jsonData);
+ * if (result.validation.valid) {
+ *   console.log('Imported schema:', result.schema.name);
+ *   console.log('Format:', result.schema.format);
+ * } else {
+ *   console.error('Validation errors:', result.validation.errors);
+ * }
+ * ```
  */
 export async function importSchema(jsonString: string): Promise<{
   schema: ShareableSchema;
@@ -820,13 +1051,10 @@ export async function importSchema(jsonString: string): Promise<{
       warnings.push(...versionCheck.warnings);
     }
 
-    // Validate schema has data based on format
-    if (schema.format === 'json' && (!schema.schemas || schema.schemas.length === 0)) {
-      warnings.push('Schema has JSON format but no schema data');
-    }
-    if (schema.format === 'sql' && (!schema.sqlStatements || schema.sqlStatements.length === 0)) {
-      warnings.push('Schema has SQL format but no SQL statements');
-    }
+    // Perform detailed structure validation
+    const structureValidation = validateSchemaStructure(schema);
+    errors.push(...structureValidation.errors);
+    warnings.push(...structureValidation.warnings);
 
     const validation: ShareableValidationResult = {
       valid: errors.length === 0,
@@ -855,10 +1083,145 @@ export async function importSchema(jsonString: string): Promise<{
 }
 
 /**
+ * Validates the structure and content of a bundle for import.
+ * Performs comprehensive field-level validation beyond basic schema checking.
+ */
+function validateBundleStructure(bundle: ShareableBundle): {
+  errors: string[];
+  warnings: string[];
+} {
+  const errors: string[] = [];
+  const warnings: string[] = [];
+
+  // Validate name
+  if (!bundle.name || bundle.name.trim().length === 0) {
+    errors.push('Bundle name is empty');
+  } else if (bundle.name.length > 200) {
+    warnings.push('Bundle name exceeds 200 characters and may be truncated');
+  }
+
+  // Validate description (if present)
+  if (bundle.description && bundle.description.length > 1000) {
+    warnings.push('Description exceeds 1000 characters and may be truncated');
+  }
+
+  // Validate documentation (if present)
+  if (bundle.documentation && bundle.documentation.length > 10000) {
+    warnings.push('Documentation exceeds 10000 characters and may be truncated');
+  }
+
+  // Validate database context (if present)
+  if (bundle.databaseContext && bundle.databaseContext.length > 200) {
+    warnings.push('Database context exceeds 200 characters and may be truncated');
+  }
+
+  // Validate tags (if present)
+  if (bundle.tags && Array.isArray(bundle.tags)) {
+    bundle.tags.forEach((tag, index) => {
+      if (typeof tag !== 'string' || tag.trim().length === 0) {
+        warnings.push(`Bundle tag at index ${index} is empty or invalid - will be ignored`);
+      } else if (tag.length > 50) {
+        warnings.push(`Bundle tag "${tag}" exceeds 50 characters and may be truncated`);
+      }
+    });
+  }
+
+  // Validate bundle has queries
+  if (!bundle.queries || bundle.queries.length === 0) {
+    errors.push('Bundle contains no queries');
+  } else {
+    // Validate each query in the bundle
+    bundle.queries.forEach((query, index) => {
+      const queryNum = index + 1;
+      const queryName = query.name || `Query ${queryNum}`;
+
+      // Validate query name
+      if (!query.name || query.name.trim().length === 0) {
+        errors.push(`Query ${queryNum} has empty name`);
+      } else if (query.name.length > 200) {
+        warnings.push(`Query "${queryName}" name exceeds 200 characters and may be truncated`);
+      }
+
+      // Validate query SQL
+      if (!query.sql || query.sql.trim().length === 0) {
+        errors.push(`Query ${queryNum} (${queryName}) has empty SQL`);
+      } else {
+        // Check SQL safety for each query
+        const sqlWarnings = validateSQLSafety(query.sql);
+        sqlWarnings.forEach((warning) => {
+          warnings.push(`Query ${queryNum} (${queryName}): ${warning}`);
+        });
+
+        // Validate SQL has executable statements
+        const sqlWithoutComments = query.sql
+          .replace(/--[^\n]*/g, '')
+          .replace(/\/\*[\s\S]*?\*\//g, '')
+          .trim();
+
+        if (sqlWithoutComments.length === 0) {
+          errors.push(`Query ${queryNum} (${queryName}) contains only comments - no executable statements`);
+        }
+      }
+
+      // Validate query description (if present)
+      if (query.description && query.description.length > 1000) {
+        warnings.push(`Query ${queryNum} (${queryName}) description exceeds 1000 characters and may be truncated`);
+      }
+
+      // Validate query notes (if present)
+      if (query.notes && query.notes.length > 5000) {
+        warnings.push(`Query ${queryNum} (${queryName}) notes exceed 5000 characters and may be truncated`);
+      }
+
+      // Validate query tags (if present)
+      if (query.tags && Array.isArray(query.tags)) {
+        query.tags.forEach((tag, tagIndex) => {
+          if (typeof tag !== 'string' || tag.trim().length === 0) {
+            warnings.push(`Query ${queryNum} (${queryName}) tag at index ${tagIndex} is empty or invalid - will be ignored`);
+          } else if (tag.length > 50) {
+            warnings.push(`Query ${queryNum} (${queryName}) tag "${tag}" exceeds 50 characters and may be truncated`);
+          }
+        });
+      }
+    });
+  }
+
+  // Validate timestamp
+  if (bundle.createdAt) {
+    const createdDate = new Date(bundle.createdAt);
+    if (isNaN(createdDate.getTime())) {
+      warnings.push('Invalid createdAt timestamp format');
+    }
+  }
+
+  return { errors, warnings };
+}
+
+/**
  * Imports and validates a bundle from JSON data.
+ *
+ * Performs comprehensive validation including:
+ * - JSON parsing and decompression (if compressed)
+ * - Schema validation using Zod
+ * - Version compatibility checking
+ * - Field-level data structure validation
+ * - Individual query validation (name, SQL, safety)
+ * - SQL safety checks for each query in the bundle
+ * - Length and format validations for all fields
  *
  * @param jsonString - JSON string or compressed data
  * @returns Validated bundle and validation result
+ *
+ * @example
+ * ```typescript
+ * const result = await importBundle(jsonData);
+ * if (result.validation.valid) {
+ *   console.log('Imported bundle:', result.bundle.name);
+ *   console.log('Queries:', result.bundle.queries.length);
+ * } else {
+ *   console.error('Validation errors:', result.validation.errors);
+ * }
+ * ```
  */
 export async function importBundle(jsonString: string): Promise<{
   bundle: ShareableBundle;
@@ -881,20 +1244,10 @@ export async function importBundle(jsonString: string): Promise<{
       warnings.push(...versionCheck.warnings);
     }
 
-    // Validate bundle has queries
-    if (!bundle.queries || bundle.queries.length === 0) {
-      errors.push('Bundle contains no queries');
-    }
-
-    // Validate individual queries
-    bundle.queries.forEach((query, index) => {
-      if (!query.sql || query.sql.trim().length === 0) {
-        errors.push(`Query ${index + 1} (${query.name}) has empty SQL`);
-      }
-      if (!query.name || query.name.trim().length === 0) {
-        errors.push(`Query ${index + 1} has empty name`);
-      }
-    });
+    // Perform detailed structure validation
+    const structureValidation = validateBundleStructure(bundle);
+    errors.push(...structureValidation.errors);
+    warnings.push(...structureValidation.warnings);
 
     const validation: ShareableValidationResult = {
       valid: errors.length === 0,

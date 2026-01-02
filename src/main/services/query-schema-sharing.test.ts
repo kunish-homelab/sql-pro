@@ -637,6 +637,441 @@ describe('Query and Schema Sharing Service', () => {
     });
   });
 
+  describe('Import Validation Enhancements', () => {
+    describe('SQL Safety Validation', () => {
+      it('should warn about DROP statements', async () => {
+        const query: ShareableQuery = {
+          id: '550e8400-e29b-41d4-a716-446655440000',
+          name: 'Dangerous Query',
+          sql: 'DROP TABLE users',
+          createdAt: '2024-01-01T00:00:00Z',
+          metadata: {
+            version: '1.0.0',
+            exportedAt: '2024-01-01T00:00:00Z',
+          },
+        };
+
+        const result = await importQuery(JSON.stringify(query));
+
+        expect(result.validation.valid).toBe(true);
+        expect(result.validation.warnings).toBeDefined();
+        expect(result.validation.warnings).toContain(
+          'Query contains DROP statement - use caution when executing'
+        );
+      });
+
+      it('should warn about DELETE without WHERE', async () => {
+        const query: ShareableQuery = {
+          id: '550e8400-e29b-41d4-a716-446655440000',
+          name: 'Delete All Query',
+          sql: 'DELETE FROM users',
+          createdAt: '2024-01-01T00:00:00Z',
+          metadata: {
+            version: '1.0.0',
+            exportedAt: '2024-01-01T00:00:00Z',
+          },
+        };
+
+        const result = await importQuery(JSON.stringify(query));
+
+        expect(result.validation.valid).toBe(true);
+        expect(result.validation.warnings).toBeDefined();
+        expect(result.validation.warnings).toContain(
+          'Query contains DELETE without WHERE clause - this will delete all rows'
+        );
+      });
+
+      it('should warn about UPDATE without WHERE', async () => {
+        const query: ShareableQuery = {
+          id: '550e8400-e29b-41d4-a716-446655440000',
+          name: 'Update All Query',
+          sql: 'UPDATE users SET active = 1',
+          createdAt: '2024-01-01T00:00:00Z',
+          metadata: {
+            version: '1.0.0',
+            exportedAt: '2024-01-01T00:00:00Z',
+          },
+        };
+
+        const result = await importQuery(JSON.stringify(query));
+
+        expect(result.validation.valid).toBe(true);
+        expect(result.validation.warnings).toBeDefined();
+        expect(result.validation.warnings).toContain(
+          'Query contains UPDATE without WHERE clause - this will update all rows'
+        );
+      });
+
+      it('should warn about PRAGMA statements', async () => {
+        const query: ShareableQuery = {
+          id: '550e8400-e29b-41d4-a716-446655440000',
+          name: 'Pragma Query',
+          sql: 'PRAGMA foreign_keys = ON',
+          createdAt: '2024-01-01T00:00:00Z',
+          metadata: {
+            version: '1.0.0',
+            exportedAt: '2024-01-01T00:00:00Z',
+          },
+        };
+
+        const result = await importQuery(JSON.stringify(query));
+
+        expect(result.validation.valid).toBe(true);
+        expect(result.validation.warnings).toBeDefined();
+        expect(result.validation.warnings).toContain(
+          'Query contains PRAGMA statement - ensure you understand the implications'
+        );
+      });
+
+      it('should not warn about safe UPDATE with WHERE', async () => {
+        const query: ShareableQuery = {
+          id: '550e8400-e29b-41d4-a716-446655440000',
+          name: 'Safe Update',
+          sql: 'UPDATE users SET active = 1 WHERE id = 5',
+          createdAt: '2024-01-01T00:00:00Z',
+          metadata: {
+            version: '1.0.0',
+            exportedAt: '2024-01-01T00:00:00Z',
+          },
+        };
+
+        const result = await importQuery(JSON.stringify(query));
+
+        expect(result.validation.valid).toBe(true);
+        const updateWarnings = result.validation.warnings?.filter((w) =>
+          w.includes('UPDATE without WHERE')
+        );
+        expect(updateWarnings?.length || 0).toBe(0);
+      });
+    });
+
+    describe('Field Length Validations', () => {
+      it('should reject oversized query name via Zod validation', async () => {
+        const query = {
+          id: '550e8400-e29b-41d4-a716-446655440000',
+          name: 'x'.repeat(250),
+          sql: 'SELECT * FROM users',
+          createdAt: '2024-01-01T00:00:00Z',
+          metadata: {
+            version: '1.0.0',
+            exportedAt: '2024-01-01T00:00:00Z',
+          },
+        };
+
+        // Zod schema validation catches this before custom validation
+        await expect(importQuery(JSON.stringify(query))).rejects.toThrow(
+          'Schema validation failed'
+        );
+      });
+
+      it('should warn about oversized tags', async () => {
+        const query: ShareableQuery = {
+          id: '550e8400-e29b-41d4-a716-446655440000',
+          name: 'Test Query',
+          sql: 'SELECT * FROM users',
+          tags: ['x'.repeat(60), 'valid-tag'],
+          createdAt: '2024-01-01T00:00:00Z',
+          metadata: {
+            version: '1.0.0',
+            exportedAt: '2024-01-01T00:00:00Z',
+          },
+        };
+
+        const result = await importQuery(JSON.stringify(query));
+
+        expect(result.validation.valid).toBe(true);
+        expect(result.validation.warnings).toBeDefined();
+        const tagWarning = result.validation.warnings?.find((w) =>
+          w.includes('exceeds 50 characters')
+        );
+        expect(tagWarning).toBeDefined();
+      });
+
+      it('should warn about empty tags', async () => {
+        const query: ShareableQuery = {
+          id: '550e8400-e29b-41d4-a716-446655440000',
+          name: 'Test Query',
+          sql: 'SELECT * FROM users',
+          tags: ['valid-tag', '', 'another-tag'],
+          createdAt: '2024-01-01T00:00:00Z',
+          metadata: {
+            version: '1.0.0',
+            exportedAt: '2024-01-01T00:00:00Z',
+          },
+        };
+
+        const result = await importQuery(JSON.stringify(query));
+
+        expect(result.validation.valid).toBe(true);
+        expect(result.validation.warnings).toBeDefined();
+        const tagWarning = result.validation.warnings?.find((w) =>
+          w.includes('Tag at index 1 is empty')
+        );
+        expect(tagWarning).toBeDefined();
+      });
+
+      it('should warn about oversized schema description', async () => {
+        const schema: ShareableSchema = {
+          id: '550e8400-e29b-41d4-a716-446655440001',
+          name: 'Test Schema',
+          description: 'x'.repeat(1100),
+          format: 'sql',
+          sqlStatements: ['CREATE TABLE users (id INTEGER)'],
+          options: { format: 'sql' },
+          createdAt: '2024-01-01T00:00:00Z',
+          metadata: {
+            version: '1.0.0',
+            exportedAt: '2024-01-01T00:00:00Z',
+          },
+        };
+
+        const result = await importSchema(JSON.stringify(schema));
+
+        expect(result.validation.valid).toBe(true);
+        expect(result.validation.warnings).toContain(
+          'Description exceeds 1000 characters and may be truncated'
+        );
+      });
+    });
+
+    describe('SQL Comment-Only Validation', () => {
+      it('should invalidate query with only comments', async () => {
+        const query: ShareableQuery = {
+          id: '550e8400-e29b-41d4-a716-446655440000',
+          name: 'Comment Only Query',
+          sql: '-- This is just a comment\n/* Another comment */',
+          createdAt: '2024-01-01T00:00:00Z',
+          metadata: {
+            version: '1.0.0',
+            exportedAt: '2024-01-01T00:00:00Z',
+          },
+        };
+
+        const result = await importQuery(JSON.stringify(query));
+
+        expect(result.validation.valid).toBe(false);
+        expect(result.validation.errors).toContain(
+          'Query SQL contains only comments - no executable statements'
+        );
+      });
+
+      it('should invalidate bundle query with only comments', async () => {
+        const bundle: ShareableBundle = {
+          id: '550e8400-e29b-41d4-a716-446655440003',
+          name: 'Test Bundle',
+          queries: [
+            {
+              id: '1',
+              name: 'Comment Query',
+              sql: '-- Just a comment',
+            },
+          ],
+          createdAt: '2024-01-01T00:00:00Z',
+          metadata: {
+            version: '1.0.0',
+            exportedAt: '2024-01-01T00:00:00Z',
+          },
+        };
+
+        const result = await importBundle(JSON.stringify(bundle));
+
+        expect(result.validation.valid).toBe(false);
+        expect(result.validation.errors).toBeDefined();
+        const commentError = result.validation.errors?.find((e) =>
+          e.includes('contains only comments - no executable statements')
+        );
+        expect(commentError).toBeDefined();
+      });
+    });
+
+    describe('Timestamp Validation', () => {
+      it('should warn about invalid createdAt timestamp', async () => {
+        const query: ShareableQuery = {
+          id: '550e8400-e29b-41d4-a716-446655440000',
+          name: 'Test Query',
+          sql: 'SELECT * FROM users',
+          createdAt: 'not-a-valid-timestamp',
+          metadata: {
+            version: '1.0.0',
+            exportedAt: '2024-01-01T00:00:00Z',
+          },
+        };
+
+        const result = await importQuery(JSON.stringify(query));
+
+        expect(result.validation.valid).toBe(true);
+        expect(result.validation.warnings).toContain('Invalid createdAt timestamp format');
+      });
+
+      it('should warn about invalid modifiedAt timestamp', async () => {
+        const query: ShareableQuery = {
+          id: '550e8400-e29b-41d4-a716-446655440000',
+          name: 'Test Query',
+          sql: 'SELECT * FROM users',
+          createdAt: '2024-01-01T00:00:00Z',
+          modifiedAt: 'invalid-date',
+          metadata: {
+            version: '1.0.0',
+            exportedAt: '2024-01-01T00:00:00Z',
+          },
+        };
+
+        const result = await importQuery(JSON.stringify(query));
+
+        expect(result.validation.valid).toBe(true);
+        expect(result.validation.warnings).toContain('Invalid modifiedAt timestamp format');
+      });
+    });
+
+    describe('Bundle Query Validation', () => {
+      it('should validate each query in bundle with SQL safety checks', async () => {
+        const bundle: ShareableBundle = {
+          id: '550e8400-e29b-41d4-a716-446655440003',
+          name: 'Test Bundle',
+          queries: [
+            {
+              id: '1',
+              name: 'Safe Query',
+              sql: 'SELECT * FROM users',
+            },
+            {
+              id: '2',
+              name: 'Dangerous Query',
+              sql: 'DROP TABLE users',
+            },
+          ],
+          createdAt: '2024-01-01T00:00:00Z',
+          metadata: {
+            version: '1.0.0',
+            exportedAt: '2024-01-01T00:00:00Z',
+          },
+        };
+
+        const result = await importBundle(JSON.stringify(bundle));
+
+        expect(result.validation.valid).toBe(true);
+        expect(result.validation.warnings).toBeDefined();
+        const dropWarning = result.validation.warnings?.find((w) =>
+          w.includes('Query 2 (Dangerous Query): Query contains DROP statement')
+        );
+        expect(dropWarning).toBeDefined();
+      });
+
+      it('should validate bundle query tags', async () => {
+        const bundle: ShareableBundle = {
+          id: '550e8400-e29b-41d4-a716-446655440003',
+          name: 'Test Bundle',
+          queries: [
+            {
+              id: '1',
+              name: 'Tagged Query',
+              sql: 'SELECT * FROM users',
+              tags: ['valid', '', 'x'.repeat(60)],
+            },
+          ],
+          createdAt: '2024-01-01T00:00:00Z',
+          metadata: {
+            version: '1.0.0',
+            exportedAt: '2024-01-01T00:00:00Z',
+          },
+        };
+
+        const result = await importBundle(JSON.stringify(bundle));
+
+        expect(result.validation.valid).toBe(true);
+        expect(result.validation.warnings).toBeDefined();
+        const emptyTagWarning = result.validation.warnings?.find((w) =>
+          w.includes('tag at index 1 is empty')
+        );
+        const longTagWarning = result.validation.warnings?.find((w) =>
+          w.includes('exceeds 50 characters')
+        );
+        expect(emptyTagWarning).toBeDefined();
+        expect(longTagWarning).toBeDefined();
+      });
+    });
+
+    describe('Schema Format Validation', () => {
+      it('should invalidate JSON schema with no tables or views', async () => {
+        const schema: ShareableSchema = {
+          id: '550e8400-e29b-41d4-a716-446655440001',
+          name: 'Empty Schema',
+          format: 'json',
+          schemas: [
+            {
+              name: 'main',
+              tables: [],
+              views: [],
+            },
+          ],
+          options: { format: 'json' },
+          createdAt: '2024-01-01T00:00:00Z',
+          metadata: {
+            version: '1.0.0',
+            exportedAt: '2024-01-01T00:00:00Z',
+          },
+        };
+
+        const result = await importSchema(JSON.stringify(schema));
+
+        expect(result.validation.valid).toBe(false);
+        expect(result.validation.errors).toBeDefined();
+        const emptySchemaError = result.validation.errors?.find((e) =>
+          e.includes('Schema must contain at least one table or view')
+        );
+        expect(emptySchemaError).toBeDefined();
+      });
+
+      it('should invalidate SQL schema with all empty statements', async () => {
+        const schema: ShareableSchema = {
+          id: '550e8400-e29b-41d4-a716-446655440001',
+          name: 'Empty SQL Schema',
+          format: 'sql',
+          sqlStatements: ['', '  ', '\n'],
+          options: { format: 'sql' },
+          createdAt: '2024-01-01T00:00:00Z',
+          metadata: {
+            version: '1.0.0',
+            exportedAt: '2024-01-01T00:00:00Z',
+          },
+        };
+
+        const result = await importSchema(JSON.stringify(schema));
+
+        expect(result.validation.valid).toBe(false);
+        expect(result.validation.errors).toBeDefined();
+        const emptyStmtsError = result.validation.errors?.find((e) =>
+          e.includes('All SQL statements are empty')
+        );
+        expect(emptyStmtsError).toBeDefined();
+      });
+
+      it('should warn about empty SQL statements but not fail', async () => {
+        const schema: ShareableSchema = {
+          id: '550e8400-e29b-41d4-a716-446655440001',
+          name: 'Mixed SQL Schema',
+          format: 'sql',
+          sqlStatements: ['CREATE TABLE users (id INTEGER)', '', 'CREATE TABLE posts (id INTEGER)'],
+          options: { format: 'sql' },
+          createdAt: '2024-01-01T00:00:00Z',
+          metadata: {
+            version: '1.0.0',
+            exportedAt: '2024-01-01T00:00:00Z',
+          },
+        };
+
+        const result = await importSchema(JSON.stringify(schema));
+
+        expect(result.validation.valid).toBe(true);
+        expect(result.validation.warnings).toBeDefined();
+        const emptyStmtWarning = result.validation.warnings?.find((w) =>
+          w.includes('SQL statement at index 1 is empty')
+        );
+        expect(emptyStmtWarning).toBeDefined();
+      });
+    });
+  });
+
   describe('Compression (100KB threshold)', () => {
     it('should not compress data smaller than 100KB', async () => {
       const query = await exportQuery({
