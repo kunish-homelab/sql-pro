@@ -1203,6 +1203,135 @@ export const mockSqlProAPI: any = {
     },
   },
 
+  // Comparison operations (alias for schemaComparison + data diff)
+  comparison: {
+    compareConnections: async (
+      _request: CompareConnectionsRequest
+    ): Promise<any> => {
+      await delay(500);
+      return {
+        success: true,
+        result: {
+          sourceName: 'Source Database',
+          targetName: 'Target Database',
+          tableDiffs: [],
+          summary: {
+            sourceTables: 4,
+            targetTables: 4,
+            tablesAdded: 0,
+            tablesRemoved: 0,
+            tablesModified: 0,
+            columnsAdded: 0,
+            columnsRemoved: 0,
+            columnsModified: 0,
+            indexesAdded: 0,
+            indexesRemoved: 0,
+            indexesModified: 0,
+            triggersAdded: 0,
+            triggersRemoved: 0,
+            triggersModified: 0,
+            foreignKeysAdded: 0,
+            foreignKeysRemoved: 0,
+            foreignKeysModified: 0,
+          },
+        },
+      };
+    },
+    compareConnectionToSnapshot: async (
+      _request: CompareConnectionToSnapshotRequest
+    ): Promise<any> => {
+      await delay(500);
+      return {
+        success: true,
+        result: {
+          sourceName: 'Current Database',
+          targetName: 'Saved Snapshot',
+          tableDiffs: [],
+          summary: {
+            sourceTables: 4,
+            targetTables: 4,
+            tablesAdded: 0,
+            tablesRemoved: 0,
+            tablesModified: 0,
+            columnsAdded: 0,
+            columnsRemoved: 0,
+            columnsModified: 0,
+            indexesAdded: 0,
+            indexesRemoved: 0,
+            indexesModified: 0,
+            triggersAdded: 0,
+            triggersRemoved: 0,
+            triggersModified: 0,
+            foreignKeysAdded: 0,
+            foreignKeysRemoved: 0,
+            foreignKeysModified: 0,
+          },
+        },
+      };
+    },
+    compareSnapshots: async (
+      _request: CompareSnapshotsRequest
+    ): Promise<any> => {
+      await delay(500);
+      return {
+        success: true,
+        result: {
+          sourceName: 'Source Snapshot',
+          targetName: 'Target Snapshot',
+          tableDiffs: [],
+          summary: {
+            sourceTables: 4,
+            targetTables: 4,
+            tablesAdded: 0,
+            tablesRemoved: 0,
+            tablesModified: 0,
+            columnsAdded: 0,
+            columnsRemoved: 0,
+            columnsModified: 0,
+            indexesAdded: 0,
+            indexesRemoved: 0,
+            indexesModified: 0,
+            triggersAdded: 0,
+            triggersRemoved: 0,
+            triggersModified: 0,
+            foreignKeysAdded: 0,
+            foreignKeysRemoved: 0,
+            foreignKeysModified: 0,
+          },
+        },
+      };
+    },
+    compareTables: async (_request: any): Promise<any> => {
+      await delay(500);
+      return {
+        success: true,
+        result: {
+          sourceName: `${_request.sourceTable}`,
+          targetName: `${_request.targetTable}`,
+          columns: [],
+          rows: [],
+          summary: {
+            sourceRows: 0,
+            targetRows: 0,
+            rowsAdded: 0,
+            rowsRemoved: 0,
+            rowsModified: 0,
+            rowsUnchanged: 0,
+          },
+        },
+      };
+    },
+    exportComparisonReport: async (
+      _request: ExportComparisonReportRequest
+    ): Promise<any> => {
+      await delay(400);
+      return {
+        success: true,
+        filePath: _request.filePath,
+      };
+    },
+  },
+
   // SQL log operations (mock)
   sqlLog: {
     get: async (): Promise<any> => {
