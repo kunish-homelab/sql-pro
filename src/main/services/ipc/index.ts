@@ -12,6 +12,10 @@ import { setupPasswordHandlers } from './password';
 import { setupPreferencesHandlers } from './preferences';
 import { setupProHandlers } from './pro';
 import { setupProfilesHandlers } from './profiles';
+import {
+  cleanupRendererStoreHandlers,
+  setupRendererStoreHandlers,
+} from './renderer-store';
 import { setupSavedQueriesHandlers } from './saved-queries';
 import { setupSchemaHandlers } from './schema';
 import { setupSystemHandlers } from './system';
@@ -36,10 +40,13 @@ export function setupIpcHandlers(): void {
   setupAIHandlers();
   setupSystemHandlers();
   setupUpdatesHandlers();
+  setupRendererStoreHandlers();
 }
 
 export function cleanupIpcHandlers(): void {
   Object.values(IPC_CHANNELS).forEach((channel) => {
     ipcMain.removeHandler(channel);
   });
+  // Also clean up renderer store channels
+  cleanupRendererStoreHandlers();
 }

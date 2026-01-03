@@ -180,8 +180,18 @@ import type {
   UpdatePluginRequest,
   UpdatePluginResponse,
 } from '@shared/types/plugin.d';
+import type {
+  GetRendererStateRequest,
+  GetRendererStateResponse,
+  RendererStoreSchema,
+  SetRendererStateRequest,
+  SetRendererStateResponse,
+  UpdateRendererStateRequest,
+  UpdateRendererStateResponse,
+} from '@shared/types/renderer-store';
 import { electronAPI } from '@electron-toolkit/preload';
 import { IPC_CHANNELS } from '@shared/types';
+import { RENDERER_STORE_CHANNELS } from '@shared/types/renderer-store';
 import { contextBridge, ipcRenderer, webUtils } from 'electron';
 
 // Custom API for SQL Pro
@@ -636,6 +646,26 @@ const sqlProAPI = {
       ipcRenderer.on(IPC_CHANNELS.PLUGIN_EVENT, handler);
       return () => ipcRenderer.off(IPC_CHANNELS.PLUGIN_EVENT, handler);
     },
+  },
+
+  // Renderer store persistence operations
+  rendererStore: {
+    get: <K extends keyof RendererStoreSchema>(
+      request: GetRendererStateRequest
+    ): Promise<GetRendererStateResponse<RendererStoreSchema[K]>> =>
+      ipcRenderer.invoke(RENDERER_STORE_CHANNELS.GET, request),
+    set: <K extends keyof RendererStoreSchema>(
+      request: SetRendererStateRequest<RendererStoreSchema[K]>
+    ): Promise<SetRendererStateResponse> =>
+      ipcRenderer.invoke(RENDERER_STORE_CHANNELS.SET, request),
+    update: <K extends keyof RendererStoreSchema>(
+      request: UpdateRendererStateRequest<Partial<RendererStoreSchema[K]>>
+    ): Promise<UpdateRendererStateResponse> =>
+      ipcRenderer.invoke(RENDERER_STORE_CHANNELS.UPDATE, request),
+    reset: (request: {
+      key: keyof RendererStoreSchema;
+    }): Promise<SetRendererStateResponse> =>
+      ipcRenderer.invoke(RENDERER_STORE_CHANNELS.RESET, request),
   },
 };
 

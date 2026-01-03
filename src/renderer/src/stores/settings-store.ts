@@ -1,6 +1,8 @@
 import type { FontConfig, FontSettings } from '@shared/types/font';
+import type { RendererSettingsState } from '@shared/types/renderer-store';
 import { create } from 'zustand';
 import { persist } from 'zustand/middleware';
+import { createHybridStorage } from '@/lib/electron-storage';
 
 // Common monospace fonts available on different platforms
 export const MONOSPACE_FONTS = [
@@ -71,7 +73,7 @@ const DEFAULT_FONTS: FontSettings = {
   syncAll: true,
 };
 
-// Migration function to handle old settings format
+// Migration function to handle old settings format (from localStorage)
 interface OldSettingsFormat {
   editorMode?: 'vim' | 'normal';
   fontSize?: number;
@@ -81,14 +83,14 @@ interface OldSettingsFormat {
 
 function migrateOldSettings(
   persisted: unknown
-): Partial<SettingsState> | undefined {
+): Partial<RendererSettingsState> | undefined {
   if (!persisted || typeof persisted !== 'object') return undefined;
 
-  const old = persisted as OldSettingsFormat & Partial<SettingsState>;
+  const old = persisted as OldSettingsFormat & Partial<RendererSettingsState>;
 
   // Check if already migrated (has fonts object)
   if ('fonts' in old && old.fonts) {
-    return old as Partial<SettingsState>;
+    return old as Partial<RendererSettingsState>;
   }
 
   // Migrate from old format
@@ -190,9 +192,10 @@ export const useSettingsStore = create<SettingsState>()(
         set((state) => ({ sidebarCollapsed: !state.sidebarCollapsed })),
     }),
     {
-      name: 'sql-pro-settings',
+      name: 'settings', // Store key in electron-store
+      storage: createHybridStorage('settings'),
       migrate: migrateOldSettings,
-      version: 1,
+      version: 2, // Bump version for electron-store migration
     }
   )
 );

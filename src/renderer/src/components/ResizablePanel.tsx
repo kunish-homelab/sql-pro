@@ -1,4 +1,5 @@
-import { useCallback, useEffect, useRef, useState } from 'react';
+import { useCallback, useEffect, useRef } from 'react';
+import { usePanelWidth } from '@/lib/panel-width';
 import { cn } from '@/lib/utils';
 
 interface ResizablePanelProps {
@@ -20,88 +21,68 @@ export function ResizablePanel({
   className,
   storageKey,
 }: ResizablePanelProps) {
-  const [width, setWidth] = useState(() => {
-    if (storageKey) {
-      const stored = localStorage.getItem(`panel-width-${storageKey}`);
-      if (stored) {
-        const parsed = Number.parseInt(stored, 10);
-        if (!Number.isNaN(parsed) && parsed >= minWidth && parsed <= maxWidth) {
-          return parsed;
-        }
-      }
-    }
-    return defaultWidth;
-  });
+  // Use persistent panel width hook
+  const [width, setWidth] = usePanelWidth(
+    storageKey || 'default',
+    defaultWidth,
+    minWidth,
+    maxWidth
+  );
 
-  const [isResizing, setIsResizing] = useState(false);
+  const isResizingRef = useRef(false);
   const panelRef = useRef<HTMLDivElement>(null);
   const startXRef = useRef(0);
   const startWidthRef = useRef(0);
 
-  // Save width to localStorage
-  useEffect(() => {
-    if (storageKey) {
-      localStorage.setItem(`panel-width-${storageKey}`, String(width));
-    }
-  }, [width, storageKey]);
-
   const handleMouseDown = useCallback(
     (e: React.MouseEvent) => {
       e.preventDefault();
-      setIsResizing(true);
+      isResizingRef.current = true;
       startXRef.current = e.clientX;
       startWidthRef.current = width;
+      document.body.style.userSelect = 'none';
+      document.body.style.cursor = 'col-resize';
+
+      const handleMouseMove = (e: MouseEvent) => {
+        if (!isResizingRef.current) return;
+
+        const delta =
+          side === 'left'
+            ? e.clientX - startXRef.current
+            : startXRef.current - e.clientX;
+
+        const newWidth = Math.min(
+          Math.max(startWidthRef.current + delta, minWidth),
+          maxWidth
+        );
+        setWidth(newWidth);
+      };
+
+      const handleMouseUp = () => {
+        isResizingRef.current = false;
+        document.body.style.userSelect = '';
+        document.body.style.cursor = '';
+        document.removeEventListener('mousemove', handleMouseMove);
+        document.removeEventListener('mouseup', handleMouseUp);
+      };
+
+      document.addEventListener('mousemove', handleMouseMove);
+      document.addEventListener('mouseup', handleMouseUp);
     },
-    [width]
+    [width, side, minWidth, maxWidth, setWidth]
   );
 
   const handleDoubleClick = useCallback(() => {
     setWidth(defaultWidth);
-  }, [defaultWidth]);
+  }, [defaultWidth, setWidth]);
 
+  // Cleanup on unmount
   useEffect(() => {
-    if (!isResizing) return;
-
-    const handleMouseMove = (e: MouseEvent) => {
-      const delta =
-        side === 'left'
-          ? e.clientX - startXRef.current
-          : startXRef.current - e.clientX;
-
-      const newWidth = Math.min(
-        Math.max(startWidthRef.current + delta, minWidth),
-        maxWidth
-      );
-      setWidth(newWidth);
-    };
-
-    const handleMouseUp = () => {
-      setIsResizing(false);
-    };
-
-    document.addEventListener('mousemove', handleMouseMove);
-    document.addEventListener('mouseup', handleMouseUp);
-
-    return () => {
-      document.removeEventListener('mousemove', handleMouseMove);
-      document.removeEventListener('mouseup', handleMouseUp);
-    };
-  }, [isResizing, side, minWidth, maxWidth]);
-
-  // Prevent text selection during resize
-  useEffect(() => {
-    if (isResizing) {
-      document.body.style.userSelect = 'none';
-      document.body.style.cursor = 'col-resize';
-    } else {
-      document.body.style.userSelect = '';
-      document.body.style.cursor = '';
-    }
     return () => {
       document.body.style.userSelect = '';
       document.body.style.cursor = '';
     };
-  }, [isResizing]);
+  }, []);
 
   return (
     <div
@@ -113,8 +94,7 @@ export function ResizablePanel({
       <div
         className={cn(
           'hover:bg-primary/50 absolute top-0 z-10 h-full w-1 cursor-col-resize transition-colors',
-          side === 'left' ? 'right-0' : 'left-0',
-          isResizing && 'bg-primary/50'
+          side === 'left' ? 'right-0' : 'left-0'
         )}
         onMouseDown={handleMouseDown}
         onDoubleClick={handleDoubleClick}
