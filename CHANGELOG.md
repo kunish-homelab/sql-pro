@@ -1,5 +1,23 @@
 # Changelog
 
+## [1.10.0](https://github.com/kunish-homelab/sql-pro/compare/v1.9.0...v1.10.0) (2026-01-03)
+
+
+### Features
+
+* **commands:** add shortcut for recent connections (Ctrl+R) ([feae1fd](https://github.com/kunish-homelab/sql-pro/commit/feae1fd06f20539cbcee29b1bb74bae33846b82d))
+* **shortcuts:** improve connection switching shortcuts ([32d115e](https://github.com/kunish-homelab/sql-pro/commit/32d115e5ec4fe642b69236fc17f796ef063e9a98))
+* **storage:** add logging for renderer state operations ([dc6b2de](https://github.com/kunish-homelab/sql-pro/commit/dc6b2de0e6ac455cde4b3b60ae6ce179cf480133))
+* **storage:** implement centralized persistence and hydration for renderer state ([cae0041](https://github.com/kunish-homelab/sql-pro/commit/cae0041d30cc94954a7e34bc2cdc7464131a774c))
+
+
+### Bug Fixes
+
+* **password:** fix remember password not saving correctly ([a306f1b](https://github.com/kunish-homelab/sql-pro/commit/a306f1b91adaa130abbaad4e7727d4fa64eab683))
+* **storage:** check electron environment dynamically at each operation ([edc94f4](https://github.com/kunish-homelab/sql-pro/commit/edc94f40abf5d20e14ecb84359cc73f3739542c0))
+* **storage:** fix font settings not saving and missing sql-log handler ([71babac](https://github.com/kunish-homelab/sql-pro/commit/71babacb201ed43bfdde55b2130d46fca674ae97))
+* **storage:** initialize electron storage before app render ([62a5109](https://github.com/kunish-homelab/sql-pro/commit/62a510991ddccbf8b4817fb63cd3a3a946fa5efe))
+
 ## [1.9.0](https://github.com/kunish-homelab/sql-pro/compare/v1.8.0...v1.9.0) (2026-01-03)
 
 
