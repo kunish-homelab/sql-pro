@@ -520,6 +520,45 @@ export const useConnectionStore = create<ConnectionState>()(
     {
       name: 'connection-store',
       version: 1,
+      storage: {
+        getItem: (name) => {
+          const str = localStorage.getItem(name);
+          if (!str) return null;
+          const parsed = JSON.parse(str);
+          return {
+            ...parsed,
+            state: {
+              ...parsed.state,
+              // Restore Map types from serialized arrays
+              connections: new Map(parsed.state.connections || []),
+              schemas: new Map(parsed.state.schemas || []),
+              profiles: new Map(parsed.state.profiles || []),
+              folders: new Map(parsed.state.folders || []),
+              // Restore Set types from serialized arrays
+              expandedFolderIds: new Set(parsed.state.expandedFolderIds || []),
+            },
+          };
+        },
+        setItem: (name, value) => {
+          const serialized = {
+            ...value,
+            state: {
+              ...value.state,
+              // Serialize Map types to arrays
+              connections: Array.from(value.state.connections || new Map()),
+              schemas: Array.from(value.state.schemas || new Map()),
+              profiles: Array.from(value.state.profiles || new Map()),
+              folders: Array.from(value.state.folders || new Map()),
+              // Serialize Set types to arrays
+              expandedFolderIds: Array.from(
+                value.state.expandedFolderIds || new Set()
+              ),
+            },
+          };
+          localStorage.setItem(name, JSON.stringify(serialized));
+        },
+        removeItem: (name) => localStorage.removeItem(name),
+      },
     }
   )
 );
