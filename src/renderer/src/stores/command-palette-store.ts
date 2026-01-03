@@ -22,6 +22,7 @@ interface CommandPaletteState {
   open: () => void;
   close: () => void;
   toggle: () => void;
+  openWithFilter: (filter: string) => void;
   setSearch: (search: string) => void;
   setSelectedIndex: (index: number) => void;
   registerCommand: (command: Command) => void;
@@ -49,6 +50,8 @@ export const useCommandPaletteStore = create<CommandPaletteState>()(
         get().open();
       }
     },
+    openWithFilter: (filter: string) =>
+      set({ isOpen: true, search: filter, selectedIndex: 0 }),
 
     setSearch: (search) => set({ search, selectedIndex: 0 }),
     setSelectedIndex: (selectedIndex) => set({ selectedIndex }),

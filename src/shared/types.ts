@@ -2586,9 +2586,9 @@ export const DEFAULT_SHORTCUTS: ShortcutPreset = {
   'action.delete-row': { key: 'Backspace', modifiers: { cmd: true } },
   'action.export-data': { key: 'e', modifiers: { cmd: true, shift: true } },
   'action.focus-search': { key: 'f', modifiers: { cmd: true } },
-  'conn.recent-connections': { key: 't', modifiers: { cmd: true } },
-  'conn.next-connection': { key: ']', modifiers: { cmd: true, shift: true } },
-  'conn.prev-connection': { key: '[', modifiers: { cmd: true, shift: true } },
+  'conn.recent-connections': { key: 'r', modifiers: { ctrl: true } },
+  'conn.next-connection': { key: ']', modifiers: { cmd: true } },
+  'conn.prev-connection': { key: '[', modifiers: { cmd: true } },
   'settings.open': { key: ',', modifiers: { cmd: true } },
   'help.shortcuts': { key: '/', modifiers: { cmd: true } },
 };

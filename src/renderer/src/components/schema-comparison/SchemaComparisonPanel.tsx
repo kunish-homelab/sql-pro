@@ -182,7 +182,7 @@ export function SchemaComparisonPanel({
           throw new Error('Connection IDs are required');
         }
 
-        response = await sqlPro.schemaComparison.compareConnections({
+        response = await sqlPro.comparison.compareConnections({
           sourceConnectionId: source.connectionId,
           targetConnectionId: target.connectionId,
         });
@@ -192,7 +192,7 @@ export function SchemaComparisonPanel({
           throw new Error('Connection ID and snapshot ID are required');
         }
 
-        response = await sqlPro.schemaComparison.compareConnectionToSnapshot({
+        response = await sqlPro.comparison.compareConnectionToSnapshot({
           connectionId: source.connectionId,
           snapshotId: target.snapshotId,
           reverse: false,
@@ -203,7 +203,7 @@ export function SchemaComparisonPanel({
           throw new Error('Snapshot ID and connection ID are required');
         }
 
-        response = await sqlPro.schemaComparison.compareConnectionToSnapshot({
+        response = await sqlPro.comparison.compareConnectionToSnapshot({
           connectionId: target.connectionId,
           snapshotId: source.snapshotId,
           reverse: true,
@@ -214,7 +214,7 @@ export function SchemaComparisonPanel({
           throw new Error('Snapshot IDs are required');
         }
 
-        response = await sqlPro.schemaComparison.compareSnapshots({
+        response = await sqlPro.comparison.compareSnapshots({
           sourceSnapshotId: source.snapshotId,
           targetSnapshotId: target.snapshotId,
         });

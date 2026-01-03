@@ -150,7 +150,7 @@ export function DataDiffPanel({ className }: DataDiffPanelProps) {
     setComparisonError(null);
 
     try {
-      const response = await window.sqlPro.dataDiff.compareTables({
+      const response = await window.sqlPro.comparison.compareTables({
         sourceConnectionId: source.connectionId,
         sourceTable: source.tableName,
         sourceSchema: source.schemaName || 'main',

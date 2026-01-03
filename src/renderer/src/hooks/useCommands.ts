@@ -52,7 +52,14 @@ import {
 export function useCommands() {
   const navigate = useNavigate();
   const toggle = useCommandPaletteStore((s) => s.toggle);
+  const openWithFilter = useCommandPaletteStore((s) => s.openWithFilter);
   const registerCommands = useCommandPaletteStore((s) => s.registerCommands);
+  const unregisterCommand = useCommandPaletteStore((s) => s.unregisterCommand);
+
+  // Subscribe to connections for dynamic command registration
+  const connections = useConnectionStore((s) => s.connections);
+  const activeConnectionId = useConnectionStore((s) => s.activeConnectionId);
+  const setActiveConnection = useConnectionStore((s) => s.setActiveConnection);
 
   // Use refs to store latest values for use in command actions
   // This prevents re-registering commands when these values change
@@ -237,18 +244,8 @@ export function useCommands() {
       const recentConnectionsBinding = getShortcut('conn.recent-connections');
       if (matchesBinding(e, recentConnectionsBinding)) {
         e.preventDefault();
-        // Open command palette with connection filter
-        toggle();
-        // Set timeout to filter after palette opens
-        setTimeout(() => {
-          const input = document.querySelector<HTMLInputElement>(
-            '[data-command-palette-input]'
-          );
-          if (input) {
-            input.value = 'connection';
-            input.dispatchEvent(new Event('input', { bubbles: true }));
-          }
-        }, 50);
+        // Open command palette with switch connection filter
+        openWithFilter('switch');
         return;
       }
 
@@ -284,7 +281,7 @@ export function useCommands() {
 
     window.addEventListener('keydown', handleKeyDown);
     return () => window.removeEventListener('keydown', handleKeyDown);
-  }, [toggle]);
+  }, [toggle, openWithFilter]);
 
   // Register commands only once on mount
   useEffect(() => {
@@ -387,7 +384,8 @@ export function useCommands() {
         category: 'navigation',
         keywords: ['recent', 'connection', 'database', 'switch'],
         action: () => {
-          navigate({ to: '/' });
+          // Open command palette filtered to connection switching commands
+          openWithFilter('switch');
         },
       },
       {
@@ -864,4 +862,40 @@ export function useCommands() {
     // Only run once on mount - registerCommands is stable from zustand
     // eslint-disable-next-line react-hooks/exhaustive-deps
   }, []);
+
+  // Register dynamic connection switch commands
+  useEffect(() => {
+    // Create commands for each open connection
+    const connectionCommands: Command[] = Array.from(connections.values()).map(
+      (conn) => ({
+        id: `conn.switch-to-${conn.id}`,
+        label: `Switch to: ${conn.filename}`,
+        icon: Database,
+        category: 'navigation',
+        keywords: ['switch', 'connection', 'database', conn.filename || ''],
+        action: () => {
+          setActiveConnection(conn.id);
+        },
+        disabled: () => activeConnectionId === conn.id,
+      })
+    );
+
+    // Register the connection commands
+    if (connectionCommands.length > 0) {
+      registerCommands(connectionCommands);
+    }
+
+    // Cleanup: unregister old connection commands when connections change
+    return () => {
+      Array.from(connections.values()).forEach((conn) => {
+        unregisterCommand(`conn.switch-to-${conn.id}`);
+      });
+    };
+  }, [
+    connections,
+    activeConnectionId,
+    setActiveConnection,
+    registerCommands,
+    unregisterCommand,
+  ]);
 }
