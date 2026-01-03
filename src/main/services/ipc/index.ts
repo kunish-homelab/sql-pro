@@ -18,6 +18,7 @@ import {
 } from './renderer-store';
 import { setupSavedQueriesHandlers } from './saved-queries';
 import { setupSchemaHandlers } from './schema';
+import { setupSqlLogHandlers } from './sql-log';
 import { setupSystemHandlers } from './system';
 import { setupUpdatesHandlers } from './updates';
 
@@ -41,6 +42,7 @@ export function setupIpcHandlers(): void {
   setupSystemHandlers();
   setupUpdatesHandlers();
   setupRendererStoreHandlers();
+  setupSqlLogHandlers();
 }
 
 export function cleanupIpcHandlers(): void {

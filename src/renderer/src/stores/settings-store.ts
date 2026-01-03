@@ -196,6 +196,15 @@ export const useSettingsStore = create<SettingsState>()(
       storage: createHybridStorage('settings'),
       migrate: migrateOldSettings,
       version: 2, // Bump version for electron-store migration
+      partialize: (state) => ({
+        editorVimMode: state.editorVimMode,
+        appVimMode: state.appVimMode,
+        fonts: state.fonts,
+        tabSize: state.tabSize,
+        pageSize: state.pageSize,
+        restoreSession: state.restoreSession,
+        sidebarCollapsed: state.sidebarCollapsed,
+      }),
     }
   )
 );

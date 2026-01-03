@@ -102,6 +102,12 @@ export const useDiagramStore = create<DiagramState>()(
       name: 'diagram', // Store key in electron-store
       storage: createHybridStorage('diagram'),
       version: 1,
+      partialize: (state) => ({
+        nodePositionsMap: state.nodePositionsMap,
+        viewportMap: state.viewportMap,
+        showColumns: state.showColumns,
+        showTypes: state.showTypes,
+      }),
     }
   )
 );
