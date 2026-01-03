@@ -89,7 +89,8 @@ export function getRendererState<K extends keyof RendererStoreSchema>(
     panelWidths: DEFAULT_PANEL_WIDTHS,
     connectionUi: DEFAULT_CONNECTION_UI,
   };
-  return getRendererStore().get(key, defaults[key]);
+  const result = getRendererStore().get(key, defaults[key]);
+  return result;
 }
 
 /**

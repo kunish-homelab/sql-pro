@@ -147,7 +147,9 @@ export async function initializeElectronStorage(): Promise<void> {
  * Helper to check if running in Electron environment
  */
 export function isElectronEnvironment(): boolean {
-  return typeof window !== 'undefined' && !!window.sqlPro?.rendererStore;
+  const result =
+    typeof window !== 'undefined' && !!window.sqlPro?.rendererStore;
+  return result;
 }
 
 /**
@@ -161,8 +163,10 @@ export function createHybridStorage<T>(
   // Return a storage that checks environment on each operation
   return {
     getItem: (name: string): StorageValue<T> | null => {
-      if (isElectronEnvironment()) {
-        return getElectronStorage<T>(storeKey).getItem(name);
+      const isElectron = isElectronEnvironment();
+      if (isElectron) {
+        const result = getElectronStorage<T>(storeKey).getItem(name);
+        return result;
       }
       // Fallback to localStorage
       const str = localStorage.getItem(name);
@@ -174,7 +178,8 @@ export function createHybridStorage<T>(
       }
     },
     setItem: (name: string, value: StorageValue<T>): void => {
-      if (isElectronEnvironment()) {
+      const isElectron = isElectronEnvironment();
+      if (isElectron) {
         getElectronStorage<T>(storeKey).setItem(name, value);
       } else {
         // Fallback to localStorage
