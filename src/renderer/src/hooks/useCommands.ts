@@ -136,6 +136,15 @@ export function useCommands() {
         return;
       }
 
+      // Recent connections shortcut (Ctrl+R) - works everywhere
+      const recentConnectionsBinding = getShortcut('conn.recent-connections');
+      if (matchesBinding(e, recentConnectionsBinding)) {
+        e.preventDefault();
+        // Open command palette with switch connection filter
+        openWithFilter('switch');
+        return;
+      }
+
       // Skip other shortcuts if typing in input
       if (isInputField) return;
 
@@ -237,15 +246,6 @@ export function useCommands() {
         document
           .querySelector<HTMLButtonElement>('[data-tab="diagram"]')
           ?.click();
-        return;
-      }
-
-      // Recent connections shortcut (Ctrl+R)
-      const recentConnectionsBinding = getShortcut('conn.recent-connections');
-      if (matchesBinding(e, recentConnectionsBinding)) {
-        e.preventDefault();
-        // Open command palette with switch connection filter
-        openWithFilter('switch');
         return;
       }
 
