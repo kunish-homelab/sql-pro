@@ -2,7 +2,15 @@ import { existsSync, readdirSync } from 'node:fs';
 import { homedir } from 'node:os';
 import { join } from 'node:path';
 import process from 'node:process';
-import { app, BrowserWindow, nativeImage, session, shell } from 'electron';
+import { IPC_CHANNELS } from '@shared/types';
+import {
+  app,
+  BrowserWindow,
+  ipcMain,
+  nativeImage,
+  session,
+  shell,
+} from 'electron';
 import { cleanupIpcHandlers, setupIpcHandlers } from './services/ipc-handlers';
 import {
   createApplicationMenu,
@@ -160,12 +168,12 @@ function createWindow(): BrowserWindow {
   return mainWindow;
 }
 
-// Set app name for development mode
-if (is.dev) {
-  app.name = 'SQL Pro';
-}
-
 app.whenReady().then(async () => {
+  // Set app name for development mode (must be after app is ready)
+  if (is.dev) {
+    app.name = 'SQL Pro';
+  }
+
   setAppUserModelId('com.sqlpro.app');
 
   // Install DevTools extensions in development mode
@@ -222,4 +230,34 @@ app.on('window-all-closed', async () => {
   if (process.platform !== 'darwin') {
     app.quit();
   }
+});
+
+// Track if we're in the process of quitting to avoid infinite loop
+let quitting = false;
+
+// Intercept application quit to check for unsaved changes
+app.on('before-quit', (event) => {
+  if (!quitting) {
+    // Prevent quit and ask renderer to check for unsaved changes
+    event.preventDefault();
+
+    // Send message to all windows to check for unsaved changes
+    const allWindows = BrowserWindow.getAllWindows();
+    allWindows.forEach((window) => {
+      window.webContents.send(IPC_CHANNELS.PREVENT_QUIT);
+    });
+  }
+});
+
+// Handle renderer's response to quit confirmation
+ipcMain.handle('app:confirm-quit', async (_event, { shouldQuit }) => {
+  if (shouldQuit) {
+    // User confirmed quit - set flag and actually quit
+    quitting = true;
+    app.quit();
+  } else {
+    // User cancelled quit - reset flag
+    quitting = false;
+  }
+  return { success: true };
 });

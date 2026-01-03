@@ -5,6 +5,7 @@ import type {
   TableSchema,
 } from '@/types/database';
 import { beforeEach, describe, expect, it, vi } from 'vitest';
+import { useChangesStore } from './changes-store';
 import { useConnectionStore } from './connection-store';
 
 // Helper function to create a mock DatabaseConnection
@@ -1803,6 +1804,181 @@ describe('connection-store', () => {
 
       const state = useConnectionStore.getState();
       expect(state.connectionTabOrder).toEqual(['conn-1', 'conn-2', 'conn-3']);
+    });
+  });
+
+  describe('hasUnsavedChanges', () => {
+    beforeEach(() => {
+      // Clear changes store before each test
+      useChangesStore.setState({ changes: [] });
+    });
+
+    it('should return true when changes exist for connection', () => {
+      const { addConnection, hasUnsavedChanges } =
+        useConnectionStore.getState();
+      const { addChange } = useChangesStore.getState();
+
+      const conn = createMockConnection({ id: 'conn-1' });
+      addConnection(conn);
+
+      // Add a change for this connection
+      addChange({
+        connectionId: 'conn-1',
+        table: 'users',
+        rowId: 1,
+        type: 'update',
+        newValues: { name: 'John Doe' },
+        oldValues: { name: 'Jane Doe' },
+      });
+
+      expect(hasUnsavedChanges('conn-1')).toBe(true);
+    });
+
+    it('should return false when no changes exist for connection', () => {
+      const { addConnection, hasUnsavedChanges } =
+        useConnectionStore.getState();
+
+      const conn = createMockConnection({ id: 'conn-1' });
+      addConnection(conn);
+
+      expect(hasUnsavedChanges('conn-1')).toBe(false);
+    });
+
+    it('should return false for connection with no changes when other connections have changes', () => {
+      const { addConnection, hasUnsavedChanges } =
+        useConnectionStore.getState();
+      const { addChange } = useChangesStore.getState();
+
+      const conn1 = createMockConnection({ id: 'conn-1' });
+      const conn2 = createMockConnection({ id: 'conn-2' });
+
+      addConnection(conn1);
+      addConnection(conn2);
+
+      // Add change only for conn-2
+      addChange({
+        connectionId: 'conn-2',
+        table: 'users',
+        rowId: 1,
+        type: 'update',
+        newValues: { name: 'John Doe' },
+        oldValues: { name: 'Jane Doe' },
+      });
+
+      expect(hasUnsavedChanges('conn-1')).toBe(false);
+      expect(hasUnsavedChanges('conn-2')).toBe(true);
+    });
+
+    it('should return true with multiple changes for connection', () => {
+      const { addConnection, hasUnsavedChanges } =
+        useConnectionStore.getState();
+      const { addChange } = useChangesStore.getState();
+
+      const conn = createMockConnection({ id: 'conn-1' });
+      addConnection(conn);
+
+      // Add multiple changes
+      addChange({
+        connectionId: 'conn-1',
+        table: 'users',
+        rowId: 1,
+        type: 'update',
+        newValues: { name: 'John Doe' },
+        oldValues: { name: 'Jane Doe' },
+      });
+
+      addChange({
+        connectionId: 'conn-1',
+        table: 'users',
+        rowId: 2,
+        type: 'delete',
+        newValues: null,
+        oldValues: { id: 2, name: 'Bob' },
+      });
+
+      addChange({
+        connectionId: 'conn-1',
+        table: 'orders',
+        rowId: 'new-1',
+        type: 'insert',
+        newValues: { product: 'Widget', quantity: 5 },
+        oldValues: null,
+      });
+
+      expect(hasUnsavedChanges('conn-1')).toBe(true);
+    });
+
+    it('should return false after changes are cleared for connection', () => {
+      const { addConnection, hasUnsavedChanges } =
+        useConnectionStore.getState();
+      const { addChange, clearChangesForConnection } =
+        useChangesStore.getState();
+
+      const conn = createMockConnection({ id: 'conn-1' });
+      addConnection(conn);
+
+      // Add a change
+      addChange({
+        connectionId: 'conn-1',
+        table: 'users',
+        rowId: 1,
+        type: 'update',
+        newValues: { name: 'John Doe' },
+        oldValues: { name: 'Jane Doe' },
+      });
+
+      expect(hasUnsavedChanges('conn-1')).toBe(true);
+
+      // Clear changes for this connection
+      clearChangesForConnection('conn-1');
+
+      expect(hasUnsavedChanges('conn-1')).toBe(false);
+    });
+
+    it('should handle different change types (insert, update, delete)', () => {
+      const { addConnection, hasUnsavedChanges } =
+        useConnectionStore.getState();
+      const { addChange } = useChangesStore.getState();
+
+      const conn = createMockConnection({ id: 'conn-1' });
+      addConnection(conn);
+
+      // Test insert
+      addChange({
+        connectionId: 'conn-1',
+        table: 'users',
+        rowId: 'new-1',
+        type: 'insert',
+        newValues: { name: 'New User' },
+        oldValues: null,
+      });
+      expect(hasUnsavedChanges('conn-1')).toBe(true);
+
+      useChangesStore.setState({ changes: [] });
+
+      // Test update
+      addChange({
+        connectionId: 'conn-1',
+        table: 'users',
+        rowId: 1,
+        type: 'update',
+        newValues: { name: 'Updated User' },
+        oldValues: { name: 'Old User' },
+      });
+      expect(hasUnsavedChanges('conn-1')).toBe(true);
+
+      useChangesStore.setState({ changes: [] });
+
+      // Test delete
+      addChange({
+        connectionId: 'conn-1',
+        table: 'users',
+        rowId: 1,
+        type: 'delete',
+        newValues: null,
+        oldValues: { id: 1, name: 'Deleted User' },
+      });
+      expect(hasUnsavedChanges('conn-1')).toBe(true);
     });
   });
 });

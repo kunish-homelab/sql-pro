@@ -168,7 +168,7 @@ export const useCollectionsStore = create<CollectionsState>((set, get) => ({
     if (!originalCollection) return;
 
     // Check if query is already in collection
-    if (originalCollection.queryIds.includes(queryId)) return;
+    if ((originalCollection.queryIds ?? []).includes(queryId)) return;
 
     // Optimistically update the UI
     set((state) => ({
@@ -176,7 +176,7 @@ export const useCollectionsStore = create<CollectionsState>((set, get) => ({
         c.id === collectionId
           ? {
               ...c,
-              queryIds: [...c.queryIds, queryId],
+              queryIds: [...(c.queryIds ?? []), queryId],
               updatedAt: new Date().toISOString(),
             }
           : c
@@ -219,7 +219,7 @@ export const useCollectionsStore = create<CollectionsState>((set, get) => ({
         c.id === collectionId
           ? {
               ...c,
-              queryIds: c.queryIds.filter((id) => id !== queryId),
+              queryIds: (c.queryIds ?? []).filter((id) => id !== queryId),
               updatedAt: new Date().toISOString(),
             }
           : c

@@ -1,25 +1,7 @@
-import type { RecentConnection } from '@shared/types';
+import type { PendingChangeInfo, RecentConnection } from '@shared/types';
 import type { DatabaseConnection } from '@/types/database';
-import {
-  AlertCircle,
-  Check,
-  ChevronDown,
-  Clock,
-  Database,
-  Plus,
-  X,
-} from 'lucide-react';
+import { Check, ChevronDown, Clock, Database, Plus, X } from 'lucide-react';
 import { useCallback, useState } from 'react';
-import {
-  AlertDialog,
-  AlertDialogAction,
-  AlertDialogCancel,
-  AlertDialogContent,
-  AlertDialogDescription,
-  AlertDialogFooter,
-  AlertDialogHeader,
-  AlertDialogTitle,
-} from '@/components/ui/alert-dialog';
 import { Button } from '@/components/ui/button';
 import {
   DropdownMenu,
@@ -34,6 +16,7 @@ import {
   TooltipContent,
   TooltipTrigger,
 } from '@/components/ui/tooltip';
+import { UnsavedChangesDialog } from '@/components/UnsavedChangesDialog';
 import { cn } from '@/lib/utils';
 import { useChangesStore, useConnectionStore, useTableFont } from '@/stores';
 
@@ -61,11 +44,17 @@ export function ConnectionSelector({
     recentConnections,
   } = useConnectionStore();
 
-  const { changes, clearChanges } = useChangesStore();
+  const {
+    hasChangesForConnection,
+    getChangesForConnection,
+    clearChangesForConnection,
+  } = useChangesStore();
   const tableFont = useTableFont();
   const [isOpen, setIsOpen] = useState(false);
   const [pendingSwitchId, setPendingSwitchId] = useState<string | null>(null);
   const [showUnsavedDialog, setShowUnsavedDialog] = useState(false);
+  const [pendingCloseId, setPendingCloseId] = useState<string | null>(null);
+  const [showCloseDialog, setShowCloseDialog] = useState(false);
 
   const allConnections = getAllConnections();
   const activeConnection = activeConnectionId
@@ -79,7 +68,16 @@ export function ConnectionSelector({
   );
 
   // Check if there are unsaved changes for the current connection
-  const hasUnsavedChanges = changes.length > 0;
+  const hasUnsavedChanges =
+    activeConnectionId !== null && hasChangesForConnection(activeConnectionId);
+  const currentChanges = activeConnectionId
+    ? getChangesForConnection(activeConnectionId)
+    : [];
+
+  // Get changes for the connection being closed
+  const pendingCloseChanges = pendingCloseId
+    ? getChangesForConnection(pendingCloseId)
+    : [];
 
   const handleConnectionSelect = useCallback(
     (connectionId: string) => {
@@ -87,6 +85,9 @@ export function ConnectionSelector({
         setIsOpen(false);
         return;
       }
+
+      // Guard: prevent showing multiple dialogs on rapid actions
+      if (showUnsavedDialog) return;
 
       if (hasUnsavedChanges) {
         setPendingSwitchId(connectionId);
@@ -97,31 +98,146 @@ export function ConnectionSelector({
       setActiveConnection(connectionId);
       setIsOpen(false);
     },
-    [activeConnectionId, hasUnsavedChanges, setActiveConnection]
+    [
+      activeConnectionId,
+      hasUnsavedChanges,
+      setActiveConnection,
+      showUnsavedDialog,
+    ]
   );
 
-  const handleConfirmSwitch = useCallback(() => {
-    if (pendingSwitchId) {
-      clearChanges();
+  const handleSaveAndSwitch = useCallback(async () => {
+    if (!activeConnectionId || !activeConnection || !pendingSwitchId) return;
+
+    const changes = getChangesForConnection(activeConnectionId);
+
+    // Convert PendingChange[] to PendingChangeInfo[]
+    const changeInfos: PendingChangeInfo[] = changes.map((change) => ({
+      id: change.id,
+      table: change.table,
+      schema: change.schema,
+      rowId: change.rowId,
+      type: change.type,
+      oldValues: change.oldValues,
+      newValues: change.newValues,
+      primaryKeyColumn: change.primaryKeyColumn,
+    }));
+
+    const response = await window.sqlPro.db.applyChanges({
+      connectionId: activeConnection.id,
+      changes: changeInfos,
+    });
+
+    if (!response.success) {
+      throw new Error(response.error || 'Failed to apply changes');
+    }
+
+    // Clear changes and switch connection
+    clearChangesForConnection(activeConnectionId);
+    setActiveConnection(pendingSwitchId);
+    setPendingSwitchId(null);
+    setIsOpen(false);
+  }, [
+    activeConnectionId,
+    activeConnection,
+    pendingSwitchId,
+    getChangesForConnection,
+    clearChangesForConnection,
+    setActiveConnection,
+  ]);
+
+  const handleDiscardAndSwitch = useCallback(() => {
+    if (activeConnectionId && pendingSwitchId) {
+      clearChangesForConnection(activeConnectionId);
       setActiveConnection(pendingSwitchId);
       setPendingSwitchId(null);
     }
     setShowUnsavedDialog(false);
     setIsOpen(false);
-  }, [pendingSwitchId, clearChanges, setActiveConnection]);
+  }, [
+    activeConnectionId,
+    pendingSwitchId,
+    clearChangesForConnection,
+    setActiveConnection,
+  ]);
 
   const handleCancelSwitch = useCallback(() => {
     setPendingSwitchId(null);
-    setShowUnsavedDialog(false);
+    // Dialog stays open, do not switch
+  }, []);
+
+  const handleSaveAndClose = useCallback(async () => {
+    if (!pendingCloseId) return;
+
+    const connection = connections.get(pendingCloseId);
+    if (!connection) return;
+
+    const changes = getChangesForConnection(pendingCloseId);
+
+    // Convert PendingChange[] to PendingChangeInfo[]
+    const changeInfos: PendingChangeInfo[] = changes.map((change) => ({
+      id: change.id,
+      table: change.table,
+      schema: change.schema,
+      rowId: change.rowId,
+      type: change.type,
+      oldValues: change.oldValues,
+      newValues: change.newValues,
+      primaryKeyColumn: change.primaryKeyColumn,
+    }));
+
+    const response = await window.sqlPro.db.applyChanges({
+      connectionId: connection.id,
+      changes: changeInfos,
+    });
+
+    if (!response.success) {
+      throw new Error(response.error || 'Failed to apply changes');
+    }
+
+    // Clear changes and close connection
+    clearChangesForConnection(pendingCloseId);
+    removeConnection(pendingCloseId);
+    setPendingCloseId(null);
+  }, [
+    pendingCloseId,
+    connections,
+    getChangesForConnection,
+    clearChangesForConnection,
+    removeConnection,
+  ]);
+
+  const handleDiscardAndClose = useCallback(() => {
+    if (pendingCloseId) {
+      clearChangesForConnection(pendingCloseId);
+      removeConnection(pendingCloseId);
+      setPendingCloseId(null);
+    }
+    setShowCloseDialog(false);
+  }, [pendingCloseId, clearChangesForConnection, removeConnection]);
+
+  const handleCancelClose = useCallback(() => {
+    setPendingCloseId(null);
   }, []);
 
   const handleCloseConnection = useCallback(
     (e: React.MouseEvent, connectionId: string) => {
       e.stopPropagation();
-      // TODO: Check for unsaved changes before closing
+
+      // Guard: prevent showing multiple dialogs on rapid clicks
+      if (showCloseDialog) return;
+
+      // Check if connection has unsaved changes
+      if (hasChangesForConnection(connectionId)) {
+        setPendingCloseId(connectionId);
+        setShowCloseDialog(true);
+        return;
+      }
+
+      // No unsaved changes, proceed with closing
       removeConnection(connectionId);
     },
-    [removeConnection]
+    [hasChangesForConnection, removeConnection, showCloseDialog]
   );
 
   const handleOpenDatabase = useCallback(() => {
@@ -189,18 +305,18 @@ export function ConnectionSelector({
                     : 'bg-gray-400'
                 )}
               />
-              <Database className="text-muted-foreground h-4 w-4 shrink-0" />
-              <span className="truncate">
-                {activeConnection?.filename || 'No connection'}
-              </span>
               {hasUnsavedChanges && (
                 <Tooltip>
                   <TooltipTrigger>
-                    <AlertCircle className="h-3.5 w-3.5 shrink-0 text-amber-500" />
+                    <span className="h-1.5 w-1.5 shrink-0 rounded-full bg-amber-500" />
                   </TooltipTrigger>
                   <TooltipContent>Unsaved changes</TooltipContent>
                 </Tooltip>
               )}
+              <Database className="text-muted-foreground h-4 w-4 shrink-0" />
+              <span className="truncate">
+                {activeConnection?.filename || 'No connection'}
+              </span>
             </div>
             <ChevronDown className="h-4 w-4 shrink-0 opacity-50" />
           </Button>
@@ -220,46 +336,59 @@ export function ConnectionSelector({
               Open Connections
             </DropdownMenuLabel>
           )}
-          {allConnections.map((conn) => (
-            <DropdownMenuItem
-              key={conn.id}
-              className="group flex cursor-pointer items-center justify-between gap-2 pr-2"
-              onClick={() => handleConnectionSelect(conn.id)}
-            >
-              <div className="flex min-w-0 items-center gap-2">
-                <span
-                  className={cn(
-                    'h-2 w-2 shrink-0 rounded-full',
-                    getStatusColor(conn)
+          {allConnections.map((conn) => {
+            const connectionHasUnsavedChanges = hasChangesForConnection(
+              conn.id
+            );
+            return (
+              <DropdownMenuItem
+                key={conn.id}
+                className="group flex cursor-pointer items-center justify-between gap-2 pr-2"
+                onClick={() => handleConnectionSelect(conn.id)}
+              >
+                <div className="flex min-w-0 items-center gap-2">
+                  <span
+                    className={cn(
+                      'h-2 w-2 shrink-0 rounded-full',
+                      getStatusColor(conn)
+                    )}
+                  />
+                  {connectionHasUnsavedChanges && (
+                    <Tooltip>
+                      <TooltipTrigger>
+                        <span className="h-1.5 w-1.5 shrink-0 rounded-full bg-amber-500" />
+                      </TooltipTrigger>
+                      <TooltipContent>Unsaved changes</TooltipContent>
+                    </Tooltip>
                   )}
-                />
-                <span className="truncate">{conn.filename}</span>
-                {conn.isReadOnly && (
-                  <span className="bg-muted text-muted-foreground shrink-0 rounded px-1 py-0.5 text-[10px]">
-                    R/O
-                  </span>
-                )}
-                {conn.isEncrypted && (
-                  <span className="bg-muted text-muted-foreground shrink-0 rounded px-1 py-0.5 text-[10px]">
-                    🔒
-                  </span>
-                )}
-              </div>
-              <div className="flex shrink-0 items-center gap-1">
-                {conn.id === activeConnectionId && (
-                  <Check className="text-primary h-4 w-4" />
-                )}
-                <Button
-                  variant="ghost"
-                  size="icon"
-                  className="h-6 w-6 opacity-0 group-hover:opacity-100"
-                  onClick={(e) => handleCloseConnection(e, conn.id)}
-                >
-                  <X className="h-3 w-3" />
-                </Button>
-              </div>
-            </DropdownMenuItem>
-          ))}
+                  <span className="truncate">{conn.filename}</span>
+                  {conn.isReadOnly && (
+                    <span className="bg-muted text-muted-foreground shrink-0 rounded px-1 py-0.5 text-[10px]">
+                      R/O
+                    </span>
+                  )}
+                  {conn.isEncrypted && (
+                    <span className="bg-muted text-muted-foreground shrink-0 rounded px-1 py-0.5 text-[10px]">
+                      🔒
+                    </span>
+                  )}
+                </div>
+                <div className="flex shrink-0 items-center gap-1">
+                  {conn.id === activeConnectionId && (
+                    <Check className="text-primary h-4 w-4" />
+                  )}
+                  <Button
+                    variant="ghost"
+                    size="icon"
+                    className="h-6 w-6 opacity-0 group-hover:opacity-100"
+                    onClick={(e) => handleCloseConnection(e, conn.id)}
+                  >
+                    <X className="h-3 w-3" />
+                  </Button>
+                </div>
+              </DropdownMenuItem>
+            );
+          })}
 
           {/* Recent connections */}
           {filteredRecentConnections.length > 0 && (
@@ -307,26 +436,31 @@ export function ConnectionSelector({
         </DropdownMenuContent>
       </DropdownMenu>
 
-      {/* Unsaved Changes Dialog */}
-      <AlertDialog open={showUnsavedDialog} onOpenChange={setShowUnsavedDialog}>
-        <AlertDialogContent>
-          <AlertDialogHeader>
-            <AlertDialogTitle>Unsaved Changes</AlertDialogTitle>
-            <AlertDialogDescription>
-              You have unsaved changes in the current connection. If you switch
-              to another connection, your changes will be lost.
-            </AlertDialogDescription>
-          </AlertDialogHeader>
-          <AlertDialogFooter>
-            <AlertDialogCancel onClick={handleCancelSwitch}>
-              Cancel
-            </AlertDialogCancel>
-            <AlertDialogAction onClick={handleConfirmSwitch}>
-              Discard & Switch
-            </AlertDialogAction>
-          </AlertDialogFooter>
-        </AlertDialogContent>
-      </AlertDialog>
+      {/* Unsaved Changes Dialog for connection switching */}
+      {activeConnectionId && (
+        <UnsavedChangesDialog
+          open={showUnsavedDialog}
+          onOpenChange={setShowUnsavedDialog}
+          changes={currentChanges}
+          connectionId={activeConnectionId}
+          onSave={handleSaveAndSwitch}
+          onDiscard={handleDiscardAndSwitch}
+          onCancel={handleCancelSwitch}
+        />
+      )}
+
+      {/* Unsaved Changes Dialog for connection closing */}
+      {pendingCloseId && (
+        <UnsavedChangesDialog
+          open={showCloseDialog}
+          onOpenChange={setShowCloseDialog}
+          changes={pendingCloseChanges}
+          connectionId={pendingCloseId}
+          onSave={handleSaveAndClose}
+          onDiscard={handleDiscardAndClose}
+          onCancel={handleCancelClose}
+        />
+      )}
     </>
   );
 }

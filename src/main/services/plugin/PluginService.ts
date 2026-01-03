@@ -91,12 +91,20 @@ const DEFAULT_CACHE_DURATION = 60 * 60 * 1000;
 
 // ============ Storage Instance ============
 
-const pluginStorageStore = new Store<PluginStorageSchema>({
-  name: 'sql-pro-plugin-storage',
-  defaults: {
-    pluginData: {},
-  },
-});
+// Lazy-initialize store to ensure app is ready before accessing userData path
+let _pluginStorageStore: Store<PluginStorageSchema> | null = null;
+
+function getPluginStorageStore(): Store<PluginStorageSchema> {
+  if (!_pluginStorageStore) {
+    _pluginStorageStore = new Store<PluginStorageSchema>({
+      name: 'sql-pro-plugin-storage',
+      defaults: {
+        pluginData: {},
+      },
+    });
+  }
+  return _pluginStorageStore;
+}
 
 // ============ PluginService Class ============
 
@@ -732,7 +740,7 @@ class PluginService extends EventEmitter {
    * @returns Stored value or undefined
    */
   getPluginData<T = unknown>(pluginId: string, key: string): T | undefined {
-    const pluginData = pluginStorageStore.get('pluginData', {});
+    const pluginData = getPluginStorageStore().get('pluginData', {});
     const data = pluginData[pluginId];
 
     if (!data) {
@@ -750,14 +758,14 @@ class PluginService extends EventEmitter {
    * @param value - Value to store
    */
   setPluginData<T = unknown>(pluginId: string, key: string, value: T): void {
-    const pluginData = pluginStorageStore.get('pluginData', {});
+    const pluginData = getPluginStorageStore().get('pluginData', {});
 
     if (!pluginData[pluginId]) {
       pluginData[pluginId] = {};
     }
 
     pluginData[pluginId][key] = value;
-    pluginStorageStore.set('pluginData', pluginData);
+    getPluginStorageStore().set('pluginData', pluginData);
   }
 
   /**
@@ -767,12 +775,12 @@ class PluginService extends EventEmitter {
    * @param key - Storage key
    */
   removePluginData(pluginId: string, key: string): void {
-    const pluginData = pluginStorageStore.get('pluginData', {});
+    const pluginData = getPluginStorageStore().get('pluginData', {});
     const data = pluginData[pluginId];
 
     if (data) {
       delete data[key];
-      pluginStorageStore.set('pluginData', pluginData);
+      getPluginStorageStore().set('pluginData', pluginData);
     }
   }
 
@@ -783,7 +791,7 @@ class PluginService extends EventEmitter {
    * @returns Array of storage keys
    */
   getPluginDataKeys(pluginId: string): string[] {
-    const pluginData = pluginStorageStore.get('pluginData', {});
+    const pluginData = getPluginStorageStore().get('pluginData', {});
     const data = pluginData[pluginId];
 
     return data ? Object.keys(data) : [];
@@ -795,9 +803,9 @@ class PluginService extends EventEmitter {
    * @param pluginId - Plugin ID
    */
   clearPluginStorage(pluginId: string): void {
-    const pluginData = pluginStorageStore.get('pluginData', {});
+    const pluginData = getPluginStorageStore().get('pluginData', {});
     delete pluginData[pluginId];
-    pluginStorageStore.set('pluginData', pluginData);
+    getPluginStorageStore().set('pluginData', pluginData);
   }
 
   // ============ Updates ============
@@ -999,7 +1007,7 @@ class PluginService extends EventEmitter {
     try {
       // Check cache first
       if (!forceRefresh) {
-        const cache = pluginStorageStore.get('marketplaceCache');
+        const cache = getPluginStorageStore().get('marketplaceCache');
 
         if (cache) {
           const cacheAge = Date.now() - new Date(cache.cachedAt).getTime();
@@ -1019,7 +1027,7 @@ class PluginService extends EventEmitter {
         request.on('response', (response) => {
           if (response.statusCode !== 200) {
             // Try to return cached data if available
-            const cache = pluginStorageStore.get('marketplaceCache');
+            const cache = getPluginStorageStore().get('marketplaceCache');
             if (cache) {
               resolve({ success: true, data: cache.registry });
               return;
@@ -1045,7 +1053,7 @@ class PluginService extends EventEmitter {
               const registry = JSON.parse(body) as MarketplaceRegistry;
 
               // Update cache
-              pluginStorageStore.set('marketplaceCache', {
+              getPluginStorageStore().set('marketplaceCache', {
                 registry,
                 cachedAt: new Date().toISOString(),
               });
@@ -1062,7 +1070,7 @@ class PluginService extends EventEmitter {
 
           response.on('error', (error) => {
             // Try to return cached data
-            const cache = pluginStorageStore.get('marketplaceCache');
+            const cache = getPluginStorageStore().get('marketplaceCache');
             if (cache) {
               resolve({ success: true, data: cache.registry });
               return;
@@ -1078,7 +1086,7 @@ class PluginService extends EventEmitter {
 
         request.on('error', (error) => {
           // Try to return cached data
-          const cache = pluginStorageStore.get('marketplaceCache');
+          const cache = getPluginStorageStore().get('marketplaceCache');
           if (cache) {
             resolve({ success: true, data: cache.registry });
             return;
@@ -1306,5 +1314,5 @@ export const pluginService = new PluginService();
 // Export class for testing purposes
 export { PluginService };
 
-// Export storage store for advanced usage (testing, debugging)
-export { pluginStorageStore };
+// Export storage store getter for advanced usage (testing, debugging)
+export { getPluginStorageStore };

@@ -209,11 +209,13 @@ function satisfiesVersion(version: string, range: string): boolean {
  * Follows the singleton service pattern from database.ts.
  */
 class PluginLoader {
-  private appVersion: string;
+  private _appVersion: string | null = null;
 
-  constructor() {
-    // Get app version for compatibility checking
-    this.appVersion = app.getVersion();
+  private get appVersion(): string {
+    if (!this._appVersion) {
+      this._appVersion = app.getVersion();
+    }
+    return this._appVersion;
   }
 
   /**

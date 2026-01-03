@@ -7,8 +7,10 @@ import type {
   AIStreamOpenAIRequest,
   AnalyzeQueryPlanRequest,
   ApplyChangesRequest,
+  CheckUnsavedChangesRequest,
   ClearQueryHistoryRequest,
   CloseDatabaseRequest,
+  ColumnInfo,
   CompareConnectionsRequest,
   CompareConnectionToSnapshotRequest,
   CompareSnapshotsRequest,
@@ -36,18 +38,19 @@ import type {
   OpenDatabaseRequest,
   OpenFileDialogRequest,
   ProActivateRequest,
+  QueryHistoryEntry,
   RemoveConnectionRequest,
   RemovePasswordRequest,
-  SaveAISettingsRequest,
   SaveFileDialogRequest,
   SavePasswordRequest,
   SaveQueryHistoryRequest,
   SaveSchemaSnapshotRequest,
+  SchemaComparisonResult,
+  SchemaSnapshot,
   UpdateConnectionRequest,
   ValidateChangesRequest,
 } from '@shared/types';
 import type { Buffer } from 'node:buffer';
-import type { StoredPreferences } from './store';
 import type { SystemFont } from '@/lib/font-constants';
 import { exec } from 'node:child_process';
 import fs from 'node:fs';
@@ -83,7 +86,6 @@ import {
   importBundle,
   importQuery,
   importSchema,
-  serializeShareableData,
 } from './query-schema-sharing';
 import { schemaComparisonService } from './schema-comparison';
 import { sqlLogger } from './sql-logger';
@@ -105,7 +107,6 @@ import {
   getProfiles,
   getProStatus,
   getQueryHistory,
-  getRecentConnections,
   getSavedQueries,
   getSchemaSnapshot,
   getSchemaSnapshots,
@@ -123,7 +124,6 @@ import {
   updateCollection,
   updateFolder,
   updateProfile,
-  updateRecentConnection,
   updateSavedQuery,
 } from './store';
 import {
@@ -333,28 +333,6 @@ export async function findClaudeCodePaths(): Promise<string[]> {
   return Array.from(foundPaths);
 }
 
-/**
- * Get the path to Claude Code executable.
- * Uses user-configured path or finds the first available one.
- */
-function getClaudeCodePath(customPath?: string): string {
-  // Use custom path if provided and exists
-  if (customPath && fs.existsSync(customPath)) {
-    return customPath;
-  }
-
-  // Check common paths
-  for (const path of COMMON_CLAUDE_PATHS) {
-    const resolvedPath = path.replace('~', os.homedir());
-    if (fs.existsSync(resolvedPath)) {
-      return resolvedPath;
-    }
-  }
-
-  // Fallback to the most common Homebrew path
-  return '/opt/homebrew/bin/claude';
-}
-
 export function cleanupIpcHandlers(): void {
   // Remove all IPC handlers when the app is shutting down
   Object.values(IPC_CHANNELS).forEach((channel) => {
@@ -544,534 +522,798 @@ export function setupIpcHandlers(): void {
     IPC_CHANNELS.EXPORT_DATA,
     async (_event, request: ExportRequest) => {
       try {
-        let columns: {
-          name: string;
-          type: string;
-          nullable: boolean;
-          defaultValue: string | null;
-          isPrimaryKey: boolean;
-        }[];
-        let rows: Record<string, unknown>[];
+        let columns: ColumnInfo[] = [];
+        let rows: Record<string, unknown>[] = [];
 
-        // Check if pre-filtered rows were provided
-        if (request.rows && request.rows.length > 0) {
-          // Use provided rows directly (for filtered/selected data export)
-          rows = request.rows;
-          // Create column info from the first row's keys
-          // Generators only use the 'name' property, so other fields can be defaults
-          const columnNames = Object.keys(rows[0]);
-          columns = columnNames.map((name) => ({
-            name,
-            type: 'TEXT',
-            nullable: true,
-            defaultValue: null,
-            isPrimaryKey: false,
-          }));
-        } else {
-          // Fetch all data from the table
-          const dataResult = databaseService.getTableData(
-            request.connectionId,
-            request.table,
-            1,
-            1000000, // Large number to get all rows
-            undefined,
-            undefined,
-            undefined
-          );
+        const tableData = await databaseService.getTableData(
+          request.connectionId,
+          request.table,
+          1,
+          999999,
+          undefined,
+          undefined,
+          undefined,
+          request.schema
+        );
 
-          if (!dataResult.success) {
-            return dataResult;
-          }
-
-          columns = dataResult.columns!;
-          rows = dataResult.rows!;
+        if (tableData.success) {
+          columns = tableData.columns || [];
+          rows = (tableData.rows || []) as Record<string, unknown>[];
         }
 
-        switch (request.format) {
-          case 'csv': {
-            const content = generateCSV(rows, columns, {
-              columns: request.columns,
-              includeHeaders: request.includeHeaders,
-              delimiter: request.delimiter,
-            });
-            fs.writeFileSync(request.filePath, content, 'utf-8');
-            break;
-          }
-          case 'json': {
-            const content = generateJSON(rows, columns, {
-              columns: request.columns,
-              prettyPrint: request.prettyPrint,
-            });
-            fs.writeFileSync(request.filePath, content, 'utf-8');
-            break;
-          }
-          case 'sql': {
-            const content = generateSQL(rows, columns, {
-              columns: request.columns,
-              tableName: request.table,
-            });
-            fs.writeFileSync(request.filePath, content, 'utf-8');
-            break;
-          }
-          case 'xlsx': {
-            const buffer = generateExcel(rows, columns, {
-              columns: request.columns,
-              sheetName: request.sheetName ?? request.table,
-            });
-            fs.writeFileSync(request.filePath, buffer);
-            break;
-          }
-          default:
-            return { success: false, error: 'Unsupported export format' };
+        let output: Buffer | string = '';
+        if (request.format === 'csv') {
+          output = generateCSV(rows, columns);
+        } else if (request.format === 'json') {
+          output = generateJSON(rows, columns);
+        } else if (request.format === 'sql') {
+          output = generateSQL(rows, columns, { tableName: request.table });
+        } else if (request.format === 'xlsx') {
+          output = generateExcel(rows, columns, { sheetName: request.table });
         }
 
-        return { success: true, rowsExported: rows.length };
+        return {
+          success: true,
+          data: output,
+          format: request.format,
+        };
       } catch (error) {
         return {
           success: false,
-          error:
-            error instanceof Error ? error.message : 'Failed to export data',
+          error: error instanceof Error ? error.message : 'Export failed',
         };
       }
     }
   );
 
-  // App: Get Recent Connections
-  ipcMain.handle(IPC_CHANNELS.APP_GET_RECENT_CONNECTIONS, async () => {
-    return { success: true, connections: getRecentConnections() };
-  });
-
-  // App: Get Preferences
-  ipcMain.handle(IPC_CHANNELS.APP_GET_PREFERENCES, async () => {
-    return { success: true, preferences: getPreferences() };
-  });
-
-  // App: Set Preferences
+  // Export: Bundle
   ipcMain.handle(
-    IPC_CHANNELS.APP_SET_PREFERENCES,
-    async (_event, request: { preferences: Partial<StoredPreferences> }) => {
+    IPC_CHANNELS.EXPORT_BUNDLE,
+    createHandler(async (_request: ExportBundleRequest) => {
+      const { data } = await exportBundle({
+        name: 'bundle',
+        queries: [],
+        schemas: [],
+      });
+      return { success: true, data };
+    })
+  );
+
+  // Export: Query
+  ipcMain.handle(
+    IPC_CHANNELS.EXPORT_QUERY,
+    createHandler(async (request: ExportQueryRequest) => {
+      // Export query needs a query object, not just an ID
+      // This should be fetched from saved queries using request.queryId
+      const savedQueries = getSavedQueries();
+      const queryData = savedQueries.find((q) => q.id === request.queryId);
+      if (!queryData) {
+        throw new Error(`Query with ID ${request.queryId} not found`);
+      }
+      const { data } = await exportQuery({
+        name: queryData.name,
+        sql: queryData.queryText || queryData.query || '',
+        databaseContext: queryData.connectionPath,
+        tags: queryData.tags,
+        description: queryData.description,
+      });
+      return { success: true, data };
+    })
+  );
+
+  // Export: Schema
+  ipcMain.handle(
+    IPC_CHANNELS.EXPORT_SCHEMA,
+    createHandler(async (request: ExportSchemaRequest) => {
+      // Export schema needs a schema object
+      // If snapshotId is provided, fetch the snapshot first
+      if (request.snapshotId) {
+        const snapshot = getSchemaSnapshot(request.snapshotId);
+        if (!snapshot) {
+          throw new Error(
+            `Schema snapshot with ID ${request.snapshotId} not found`
+          );
+        }
+        const { data } = await exportSchema({
+          name: snapshot.name,
+          description: snapshot.description,
+          databaseName: snapshot.connectionPath || '',
+          databaseType: 'sqlite',
+          format: 'json',
+          schemas: snapshot.schemas || [],
+        });
+        return { success: true, data };
+      }
+      throw new Error('snapshotId is required');
+    })
+  );
+
+  // Import: Bundle
+  ipcMain.handle(
+    IPC_CHANNELS.IMPORT_BUNDLE,
+    createHandler(async (request: ImportBundleRequest) => {
+      if (!request.data) {
+        throw new Error('Import data is required');
+      }
+      const result = await importBundle(request.data);
+      return result;
+    })
+  );
+
+  // Import: Query
+  ipcMain.handle(
+    IPC_CHANNELS.IMPORT_QUERY,
+    createHandler(async (request: ImportQueryRequest) => {
+      if (!request.data) {
+        throw new Error('Import data is required');
+      }
+      const result = await importQuery(request.data);
+      return result;
+    })
+  );
+
+  // Import: Schema
+  ipcMain.handle(
+    IPC_CHANNELS.IMPORT_SCHEMA,
+    createHandler(async (request: ImportSchemaRequest) => {
+      if (!request.data) {
+        throw new Error('Import data is required');
+      }
+      const result = await importSchema(request.data);
+      return result;
+    })
+  );
+
+  // Schema: Get Snapshots
+  ipcMain.handle(
+    IPC_CHANNELS.SCHEMA_GET_SNAPSHOTS,
+    createHandler(async () => {
+      const snapshots = getSchemaSnapshots();
+      return { success: true, snapshots };
+    })
+  );
+
+  // Schema: Get Snapshot
+  ipcMain.handle(
+    IPC_CHANNELS.SCHEMA_GET_SNAPSHOT,
+    createHandler(async (request: GetSchemaSnapshotRequest) => {
+      const snapshot = getSchemaSnapshot(request.snapshotId);
+      return { success: true, snapshot };
+    })
+  );
+
+  // Schema: Save Snapshot
+  ipcMain.handle(
+    IPC_CHANNELS.SCHEMA_SAVE_SNAPSHOT,
+    createHandler(async (request: SaveSchemaSnapshotRequest) => {
+      // Create a snapshot object with the provided data
+      const snapshotData: SchemaSnapshot = {
+        id: crypto.randomUUID(),
+        name: request.name || 'Unnamed Snapshot',
+        schemas: request.schema || [],
+        connectionPath: request.connectionPath || '',
+        description: request.description,
+        createdAt: new Date().toISOString(),
+      };
+      saveSchemaSnapshot(snapshotData);
+      return { success: true, snapshot: snapshotData };
+    })
+  );
+
+  // Schema: Delete Snapshot
+  ipcMain.handle(
+    IPC_CHANNELS.SCHEMA_DELETE_SNAPSHOT,
+    createHandler(async (request: DeleteSchemaSnapshotRequest) => {
+      deleteSchemaSnapshot(request.snapshotId);
+      return { success: true };
+    })
+  );
+
+  // Schema: Compare Snapshots
+  ipcMain.handle(
+    IPC_CHANNELS.SCHEMA_COMPARE_SNAPSHOTS,
+    createHandler(async (request: CompareSnapshotsRequest) => {
+      const snapshotId1 = request.snapshotId1 || request.sourceSnapshotId || '';
+      const snapshotId2 = request.snapshotId2 || request.targetSnapshotId || '';
+      const snapshot1 = getSchemaSnapshot(snapshotId1);
+      const snapshot2 = getSchemaSnapshot(snapshotId2);
+
+      if (!snapshot1 || !snapshot2) {
+        throw new Error('One or both snapshots not found');
+      }
+
+      const comparison = schemaComparisonService.compareSchemas(
+        snapshot1.schemas || snapshot1.schema || [],
+        snapshot2.schemas || snapshot2.schema || [],
+        snapshot1.id,
+        snapshot1.name,
+        'snapshot',
+        snapshot2.id,
+        snapshot2.name,
+        'snapshot'
+      );
+      return { success: true, comparison };
+    })
+  );
+
+  // Schema: Compare Connections
+  ipcMain.handle(
+    IPC_CHANNELS.SCHEMA_COMPARE_CONNECTIONS,
+    createHandler(async (request: CompareConnectionsRequest) => {
+      const connectionId1 =
+        request.connectionId1 || request.sourceConnectionId || '';
+      const connectionId2 =
+        request.connectionId2 || request.targetConnectionId || '';
+      const schema1 = await databaseService.getSchema(connectionId1);
+      const schema2 = await databaseService.getSchema(connectionId2);
+
+      if (!schema1.success || !schema2.success) {
+        throw new Error('Failed to fetch schemas');
+      }
+
+      const comparison = schemaComparisonService.compareSchemas(
+        schema1.schemas || [],
+        schema2.schemas || [],
+        connectionId1,
+        connectionId1,
+        'connection',
+        connectionId2,
+        connectionId2,
+        'connection'
+      );
+      return { success: true, comparison };
+    })
+  );
+
+  // Schema: Compare Connection to Snapshot
+  ipcMain.handle(
+    IPC_CHANNELS.SCHEMA_COMPARE_CONNECTION_TO_SNAPSHOT,
+    createHandler(async (request: CompareConnectionToSnapshotRequest) => {
+      const connectionId = request.connectionId || '';
+      const snapshotId = request.snapshotId || '';
+      const liveSchema = await databaseService.getSchema(connectionId);
+      const snapshot = getSchemaSnapshot(snapshotId);
+
+      if (!liveSchema.success || !snapshot) {
+        throw new Error('Failed to fetch schema or snapshot');
+      }
+
+      const comparison = schemaComparisonService.compareSchemas(
+        liveSchema.schemas || [],
+        snapshot.schemas || snapshot.schema || [],
+        connectionId,
+        connectionId,
+        'connection',
+        snapshot.id,
+        snapshot.name,
+        'snapshot'
+      );
+      return { success: true, comparison };
+    })
+  );
+
+  // Table: Compare Tables
+  ipcMain.handle(
+    IPC_CHANNELS.TABLE_COMPARE,
+    createHandler(async (request: CompareTablesRequest) => {
+      const connectionId1 =
+        request.connectionId1 || request.sourceConnectionId || '';
+      const connectionId2 =
+        request.connectionId2 || request.targetConnectionId || '';
+      const table1 = request.table1 || request.sourceTable || '';
+      const table2 = request.table2 || request.targetTable || '';
+      const schema1 = request.schema1 || request.sourceSchema || '';
+      const schema2 = request.schema2 || request.targetSchema || '';
+
+      const comparison = await dataDiffService.compareTableData(
+        connectionId1,
+        table1,
+        schema1,
+        connectionId2,
+        table2,
+        schema2,
+        request.primaryKeys || []
+      );
+      return { success: true, comparison };
+    })
+  );
+
+  // Migration: Generate SQL
+  ipcMain.handle(
+    IPC_CHANNELS.MIGRATION_GENERATE_SQL,
+    createHandler(async (request: GenerateMigrationSQLRequest) => {
+      const result = migrationGeneratorService.generateMigrationSQL(request);
+      return result;
+    })
+  );
+
+  // Migration: Generate Sync SQL
+  ipcMain.handle(
+    IPC_CHANNELS.MIGRATION_GENERATE_SYNC_SQL,
+    createHandler(async (request: GenerateSyncSQLRequest) => {
+      const result = dataDiffSyncGeneratorService.generateSyncSQL(request);
+      return result;
+    })
+  );
+
+  // Export: Comparison Report
+  ipcMain.handle(
+    IPC_CHANNELS.EXPORT_COMPARISON_REPORT,
+    createHandler(async (request: ExportComparisonReportRequest) => {
+      const comparisonData = (request.comparison ||
+        request.comparisonResult) as SchemaComparisonResult;
+      if (!comparisonData) {
+        throw new Error('Comparison data is required');
+      }
+      let output = '';
+
+      if (request.format === 'markdown') {
+        output = generateMarkdownReport(comparisonData);
+      } else if (request.format === 'html') {
+        output = generateHTMLReport(comparisonData);
+      } else if (request.format === 'json') {
+        output = generateJSONReport(comparisonData);
+      }
+
+      return { success: true, data: output, format: request.format };
+    })
+  );
+
+  // Query History: Get
+  ipcMain.handle(
+    IPC_CHANNELS.QUERY_HISTORY_GET,
+    createHandler(async (request: GetQueryHistoryRequest) => {
+      const dbPath = request.dbPath || '';
+      const history = getQueryHistory(dbPath);
+      return { success: true, history };
+    })
+  );
+
+  // Query History: Save
+  ipcMain.handle(
+    IPC_CHANNELS.QUERY_HISTORY_SAVE,
+    createHandler(async (request: SaveQueryHistoryRequest) => {
+      // Build entry from request
+      const entry: QueryHistoryEntry = request.entry || {
+        id: crypto.randomUUID(),
+        query: request.query || '',
+        dbPath: request.connectionPath || '',
+        timestamp: request.timestamp || new Date().toISOString(),
+        description: request.description,
+      };
+      saveQueryHistoryEntry(entry);
+      return { success: true, entry };
+    })
+  );
+
+  // Query History: Delete
+  ipcMain.handle(
+    IPC_CHANNELS.QUERY_HISTORY_DELETE,
+    createHandler(async (request: DeleteQueryHistoryRequest) => {
+      const dbPath = request.dbPath || '';
+      const entryId = request.id || request.entryId || '';
+      deleteQueryHistoryEntry(dbPath, entryId);
+      return { success: true };
+    })
+  );
+
+  // Query History: Clear
+  ipcMain.handle(
+    IPC_CHANNELS.QUERY_HISTORY_CLEAR,
+    createHandler(async (request: ClearQueryHistoryRequest) => {
+      const dbPath = request.dbPath || '';
+      clearQueryHistory(dbPath);
+      return { success: true };
+    })
+  );
+
+  // Saved Queries: Get
+  ipcMain.handle(IPC_CHANNELS.SAVED_QUERIES_GET, async () => {
+    try {
+      const queries = getSavedQueries();
+      return { success: true, queries };
+    } catch (error) {
+      return {
+        success: false,
+        error: error instanceof Error ? error.message : 'Failed to get queries',
+      };
+    }
+  });
+
+  // Saved Queries: Save
+  ipcMain.handle(IPC_CHANNELS.SAVED_QUERIES_SAVE, async (_event, request) => {
+    try {
+      const result = saveSavedQuery({
+        name: request.name,
+        queryText: request.query || request.queryText,
+        dbPath: request.connectionPath || request.dbPath,
+        tags: request.tags,
+        description: request.description,
+        collectionIds: [],
+      });
+      return result;
+    } catch (error) {
+      return {
+        success: false,
+        error: error instanceof Error ? error.message : 'Failed to save query',
+      };
+    }
+  });
+
+  // Saved Queries: Update
+  ipcMain.handle(IPC_CHANNELS.SAVED_QUERIES_UPDATE, async (_event, request) => {
+    try {
+      const result = updateSavedQuery(request.id, {
+        name: request.name,
+        queryText: request.query || request.queryText,
+        tags: request.tags,
+        description: request.description,
+      });
+      return result;
+    } catch (error) {
+      return {
+        success: false,
+        error:
+          error instanceof Error ? error.message : 'Failed to update query',
+      };
+    }
+  });
+
+  // Saved Queries: Delete
+  ipcMain.handle(IPC_CHANNELS.SAVED_QUERIES_DELETE, async (_event, request) => {
+    try {
+      deleteSavedQuery(request.id);
+      return { success: true };
+    } catch (error) {
+      return {
+        success: false,
+        error:
+          error instanceof Error ? error.message : 'Failed to delete query',
+      };
+    }
+  });
+
+  // Collections: Get
+  ipcMain.handle(IPC_CHANNELS.COLLECTIONS_GET, async () => {
+    try {
+      const collections = getCollections();
+      return { success: true, collections };
+    } catch (error) {
+      return {
+        success: false,
+        error:
+          error instanceof Error ? error.message : 'Failed to get collections',
+      };
+    }
+  });
+
+  // Collections: Save
+  ipcMain.handle(IPC_CHANNELS.COLLECTIONS_SAVE, async (_event, request) => {
+    try {
+      const result = saveCollection({
+        name: request.name,
+        description: request.description,
+        queryIds: [],
+      });
+      return result;
+    } catch (error) {
+      return {
+        success: false,
+        error:
+          error instanceof Error ? error.message : 'Failed to save collection',
+      };
+    }
+  });
+
+  // Collections: Update
+  ipcMain.handle(IPC_CHANNELS.COLLECTIONS_UPDATE, async (_event, request) => {
+    try {
+      const result = updateCollection(request.id, {
+        name: request.name,
+        description: request.description,
+      });
+      return result;
+    } catch (error) {
+      return {
+        success: false,
+        error:
+          error instanceof Error
+            ? error.message
+            : 'Failed to update collection',
+      };
+    }
+  });
+
+  // Collections: Delete
+  ipcMain.handle(IPC_CHANNELS.COLLECTIONS_DELETE, async (_event, request) => {
+    try {
+      deleteCollection(request.id);
+      return { success: true };
+    } catch (error) {
+      return {
+        success: false,
+        error:
+          error instanceof Error
+            ? error.message
+            : 'Failed to delete collection',
+      };
+    }
+  });
+
+  // Collections: Add Query
+  ipcMain.handle(
+    IPC_CHANNELS.COLLECTIONS_ADD_QUERY,
+    async (_event, request) => {
       try {
-        setPreferences(request.preferences);
+        addQueryToCollection(request.collectionId, request.queryId);
+        return { success: true };
+      } catch (error) {
+        return {
+          success: false,
+          error: error instanceof Error ? error.message : 'Failed to add query',
+        };
+      }
+    }
+  );
+
+  // Collections: Remove Query
+  ipcMain.handle(
+    IPC_CHANNELS.COLLECTIONS_REMOVE_QUERY,
+    async (_event, request) => {
+      try {
+        removeQueryFromCollection(request.collectionId, request.queryId);
         return { success: true };
       } catch (error) {
         return {
           success: false,
           error:
-            error instanceof Error
-              ? error.message
-              : 'Failed to save preferences',
+            error instanceof Error ? error.message : 'Failed to remove query',
         };
       }
     }
   );
 
-  // Password: Check if storage is available
-  ipcMain.handle(IPC_CHANNELS.PASSWORD_IS_AVAILABLE, async () => {
-    return {
-      success: true,
-      available: passwordStorageService.isAvailable(),
-    };
+  // Profiles: Get
+  ipcMain.handle(IPC_CHANNELS.PROFILES_GET, async () => {
+    try {
+      const profiles = getProfiles();
+      return { success: true, profiles };
+    } catch (error) {
+      return {
+        success: false,
+        error:
+          error instanceof Error ? error.message : 'Failed to get profiles',
+      };
+    }
   });
 
-  // Password: Save
-  ipcMain.handle(
-    IPC_CHANNELS.PASSWORD_SAVE,
-    async (_event, request: SavePasswordRequest) => {
-      try {
-        const success = passwordStorageService.savePassword(
-          request.dbPath,
-          request.password
-        );
-        if (success) {
-          return { success: true };
-        }
-        return {
-          success: false,
-          error: 'Password encryption is not available on this system',
-        };
-      } catch (error) {
-        return {
-          success: false,
-          error:
-            error instanceof Error ? error.message : 'Failed to save password',
-        };
-      }
+  // Profiles: Save
+  ipcMain.handle(IPC_CHANNELS.PROFILES_SAVE, async (_event, request) => {
+    try {
+      const result = saveProfile({
+        path: request.path || '',
+        filename: request.filename || request.name || '',
+        displayName: request.name,
+        isEncrypted: request.isEncrypted ?? false,
+        lastOpened: new Date().toISOString(),
+        readOnly: request.readOnly ?? false,
+        isSaved: true,
+        ...request.config,
+      });
+      return result;
+    } catch (error) {
+      return {
+        success: false,
+        error:
+          error instanceof Error ? error.message : 'Failed to save profile',
+      };
     }
+  });
+
+  // Profiles: Update
+  ipcMain.handle(IPC_CHANNELS.PROFILES_UPDATE, async (_event, request) => {
+    try {
+      const result = updateProfile(request.id, {
+        displayName: request.name,
+        ...request.config,
+      });
+      return result;
+    } catch (error) {
+      return {
+        success: false,
+        error:
+          error instanceof Error ? error.message : 'Failed to update profile',
+      };
+    }
+  });
+
+  // Profiles: Delete
+  ipcMain.handle(IPC_CHANNELS.PROFILES_DELETE, async (_event, request) => {
+    try {
+      deleteProfile(request.id);
+      return { success: true };
+    } catch (error) {
+      return {
+        success: false,
+        error:
+          error instanceof Error ? error.message : 'Failed to delete profile',
+      };
+    }
+  });
+
+  // Connections: Update
+  ipcMain.handle(
+    IPC_CHANNELS.CONNECTION_UPDATE,
+    createHandler(async (request: UpdateConnectionRequest) => {
+      // Find and update the profile by path or connection ID
+      const profiles = getProfiles();
+      const profile = profiles.find(
+        (p) => p.path === request.path || p.id === request.connectionId
+      );
+
+      if (!profile) {
+        return { success: false, error: 'Connection profile not found' };
+      }
+
+      const result = updateProfile(profile.id, {
+        displayName: request.updates?.displayName || request.displayName,
+        readOnly: request.updates?.readOnly ?? request.readOnly,
+      });
+
+      return result;
+    })
   );
+
+  // Connections: Remove
+  ipcMain.handle(
+    IPC_CHANNELS.CONNECTION_REMOVE,
+    createHandler(async (request: RemoveConnectionRequest) => {
+      removeRecentConnection(request.path);
+      return { success: true };
+    })
+  );
+
+  // Preferences: Get
+  ipcMain.handle(IPC_CHANNELS.PREFERENCES_GET, async () => {
+    try {
+      const preferences = getPreferences();
+      return { success: true, preferences };
+    } catch (error) {
+      return {
+        success: false,
+        error:
+          error instanceof Error ? error.message : 'Failed to get preferences',
+      };
+    }
+  });
+
+  // Preferences: Set
+  ipcMain.handle(IPC_CHANNELS.PREFERENCES_SET, async (_event, request) => {
+    try {
+      const preferences = setPreferences(request.preferences);
+      return { success: true, preferences };
+    } catch (error) {
+      return {
+        success: false,
+        error:
+          error instanceof Error ? error.message : 'Failed to set preferences',
+      };
+    }
+  });
+
+  // Folders: Get
+  ipcMain.handle(IPC_CHANNELS.FOLDERS_GET, async () => {
+    try {
+      const folders = getFolders();
+      return { success: true, folders };
+    } catch (error) {
+      return {
+        success: false,
+        error: error instanceof Error ? error.message : 'Failed to get folders',
+      };
+    }
+  });
+
+  // Folders: Save
+  ipcMain.handle(IPC_CHANNELS.FOLDERS_SAVE, async (_event, request) => {
+    try {
+      const result = saveFolder({
+        name: request.name || request.alias || '',
+        parentId: request.parentId,
+      });
+      return result;
+    } catch (error) {
+      return {
+        success: false,
+        error: error instanceof Error ? error.message : 'Failed to save folder',
+      };
+    }
+  });
+
+  // Folders: Update
+  ipcMain.handle(IPC_CHANNELS.FOLDERS_UPDATE, async (_event, request) => {
+    try {
+      const result = updateFolder(request.id || request.path, {
+        name: request.name || request.alias,
+      });
+      return result;
+    } catch (error) {
+      return {
+        success: false,
+        error:
+          error instanceof Error ? error.message : 'Failed to update folder',
+      };
+    }
+  });
+
+  // Folders: Delete
+  ipcMain.handle(IPC_CHANNELS.FOLDERS_DELETE, async (_event, request) => {
+    try {
+      deleteFolder(request.id || request.path);
+      return { success: true };
+    } catch (error) {
+      return {
+        success: false,
+        error:
+          error instanceof Error ? error.message : 'Failed to delete folder',
+      };
+    }
+  });
 
   // Password: Get
   ipcMain.handle(
     IPC_CHANNELS.PASSWORD_GET,
-    async (_event, request: GetPasswordRequest) => {
-      try {
-        const password = passwordStorageService.getPassword(request.dbPath);
-        if (password !== null) {
-          return { success: true, password };
-        }
-        return { success: true, password: undefined };
-      } catch (error) {
-        return {
-          success: false,
-          error:
-            error instanceof Error
-              ? error.message
-              : 'Failed to retrieve password',
-        };
-      }
-    }
+    createHandler(async (request: GetPasswordRequest) => {
+      const identifier = request.identifier || request.dbPath || '';
+      const password = await passwordStorageService.getPassword(identifier);
+      return { success: true, password };
+    })
   );
 
   // Password: Has
   ipcMain.handle(
     IPC_CHANNELS.PASSWORD_HAS,
-    async (_event, request: HasPasswordRequest) => {
-      return {
-        success: true,
-        hasPassword: passwordStorageService.hasPassword(request.dbPath),
-      };
-    }
+    createHandler(async (request: HasPasswordRequest) => {
+      const identifier = request.identifier || request.dbPath || '';
+      const hasPassword = await passwordStorageService.hasPassword(identifier);
+      return { success: true, hasPassword };
+    })
+  );
+
+  // Password: Save
+  ipcMain.handle(
+    IPC_CHANNELS.PASSWORD_SAVE,
+    createHandler(async (request: SavePasswordRequest) => {
+      const identifier = request.identifier || request.dbPath || '';
+      await passwordStorageService.savePassword(identifier, request.password);
+      return { success: true };
+    })
   );
 
   // Password: Remove
   ipcMain.handle(
     IPC_CHANNELS.PASSWORD_REMOVE,
-    async (_event, request: RemovePasswordRequest) => {
-      try {
-        passwordStorageService.removePassword(request.dbPath);
-        return { success: true };
-      } catch (error) {
-        return {
-          success: false,
-          error:
-            error instanceof Error
-              ? error.message
-              : 'Failed to remove password',
-        };
-      }
-    }
+    createHandler(async (request: RemovePasswordRequest) => {
+      const identifier = request.identifier || request.dbPath || '';
+      await passwordStorageService.removePassword(identifier);
+      return { success: true };
+    })
   );
 
-  // Connection: Update (T008)
+  // Pro: Activate
   ipcMain.handle(
-    IPC_CHANNELS.CONNECTION_UPDATE,
-    async (_event, request: UpdateConnectionRequest) => {
-      return updateRecentConnection(request.path, {
-        displayName: request.displayName,
-        readOnly: request.readOnly,
+    IPC_CHANNELS.PRO_ACTIVATE,
+    createHandler(async (request: ProActivateRequest) => {
+      saveProStatus({
+        isActive: true,
+        activationDate: new Date().toISOString(),
+        licenseKey: request.licenseKey,
       });
-    }
+      return { success: true };
+    })
   );
 
-  // Connection: Remove (T009)
-  ipcMain.handle(
-    IPC_CHANNELS.CONNECTION_REMOVE,
-    async (_event, request: RemoveConnectionRequest) => {
-      const result = removeRecentConnection(request.path);
-
-      // Optionally remove the saved password
-      if (result.success && request.removePassword) {
-        try {
-          passwordStorageService.removePassword(request.path);
-        } catch {
-          // Password removal failure shouldn't fail the entire operation
-        }
-      }
-
-      return result;
-    }
-  );
-
-  // History: Get query history for a database
-  ipcMain.handle(
-    IPC_CHANNELS.HISTORY_GET,
-    async (_event, request: GetQueryHistoryRequest) => {
-      try {
-        const history = getQueryHistory(request.dbPath);
-        return { success: true, history };
-      } catch (error) {
-        return {
-          success: false,
-          error:
-            error instanceof Error ? error.message : 'Failed to load history',
-        };
-      }
-    }
-  );
-
-  // History: Save a query history entry
-  ipcMain.handle(
-    IPC_CHANNELS.HISTORY_SAVE,
-    async (_event, request: SaveQueryHistoryRequest) => {
-      try {
-        saveQueryHistoryEntry(request.entry);
-        return { success: true };
-      } catch (error) {
-        return {
-          success: false,
-          error:
-            error instanceof Error ? error.message : 'Failed to save history',
-        };
-      }
-    }
-  );
-
-  // History: Delete a specific history entry
-  ipcMain.handle(
-    IPC_CHANNELS.HISTORY_DELETE,
-    async (_event, request: DeleteQueryHistoryRequest) => {
-      return deleteQueryHistoryEntry(request.dbPath, request.entryId);
-    }
-  );
-
-  // History: Clear all history for a database
-  ipcMain.handle(
-    IPC_CHANNELS.HISTORY_CLEAR,
-    async (_event, request: ClearQueryHistoryRequest) => {
-      return clearQueryHistory(request.dbPath);
-    }
-  );
-
-  // AI: Get settings
-  ipcMain.handle(IPC_CHANNELS.AI_GET_SETTINGS, async () => {
-    try {
-      const settings = getAISettings();
-      return { success: true, settings };
-    } catch (error) {
-      return {
-        success: false,
-        error:
-          error instanceof Error ? error.message : 'Failed to load AI settings',
-      };
-    }
-  });
-
-  // AI: Save settings
-  ipcMain.handle(
-    IPC_CHANNELS.AI_SAVE_SETTINGS,
-    async (_event, request: SaveAISettingsRequest) => {
-      try {
-        saveAISettings(request.settings);
-        return { success: true };
-      } catch (error) {
-        return {
-          success: false,
-          error:
-            error instanceof Error
-              ? error.message
-              : 'Failed to save AI settings',
-        };
-      }
-    }
-  );
-
-  // AI: Fetch from Anthropic-compatible API using official SDK (bypasses CORS)
-  ipcMain.handle(
-    IPC_CHANNELS.AI_FETCH_ANTHROPIC,
-    async (_event, request: AIFetchAnthropicRequest) => {
-      try {
-        // Create Anthropic client with custom baseURL if provided
-        const client = new Anthropic({
-          apiKey: request.apiKey,
-          baseURL: request.baseUrl || undefined,
-        });
-
-        const response = await client.messages.create({
-          model: request.model,
-          max_tokens: request.maxTokens || 4096,
-          system: request.system,
-          messages: request.messages as Anthropic.MessageParam[],
-          temperature: request.temperature,
-        });
-
-        // Extract text content from response
-        const textContent = response.content.find((c) => c.type === 'text');
-        return {
-          success: true,
-          message: {
-            role: 'assistant',
-            content: textContent?.type === 'text' ? textContent.text : '',
-          },
-        };
-      } catch (error) {
-        return {
-          success: false,
-          error:
-            error instanceof Error
-              ? error.message
-              : 'Failed to fetch from Anthropic',
-        };
-      }
-    }
-  );
-
-  // AI: Stream from Anthropic-compatible API using official SDK
-  ipcMain.handle(
-    IPC_CHANNELS.AI_STREAM_ANTHROPIC,
-    async (_event, request: AIStreamAnthropicRequest) => {
-      try {
-        const client = new Anthropic({
-          apiKey: request.apiKey,
-          baseURL: request.baseUrl || undefined,
-        });
-
-        const stream = client.messages.stream({
-          model: request.model,
-          max_tokens: request.maxTokens || 4096,
-          system: request.system,
-          messages: request.messages as Anthropic.MessageParam[],
-          temperature: request.temperature,
-        });
-
-        return {
-          success: true,
-          stream,
-        };
-      } catch (error) {
-        return {
-          success: false,
-          error:
-            error instanceof Error
-              ? error.message
-              : 'Failed to stream from Anthropic',
-        };
-      }
-    }
-  );
-
-  // AI: Fetch from OpenAI API
-  ipcMain.handle(
-    IPC_CHANNELS.AI_FETCH_OPENAI,
-    async (_event, request: AIFetchOpenAIRequest) => {
-      try {
-        const client = new OpenAI({
-          apiKey: request.apiKey,
-          baseURL: request.baseUrl,
-        });
-
-        const response = await client.chat.completions.create({
-          model: request.model,
-          messages:
-            request.messages as OpenAI.Chat.Completions.ChatCompletionMessageParam[],
-          temperature: request.temperature,
-          max_tokens: request.maxTokens,
-        });
-
-        return {
-          success: true,
-          message: {
-            role: 'assistant',
-            content:
-              response.choices[0]?.message?.content || 'No content returned',
-          },
-        };
-      } catch (error) {
-        return {
-          success: false,
-          error:
-            error instanceof Error
-              ? error.message
-              : 'Failed to fetch from OpenAI',
-        };
-      }
-    }
-  );
-
-  // AI: Stream from OpenAI API
-  ipcMain.handle(
-    IPC_CHANNELS.AI_STREAM_OPENAI,
-    async (_event, request: AIStreamOpenAIRequest) => {
-      try {
-        const client = new OpenAI({
-          apiKey: request.apiKey,
-          baseURL: request.baseUrl,
-        });
-
-        const stream = await client.chat.completions.create({
-          model: request.model,
-          messages:
-            request.messages as OpenAI.Chat.Completions.ChatCompletionMessageParam[],
-          temperature: request.temperature,
-          max_tokens: request.maxTokens,
-          stream: true,
-        });
-
-        return {
-          success: true,
-          stream,
-        };
-      } catch (error) {
-        return {
-          success: false,
-          error:
-            error instanceof Error
-              ? error.message
-              : 'Failed to stream from OpenAI',
-        };
-      }
-    }
-  );
-
-  // AI: Agent Query using Claude Agent SDK
-  ipcMain.handle(
-    IPC_CHANNELS.AI_AGENT_QUERY,
-    async (_event, request: AIAgentQueryRequest) => {
-      try {
-        // Use prompt directly or build from messages
-        const prompt =
-          request.prompt ||
-          (request.messages || [])
-            .map((m) => `${m.role}: ${m.content}`)
-            .join('\n');
-
-        const query = claudeAgentQuery({
-          prompt,
-          options: {
-            model: request.model,
-            maxThinkingTokens: request.maxTokens,
-            pathToClaudeCodeExecutable: getClaudeCodePath(
-              request.customClaudePath
-            ),
-          },
-        });
-
-        // Collect all messages from the query
-        const messages: unknown[] = [];
-        for await (const message of query) {
-          messages.push(message);
-        }
-
-        return {
-          success: true,
-          message: messages,
-        };
-      } catch (error) {
-        return {
-          success: false,
-          error:
-            error instanceof Error ? error.message : 'Failed to query AI agent',
-        };
-      }
-    }
-  );
-
-  // AI: Cancel Stream
-  ipcMain.handle(
-    IPC_CHANNELS.AI_CANCEL_STREAM,
-    async (_event, _request: AICancelStreamRequest) => {
-      try {
-        // Implementation for canceling stream
-        return { success: true };
-      } catch (error) {
-        return {
-          success: false,
-          error:
-            error instanceof Error ? error.message : 'Failed to cancel stream',
-        };
-      }
-    }
-  );
-
-  // Pro: Get status
+  // Pro: Get Status
   ipcMain.handle(IPC_CHANNELS.PRO_GET_STATUS, async () => {
     try {
       const status = getProStatus();
@@ -1085,30 +1327,8 @@ export function setupIpcHandlers(): void {
     }
   });
 
-  // Pro: Activate
-  ipcMain.handle(
-    IPC_CHANNELS.PRO_ACTIVATE,
-    async (_event, request: ProActivateRequest) => {
-      try {
-        saveProStatus({
-          isPro: true,
-          licenseKey: request.licenseKey,
-          activatedAt: new Date().toISOString(),
-          features: request.features || [],
-        });
-        return { success: true };
-      } catch (error) {
-        return {
-          success: false,
-          error:
-            error instanceof Error ? error.message : 'Failed to activate pro',
-        };
-      }
-    }
-  );
-
-  // Pro: Deactivate
-  ipcMain.handle(IPC_CHANNELS.PRO_DEACTIVATE, async () => {
+  // Pro: Clear Status
+  ipcMain.handle(IPC_CHANNELS.PRO_CLEAR_STATUS, async () => {
     try {
       clearProStatus();
       return { success: true };
@@ -1116,39 +1336,243 @@ export function setupIpcHandlers(): void {
       return {
         success: false,
         error:
-          error instanceof Error ? error.message : 'Failed to deactivate pro',
+          error instanceof Error ? error.message : 'Failed to clear pro status',
       };
     }
   });
 
-  // Window: Close
-  ipcMain.handle(IPC_CHANNELS.WINDOW_CLOSE, async () => {
-    const window = BrowserWindow.getFocusedWindow();
-    if (window) {
-      window.close();
+  // AI: Get Settings
+  ipcMain.handle(IPC_CHANNELS.AI_GET_SETTINGS, async () => {
+    try {
+      const settings = getAISettings();
+      return { success: true, settings };
+    } catch (error) {
+      return {
+        success: false,
+        error:
+          error instanceof Error ? error.message : 'Failed to get AI settings',
+      };
     }
-    return { success: true };
   });
 
-  // Window: Focus
+  // AI: Save Settings
+  ipcMain.handle(IPC_CHANNELS.AI_SAVE_SETTINGS, async (_event, request) => {
+    try {
+      const settings = saveAISettings(request.settings);
+      return { success: true, settings };
+    } catch (error) {
+      return {
+        success: false,
+        error:
+          error instanceof Error ? error.message : 'Failed to save AI settings',
+      };
+    }
+  });
+
+  // AI: Query
   ipcMain.handle(
-    IPC_CHANNELS.WINDOW_FOCUS,
-    async (_event, request: FocusWindowRequest) => {
-      const windows = BrowserWindow.getAllWindows();
-      const targetWindow = windows.find((w) => w.id === request.windowId);
-      if (targetWindow) {
-        targetWindow.focus();
-        return { success: true };
+    IPC_CHANNELS.AI_QUERY,
+    createHandler(async (request: AIAgentQueryRequest) => {
+      const settings = getAISettings();
+
+      if (!settings) {
+        throw new Error('AI settings not configured');
       }
-      return { success: false, error: 'Window not found' };
+
+      if (request.provider === 'anthropic') {
+        const client = new Anthropic({
+          apiKey: settings.anthropicApiKey,
+        });
+
+        const response = await client.messages.create({
+          model: request.model || 'claude-3-5-sonnet-20241022',
+          max_tokens: request.maxTokens || 2048,
+          messages: (request.messages ||
+            []) as Anthropic.Messages.MessageParam[],
+          system: request.systemPrompt || undefined,
+        });
+
+        return {
+          success: true,
+          response: {
+            content:
+              response.content[0].type === 'text'
+                ? response.content[0].text
+                : '',
+            stopReason: response.stop_reason,
+            usage: {
+              inputTokens: response.usage.input_tokens,
+              outputTokens: response.usage.output_tokens,
+            },
+          },
+        };
+      } else if (request.provider === 'openai') {
+        const client = new OpenAI({
+          apiKey: settings.openaiApiKey,
+        });
+
+        const response = await client.chat.completions.create({
+          model: request.model || 'gpt-4-turbo-preview',
+          max_tokens: request.maxTokens || 2048,
+          messages: (request.messages || []).map((msg) => ({
+            role: msg.role as 'user' | 'assistant' | 'system',
+            content: msg.content,
+          })),
+        });
+
+        return {
+          success: true,
+          response: {
+            content: response.choices[0].message.content || '',
+            stopReason: response.choices[0].finish_reason,
+            usage: {
+              inputTokens: response.usage?.prompt_tokens || 0,
+              outputTokens: response.usage?.completion_tokens || 0,
+            },
+          },
+        };
+      } else if (request.provider === 'claude-agent') {
+        const response = await claudeAgentQuery({
+          prompt: request.systemPrompt || '',
+        });
+
+        return {
+          success: true,
+          response: {
+            content: String(response || ''),
+            stopReason: 'stop',
+            usage: {
+              inputTokens: 0,
+              outputTokens: 0,
+            },
+          },
+        };
+      }
+
+      throw new Error('Unsupported provider');
+    })
+  );
+
+  // AI: Stream
+  ipcMain.handle(
+    IPC_CHANNELS.AI_STREAM,
+    async (
+      _event,
+      _request: AIStreamAnthropicRequest | AIStreamOpenAIRequest
+    ) => {
+      // Stream handlers are more complex and would need event-based communication
+      // This is a placeholder for the implementation
+      return { success: false, error: 'Streaming not yet implemented' };
     }
   );
 
-  // Updates: Check for updates
+  // AI: Fetch (Anthropic)
+  ipcMain.handle(
+    IPC_CHANNELS.AI_FETCH_ANTHROPIC,
+    createHandler(async (request: AIFetchAnthropicRequest) => {
+      const client = new Anthropic({
+        apiKey: request.apiKey,
+      });
+
+      const response = await client.messages.create({
+        model: request.model || 'claude-3-5-sonnet-20241022',
+        max_tokens: request.maxTokens || 2048,
+        messages: (request.messages || []) as Anthropic.Messages.MessageParam[],
+      });
+
+      return {
+        success: true,
+        response: {
+          content:
+            response.content[0].type === 'text' ? response.content[0].text : '',
+          stopReason: response.stop_reason,
+        },
+      };
+    })
+  );
+
+  // AI: Fetch (OpenAI)
+  ipcMain.handle(
+    IPC_CHANNELS.AI_FETCH_OPENAI,
+    createHandler(async (request: AIFetchOpenAIRequest) => {
+      const client = new OpenAI({
+        apiKey: request.apiKey,
+      });
+
+      const response = await client.chat.completions.create({
+        model: request.model || 'gpt-4-turbo-preview',
+        max_tokens: request.maxTokens || 2048,
+        messages: request.messages.map((msg) => ({
+          role: msg.role as 'user' | 'assistant' | 'system',
+          content: msg.content,
+        })),
+      });
+
+      return {
+        success: true,
+        response: {
+          content: response.choices[0].message.content || '',
+          stopReason: response.choices[0].finish_reason,
+        },
+      };
+    })
+  );
+
+  // AI: Cancel Stream
+  ipcMain.handle(
+    IPC_CHANNELS.AI_CANCEL_STREAM,
+    createHandler(async (_request: AICancelStreamRequest) => {
+      // Stream cancellation would be handled via event-based communication
+      return { success: true };
+    })
+  );
+
+  // System: Focus Window
+  ipcMain.handle(
+    IPC_CHANNELS.SYSTEM_FOCUS_WINDOW,
+    createHandler(async (request: FocusWindowRequest) => {
+      const window = BrowserWindow.fromId(request.windowId);
+      if (window) {
+        window.focus();
+      }
+      return { success: true };
+    })
+  );
+
+  // System: Get System Fonts
+  ipcMain.handle(IPC_CHANNELS.SYSTEM_GET_FONTS, async () => {
+    try {
+      const fonts = await getSystemFonts();
+      return { success: true, fonts };
+    } catch (error) {
+      return {
+        success: false,
+        error: error instanceof Error ? error.message : 'Failed to get fonts',
+      };
+    }
+  });
+
+  // System: Find Claude Paths
+  ipcMain.handle(IPC_CHANNELS.SYSTEM_FIND_CLAUDE_PATHS, async () => {
+    try {
+      const paths = await findClaudeCodePaths();
+      return { success: true, paths };
+    } catch (error) {
+      return {
+        success: false,
+        error:
+          error instanceof Error
+            ? error.message
+            : 'Failed to find Claude paths',
+      };
+    }
+  });
+
+  // Updates: Check For Updates
   ipcMain.handle(IPC_CHANNELS.UPDATES_CHECK, async () => {
     try {
-      const hasUpdates = await checkForUpdates();
-      return { success: true, hasUpdates };
+      await checkForUpdates();
+      return { success: true };
     } catch (error) {
       return {
         success: false,
@@ -1160,7 +1584,7 @@ export function setupIpcHandlers(): void {
     }
   });
 
-  // Updates: Get status
+  // Updates: Get Status
   ipcMain.handle(IPC_CHANNELS.UPDATES_GET_STATUS, async () => {
     try {
       const status = getUpdateStatus();
@@ -1176,10 +1600,10 @@ export function setupIpcHandlers(): void {
     }
   });
 
-  // Updates: Download update
+  // Updates: Download
   ipcMain.handle(IPC_CHANNELS.UPDATES_DOWNLOAD, async () => {
     try {
-      await downloadUpdate();
+      downloadUpdate();
       return { success: true };
     } catch (error) {
       return {
@@ -1190,7 +1614,7 @@ export function setupIpcHandlers(): void {
     }
   });
 
-  // Updates: Quit and install
+  // Updates: Quit and Install
   ipcMain.handle(IPC_CHANNELS.UPDATES_QUIT_AND_INSTALL, async () => {
     try {
       quitAndInstall();
@@ -1199,1433 +1623,22 @@ export function setupIpcHandlers(): void {
       return {
         success: false,
         error:
-          error instanceof Error ? error.message : 'Failed to quit and install',
+          error instanceof Error ? error.message : 'Failed to install update',
       };
     }
   });
 
-  // System: Get all system fonts
-  ipcMain.handle(IPC_CHANNELS.SYSTEM_GET_FONTS, async () => {
-    try {
-      const fonts = await getSystemFonts();
-      return { success: true, fonts };
-    } catch (error) {
-      return {
-        success: false,
-        fonts: [],
-        error:
-          error instanceof Error ? error.message : 'Failed to get system fonts',
-      };
-    }
+  // Check Unsaved Changes
+  ipcMain.handle(
+    IPC_CHANNELS.CHECK_UNSAVED_CHANGES,
+    createHandler(async (_request: CheckUnsavedChangesRequest) => {
+      // Unsaved changes tracking is handled in the renderer
+      return { success: true, hasChanges: false };
+    })
+  );
+
+  // SQL Logging
+  ipcMain.on('sql-execute', (_event, data) => {
+    sqlLogger.log(data);
   });
-
-  // AI: Get Claude Code paths
-  ipcMain.handle(IPC_CHANNELS.AI_GET_CLAUDE_CODE_PATHS, async () => {
-    try {
-      const paths = await findClaudeCodePaths();
-      return { success: true, paths };
-    } catch (error) {
-      return {
-        success: false,
-        paths: [],
-        error:
-          error instanceof Error
-            ? error.message
-            : 'Failed to find Claude Code paths',
-      };
-    }
-  });
-
-  // SQL Logs: Get logs
-  ipcMain.handle(
-    IPC_CHANNELS.SQL_LOG_GET,
-    async (
-      _event,
-      request: { limit?: number; connectionId?: string; level?: string }
-    ) => {
-      try {
-        const logs = sqlLogger.getLogs({
-          limit: request.limit,
-          connectionId: request.connectionId,
-          level: request.level as 'info' | 'warn' | 'error' | 'debug',
-        });
-        return { success: true, logs };
-      } catch (error) {
-        return {
-          success: false,
-          error:
-            error instanceof Error ? error.message : 'Failed to get SQL logs',
-        };
-      }
-    }
-  );
-
-  // SQL Logs: Clear logs
-  ipcMain.handle(
-    IPC_CHANNELS.SQL_LOG_CLEAR,
-    async (_event, request: { connectionId?: string }) => {
-      try {
-        sqlLogger.clearLogs(request.connectionId);
-        return { success: true };
-      } catch (error) {
-        return {
-          success: false,
-          error:
-            error instanceof Error ? error.message : 'Failed to clear SQL logs',
-        };
-      }
-    }
-  );
-
-  // ============ Profile Handlers ============
-
-  // Profile: Get all profiles
-  ipcMain.handle(
-    IPC_CHANNELS.PROFILE_GET_ALL,
-    createHandler(async () => ({
-      profiles: getProfiles(),
-    }))
-  );
-
-  // Profile: Save profile
-  ipcMain.handle(
-    IPC_CHANNELS.PROFILE_SAVE,
-    createHandler(async (request: { profile: Record<string, unknown> }) => ({
-      result: saveProfile(request.profile as Parameters<typeof saveProfile>[0]),
-    }))
-  );
-
-  // Profile: Update profile
-  ipcMain.handle(
-    IPC_CHANNELS.PROFILE_UPDATE,
-    createHandler(
-      async (request: { id: string; updates: Record<string, unknown> }) => ({
-        result: updateProfile(
-          request.id,
-          request.updates as Parameters<typeof updateProfile>[1]
-        ),
-      })
-    )
-  );
-
-  // Profile: Delete profile
-  ipcMain.handle(
-    IPC_CHANNELS.PROFILE_DELETE,
-    createHandler(async (request: { id: string }) => ({
-      result: deleteProfile(request.id),
-    }))
-  );
-
-  // ============ Folder Handlers ============
-
-  // Folder: Get all folders
-  ipcMain.handle(
-    IPC_CHANNELS.FOLDER_GET_ALL,
-    createHandler(async () => ({
-      folders: getFolders(),
-    }))
-  );
-
-  // Folder: Create folder
-  ipcMain.handle(
-    IPC_CHANNELS.FOLDER_CREATE,
-    createHandler(async (request: Record<string, unknown>) => {
-      // Support both { folder: {...} } and direct { name, parentId } formats
-      const folderData = request.folder ?? request;
-      return {
-        result: saveFolder(folderData as Parameters<typeof saveFolder>[0]),
-      };
-    })
-  );
-
-  // Folder: Update folder
-  ipcMain.handle(
-    IPC_CHANNELS.FOLDER_UPDATE,
-    createHandler(
-      async (request: { id: string; updates: Record<string, unknown> }) => ({
-        result: updateFolder(
-          request.id,
-          request.updates as Parameters<typeof updateFolder>[1]
-        ),
-      })
-    )
-  );
-
-  // Folder: Delete folder
-  ipcMain.handle(
-    IPC_CHANNELS.FOLDER_DELETE,
-    createHandler(async (request: { id: string }) => ({
-      result: deleteFolder(request.id),
-    }))
-  );
-
-  // ============ Schema Snapshot Handlers ============
-
-  // Schema Snapshots: Save
-  ipcMain.handle(
-    IPC_CHANNELS.SCHEMA_SNAPSHOT_SAVE,
-    async (_event, request: SaveSchemaSnapshotRequest) => {
-      try {
-        const schemaResult = databaseService.getSchema(request.connectionId);
-        if (!schemaResult.success) {
-          return {
-            success: false,
-            error: schemaResult.error,
-          };
-        }
-        if (!schemaResult.schemas) {
-          return {
-            success: false,
-            error: 'Failed to get schema',
-          };
-        }
-
-        const connection = databaseService.getConnection(request.connectionId);
-        if (!connection) {
-          return {
-            success: false,
-            error: 'Connection not found',
-          };
-        }
-
-        const snapshot = {
-          id: `snapshot-${Date.now()}-${Math.random().toString(36).slice(2, 9)}`,
-          name: request.name,
-          dbPath: connection.path,
-          filename: connection.filename,
-          createdAt: new Date().toISOString(),
-          schemas: schemaResult.schemas,
-          tableCount: schemaResult.schemas.reduce(
-            (acc, s) => acc + s.tables.length,
-            0
-          ),
-          viewCount: schemaResult.schemas.reduce(
-            (acc, s) => acc + s.views.length,
-            0
-          ),
-        };
-
-        saveSchemaSnapshot(snapshot);
-        return { success: true, snapshot };
-      } catch (error) {
-        return {
-          success: false,
-          error:
-            error instanceof Error
-              ? error.message
-              : 'Failed to save schema snapshot',
-        };
-      }
-    }
-  );
-
-  // Schema Snapshots: Get All
-  ipcMain.handle(IPC_CHANNELS.SCHEMA_SNAPSHOT_GET_ALL, async () => {
-    try {
-      const snapshots = getSchemaSnapshots();
-      return { success: true, snapshots };
-    } catch (error) {
-      return {
-        success: false,
-        error:
-          error instanceof Error
-            ? error.message
-            : 'Failed to get schema snapshots',
-      };
-    }
-  });
-
-  // Schema Snapshots: Get
-  ipcMain.handle(
-    IPC_CHANNELS.SCHEMA_SNAPSHOT_GET,
-    async (_event, request: GetSchemaSnapshotRequest) => {
-      try {
-        const snapshot = getSchemaSnapshot(request.snapshotId);
-        if (!snapshot) {
-          return {
-            success: false,
-            error: 'Schema snapshot not found',
-          };
-        }
-        return { success: true, snapshot };
-      } catch (error) {
-        return {
-          success: false,
-          error:
-            error instanceof Error
-              ? error.message
-              : 'Failed to get schema snapshot',
-        };
-      }
-    }
-  );
-
-  // Schema Snapshots: Delete
-  ipcMain.handle(
-    IPC_CHANNELS.SCHEMA_SNAPSHOT_DELETE,
-    async (_event, request: DeleteSchemaSnapshotRequest) => {
-      try {
-        const result = deleteSchemaSnapshot(request.snapshotId);
-        return result;
-      } catch (error) {
-        return {
-          success: false,
-          error:
-            error instanceof Error
-              ? error.message
-              : 'Failed to delete schema snapshot',
-        };
-      }
-    }
-  );
-
-  // ============ Schema Comparison Handlers ============
-
-  // Schema Comparison: Compare Connections
-  ipcMain.handle(
-    IPC_CHANNELS.SCHEMA_COMPARISON_COMPARE_CONNECTIONS,
-    async (_event, request: CompareConnectionsRequest) => {
-      try {
-        const sourceSchemaResult = databaseService.getSchema(
-          request.sourceConnectionId
-        );
-        const targetSchemaResult = databaseService.getSchema(
-          request.targetConnectionId
-        );
-
-        if (!sourceSchemaResult.success) {
-          return {
-            success: false,
-            error: sourceSchemaResult.error,
-          };
-        }
-
-        if (!targetSchemaResult.success) {
-          return {
-            success: false,
-            error: targetSchemaResult.error,
-          };
-        }
-
-        const sourceConnection = databaseService.getConnection(
-          request.sourceConnectionId
-        );
-        const targetConnection = databaseService.getConnection(
-          request.targetConnectionId
-        );
-
-        if (!sourceConnection || !targetConnection) {
-          return {
-            success: false,
-            error: 'One or both connections not found',
-          };
-        }
-
-        const result = schemaComparisonService.compareSchemas(
-          sourceSchemaResult.schemas,
-          targetSchemaResult.schemas,
-          request.sourceConnectionId,
-          sourceConnection.filename,
-          'connection',
-          request.targetConnectionId,
-          targetConnection.filename,
-          'connection'
-        );
-
-        return { success: true, result };
-      } catch (error) {
-        return {
-          success: false,
-          error:
-            error instanceof Error
-              ? error.message
-              : 'Failed to compare connections',
-        };
-      }
-    }
-  );
-
-  // Schema Comparison: Compare Connection to Snapshot
-  ipcMain.handle(
-    IPC_CHANNELS.SCHEMA_COMPARISON_COMPARE_CONNECTION_TO_SNAPSHOT,
-    async (_event, request: CompareConnectionToSnapshotRequest) => {
-      try {
-        const connectionSchemaResult = databaseService.getSchema(
-          request.connectionId
-        );
-
-        if (!connectionSchemaResult.success) {
-          return {
-            success: false,
-            error: connectionSchemaResult.error,
-          };
-        }
-
-        const snapshot = getSchemaSnapshot(request.snapshotId);
-        if (!snapshot) {
-          return {
-            success: false,
-            error: 'Schema snapshot not found',
-          };
-        }
-
-        const connection = databaseService.getConnection(request.connectionId);
-        if (!connection) {
-          return {
-            success: false,
-            error: 'Connection not found',
-          };
-        }
-
-        let result;
-        if (request.reverseComparison) {
-          // Snapshot is source, connection is target
-          result = schemaComparisonService.compareSchemas(
-            snapshot.schemas,
-            connectionSchemaResult.schemas,
-            request.snapshotId,
-            snapshot.name,
-            'snapshot',
-            request.connectionId,
-            connection.filename,
-            'connection'
-          );
-        } else {
-          // Connection is source, snapshot is target
-          result = schemaComparisonService.compareSchemas(
-            connectionSchemaResult.schemas,
-            snapshot.schemas,
-            request.connectionId,
-            connection.filename,
-            'connection',
-            request.snapshotId,
-            snapshot.name,
-            'snapshot'
-          );
-        }
-
-        return { success: true, result };
-      } catch (error) {
-        return {
-          success: false,
-          error:
-            error instanceof Error
-              ? error.message
-              : 'Failed to compare connection to snapshot',
-        };
-      }
-    }
-  );
-
-  // Schema Comparison: Compare Snapshots
-  ipcMain.handle(
-    IPC_CHANNELS.SCHEMA_COMPARISON_COMPARE_SNAPSHOTS,
-    async (_event, request: CompareSnapshotsRequest) => {
-      try {
-        const sourceSnapshot = getSchemaSnapshot(request.sourceSnapshotId);
-        const targetSnapshot = getSchemaSnapshot(request.targetSnapshotId);
-
-        if (!sourceSnapshot) {
-          return {
-            success: false,
-            error: 'Source schema snapshot not found',
-          };
-        }
-
-        if (!targetSnapshot) {
-          return {
-            success: false,
-            error: 'Target schema snapshot not found',
-          };
-        }
-
-        const result = schemaComparisonService.compareSchemas(
-          sourceSnapshot.schemas,
-          targetSnapshot.schemas,
-          request.sourceSnapshotId,
-          sourceSnapshot.name,
-          'snapshot',
-          request.targetSnapshotId,
-          targetSnapshot.name,
-          'snapshot'
-        );
-
-        return { success: true, result };
-      } catch (error) {
-        return {
-          success: false,
-          error:
-            error instanceof Error
-              ? error.message
-              : 'Failed to compare snapshots',
-        };
-      }
-    }
-  );
-
-  // Schema Comparison: Generate Migration SQL
-  ipcMain.handle(
-    IPC_CHANNELS.SCHEMA_COMPARISON_GENERATE_MIGRATION_SQL,
-    async (_event, request: GenerateMigrationSQLRequest) => {
-      try {
-        const result = migrationGeneratorService.generateMigrationSQL(request);
-        return result;
-      } catch (error) {
-        return {
-          success: false,
-          error:
-            error instanceof Error
-              ? error.message
-              : 'Failed to generate migration SQL',
-        };
-      }
-    }
-  );
-
-  // Schema Comparison: Export Report
-  ipcMain.handle(
-    IPC_CHANNELS.SCHEMA_COMPARISON_EXPORT_REPORT,
-    async (_event, request: ExportComparisonReportRequest) => {
-      try {
-        const { comparisonResult, format, filePath, includeMigrationSQL } =
-          request;
-
-        let reportContent: string | Buffer;
-
-        // Generate report based on format
-        switch (format) {
-          case 'html': {
-            let htmlContent = generateHTMLReport(comparisonResult);
-
-            // Optionally append migration SQL
-            if (includeMigrationSQL) {
-              const migrationResult =
-                migrationGeneratorService.generateMigrationSQL({
-                  comparisonResult,
-                  includeDropStatements: true,
-                });
-
-              if (migrationResult.success && migrationResult.sql) {
-                // Append migration SQL section to HTML
-                htmlContent = htmlContent.replace(
-                  '</body>',
-                  `
-  <section class="migration-sql">
-    <h2>Migration SQL</h2>
-    <pre><code>${escapeHtml(migrationResult.sql)}</code></pre>
-    ${
-      migrationResult.warnings && migrationResult.warnings.length > 0
-        ? `
-    <div class="warnings">
-      <h3>Warnings</h3>
-      <ul>
-        ${migrationResult.warnings.map((w) => `<li>${escapeHtml(w)}</li>`).join('\n        ')}
-      </ul>
-    </div>
-    `
-        : ''
-    }
-  </section>
-</body>`
-                );
-              }
-            }
-
-            reportContent = htmlContent;
-            break;
-          }
-          case 'json': {
-            const jsonReport = JSON.parse(generateJSONReport(comparisonResult));
-
-            // Optionally include migration SQL
-            if (includeMigrationSQL) {
-              const migrationResult =
-                migrationGeneratorService.generateMigrationSQL({
-                  comparisonResult,
-                  includeDropStatements: true,
-                });
-
-              if (migrationResult.success) {
-                jsonReport.migrationSQL = {
-                  sql: migrationResult.sql,
-                  statements: migrationResult.statements,
-                  warnings: migrationResult.warnings,
-                };
-              }
-            }
-
-            reportContent = JSON.stringify(jsonReport, null, 2);
-            break;
-          }
-          case 'markdown': {
-            let markdownContent = generateMarkdownReport(comparisonResult);
-
-            // Optionally append migration SQL
-            if (includeMigrationSQL) {
-              const migrationResult =
-                migrationGeneratorService.generateMigrationSQL({
-                  comparisonResult,
-                  includeDropStatements: true,
-                });
-
-              if (migrationResult.success && migrationResult.sql) {
-                markdownContent += '\n\n## Migration SQL\n\n';
-                markdownContent += '```sql\n';
-                markdownContent += migrationResult.sql;
-                markdownContent += '\n```\n';
-
-                if (
-                  migrationResult.warnings &&
-                  migrationResult.warnings.length > 0
-                ) {
-                  markdownContent += '\n### Warnings\n\n';
-                  migrationResult.warnings.forEach((w) => {
-                    markdownContent += `- ${w}\n`;
-                  });
-                }
-              }
-            }
-
-            reportContent = markdownContent;
-            break;
-          }
-          default:
-            return {
-              success: false,
-              error: 'Unsupported report format',
-            };
-        }
-
-        // Write report to file
-        fs.writeFileSync(filePath, reportContent, 'utf-8');
-
-        return {
-          success: true,
-          filePath,
-        };
-      } catch (error) {
-        return {
-          success: false,
-          error:
-            error instanceof Error
-              ? error.message
-              : 'Failed to export comparison report',
-        };
-      }
-    }
-  );
-
-  // ============ Data Diff Handlers ============
-
-  // Data Diff: Compare Tables
-  ipcMain.handle(
-    IPC_CHANNELS.DATA_DIFF_COMPARE_TABLES,
-    async (_event, request: CompareTablesRequest) => {
-      try {
-        const result = await dataDiffService.compareTableData(
-          request.sourceConnectionId,
-          request.sourceTable,
-          request.sourceSchema ?? 'main',
-          request.targetConnectionId,
-          request.targetTable,
-          request.targetSchema ?? 'main',
-          request.primaryKeys ?? [],
-          request.pagination
-        );
-
-        return { success: true, result };
-      } catch (error) {
-        return {
-          success: false,
-          error:
-            error instanceof Error ? error.message : 'Failed to compare tables',
-        };
-      }
-    }
-  );
-
-  // Data Diff: Generate Sync SQL
-  ipcMain.handle(
-    IPC_CHANNELS.DATA_DIFF_GENERATE_SYNC_SQL,
-    async (_event, request: GenerateSyncSQLRequest) => {
-      try {
-        const result = dataDiffSyncGeneratorService.generateSyncSQL(request);
-        return result;
-      } catch (error) {
-        return {
-          success: false,
-          error:
-            error instanceof Error
-              ? error.message
-              : 'Failed to generate sync SQL',
-        };
-      }
-    }
-  );
-
-  // ============ Query & Schema Sharing Handlers ============
-
-  // Query Sharing: Export
-  ipcMain.handle(
-    IPC_CHANNELS.QUERY_EXPORT,
-    createHandler(async (request: ExportQueryRequest) => {
-      // Export query to shareable format
-      const { data } = await exportQuery(request.query);
-
-      // Serialize with optional compression
-      const { result, compressionInfo } = await serializeShareableData(
-        data,
-        request.compress
-      );
-
-      // Handle file path
-      let filePath = request.filePath;
-      if (!filePath) {
-        const dialogResult = await dialog.showSaveDialog({
-          title: 'Export Query',
-          defaultPath: `${request.query.name || 'query'}.sqlpro-query.json`,
-          filters: [
-            { name: 'SQL Pro Query', extensions: ['json'] },
-            { name: 'All Files', extensions: ['*'] },
-          ],
-        });
-
-        if (dialogResult.canceled || !dialogResult.filePath) {
-          throw new Error('Export canceled by user');
-        }
-
-        filePath = dialogResult.filePath;
-      }
-
-      // Write to file
-      fs.writeFileSync(filePath, result, 'utf-8');
-
-      return { filePath, compressionInfo };
-    })
-  );
-
-  // Query Sharing: Import
-  ipcMain.handle(
-    IPC_CHANNELS.QUERY_IMPORT,
-    createHandler(async (request: ImportQueryRequest) => {
-      let data: string;
-
-      // Get data from file or request
-      if (request.data) {
-        data = request.data;
-      } else {
-        let filePath = request.filePath;
-        if (!filePath) {
-          const dialogResult = await dialog.showOpenDialog({
-            title: 'Import Query',
-            filters: [
-              { name: 'SQL Pro Query', extensions: ['json'] },
-              { name: 'All Files', extensions: ['*'] },
-            ],
-            properties: ['openFile'],
-          });
-
-          if (dialogResult.canceled || dialogResult.filePaths.length === 0) {
-            throw new Error('Import canceled by user');
-          }
-
-          filePath = dialogResult.filePaths[0];
-        }
-
-        data = fs.readFileSync(filePath, 'utf-8');
-      }
-
-      // Import and validate
-      const { query, validation } = await importQuery(data);
-
-      return { query, validation };
-    })
-  );
-
-  // Schema Sharing: Export
-  ipcMain.handle(
-    IPC_CHANNELS.SCHEMA_EXPORT,
-    createHandler(async (request: ExportSchemaRequest) => {
-      // Fetch current schema from database service
-      const schemaResult = databaseService.getSchema(request.connectionId);
-      if (!schemaResult.success) {
-        throw new Error(schemaResult.error || 'Failed to get schema');
-      }
-      if (!schemaResult.schemas) {
-        throw new Error('No schema data available');
-      }
-
-      // Get connection info for database name
-      const connection = databaseService.getConnection(request.connectionId);
-      if (!connection) {
-        throw new Error('Connection not found');
-      }
-
-      // Merge database schema with request metadata
-      const schemaToExport = {
-        ...request.schema,
-        schemas: schemaResult.schemas,
-        databaseName: request.schema.databaseName || connection.filename,
-        databaseType: request.schema.databaseType || 'sqlite',
-      };
-
-      // Export schema to shareable format
-      const { data } = await exportSchema(schemaToExport);
-
-      // Serialize with optional compression
-      const { result, compressionInfo } = await serializeShareableData(
-        data,
-        request.compress
-      );
-
-      // Handle file path
-      let filePath = request.filePath;
-      if (!filePath) {
-        const dialogResult = await dialog.showSaveDialog({
-          title: 'Export Schema',
-          defaultPath: `${request.schema.name || 'schema'}.sqlpro-schema.json`,
-          filters: [
-            { name: 'SQL Pro Schema', extensions: ['json'] },
-            { name: 'All Files', extensions: ['*'] },
-          ],
-        });
-
-        if (dialogResult.canceled || !dialogResult.filePath) {
-          throw new Error('Export canceled by user');
-        }
-
-        filePath = dialogResult.filePath;
-      }
-
-      // Write to file
-      fs.writeFileSync(filePath, result, 'utf-8');
-
-      return { filePath, compressionInfo };
-    })
-  );
-
-  // Schema Sharing: Import
-  ipcMain.handle(
-    IPC_CHANNELS.SCHEMA_IMPORT,
-    createHandler(async (request: ImportSchemaRequest) => {
-      let data: string;
-
-      // Get data from file or request
-      if (request.data) {
-        data = request.data;
-      } else {
-        let filePath = request.filePath;
-        if (!filePath) {
-          const dialogResult = await dialog.showOpenDialog({
-            title: 'Import Schema',
-            filters: [
-              { name: 'SQL Pro Schema', extensions: ['json'] },
-              { name: 'All Files', extensions: ['*'] },
-            ],
-            properties: ['openFile'],
-          });
-
-          if (dialogResult.canceled || dialogResult.filePaths.length === 0) {
-            throw new Error('Import canceled by user');
-          }
-
-          filePath = dialogResult.filePaths[0];
-        }
-
-        data = fs.readFileSync(filePath, 'utf-8');
-      }
-
-      // Import and validate
-      const { schema, validation } = await importSchema(data);
-
-      return { schema, validation };
-    })
-  );
-
-  // Bundle Sharing: Export
-  ipcMain.handle(
-    IPC_CHANNELS.BUNDLE_EXPORT,
-    createHandler(async (request: ExportBundleRequest) => {
-      // Export bundle to shareable format
-      const { data } = await exportBundle(request.bundle);
-
-      // Serialize with optional compression
-      const { result, compressionInfo } = await serializeShareableData(
-        data,
-        request.compress
-      );
-
-      // Handle file path
-      let filePath = request.filePath;
-      if (!filePath) {
-        const dialogResult = await dialog.showSaveDialog({
-          title: 'Export Query Bundle',
-          defaultPath: `${request.bundle.name || 'bundle'}.sqlpro-bundle.json`,
-          filters: [
-            { name: 'SQL Pro Bundle', extensions: ['json'] },
-            { name: 'All Files', extensions: ['*'] },
-          ],
-        });
-
-        if (dialogResult.canceled || !dialogResult.filePath) {
-          throw new Error('Export canceled by user');
-        }
-
-        filePath = dialogResult.filePath;
-      }
-
-      // Write to file
-      fs.writeFileSync(filePath, result, 'utf-8');
-
-      return { filePath, compressionInfo };
-    })
-  );
-
-  // Bundle Sharing: Import
-  ipcMain.handle(
-    IPC_CHANNELS.BUNDLE_IMPORT,
-    createHandler(async (request: ImportBundleRequest) => {
-      let data: string;
-
-      // Get data from file or request
-      if (request.data) {
-        data = request.data;
-      } else {
-        let filePath = request.filePath;
-        if (!filePath) {
-          const dialogResult = await dialog.showOpenDialog({
-            title: 'Import Query Bundle',
-            filters: [
-              { name: 'SQL Pro Bundle', extensions: ['json'] },
-              { name: 'All Files', extensions: ['*'] },
-            ],
-            properties: ['openFile'],
-          });
-
-          if (dialogResult.canceled || dialogResult.filePaths.length === 0) {
-            throw new Error('Import canceled by user');
-          }
-
-          filePath = dialogResult.filePaths[0];
-        }
-
-        data = fs.readFileSync(filePath, 'utf-8');
-      }
-
-      // Import and validate
-      const { bundle, validation } = await importBundle(data);
-
-      return { bundle, validation };
-    })
-  );
-
-  // ============ Saved Query Handlers ============
-
-  // Saved Query: Get All
-  ipcMain.handle(
-    IPC_CHANNELS.SAVED_QUERY_GET_ALL,
-    async (
-      _event,
-      request: {
-        dbPath?: string;
-        favoritesOnly?: boolean;
-        collectionId?: string;
-      }
-    ) => {
-      try {
-        const queries = getSavedQueries({
-          dbPath: request.dbPath,
-          favoritesOnly: request.favoritesOnly,
-          collectionId: request.collectionId,
-        });
-        return { success: true, queries };
-      } catch (error) {
-        return {
-          success: false,
-          error:
-            error instanceof Error
-              ? error.message
-              : 'Failed to get saved queries',
-        };
-      }
-    }
-  );
-
-  // Saved Query: Save
-  ipcMain.handle(
-    IPC_CHANNELS.SAVED_QUERY_SAVE,
-    async (_event, request: { query: Record<string, unknown> }) => {
-      try {
-        const result = saveSavedQuery(
-          request.query as Parameters<typeof saveSavedQuery>[0]
-        );
-        if (!result.success) {
-          return {
-            success: false,
-            error: result.error || 'Failed to save query',
-          };
-        }
-        return { success: true, query: result.query };
-      } catch (error) {
-        return {
-          success: false,
-          error:
-            error instanceof Error ? error.message : 'Failed to save query',
-        };
-      }
-    }
-  );
-
-  // Saved Query: Update
-  ipcMain.handle(
-    IPC_CHANNELS.SAVED_QUERY_UPDATE,
-    async (
-      _event,
-      request: { id: string; updates: Record<string, unknown> }
-    ) => {
-      try {
-        const result = updateSavedQuery(
-          request.id,
-          request.updates as Parameters<typeof updateSavedQuery>[1]
-        );
-        if (!result.success) {
-          return {
-            success: false,
-            error: result.error || 'Failed to update query',
-          };
-        }
-        return { success: true, query: result.query };
-      } catch (error) {
-        return {
-          success: false,
-          error:
-            error instanceof Error ? error.message : 'Failed to update query',
-        };
-      }
-    }
-  );
-
-  // Saved Query: Delete
-  ipcMain.handle(
-    IPC_CHANNELS.SAVED_QUERY_DELETE,
-    async (_event, request: { id: string }) => {
-      try {
-        const result = deleteSavedQuery(request.id);
-        if (!result.success) {
-          return {
-            success: false,
-            error: result.error || 'Failed to delete query',
-          };
-        }
-        return { success: true };
-      } catch (error) {
-        return {
-          success: false,
-          error:
-            error instanceof Error ? error.message : 'Failed to delete query',
-        };
-      }
-    }
-  );
-
-  // Saved Query: Toggle Favorite
-  ipcMain.handle(
-    IPC_CHANNELS.SAVED_QUERY_TOGGLE_FAVORITE,
-    async (_event, request: { id: string; isFavorite: boolean }) => {
-      try {
-        const result = updateSavedQuery(request.id, {
-          isFavorite: request.isFavorite,
-        });
-        if (!result.success) {
-          return {
-            success: false,
-            error: result.error || 'Failed to toggle favorite',
-          };
-        }
-        return { success: true, query: result.query };
-      } catch (error) {
-        return {
-          success: false,
-          error:
-            error instanceof Error
-              ? error.message
-              : 'Failed to toggle favorite',
-        };
-      }
-    }
-  );
-
-  // ============ Collection Handlers ============
-
-  // Collection: Get All
-  ipcMain.handle(IPC_CHANNELS.COLLECTION_GET_ALL, async () => {
-    try {
-      const collections = getCollections();
-      return { success: true, collections };
-    } catch (error) {
-      return {
-        success: false,
-        error:
-          error instanceof Error ? error.message : 'Failed to get collections',
-      };
-    }
-  });
-
-  // Collection: Save
-  ipcMain.handle(
-    IPC_CHANNELS.COLLECTION_SAVE,
-    async (_event, request: { collection: Record<string, unknown> }) => {
-      try {
-        const result = saveCollection(
-          request.collection as Parameters<typeof saveCollection>[0]
-        );
-        if (!result.success) {
-          return {
-            success: false,
-            error: result.error || 'Failed to save collection',
-          };
-        }
-        return { success: true, collection: result.collection };
-      } catch (error) {
-        return {
-          success: false,
-          error:
-            error instanceof Error
-              ? error.message
-              : 'Failed to save collection',
-        };
-      }
-    }
-  );
-
-  // Collection: Update
-  ipcMain.handle(
-    IPC_CHANNELS.COLLECTION_UPDATE,
-    async (
-      _event,
-      request: { id: string; updates: Record<string, unknown> }
-    ) => {
-      try {
-        const result = updateCollection(
-          request.id,
-          request.updates as Parameters<typeof updateCollection>[1]
-        );
-        if (!result.success) {
-          return {
-            success: false,
-            error: result.error || 'Failed to update collection',
-          };
-        }
-        return { success: true, collection: result.collection };
-      } catch (error) {
-        return {
-          success: false,
-          error:
-            error instanceof Error
-              ? error.message
-              : 'Failed to update collection',
-        };
-      }
-    }
-  );
-
-  // Collection: Delete
-  ipcMain.handle(
-    IPC_CHANNELS.COLLECTION_DELETE,
-    async (_event, request: { id: string }) => {
-      try {
-        const result = deleteCollection(request.id);
-        if (!result.success) {
-          return {
-            success: false,
-            error: result.error || 'Failed to delete collection',
-          };
-        }
-        return { success: true };
-      } catch (error) {
-        return {
-          success: false,
-          error:
-            error instanceof Error
-              ? error.message
-              : 'Failed to delete collection',
-        };
-      }
-    }
-  );
-
-  // Collection: Add Query
-  ipcMain.handle(
-    IPC_CHANNELS.COLLECTION_ADD_QUERY,
-    async (_event, request: { queryId: string; collectionId: string }) => {
-      try {
-        const result = addQueryToCollection(
-          request.queryId,
-          request.collectionId
-        );
-        if (!result.success) {
-          return {
-            success: false,
-            error: result.error || 'Failed to add query to collection',
-          };
-        }
-        return {
-          success: true,
-          query: result.query,
-          collection: result.collection,
-        };
-      } catch (error) {
-        return {
-          success: false,
-          error:
-            error instanceof Error
-              ? error.message
-              : 'Failed to add query to collection',
-        };
-      }
-    }
-  );
-
-  // Collection: Remove Query
-  ipcMain.handle(
-    IPC_CHANNELS.COLLECTION_REMOVE_QUERY,
-    async (_event, request: { queryId: string; collectionId: string }) => {
-      try {
-        const result = removeQueryFromCollection(
-          request.queryId,
-          request.collectionId
-        );
-        if (!result.success) {
-          return {
-            success: false,
-            error: result.error || 'Failed to remove query from collection',
-          };
-        }
-        return {
-          success: true,
-          query: result.query,
-          collection: result.collection,
-        };
-      } catch (error) {
-        return {
-          success: false,
-          error:
-            error instanceof Error
-              ? error.message
-              : 'Failed to remove query from collection',
-        };
-      }
-    }
-  );
-
-  // Collection: Export
-  ipcMain.handle(
-    IPC_CHANNELS.COLLECTION_EXPORT,
-    async (_event, request: { collectionIds?: string[]; filePath: string }) => {
-      try {
-        // Get all collections if no specific IDs provided
-        const allCollections = getCollections();
-        const collectionsToExport = request.collectionIds
-          ? allCollections.filter((c) => request.collectionIds!.includes(c.id))
-          : allCollections;
-
-        // Get all queries that belong to these collections
-        const queryIds = new Set<string>();
-        collectionsToExport.forEach((c) => {
-          c.queryIds.forEach((qId) => queryIds.add(qId));
-        });
-
-        const allQueries = getSavedQueries();
-        const queriesToExport = allQueries.filter((q) => queryIds.has(q.id));
-
-        // Create export data structure
-        const exportData = {
-          version: '1.0',
-          exportedAt: new Date().toISOString(),
-          collections: collectionsToExport,
-          queries: queriesToExport,
-        };
-
-        // Write to file
-        fs.writeFileSync(
-          request.filePath,
-          JSON.stringify(exportData, null, 2),
-          'utf-8'
-        );
-
-        return {
-          success: true,
-          filePath: request.filePath,
-          collectionsExported: collectionsToExport.length,
-          queriesExported: queriesToExport.length,
-        };
-      } catch (error) {
-        return {
-          success: false,
-          error:
-            error instanceof Error
-              ? error.message
-              : 'Failed to export collections',
-        };
-      }
-    }
-  );
-
-  // Collection: Import
-  ipcMain.handle(
-    IPC_CHANNELS.COLLECTION_IMPORT,
-    async (
-      _event,
-      request: { filePath: string; duplicateStrategy?: string }
-    ) => {
-      try {
-        // Read import file
-        const fileContent = fs.readFileSync(request.filePath, 'utf-8');
-        const importData = JSON.parse(fileContent);
-
-        // Validate import data structure
-        if (
-          !importData.version ||
-          !importData.collections ||
-          !importData.queries
-        ) {
-          return {
-            success: false,
-            error: 'Invalid import file format',
-          };
-        }
-
-        const strategy = request.duplicateStrategy || 'skip';
-        let collectionsImported = 0;
-        let queriesImported = 0;
-        let skipped = 0;
-
-        // Import queries first
-        const existingQueries = getSavedQueries();
-        const queryIdMap = new Map<string, string>(); // old ID -> new ID
-
-        for (const query of importData.queries) {
-          const existingQuery = existingQueries.find(
-            (q) => q.name === query.name && q.queryText === query.queryText
-          );
-
-          if (existingQuery) {
-            if (strategy === 'skip') {
-              queryIdMap.set(query.id, existingQuery.id);
-              skipped++;
-              continue;
-            } else if (strategy === 'rename') {
-              query.name = `${query.name} (imported)`;
-            } else if (strategy === 'overwrite') {
-              const result = updateSavedQuery(existingQuery.id, {
-                ...query,
-                id: existingQuery.id,
-              });
-              if (result.success) {
-                queryIdMap.set(query.id, existingQuery.id);
-                queriesImported++;
-              }
-              continue;
-            }
-          }
-
-          const oldId = query.id;
-          delete query.id; // Let the store generate a new ID
-          delete query.createdAt;
-          delete query.updatedAt;
-          query.collectionIds = []; // Will be set when collections are imported
-
-          const result = saveSavedQuery(query);
-          if (result.success && result.query) {
-            queryIdMap.set(oldId, result.query.id);
-            queriesImported++;
-          }
-        }
-
-        // Import collections
-        const existingCollections = getCollections();
-
-        for (const collection of importData.collections) {
-          const existingCollection = existingCollections.find(
-            (c) => c.name === collection.name
-          );
-
-          if (existingCollection) {
-            if (strategy === 'skip') {
-              skipped++;
-              continue;
-            } else if (strategy === 'rename') {
-              collection.name = `${collection.name} (imported)`;
-            } else if (strategy === 'overwrite') {
-              // Map old query IDs to new ones
-              const mappedQueryIds = collection.queryIds
-                .map((qId: string) => queryIdMap.get(qId))
-                .filter((id: string | undefined) => id !== undefined);
-
-              const result = updateCollection(existingCollection.id, {
-                ...collection,
-                queryIds: mappedQueryIds,
-              });
-              if (result.success) {
-                // Update the bidirectional relationship for overwritten collections
-                for (const queryId of mappedQueryIds) {
-                  addQueryToCollection(queryId, existingCollection.id);
-                }
-                collectionsImported++;
-              }
-              continue;
-            }
-          }
-
-          // Map old query IDs to new ones
-          const mappedQueryIds = collection.queryIds
-            .map((qId: string) => queryIdMap.get(qId))
-            .filter((id: string | undefined) => id !== undefined);
-
-          delete collection.id; // Let the store generate a new ID
-          delete collection.createdAt;
-          delete collection.updatedAt;
-          collection.queryIds = mappedQueryIds;
-
-          const result = saveCollection(collection);
-          if (result.success && result.collection) {
-            // Update the bidirectional relationship: add collection to each query
-            for (const queryId of mappedQueryIds) {
-              addQueryToCollection(queryId, result.collection.id);
-            }
-            collectionsImported++;
-          }
-        }
-
-        return {
-          success: true,
-          collectionsImported,
-          queriesImported,
-          skipped,
-        };
-      } catch (error) {
-        return {
-          success: false,
-          error:
-            error instanceof Error
-              ? error.message
-              : 'Failed to import collections',
-        };
-      }
-    }
-  );
-}
-
-/**
- * Helper function to escape HTML special characters
- */
-function escapeHtml(text: string): string {
-  const map: Record<string, string> = {
-    '&': '&amp;',
-    '<': '&lt;',
-    '>': '&gt;',
-    '"': '&quot;',
-    "'": '&#039;',
-  };
-  return text.replace(/[&<>"']/g, (char) => map[char] || char);
 }

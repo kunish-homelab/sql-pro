@@ -88,70 +88,78 @@ const DEFAULT_PREFERENCES: StoredPreferences = {
 
 // ============ Store Instance ============
 
-const store = new Store<StoreSchema>({
-  name: 'sql-pro-data',
-  defaults: {
-    preferences: DEFAULT_PREFERENCES,
-    recentConnections: [],
-    queryHistory: {},
-    aiSettings: null,
-    proStatus: null,
-    connectionProfiles: [],
-    profileFolders: [],
-    schemaSnapshots: {},
-    savedQueries: {},
-    collections: {},
-  },
-  // Enable schema migration
-  migrations: {
-    // Migration to convert existing recent connections to profiles
-    '>=1.0.0': (store) => {
-      // Get existing data
-      const recentConnections = store.get(
-        'recentConnections',
-        []
-      ) as StoredRecentConnection[];
-      const existingProfiles = store.get(
-        'connectionProfiles',
-        []
-      ) as StoredConnectionProfile[];
+// Lazy-initialize store to ensure app is ready before accessing userData path
+let _store: Store<StoreSchema> | null = null;
 
-      // Only migrate if we have recent connections and no profiles yet
-      // This ensures migration only runs once
-      if (recentConnections.length > 0 && existingProfiles.length === 0) {
-        const migratedProfiles: StoredConnectionProfile[] =
-          recentConnections.map((conn) => ({
-            ...conn,
-            id: crypto.randomUUID(),
-            isSaved: false, // Mark as unsaved since these are just recent connections
-            // Optional fields remain undefined
-          }));
+function getStore(): Store<StoreSchema> {
+  if (!_store) {
+    _store = new Store<StoreSchema>({
+      name: 'sql-pro-data',
+      defaults: {
+        preferences: DEFAULT_PREFERENCES,
+        recentConnections: [],
+        queryHistory: {},
+        aiSettings: null,
+        proStatus: null,
+        connectionProfiles: [],
+        profileFolders: [],
+        schemaSnapshots: {},
+        savedQueries: {},
+        collections: {},
+      },
+      // Enable schema migration
+      migrations: {
+        // Migration to convert existing recent connections to profiles
+        '>=1.0.0': (store) => {
+          // Get existing data
+          const recentConnections = store.get(
+            'recentConnections',
+            []
+          ) as StoredRecentConnection[];
+          const existingProfiles = store.get(
+            'connectionProfiles',
+            []
+          ) as StoredConnectionProfile[];
 
-        store.set('connectionProfiles', migratedProfiles);
-      }
-    },
-  },
-});
+          // Only migrate if we have recent connections and no profiles yet
+          // This ensures migration only runs once
+          if (recentConnections.length > 0 && existingProfiles.length === 0) {
+            const migratedProfiles: StoredConnectionProfile[] =
+              recentConnections.map((conn) => ({
+                ...conn,
+                id: crypto.randomUUID(),
+                isSaved: false, // Mark as unsaved since these are just recent connections
+                // Optional fields remain undefined
+              }));
+
+            store.set('connectionProfiles', migratedProfiles);
+          }
+        },
+      },
+    });
+  }
+  return _store;
+}
 
 // ============ Preferences ============
 
 export function getPreferences(): StoredPreferences {
-  return store.get('preferences', DEFAULT_PREFERENCES);
+  return getStore().get('preferences', DEFAULT_PREFERENCES);
 }
 
 export function setPreferences(prefs: Partial<StoredPreferences>): void {
   const current = getPreferences();
-  store.set('preferences', { ...current, ...prefs });
+  getStore().set('preferences', { ...current, ...prefs });
 }
 
 export function resetPreferences(): void {
-  store.set('preferences', DEFAULT_PREFERENCES);
+  getStore().set('preferences', DEFAULT_PREFERENCES);
 }
 
 // ============ Recent Connections ============
 
 export function getRecentConnections(): StoredRecentConnection[] {
-  return store.get('recentConnections', []);
+  return getStore().get('recentConnections', []);
 }
 
 export function addRecentConnection(
@@ -186,7 +194,7 @@ export function addRecentConnection(
   // Limit to configured max
   const limited = filtered.slice(0, prefs.recentConnectionsLimit);
 
-  store.set('recentConnections', limited);
+  getStore().set('recentConnections', limited);
 }
 
 export function updateRecentConnection(
@@ -215,7 +223,7 @@ export function updateRecentConnection(
     connections[index].readOnly = updates.readOnly;
   }
 
-  store.set('recentConnections', connections);
+  getStore().set('recentConnections', connections);
   return { success: true };
 }
 
@@ -231,33 +239,33 @@ export function removeRecentConnection(filePath: string): {
     return { success: true };
   }
 
-  store.set('recentConnections', filtered);
+  getStore().set('recentConnections', filtered);
   return { success: true };
 }
 
 // ============ Query History ============
 
 export function getQueryHistory(dbPath: string): QueryHistoryEntry[] {
-  const allHistory = store.get('queryHistory', {});
+  const allHistory = getStore().get('queryHistory', {});
   return allHistory[dbPath] || [];
 }
 
 export function saveQueryHistoryEntry(entry: QueryHistoryEntry): void {
-  const allHistory = store.get('queryHistory', {});
+  const allHistory = getStore().get('queryHistory', {});
   const dbHistory = allHistory[entry.dbPath] || [];
 
   // Add new entry at the beginning (most recent first)
   dbHistory.unshift(entry);
 
   allHistory[entry.dbPath] = dbHistory;
-  store.set('queryHistory', allHistory);
+  getStore().set('queryHistory', allHistory);
 }
 
 export function deleteQueryHistoryEntry(
   dbPath: string,
   entryId: string
 ): { success: boolean; error?: string } {
-  const allHistory = store.get('queryHistory', {});
+  const allHistory = getStore().get('queryHistory', {});
   const dbHistory = allHistory[dbPath] || [];
 
   const filtered = dbHistory.filter((entry) => entry.id !== entryId);
@@ -268,7 +276,7 @@ export function deleteQueryHistoryEntry(
   }
 
   allHistory[dbPath] = filtered;
-  store.set('queryHistory', allHistory);
+  getStore().set('queryHistory', allHistory);
   return { success: true };
 }
 
@@ -276,27 +284,27 @@ export function clearQueryHistory(dbPath: string): {
   success: boolean;
   error?: string;
 } {
-  const allHistory = store.get('queryHistory', {});
+  const allHistory = getStore().get('queryHistory', {});
 
   // Remove history for this database
   delete allHistory[dbPath];
 
-  store.set('queryHistory', allHistory);
+  getStore().set('queryHistory', allHistory);
   return { success: true };
 }
 
 // ============ AI Settings ============
 
 export function getAISettings(): AISettings | null {
-  return store.get('aiSettings', null);
+  return getStore().get('aiSettings', null);
 }
 
 export function saveAISettings(settings: AISettings): void {
-  store.set('aiSettings', settings);
+  getStore().set('aiSettings', settings);
 }
 
 export function clearAISettings(): void {
-  store.set('aiSettings', null);
+  getStore().set('aiSettings', null);
 }
 
 // ============ Pro Status ============
@@ -320,21 +328,21 @@ export function getProStatus(): ProStatus | null {
       features: [...ALL_PRO_FEATURES],
     };
   }
-  return store.get('proStatus', null);
+  return getStore().get('proStatus', null);
 }
 
 export function saveProStatus(status: ProStatus): void {
-  store.set('proStatus', status);
+  getStore().set('proStatus', status);
 }
 
 export function clearProStatus(): void {
-  store.set('proStatus', null);
+  getStore().set('proStatus', null);
 }
 
 // ============ Connection Profiles ============
 
 export function getProfiles(): StoredConnectionProfile[] {
-  return store.get('connectionProfiles', []);
+  return getStore().get('connectionProfiles', []);
 }
 
 export function saveProfile(
@@ -375,7 +383,7 @@ export function saveProfile(
       profiles.push(newProfile);
     }
 
-    store.set('connectionProfiles', profiles);
+    getStore().set('connectionProfiles', profiles);
     return { success: true, profile: newProfile };
   } catch (error) {
     return {
@@ -411,7 +419,7 @@ export function updateProfile(
 
   profiles[index] = updatedProfile;
 
-  store.set('connectionProfiles', profiles);
+  getStore().set('connectionProfiles', profiles);
   return { success: true, profile: updatedProfile };
 }
 
@@ -427,7 +435,7 @@ export function deleteProfile(id: string): {
     return { success: true };
   }
 
-  store.set('connectionProfiles', filtered);
+  getStore().set('connectionProfiles', filtered);
   return { success: true };
 }
 
@@ -445,7 +453,7 @@ export function getProfilesByFolder(
 // ============ Profile Folders ============
 
 export function getFolders(): StoredProfileFolder[] {
-  return store.get('profileFolders', []);
+  return getStore().get('profileFolders', []);
 }
 
 export function saveFolder(
@@ -487,7 +495,7 @@ export function saveFolder(
       folders.push(newFolder);
     }
 
-    store.set('profileFolders', folders);
+    getStore().set('profileFolders', folders);
     return { success: true, folder: newFolder };
   } catch (error) {
     return {
@@ -531,7 +539,7 @@ export function updateFolder(
 
   folders[index] = updatedFolder;
 
-  store.set('profileFolders', folders);
+  getStore().set('profileFolders', folders);
   return { success: true, folder: updatedFolder };
 }
 
@@ -561,7 +569,7 @@ export function deleteFolder(id: string): {
     return { success: true };
   }
 
-  store.set('profileFolders', filtered);
+  getStore().set('profileFolders', filtered);
   return { success: true };
 }
 
@@ -577,20 +585,20 @@ export function getSubfolders(parentId?: string): StoredProfileFolder[] {
 // ============ Schema Snapshots ============
 
 export function saveSchemaSnapshot(snapshot: SchemaSnapshot): void {
-  const snapshots = store.get('schemaSnapshots', {});
+  const snapshots = getStore().get('schemaSnapshots', {});
   snapshots[snapshot.id] = snapshot;
-  store.set('schemaSnapshots', snapshots);
+  getStore().set('schemaSnapshots', snapshots);
 }
 
 export function getSchemaSnapshots(): SchemaSnapshot[] {
-  const snapshots = store.get('schemaSnapshots', {});
+  const snapshots = getStore().get('schemaSnapshots', {});
   return Object.values(snapshots).sort(
     (a, b) => new Date(b.createdAt).getTime() - new Date(a.createdAt).getTime()
   );
 }
 
 export function getSchemaSnapshot(snapshotId: string): SchemaSnapshot | null {
-  const snapshots = store.get('schemaSnapshots', {});
+  const snapshots = getStore().get('schemaSnapshots', {});
   return snapshots[snapshotId] || null;
 }
 
@@ -598,7 +606,7 @@ export function deleteSchemaSnapshot(snapshotId: string): {
   success: boolean;
   error?: string;
 } {
-  const snapshots = store.get('schemaSnapshots', {});
+  const snapshots = getStore().get('schemaSnapshots', {});
 
   if (!snapshots[snapshotId]) {
     // Snapshot not found, but not an error
@@ -606,7 +614,7 @@ export function deleteSchemaSnapshot(snapshotId: string): {
   }
 
   delete snapshots[snapshotId];
-  store.set('schemaSnapshots', snapshots);
+  getStore().set('schemaSnapshots', snapshots);
   return { success: true };
 }
 
@@ -617,7 +625,7 @@ export function getSavedQueries(options?: {
   favoritesOnly?: boolean;
   collectionId?: string;
 }): SavedQuery[] {
-  const queries = store.get('savedQueries', {});
+  const queries = getStore().get('savedQueries', {});
   let result = Object.values(queries);
 
   // Filter by dbPath if provided
@@ -633,7 +641,7 @@ export function getSavedQueries(options?: {
   // Filter by collection if requested
   if (options?.collectionId) {
     const collectionId = options.collectionId;
-    result = result.filter((q) => q.collectionIds.includes(collectionId));
+    result = result.filter((q) => q.collectionIds?.includes(collectionId));
   }
 
   // Sort by updatedAt (most recent first)
@@ -650,7 +658,7 @@ export function saveSavedQuery(
   }
 ): { success: boolean; query?: SavedQuery; error?: string } {
   try {
-    const queries = store.get('savedQueries', {});
+    const queries = getStore().get('savedQueries', {});
     const now = new Date().toISOString();
 
     // Generate ID if not provided
@@ -682,16 +690,19 @@ export function saveSavedQuery(
     }
 
     queries[queryId] = newQuery;
-    store.set('savedQueries', queries);
+    getStore().set('savedQueries', queries);
 
     // Update collections if needed
-    if (newQuery.collectionIds.length > 0) {
-      const collections = store.get('collections', {});
+    if (newQuery.collectionIds && newQuery.collectionIds.length > 0) {
+      const collections = getStore().get('collections', {});
       let collectionsUpdated = false;
 
       for (const collectionId of newQuery.collectionIds) {
         const collection = collections[collectionId];
-        if (collection && !collection.queryIds.includes(queryId)) {
+        if (collection && !collection.queryIds?.includes(queryId)) {
+          if (!collection.queryIds) {
+            collection.queryIds = [];
+          }
           collection.queryIds.push(queryId);
           collection.updatedAt = now;
           collectionsUpdated = true;
@@ -699,7 +710,7 @@ export function saveSavedQuery(
       }
 
       if (collectionsUpdated) {
-        store.set('collections', collections);
+        getStore().set('collections', collections);
       }
     }
 
@@ -716,7 +727,7 @@ export function updateSavedQuery(
   id: string,
   updates: Partial<Omit<SavedQuery, 'id' | 'createdAt'>>
 ): { success: boolean; query?: SavedQuery; error?: string } {
-  const queries = store.get('savedQueries', {});
+  const queries = getStore().get('savedQueries', {});
   const query = queries[id];
 
   if (!query) {
@@ -745,7 +756,7 @@ export function updateSavedQuery(
 
   // Handle collection changes
   if (updates.collectionIds !== undefined) {
-    const collections = store.get('collections', {});
+    const collections = getStore().get('collections', {});
     const oldCollectionIds = query.collectionIds || [];
     const newCollectionIds = updates.collectionIds || [];
 
@@ -754,7 +765,9 @@ export function updateSavedQuery(
       if (!newCollectionIds.includes(collectionId)) {
         const collection = collections[collectionId];
         if (collection) {
-          collection.queryIds = collection.queryIds.filter((qId) => qId !== id);
+          collection.queryIds = (collection.queryIds || []).filter(
+            (qId) => qId !== id
+          );
           collection.updatedAt = now;
         }
       }
@@ -764,14 +777,17 @@ export function updateSavedQuery(
     for (const collectionId of newCollectionIds) {
       if (!oldCollectionIds.includes(collectionId)) {
         const collection = collections[collectionId];
-        if (collection && !collection.queryIds.includes(id)) {
+        if (collection && !collection.queryIds?.includes(id)) {
+          if (!collection.queryIds) {
+            collection.queryIds = [];
+          }
           collection.queryIds.push(id);
           collection.updatedAt = now;
         }
       }
     }
 
-    store.set('collections', collections);
+    getStore().set('collections', collections);
   }
 
   // Update the query
@@ -782,7 +798,7 @@ export function updateSavedQuery(
   };
 
   queries[id] = updatedQuery;
-  store.set('savedQueries', queries);
+  getStore().set('savedQueries', queries);
 
   return { success: true, query: updatedQuery };
 }
@@ -791,7 +807,7 @@ export function deleteSavedQuery(id: string): {
   success: boolean;
   error?: string;
 } {
-  const queries = store.get('savedQueries', {});
+  const queries = getStore().get('savedQueries', {});
   const query = queries[id];
 
   if (!query) {
@@ -800,25 +816,27 @@ export function deleteSavedQuery(id: string): {
   }
 
   // Remove query from all collections
-  const collections = store.get('collections', {});
+  const collections = getStore().get('collections', {});
   let collectionsUpdated = false;
   const now = new Date().toISOString();
 
   for (const collectionId of query.collectionIds || []) {
     const collection = collections[collectionId];
     if (collection) {
-      collection.queryIds = collection.queryIds.filter((qId) => qId !== id);
+      collection.queryIds = (collection.queryIds || []).filter(
+        (qId) => qId !== id
+      );
       collection.updatedAt = now;
       collectionsUpdated = true;
     }
   }
 
   if (collectionsUpdated) {
-    store.set('collections', collections);
+    getStore().set('collections', collections);
   }
 
   delete queries[id];
-  store.set('savedQueries', queries);
+  getStore().set('savedQueries', queries);
 
   return { success: true };
 }
@@ -826,7 +844,7 @@ export function deleteSavedQuery(id: string): {
 // ============ Collections ============
 
 export function getCollections(): QueryCollection[] {
-  const collections = store.get('collections', {});
+  const collections = getStore().get('collections', {});
   return Object.values(collections).sort(
     (a, b) => new Date(b.updatedAt).getTime() - new Date(a.updatedAt).getTime()
   );
@@ -840,7 +858,7 @@ export function saveCollection(
   }
 ): { success: boolean; collection?: QueryCollection; error?: string } {
   try {
-    const collections = store.get('collections', {});
+    const collections = getStore().get('collections', {});
     const now = new Date().toISOString();
 
     // Generate ID if not provided
@@ -866,16 +884,19 @@ export function saveCollection(
     }
 
     collections[collectionId] = newCollection;
-    store.set('collections', collections);
+    getStore().set('collections', collections);
 
     // Update queries if needed
-    if (newCollection.queryIds.length > 0) {
-      const queries = store.get('savedQueries', {});
+    if (newCollection.queryIds && newCollection.queryIds.length > 0) {
+      const queries = getStore().get('savedQueries', {});
       let queriesUpdated = false;
 
       for (const queryId of newCollection.queryIds) {
         const query = queries[queryId];
-        if (query && !query.collectionIds.includes(collectionId)) {
+        if (query && !query.collectionIds?.includes(collectionId)) {
+          if (!query.collectionIds) {
+            query.collectionIds = [];
+          }
           query.collectionIds.push(collectionId);
           query.updatedAt = now;
           queriesUpdated = true;
@@ -883,7 +904,7 @@ export function saveCollection(
       }
 
       if (queriesUpdated) {
-        store.set('savedQueries', queries);
+        getStore().set('savedQueries', queries);
       }
     }
 
@@ -900,7 +921,7 @@ export function updateCollection(
   id: string,
   updates: Partial<Omit<QueryCollection, 'id' | 'createdAt'>>
 ): { success: boolean; collection?: QueryCollection; error?: string } {
-  const collections = store.get('collections', {});
+  const collections = getStore().get('collections', {});
   const collection = collections[id];
 
   if (!collection) {
@@ -921,7 +942,7 @@ export function updateCollection(
 
   // Handle query changes
   if (updates.queryIds !== undefined) {
-    const queries = store.get('savedQueries', {});
+    const queries = getStore().get('savedQueries', {});
     const oldQueryIds = collection.queryIds || [];
     const newQueryIds = updates.queryIds || [];
 
@@ -930,7 +951,9 @@ export function updateCollection(
       if (!newQueryIds.includes(queryId)) {
         const query = queries[queryId];
         if (query) {
-          query.collectionIds = query.collectionIds.filter((cId) => cId !== id);
+          query.collectionIds = (query.collectionIds || []).filter(
+            (cId) => cId !== id
+          );
           query.updatedAt = now;
         }
       }
@@ -940,14 +963,17 @@ export function updateCollection(
     for (const queryId of newQueryIds) {
       if (!oldQueryIds.includes(queryId)) {
         const query = queries[queryId];
-        if (query && !query.collectionIds.includes(id)) {
+        if (query && !query.collectionIds?.includes(id)) {
+          if (!query.collectionIds) {
+            query.collectionIds = [];
+          }
           query.collectionIds.push(id);
           query.updatedAt = now;
         }
       }
     }
 
-    store.set('savedQueries', queries);
+    getStore().set('savedQueries', queries);
   }
 
   // Update the collection
@@ -958,7 +984,7 @@ export function updateCollection(
   };
 
   collections[id] = updatedCollection;
-  store.set('collections', collections);
+  getStore().set('collections', collections);
 
   return { success: true, collection: updatedCollection };
 }
@@ -967,7 +993,7 @@ export function deleteCollection(id: string): {
   success: boolean;
   error?: string;
 } {
-  const collections = store.get('collections', {});
+  const collections = getStore().get('collections', {});
   const collection = collections[id];
 
   if (!collection) {
@@ -976,25 +1002,27 @@ export function deleteCollection(id: string): {
   }
 
   // Remove collection from all queries
-  const queries = store.get('savedQueries', {});
+  const queries = getStore().get('savedQueries', {});
   let queriesUpdated = false;
   const now = new Date().toISOString();
 
   for (const queryId of collection.queryIds || []) {
     const query = queries[queryId];
     if (query) {
-      query.collectionIds = query.collectionIds.filter((cId) => cId !== id);
+      query.collectionIds = (query.collectionIds || []).filter(
+        (cId) => cId !== id
+      );
       query.updatedAt = now;
       queriesUpdated = true;
     }
   }
 
   if (queriesUpdated) {
-    store.set('savedQueries', queries);
+    getStore().set('savedQueries', queries);
   }
 
   delete collections[id];
-  store.set('collections', collections);
+  getStore().set('collections', collections);
 
   return { success: true };
 }
@@ -1010,8 +1038,8 @@ export function addQueryToCollection(
   collection?: QueryCollection;
   error?: string;
 } {
-  const queries = store.get('savedQueries', {});
-  const collections = store.get('collections', {});
+  const queries = getStore().get('savedQueries', {});
+  const collections = getStore().get('collections', {});
 
   const query = queries[queryId];
   const collection = collections[collectionId];
@@ -1027,6 +1055,9 @@ export function addQueryToCollection(
   const now = new Date().toISOString();
 
   // Add to query's collection list
+  if (!query.collectionIds) {
+    query.collectionIds = [];
+  }
   if (!query.collectionIds.includes(collectionId)) {
     query.collectionIds.push(collectionId);
     query.updatedAt = now;
@@ -1034,14 +1065,17 @@ export function addQueryToCollection(
   }
 
   // Add to collection's query list
+  if (!collection.queryIds) {
+    collection.queryIds = [];
+  }
   if (!collection.queryIds.includes(queryId)) {
     collection.queryIds.push(queryId);
     collection.updatedAt = now;
     collections[collectionId] = collection;
   }
 
-  store.set('savedQueries', queries);
-  store.set('collections', collections);
+  getStore().set('savedQueries', queries);
+  getStore().set('collections', collections);
 
   return { success: true, query, collection };
 }
@@ -1055,8 +1089,8 @@ export function removeQueryFromCollection(
   collection?: QueryCollection;
   error?: string;
 } {
-  const queries = store.get('savedQueries', {});
-  const collections = store.get('collections', {});
+  const queries = getStore().get('savedQueries', {});
+  const collections = getStore().get('collections', {});
 
   const query = queries[queryId];
   const collection = collections[collectionId];
@@ -1072,17 +1106,21 @@ export function removeQueryFromCollection(
   const now = new Date().toISOString();
 
   // Remove from query's collection list
-  query.collectionIds = query.collectionIds.filter((id) => id !== collectionId);
+  query.collectionIds = (query.collectionIds || []).filter(
+    (id) => id !== collectionId
+  );
   query.updatedAt = now;
   queries[queryId] = query;
 
   // Remove from collection's query list
-  collection.queryIds = collection.queryIds.filter((id) => id !== queryId);
+  collection.queryIds = (collection.queryIds || []).filter(
+    (id) => id !== queryId
+  );
   collection.updatedAt = now;
   collections[collectionId] = collection;
 
-  store.set('savedQueries', queries);
-  store.set('collections', collections);
+  getStore().set('savedQueries', queries);
+  getStore().set('collections', collections);
 
   return { success: true, query, collection };
 }
@@ -1090,12 +1128,12 @@ export function removeQueryFromCollection(
 // ============ Utility Functions ============
 
 export function clearAllData(): void {
-  store.clear();
+  getStore().clear();
 }
 
 export function getStorePath(): string {
-  return store.path;
+  return getStore().path;
 }
 
-// Export the store instance for advanced usage
-export { store };
+// Export the store getter for advanced usage
+export { getStore };

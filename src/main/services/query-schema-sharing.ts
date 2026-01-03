@@ -423,9 +423,9 @@ export async function exportSchema(
   }
 
   // Validate options match format
-  if (schema.options.format !== schema.format) {
+  if (schema.options?.format !== schema.format) {
     throw new Error(
-      `Format mismatch: schema.format is '${schema.format}' but options.format is '${schema.options.format}'`
+      `Format mismatch: schema.format is '${schema.format}' but options.format is '${schema.options?.format}'`
     );
   }
 
@@ -654,6 +654,7 @@ async function parseAndValidate<T>(
       compressionInfo = {
         compressed: true,
         algorithm: COMPRESSION_ALGORITHM,
+        originalSize: jsonString.length,
       };
     } catch (error) {
       throw new Error(
@@ -1012,9 +1013,9 @@ function validateSchemaStructure(schema: ShareableSchema): {
   }
 
   // Validate options match format
-  if (schema.options.format !== schema.format) {
+  if (schema.options?.format !== schema.format) {
     errors.push(
-      `Format mismatch: schema.format is '${schema.format}' but options.format is '${schema.options.format}'`
+      `Format mismatch: schema.format is '${schema.format}' but options.format is '${schema.options?.format}'`
     );
   }
 

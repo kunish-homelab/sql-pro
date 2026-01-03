@@ -10,6 +10,7 @@ import type {
 } from '@/types/database';
 import { create } from 'zustand';
 import { persist } from 'zustand/middleware';
+import { useChangesStore } from './changes-store';
 
 interface ConnectionState {
   // Multiple connections support
@@ -475,10 +476,9 @@ export const useConnectionStore = create<ConnectionState>()(
         return get().connectionColors[id];
       },
 
-      hasUnsavedChanges: (_connectionId) => {
-        // This will be implemented to check the changes store
-        // For now, return false
-        return false;
+      hasUnsavedChanges: (connectionId) => {
+        const changesStore = useChangesStore.getState();
+        return changesStore.hasChangesForConnection(connectionId);
       },
 
       // Profile getters
@@ -491,8 +491,9 @@ export const useConnectionStore = create<ConnectionState>()(
       },
 
       getProfilesByFolder: (folderId) => {
-        const profiles = Array.from(get().profiles.values());
-        return profiles.filter((profile) => profile.folderId === folderId);
+        return Array.from(get().profiles.values()).filter(
+          (profile) => profile.folderId === folderId
+        );
       },
 
       // Folder getters
@@ -505,31 +506,20 @@ export const useConnectionStore = create<ConnectionState>()(
       },
 
       getSubfolders: (parentId) => {
-        const folders = Array.from(get().folders.values());
-        return folders.filter((folder) => folder.parentId === parentId);
+        return Array.from(get().folders.values()).filter(
+          (folder) => folder.parentId === parentId
+        );
       },
 
-      // Legacy compatibility - setter for single connection
-      setConnection: (connection) => {
-        if (connection === null) {
-          const state = get();
-          if (state.activeConnectionId) {
-            get().removeConnection(state.activeConnectionId);
-          }
-          set({ error: null });
-        } else {
-          get().addConnection(connection);
-        }
-      },
+      // Legacy compatibility
+      setConnection: (connection) =>
+        set({
+          connection,
+        }),
     }),
     {
-      name: 'sql-pro-connections',
-      partialize: (state) => ({
-        // Only persist UI preferences - tab order and colors
-        connectionTabOrder: state.connectionTabOrder,
-        connectionColors: state.connectionColors,
-        recentConnections: state.recentConnections,
-      }),
+      name: 'connection-store',
+      version: 1,
     }
   )
 );

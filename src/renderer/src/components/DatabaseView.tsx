@@ -155,7 +155,7 @@ export function DatabaseView({
       // Switch to query tab
       setActiveTab('query');
       // Load query into editor
-      setCurrentQuery(query.queryText);
+      setCurrentQuery(query.queryText ?? '');
       // Update active tab query if in multi-tab mode
       if (activeConnectionId) {
         const activeQueryTab = getActiveQueryTab(activeConnectionId);
@@ -163,7 +163,7 @@ export function DatabaseView({
           updateTabQuery(
             activeConnectionId,
             activeQueryTab.id,
-            query.queryText
+            query.queryText ?? ''
           );
         }
       }

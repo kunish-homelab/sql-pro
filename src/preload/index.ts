@@ -15,6 +15,8 @@ import type {
   AnalyzeQueryPlanResponse,
   ApplyChangesRequest,
   ApplyChangesResponse,
+  CheckUnsavedChangesRequest,
+  CheckUnsavedChangesResponse,
   ClearQueryHistoryRequest,
   ClearQueryHistoryResponse,
   ClearSqlLogsRequest,
@@ -154,7 +156,6 @@ import type {
   UpdateProfileResponse,
   UpdateSavedQueryRequest,
   UpdateSavedQueryResponse,
-  UpdateStatus,
   ValidateChangesRequest,
   ValidateChangesResponse,
 } from '@shared/types';
@@ -243,6 +244,21 @@ const sqlProAPI = {
       request: SetPreferencesRequest
     ): Promise<SetPreferencesResponse> =>
       ipcRenderer.invoke(IPC_CHANNELS.APP_SET_PREFERENCES, request),
+    onBeforeQuit: (callback: () => void): (() => void) => {
+      const handler = (_event: Electron.IpcRendererEvent) => callback();
+      ipcRenderer.on(IPC_CHANNELS.PREVENT_QUIT, handler);
+      return () => ipcRenderer.off(IPC_CHANNELS.PREVENT_QUIT, handler);
+    },
+    confirmQuit: (shouldQuit: boolean): Promise<{ success: boolean }> =>
+      ipcRenderer.invoke('app:confirm-quit', { shouldQuit }),
+  },
+
+  // Unsaved changes operations
+  unsavedChanges: {
+    check: (
+      request: CheckUnsavedChangesRequest
+    ): Promise<CheckUnsavedChangesResponse> =>
+      ipcRenderer.invoke(IPC_CHANNELS.UNSAVED_CHANGES_CHECK, request),
   },
 
   // Password storage operations
@@ -451,87 +467,51 @@ const sqlProAPI = {
       ipcRenderer.invoke(IPC_CHANNELS.UPDATE_CHECK, silent),
     download: (): Promise<{ success: boolean; error?: string }> =>
       ipcRenderer.invoke(IPC_CHANNELS.UPDATE_DOWNLOAD),
-    install: (): Promise<{ success: boolean; error?: string }> =>
-      ipcRenderer.invoke(IPC_CHANNELS.UPDATE_INSTALL),
-    getStatus: (): Promise<{
-      success: boolean;
-      status?: UpdateStatus;
-      error?: string;
-    }> => ipcRenderer.invoke(IPC_CHANNELS.UPDATE_STATUS),
-    onStatusChange: (
-      callback: (status: UpdateStatus) => void
-    ): (() => void) => {
-      const handler = (
-        _event: Electron.IpcRendererEvent,
-        status: UpdateStatus
-      ) => callback(status);
-      ipcRenderer.on(IPC_CHANNELS.UPDATE_STATUS_CHANGE, handler);
-      return () => ipcRenderer.off(IPC_CHANNELS.UPDATE_STATUS_CHANGE, handler);
-    },
-  },
-
-  // Comparison operations
-  compare: {
-    connections: (
-      request: CompareConnectionsRequest
-    ): Promise<CompareConnectionsResponse> =>
-      ipcRenderer.invoke(IPC_CHANNELS.COMPARE_CONNECTIONS, request),
-    connectionToSnapshot: (
-      request: CompareConnectionToSnapshotRequest
-    ): Promise<CompareConnectionToSnapshotResponse> =>
-      ipcRenderer.invoke(IPC_CHANNELS.COMPARE_CONNECTION_TO_SNAPSHOT, request),
-    snapshots: (
-      request: CompareSnapshotsRequest
-    ): Promise<CompareSnapshotsResponse> =>
-      ipcRenderer.invoke(IPC_CHANNELS.COMPARE_SNAPSHOTS, request),
-    tables: (request: CompareTablesRequest): Promise<CompareTablesResponse> =>
-      ipcRenderer.invoke(IPC_CHANNELS.COMPARE_TABLES, request),
-    exportReport: (
-      request: ExportComparisonReportRequest
-    ): Promise<ExportComparisonReportResponse> =>
-      ipcRenderer.invoke(IPC_CHANNELS.EXPORT_COMPARISON_REPORT, request),
-  },
-
-  // Schema Comparison operations (alias for compare + migration.generateSQL)
-  schemaComparison: {
-    compareConnections: (
-      request: CompareConnectionsRequest
-    ): Promise<CompareConnectionsResponse> =>
-      ipcRenderer.invoke(IPC_CHANNELS.COMPARE_CONNECTIONS, request),
-    compareConnectionToSnapshot: (
-      request: CompareConnectionToSnapshotRequest
-    ): Promise<CompareConnectionToSnapshotResponse> =>
-      ipcRenderer.invoke(IPC_CHANNELS.COMPARE_CONNECTION_TO_SNAPSHOT, request),
-    compareSnapshots: (
-      request: CompareSnapshotsRequest
-    ): Promise<CompareSnapshotsResponse> =>
-      ipcRenderer.invoke(IPC_CHANNELS.COMPARE_SNAPSHOTS, request),
-    exportReport: (
-      request: ExportComparisonReportRequest
-    ): Promise<ExportComparisonReportResponse> =>
-      ipcRenderer.invoke(IPC_CHANNELS.EXPORT_COMPARISON_REPORT, request),
-    generateMigrationSQL: (
-      request: GenerateMigrationSQLRequest
-    ): Promise<GenerateMigrationSQLResponse> =>
-      ipcRenderer.invoke(IPC_CHANNELS.GENERATE_MIGRATION_SQL, request),
   },
 
   // Schema snapshot operations
-  snapshot: {
+  schemaSnapshot: {
     save: (
       request: SaveSchemaSnapshotRequest
     ): Promise<SaveSchemaSnapshotResponse> =>
-      ipcRenderer.invoke(IPC_CHANNELS.SAVE_SCHEMA_SNAPSHOT, request),
+      ipcRenderer.invoke(IPC_CHANNELS.SCHEMA_SNAPSHOT_SAVE, request),
     get: (
       request: GetSchemaSnapshotRequest
     ): Promise<GetSchemaSnapshotResponse> =>
-      ipcRenderer.invoke(IPC_CHANNELS.GET_SCHEMA_SNAPSHOT, request),
+      ipcRenderer.invoke(IPC_CHANNELS.SCHEMA_SNAPSHOT_GET, request),
     getAll: (): Promise<GetSchemaSnapshotsResponse> =>
-      ipcRenderer.invoke(IPC_CHANNELS.GET_SCHEMA_SNAPSHOTS),
+      ipcRenderer.invoke(IPC_CHANNELS.SCHEMA_SNAPSHOT_GET_ALL),
     delete: (
       request: DeleteSchemaSnapshotRequest
     ): Promise<DeleteSchemaSnapshotResponse> =>
-      ipcRenderer.invoke(IPC_CHANNELS.DELETE_SCHEMA_SNAPSHOT, request),
+      ipcRenderer.invoke(IPC_CHANNELS.SCHEMA_SNAPSHOT_DELETE, request),
+  },
+
+  // Comparison operations
+  comparison: {
+    compareConnections: (
+      request: CompareConnectionsRequest
+    ): Promise<CompareConnectionsResponse> =>
+      ipcRenderer.invoke(IPC_CHANNELS.COMPARISON_COMPARE_CONNECTIONS, request),
+    compareConnectionToSnapshot: (
+      request: CompareConnectionToSnapshotRequest
+    ): Promise<CompareConnectionToSnapshotResponse> =>
+      ipcRenderer.invoke(
+        IPC_CHANNELS.COMPARISON_COMPARE_CONNECTION_TO_SNAPSHOT,
+        request
+      ),
+    compareSnapshots: (
+      request: CompareSnapshotsRequest
+    ): Promise<CompareSnapshotsResponse> =>
+      ipcRenderer.invoke(IPC_CHANNELS.COMPARISON_COMPARE_SNAPSHOTS, request),
+    compareTables: (
+      request: CompareTablesRequest
+    ): Promise<CompareTablesResponse> =>
+      ipcRenderer.invoke(IPC_CHANNELS.COMPARISON_COMPARE_TABLES, request),
+    exportComparisonReport: (
+      request: ExportComparisonReportRequest
+    ): Promise<ExportComparisonReportResponse> =>
+      ipcRenderer.invoke(IPC_CHANNELS.COMPARISON_EXPORT_REPORT, request),
   },
 
   // Migration operations
@@ -539,111 +519,43 @@ const sqlProAPI = {
     generateSQL: (
       request: GenerateMigrationSQLRequest
     ): Promise<GenerateMigrationSQLResponse> =>
-      ipcRenderer.invoke(IPC_CHANNELS.GENERATE_MIGRATION_SQL, request),
+      ipcRenderer.invoke(IPC_CHANNELS.MIGRATION_GENERATE_SQL, request),
     generateSyncSQL: (
       request: GenerateSyncSQLRequest
     ): Promise<GenerateSyncSQLResponse> =>
-      ipcRenderer.invoke(IPC_CHANNELS.GENERATE_SYNC_SQL, request),
+      ipcRenderer.invoke(IPC_CHANNELS.MIGRATION_GENERATE_SYNC_SQL, request),
   },
 
-  // Data Diff operations (comparing table data)
-  dataDiff: {
-    compareTables: (
-      request: CompareTablesRequest
-    ): Promise<CompareTablesResponse> =>
-      ipcRenderer.invoke(IPC_CHANNELS.DATA_DIFF_COMPARE_TABLES, request),
-    generateSyncSQL: (
-      request: GenerateSyncSQLRequest
-    ): Promise<GenerateSyncSQLResponse> =>
-      ipcRenderer.invoke(IPC_CHANNELS.DATA_DIFF_GENERATE_SYNC_SQL, request),
-  },
-
-  // Plugin operations
-  plugin: {
-    list: (request: ListPluginsRequest): Promise<ListPluginsResponse> =>
-      ipcRenderer.invoke(IPC_CHANNELS.PLUGIN_LIST, request),
-    get: (request: GetPluginRequest): Promise<GetPluginResponse> =>
-      ipcRenderer.invoke(IPC_CHANNELS.PLUGIN_GET, request),
-    install: (request: InstallPluginRequest): Promise<InstallPluginResponse> =>
-      ipcRenderer.invoke(IPC_CHANNELS.PLUGIN_INSTALL, request),
-    uninstall: (
-      request: UninstallPluginRequest
-    ): Promise<UninstallPluginResponse> =>
-      ipcRenderer.invoke(IPC_CHANNELS.PLUGIN_UNINSTALL, request),
-    enable: (request: EnablePluginRequest): Promise<EnablePluginResponse> =>
-      ipcRenderer.invoke(IPC_CHANNELS.PLUGIN_ENABLE, request),
-    disable: (request: DisablePluginRequest): Promise<DisablePluginResponse> =>
-      ipcRenderer.invoke(IPC_CHANNELS.PLUGIN_DISABLE, request),
-    update: (request: UpdatePluginRequest): Promise<UpdatePluginResponse> =>
-      ipcRenderer.invoke(IPC_CHANNELS.PLUGIN_UPDATE, request),
-    fetchMarketplace: (
-      request: FetchMarketplaceRequest
-    ): Promise<FetchMarketplaceResponse> =>
-      ipcRenderer.invoke(IPC_CHANNELS.PLUGIN_FETCH_MARKETPLACE, request),
-    onEvent: (callback: (event: PluginEvent) => void): (() => void) => {
-      const handler = (_event: Electron.IpcRendererEvent, event: PluginEvent) =>
-        callback(event);
-      ipcRenderer.on(IPC_CHANNELS.PLUGIN_EVENT, handler);
-      return () => ipcRenderer.off(IPC_CHANNELS.PLUGIN_EVENT, handler);
-    },
-  },
-
-  // Update check operations
-  marketplace: {
-    checkUpdates: (
-      request: CheckUpdatesRequest
-    ): Promise<CheckUpdatesResponse> =>
-      ipcRenderer.invoke(IPC_CHANNELS.MARKETPLACE_CHECK_UPDATES, request),
-  },
-
-  // Query & Schema Sharing operations
-  sharing: {
-    exportQuery: (request: ExportQueryRequest): Promise<ExportQueryResponse> =>
-      ipcRenderer.invoke(IPC_CHANNELS.QUERY_EXPORT, request),
-    importQuery: (request: ImportQueryRequest): Promise<ImportQueryResponse> =>
-      ipcRenderer.invoke(IPC_CHANNELS.QUERY_IMPORT, request),
-    exportSchema: (
-      request: ExportSchemaRequest
-    ): Promise<ExportSchemaResponse> =>
-      ipcRenderer.invoke(IPC_CHANNELS.SCHEMA_EXPORT, request),
-    importSchema: (
-      request: ImportSchemaRequest
-    ): Promise<ImportSchemaResponse> =>
-      ipcRenderer.invoke(IPC_CHANNELS.SCHEMA_IMPORT, request),
-    exportBundle: (
-      request: ExportBundleRequest
-    ): Promise<ExportBundleResponse> =>
-      ipcRenderer.invoke(IPC_CHANNELS.BUNDLE_EXPORT, request),
-    importBundle: (
-      request: ImportBundleRequest
-    ): Promise<ImportBundleResponse> =>
-      ipcRenderer.invoke(IPC_CHANNELS.BUNDLE_IMPORT, request),
-  },
-
-  // Saved queries operations
-  savedQueries: {
-    getAll: (
-      request?: GetSavedQueriesRequest
+  // Query operations
+  query: {
+    getSavedQueries: (
+      request: GetSavedQueriesRequest
     ): Promise<GetSavedQueriesResponse> =>
-      ipcRenderer.invoke(IPC_CHANNELS.SAVED_QUERY_GET_ALL, request || {}),
-    save: (request: SaveSavedQueryRequest): Promise<SaveSavedQueryResponse> =>
-      ipcRenderer.invoke(IPC_CHANNELS.SAVED_QUERY_SAVE, request),
-    update: (
+      ipcRenderer.invoke(IPC_CHANNELS.QUERY_GET_SAVED_QUERIES, request),
+    saveSavedQuery: (
+      request: SaveSavedQueryRequest
+    ): Promise<SaveSavedQueryResponse> =>
+      ipcRenderer.invoke(IPC_CHANNELS.QUERY_SAVE_SAVED_QUERY, request),
+    updateSavedQuery: (
       request: UpdateSavedQueryRequest
     ): Promise<UpdateSavedQueryResponse> =>
-      ipcRenderer.invoke(IPC_CHANNELS.SAVED_QUERY_UPDATE, request),
-    delete: (
+      ipcRenderer.invoke(IPC_CHANNELS.QUERY_UPDATE_SAVED_QUERY, request),
+    deleteSavedQuery: (
       request: DeleteSavedQueryRequest
     ): Promise<DeleteSavedQueryResponse> =>
-      ipcRenderer.invoke(IPC_CHANNELS.SAVED_QUERY_DELETE, request),
+      ipcRenderer.invoke(IPC_CHANNELS.QUERY_DELETE_SAVED_QUERY, request),
     toggleFavorite: (
       request: ToggleFavoriteRequest
     ): Promise<ToggleFavoriteResponse> =>
-      ipcRenderer.invoke(IPC_CHANNELS.SAVED_QUERY_TOGGLE_FAVORITE, request),
+      ipcRenderer.invoke(IPC_CHANNELS.QUERY_TOGGLE_FAVORITE, request),
+    exportQuery: (request: ExportQueryRequest): Promise<ExportQueryResponse> =>
+      ipcRenderer.invoke(IPC_CHANNELS.QUERY_EXPORT_QUERY, request),
+    importQuery: (request: ImportQueryRequest): Promise<ImportQueryResponse> =>
+      ipcRenderer.invoke(IPC_CHANNELS.QUERY_IMPORT_QUERY, request),
   },
 
-  // Collections operations
-  collections: {
+  // Collection operations
+  collection: {
     getAll: (): Promise<GetCollectionsResponse> =>
       ipcRenderer.invoke(IPC_CHANNELS.COLLECTION_GET_ALL),
     save: (request: SaveCollectionRequest): Promise<SaveCollectionResponse> =>
@@ -673,10 +585,59 @@ const sqlProAPI = {
     ): Promise<ImportCollectionsResponse> =>
       ipcRenderer.invoke(IPC_CHANNELS.COLLECTION_IMPORT, request),
   },
+
+  // Import/export bundle operations
+  bundle: {
+    export: (request: ExportBundleRequest): Promise<ExportBundleResponse> =>
+      ipcRenderer.invoke(IPC_CHANNELS.BUNDLE_EXPORT, request),
+    import: (request: ImportBundleRequest): Promise<ImportBundleResponse> =>
+      ipcRenderer.invoke(IPC_CHANNELS.BUNDLE_IMPORT, request),
+  },
+
+  // Schema operations
+  schema: {
+    export: (request: ExportSchemaRequest): Promise<ExportSchemaResponse> =>
+      ipcRenderer.invoke(IPC_CHANNELS.SCHEMA_EXPORT, request),
+    import: (request: ImportSchemaRequest): Promise<ImportSchemaResponse> =>
+      ipcRenderer.invoke(IPC_CHANNELS.SCHEMA_IMPORT, request),
+  },
+
+  // Plugin operations
+  plugin: {
+    list: (request: ListPluginsRequest): Promise<ListPluginsResponse> =>
+      ipcRenderer.invoke(IPC_CHANNELS.PLUGIN_LIST, request),
+    get: (request: GetPluginRequest): Promise<GetPluginResponse> =>
+      ipcRenderer.invoke(IPC_CHANNELS.PLUGIN_GET, request),
+    install: (request: InstallPluginRequest): Promise<InstallPluginResponse> =>
+      ipcRenderer.invoke(IPC_CHANNELS.PLUGIN_INSTALL, request),
+    uninstall: (
+      request: UninstallPluginRequest
+    ): Promise<UninstallPluginResponse> =>
+      ipcRenderer.invoke(IPC_CHANNELS.PLUGIN_UNINSTALL, request),
+    enable: (request: EnablePluginRequest): Promise<EnablePluginResponse> =>
+      ipcRenderer.invoke(IPC_CHANNELS.PLUGIN_ENABLE, request),
+    disable: (request: DisablePluginRequest): Promise<DisablePluginResponse> =>
+      ipcRenderer.invoke(IPC_CHANNELS.PLUGIN_DISABLE, request),
+    update: (request: UpdatePluginRequest): Promise<UpdatePluginResponse> =>
+      ipcRenderer.invoke(IPC_CHANNELS.PLUGIN_UPDATE, request),
+    fetchMarketplace: (
+      request: FetchMarketplaceRequest
+    ): Promise<FetchMarketplaceResponse> =>
+      ipcRenderer.invoke(IPC_CHANNELS.PLUGIN_FETCH_MARKETPLACE, request),
+    checkUpdates: (
+      request: CheckUpdatesRequest
+    ): Promise<CheckUpdatesResponse> =>
+      ipcRenderer.invoke(IPC_CHANNELS.PLUGIN_CHECK_UPDATES, request),
+    onEvent: (callback: (event: PluginEvent) => void): (() => void) => {
+      const handler = (
+        _event: Electron.IpcRendererEvent,
+        pluginEvent: PluginEvent
+      ) => callback(pluginEvent);
+      ipcRenderer.on(IPC_CHANNELS.PLUGIN_EVENT, handler);
+      return () => ipcRenderer.off(IPC_CHANNELS.PLUGIN_EVENT, handler);
+    },
+  },
 };
 
-// Expose the custom API to the renderer process
 contextBridge.exposeInMainWorld('sqlPro', sqlProAPI);
-
-// Expose electron API
-contextBridge.exposeInMainWorld('electron', electronAPI);
+contextBridge.exposeInMainWorld('electronAPI', electronAPI);

@@ -128,15 +128,11 @@ export function QueryBundleExportDialog({
               id: query.id,
               name: metadata.name.trim() || `Query ${index + 1}`,
               description: metadata.description.trim() || undefined,
-              sql: query.queryText,
-              notes: metadata.notes.trim() || undefined,
+              sql: query.queryText ?? '',
               tags: parsedTags.length > 0 ? parsedTags : undefined,
               order: index,
             };
           }),
-          databaseContext: databaseContext.trim() || undefined,
-          tags: parseBundleTags.length > 0 ? parseBundleTags : undefined,
-          documentation: documentation.trim() || undefined,
         },
         compress,
       };
@@ -359,8 +355,10 @@ export function QueryBundleExportDialog({
                                 Query {index + 1}
                               </p>
                               <p className="text-muted-foreground font-mono text-xs">
-                                {query.queryText.substring(0, 80)}
-                                {query.queryText.length > 80 ? '...' : ''}
+                                {(query.queryText ?? '').substring(0, 80)}
+                                {(query.queryText ?? '').length > 80
+                                  ? '...'
+                                  : ''}
                               </p>
                             </div>
                           </div>

@@ -36,6 +36,7 @@ import {
 } from '@/components/ui/tooltip';
 import { cn } from '@/lib/utils';
 import { useConnectionStore } from '@/stores';
+import { useChangesStore } from '@/stores/changes-store';
 
 // Preset colors for connection tabs
 const PRESET_COLORS = [
@@ -78,6 +79,11 @@ const ConnectionTab = memo(
   ({ connection, isActive, onSelect, onClose }: ConnectionTabProps) => {
     const { getConnectionColor, setConnectionColor } = useConnectionStore();
     const connectionColor = getConnectionColor(connection.id) || '#3b82f6'; // default blue
+
+    // Check for unsaved changes
+    const hasUnsavedChanges = useChangesStore((state) =>
+      state.hasChangesForConnection(connection.id)
+    );
 
     // Set up drag and drop for this tab with activation constraint
     const {
@@ -157,6 +163,16 @@ const ConnectionTab = memo(
                   <StatusIcon
                     className={cn('h-3.5 w-3.5 shrink-0', statusColorClass)}
                   />
+                  {hasUnsavedChanges && (
+                    <Tooltip>
+                      <TooltipTrigger>
+                        <div className="h-1.5 w-1.5 shrink-0 rounded-full bg-amber-500" />
+                      </TooltipTrigger>
+                      <TooltipContent side="bottom" className="text-xs">
+                        Unsaved changes
+                      </TooltipContent>
+                    </Tooltip>
+                  )}
                   <span className="flex-1 truncate">{connection.filename}</span>
                   <Tooltip>
                     <TooltipTrigger>

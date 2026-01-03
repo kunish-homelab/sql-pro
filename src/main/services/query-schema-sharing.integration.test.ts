@@ -18,7 +18,7 @@
  * - Validation and safety checks
  */
 
-import type { SchemaInfo } from '@shared/types';
+import type { SchemaInfo, ShareableQuery } from '@shared/types';
 import { randomUUID } from 'node:crypto';
 import {
   existsSync,
@@ -74,7 +74,7 @@ describe('query & Schema Sharing Integration Tests', () => {
       const exportResult = await exportQuery(originalQuery);
       expect(exportResult.data.id).toBeDefined();
       expect(exportResult.data.name).toBe(originalQuery.name);
-      expect(exportResult.data.metadata.version).toBe('1.0.0');
+      expect(exportResult.data.metadata?.version).toBe('1.0.0');
 
       // Step 2: Serialize to JSON
       const { result: jsonString } = await serializeShareableData(
@@ -111,7 +111,7 @@ describe('query & Schema Sharing Integration Tests', () => {
       expect(importResult.query.documentation).toBe(
         originalQuery.documentation
       );
-      expect(importResult.query.metadata.version).toBe('1.0.0');
+      expect(importResult.query.metadata?.version).toBe('1.0.0');
     });
 
     it('should preserve query metadata through export/import cycle', async () => {
@@ -137,8 +137,8 @@ describe('query & Schema Sharing Integration Tests', () => {
       // Verify metadata preserved
       expect(importResult.query.id).toBe(queryId);
       expect(importResult.query.createdAt).toBe(createdAt);
-      expect(importResult.query.metadata.exportedAt).toBeDefined();
-      expect(importResult.query.metadata.version).toBe('1.0.0');
+      expect(importResult.query.metadata?.exportedAt).toBeDefined();
+      expect(importResult.query.metadata?.version).toBe('1.0.0');
     });
 
     it('should detect SQL safety warnings during import', async () => {
@@ -503,7 +503,7 @@ describe('query & Schema Sharing Integration Tests', () => {
       );
 
       // Step 6: Verify each query in bundle
-      importResult.bundle.queries.forEach((query, index) => {
+      importResult.bundle.queries?.forEach((query, index) => {
         expect(query.name).toBe(originalBundle.queries[index].name);
         expect(query.sql).toBe(originalBundle.queries[index].sql);
         expect(query.description).toBe(
@@ -674,7 +674,7 @@ describe('query & Schema Sharing Integration Tests', () => {
 
       // Verify all 50 queries preserved
       expect(importResult.bundle.queries).toHaveLength(50);
-      importResult.bundle.queries.forEach((query, i) => {
+      importResult.bundle.queries?.forEach((query, i) => {
         expect(query.name).toBe(`Query ${i}`);
         expect(query.sql).toBe(`SELECT * FROM table_${i} WHERE id = ${i}`);
       });
@@ -699,7 +699,7 @@ describe('query & Schema Sharing Integration Tests', () => {
           ...exportResult.data.metadata,
           version: '2.0.0', // Major version change
         },
-      };
+      } as ShareableQuery;
 
       const { result } = await serializeShareableData(modifiedData);
       const importResult = await importQuery(result);
@@ -727,7 +727,7 @@ describe('query & Schema Sharing Integration Tests', () => {
           ...exportResult.data.metadata,
           version: '1.5.0', // Different minor version
         },
-      };
+      } as ShareableQuery;
 
       const { result } = await serializeShareableData(modifiedData);
       const importResult = await importQuery(result);
@@ -858,8 +858,8 @@ describe('query & Schema Sharing Integration Tests', () => {
 
       // Step 6: Verify metadata
       expect(importResult.query.id).toBe(exportResult.data.id);
-      expect(importResult.query.metadata.version).toBe('1.0.0');
-      expect(importResult.query.metadata.exportedAt).toBeDefined();
+      expect(importResult.query.metadata?.version).toBe('1.0.0');
+      expect(importResult.query.metadata?.exportedAt).toBeDefined();
     });
 
     it('should handle complete bundle sharing workflow', async () => {
@@ -911,10 +911,10 @@ describe('query & Schema Sharing Integration Tests', () => {
 
       // Verify each query
       teamBundle.queries.forEach((originalQuery, index) => {
-        const importedQuery = importResult.bundle.queries[index];
-        expect(importedQuery.name).toBe(originalQuery.name);
-        expect(importedQuery.sql).toBe(originalQuery.sql);
-        expect(importedQuery.description).toBe(originalQuery.description);
+        const importedQuery = importResult.bundle.queries?.[index];
+        expect(importedQuery?.name).toBe(originalQuery.name);
+        expect(importedQuery?.sql).toBe(originalQuery.sql);
+        expect(importedQuery?.description).toBe(originalQuery.description);
       });
     });
 

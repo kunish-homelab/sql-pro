@@ -3,12 +3,10 @@ import { defineConfig } from 'vitest/config';
 
 export default defineConfig({
   resolve: {
-    alias: [
-      // Main paths - for renderer tests, @ should point to renderer
-      { find: '@', replacement: path.resolve(__dirname, './src/renderer/src') },
-      // Shared paths
-      { find: '@shared', replacement: path.resolve(__dirname, './src/shared') },
-    ],
+    alias: {
+      '@': path.resolve(__dirname, './src/renderer/src'),
+      '@shared': path.resolve(__dirname, './src/shared'),
+    },
   },
   test: {
     watch: false,

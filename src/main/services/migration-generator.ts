@@ -35,9 +35,11 @@ class MigrationGeneratorService {
       const warnings: string[] = [];
 
       // Get table diffs, potentially reversed
-      const tableDiffs = reverse
-        ? this.reverseTableDiffs(comparisonResult.tableDiffs)
-        : comparisonResult.tableDiffs;
+      const tableDiffs = comparisonResult
+        ? reverse
+          ? this.reverseTableDiffs(comparisonResult.tableDiffs)
+          : comparisonResult.tableDiffs
+        : [];
 
       // Process in dependency order:
       // 1. Drop triggers (must happen before table changes)

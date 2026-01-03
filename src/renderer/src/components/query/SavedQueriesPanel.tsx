@@ -121,7 +121,7 @@ export function SavedQueriesPanel({ onLoadQuery }: SavedQueriesPanelProps) {
       setEditFormData({
         name: selectedQuery.name,
         description: selectedQuery.description || '',
-        isFavorite: selectedQuery.isFavorite,
+        isFavorite: selectedQuery.isFavorite ?? false,
       });
     }
   }, [editDialogOpen, selectedQuery]);
@@ -138,7 +138,7 @@ export function SavedQueriesPanel({ onLoadQuery }: SavedQueriesPanelProps) {
     // Filter by collection
     if (selectedCollectionId) {
       filtered = filtered.filter((q) =>
-        q.collectionIds.includes(selectedCollectionId)
+        (q.collectionIds ?? []).includes(selectedCollectionId)
       );
     }
 
@@ -149,7 +149,7 @@ export function SavedQueriesPanel({ onLoadQuery }: SavedQueriesPanelProps) {
         (q) =>
           q.name.toLowerCase().includes(search) ||
           q.description?.toLowerCase().includes(search) ||
-          q.queryText.toLowerCase().includes(search)
+          (q.queryText ?? '').toLowerCase().includes(search)
       );
     }
 
@@ -220,7 +220,7 @@ export function SavedQueriesPanel({ onLoadQuery }: SavedQueriesPanelProps) {
     async (query: SavedQuery, event: React.MouseEvent) => {
       event.stopPropagation();
       try {
-        await navigator.clipboard.writeText(query.queryText);
+        await navigator.clipboard.writeText(query.queryText ?? '');
       } catch {
         // Silent fail - clipboard API might not be available
       }
@@ -375,8 +375,10 @@ export function SavedQueriesPanel({ onLoadQuery }: SavedQueriesPanelProps) {
               </div>
             ) : (
               filteredQueries.map((query) => {
-                const collectionNames = getCollectionNames(query.collectionIds);
-                const queryPreview = getQueryPreview(query.queryText);
+                const collectionNames = getCollectionNames(
+                  query.collectionIds ?? []
+                );
+                const queryPreview = getQueryPreview(query.queryText ?? '');
 
                 return (
                   <Card
@@ -598,7 +600,7 @@ export function SavedQueriesPanel({ onLoadQuery }: SavedQueriesPanelProps) {
               <div className="space-y-2">
                 <Label className="text-sm font-medium">Query</Label>
                 <div className="bg-muted text-muted-foreground rounded-md p-3 font-mono text-xs">
-                  {getQueryPreview(selectedQuery.queryText)}
+                  {getQueryPreview(selectedQuery.queryText ?? '')}
                 </div>
               </div>
             )}

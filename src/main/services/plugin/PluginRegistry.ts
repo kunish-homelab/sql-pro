@@ -62,17 +62,25 @@ export type PluginRegistryResult<T = void> =
 
 // ============ Store Instance ============
 
-const pluginStore = new Store<PluginRegistryStoreSchema>({
-  name: 'sql-pro-plugins',
-  defaults: {
-    pluginStates: {},
-  },
-  // Enable schema migration for future updates
-  migrations: {
-    // Future migrations can be added here
-    // '1.0.0': (store) => { ... }
-  },
-});
+// Lazy-initialize store to ensure app is ready before accessing userData path
+let _pluginStore: Store<PluginRegistryStoreSchema> | null = null;
+
+function getPluginStore(): Store<PluginRegistryStoreSchema> {
+  if (!_pluginStore) {
+    _pluginStore = new Store<PluginRegistryStoreSchema>({
+      name: 'sql-pro-plugins',
+      defaults: {
+        pluginStates: {},
+      },
+      // Enable schema migration for future updates
+      migrations: {
+        // Future migrations can be added here
+        // '1.0.0': (store) => { ... }
+      },
+    });
+  }
+  return _pluginStore;
+}
 
 // ============ PluginRegistry Class ============
 
@@ -130,7 +138,7 @@ class PluginRegistry extends EventEmitter {
     }
 
     // Load stored state if exists, otherwise create new state
-    const storedStates = pluginStore.get('pluginStates', {});
+    const storedStates = getPluginStore().get('pluginStates', {});
     const storedState = storedStates[pluginId];
 
     const now = new Date().toISOString();
@@ -164,7 +172,7 @@ class PluginRegistry extends EventEmitter {
         installedAt,
         path: pluginPath,
       };
-      pluginStore.set('pluginStates', storedStates);
+      getPluginStore().set('pluginStates', storedStates);
     }
 
     // Emit event
@@ -200,9 +208,9 @@ class PluginRegistry extends EventEmitter {
 
     // Remove from stored state if requested
     if (removeData) {
-      const storedStates = pluginStore.get('pluginStates', {});
+      const storedStates = getPluginStore().get('pluginStates', {});
       delete storedStates[pluginId];
-      pluginStore.set('pluginStates', storedStates);
+      getPluginStore().set('pluginStates', storedStates);
     }
 
     // Emit event
@@ -234,11 +242,11 @@ class PluginRegistry extends EventEmitter {
     entry.info.state = 'enabled';
 
     // Persist state
-    const storedStates = pluginStore.get('pluginStates', {});
+    const storedStates = getPluginStore().get('pluginStates', {});
     if (storedStates[pluginId]) {
       storedStates[pluginId].enabled = true;
       storedStates[pluginId].updatedAt = new Date().toISOString();
-      pluginStore.set('pluginStates', storedStates);
+      getPluginStore().set('pluginStates', storedStates);
     }
 
     // Emit event
@@ -270,11 +278,11 @@ class PluginRegistry extends EventEmitter {
     entry.info.state = 'disabled';
 
     // Persist state
-    const storedStates = pluginStore.get('pluginStates', {});
+    const storedStates = getPluginStore().get('pluginStates', {});
     if (storedStates[pluginId]) {
       storedStates[pluginId].enabled = false;
       storedStates[pluginId].updatedAt = new Date().toISOString();
-      pluginStore.set('pluginStates', storedStates);
+      getPluginStore().set('pluginStates', storedStates);
     }
 
     // Emit event
@@ -485,7 +493,7 @@ class PluginRegistry extends EventEmitter {
    * @returns Stored state or null if not found
    */
   getStoredState(pluginId: string): StoredPluginState | null {
-    const storedStates = pluginStore.get('pluginStates', {});
+    const storedStates = getPluginStore().get('pluginStates', {});
     return storedStates[pluginId] ?? null;
   }
 
@@ -495,7 +503,7 @@ class PluginRegistry extends EventEmitter {
    * @returns Map of plugin ID to stored state
    */
   getAllStoredStates(): Record<string, StoredPluginState> {
-    return pluginStore.get('pluginStates', {});
+    return getPluginStore().get('pluginStates', {});
   }
 
   /**
@@ -524,10 +532,10 @@ class PluginRegistry extends EventEmitter {
     entry.info.updatedAt = new Date().toISOString();
 
     // Update stored state
-    const storedStates = pluginStore.get('pluginStates', {});
+    const storedStates = getPluginStore().get('pluginStates', {});
     if (storedStates[pluginId]) {
       storedStates[pluginId].updatedAt = entry.info.updatedAt;
-      pluginStore.set('pluginStates', storedStates);
+      getPluginStore().set('pluginStates', storedStates);
     }
 
     // Emit event
@@ -542,7 +550,7 @@ class PluginRegistry extends EventEmitter {
    */
   clear(): void {
     this.plugins.clear();
-    pluginStore.set('pluginStates', {});
+    getPluginStore().set('pluginStates', {});
   }
 
   /**
@@ -578,5 +586,5 @@ export const pluginRegistry = new PluginRegistry();
 // Export class for testing purposes
 export { PluginRegistry };
 
-// Export store for advanced usage (testing, debugging)
-export { pluginStore };
+// Export store getter for advanced usage (testing, debugging)
+export { getPluginStore };

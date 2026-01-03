@@ -24,6 +24,13 @@ class DataDiffSyncGeneratorService {
         includeDeletes = false, // Default to false for safety
       } = request;
 
+      if (!comparisonResult) {
+        return {
+          success: false,
+          error: 'Comparison result is required',
+        };
+      }
+
       const statements: string[] = [];
       const warnings: string[] = [];
 

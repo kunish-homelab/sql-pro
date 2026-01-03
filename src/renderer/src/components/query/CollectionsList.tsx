@@ -220,8 +220,9 @@ export function CollectionsList() {
 
   const getQueryCountForCollection = useCallback(
     (collectionId: string): number => {
-      return savedQueries.filter((q) => q.collectionIds.includes(collectionId))
-        .length;
+      return savedQueries.filter((q) =>
+        (q.collectionIds ?? []).includes(collectionId)
+      ).length;
     },
     [savedQueries]
   );

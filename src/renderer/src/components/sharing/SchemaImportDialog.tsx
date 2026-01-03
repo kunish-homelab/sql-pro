@@ -429,14 +429,22 @@ export function SchemaImportDialog({
                     <div className="space-y-1.5 rounded-lg border p-3">
                       <div className="flex items-center gap-2">
                         <Checkbox
-                          checked={importResult.schema.options.includeIndexes}
+                          checked={
+                            (importResult.schema.options?.includeIndexes as
+                              | boolean
+                              | undefined) ?? false
+                          }
                           disabled
                         />
                         <span className="text-sm">Include Indexes</span>
                       </div>
                       <div className="flex items-center gap-2">
                         <Checkbox
-                          checked={importResult.schema.options.includeTriggers}
+                          checked={
+                            (importResult.schema.options?.includeTriggers as
+                              | boolean
+                              | undefined) ?? false
+                          }
                           disabled
                         />
                         <span className="text-sm">Include Triggers</span>
@@ -444,7 +452,9 @@ export function SchemaImportDialog({
                       <div className="flex items-center gap-2">
                         <Checkbox
                           checked={
-                            importResult.schema.options.includeForeignKeys
+                            (importResult.schema.options?.includeForeignKeys as
+                              | boolean
+                              | undefined) ?? false
                           }
                           disabled
                         />

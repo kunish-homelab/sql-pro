@@ -1293,7 +1293,7 @@ export const mockSqlProAPI: any = {
       }
       if (request?.collectionId) {
         queries = queries.filter((q) =>
-          q.collectionIds.includes(request.collectionId!)
+          (q.collectionIds ?? []).includes(request.collectionId!)
         );
       }
 
@@ -1305,14 +1305,15 @@ export const mockSqlProAPI: any = {
     save: async (request: SaveSavedQueryRequest): Promise<any> => {
       await delay(200);
       const now = new Date().toISOString();
+      const existingQuery = request.query as SavedQuery;
       const newQuery: SavedQuery = {
-        id: request.query.id || `query-${Date.now()}`,
+        id: existingQuery.id || `query-${Date.now()}`,
         name: request.query.name,
         queryText: request.query.queryText,
         description: request.query.description,
         dbPath: request.query.dbPath,
-        createdAt: request.query.createdAt || now,
-        updatedAt: request.query.updatedAt || now,
+        createdAt: existingQuery.createdAt || now,
+        updatedAt: existingQuery.updatedAt || now,
         isFavorite: request.query.isFavorite,
         collectionIds: request.query.collectionIds,
       };
@@ -1361,7 +1362,7 @@ export const mockSqlProAPI: any = {
 
       // Remove query from all collections
       mockCollections.forEach((collection) => {
-        collection.queryIds = collection.queryIds.filter(
+        collection.queryIds = (collection.queryIds ?? []).filter(
           (id) => id !== request.id
         );
       });
@@ -1403,14 +1404,15 @@ export const mockSqlProAPI: any = {
     save: async (request: SaveCollectionRequest): Promise<any> => {
       await delay(200);
       const now = new Date().toISOString();
+      const existingCollection = request.collection as QueryCollection;
       const newCollection: QueryCollection = {
-        id: request.collection.id || `collection-${Date.now()}`,
+        id: existingCollection.id || `collection-${Date.now()}`,
         name: request.collection.name,
         description: request.collection.description,
         color: request.collection.color,
         icon: request.collection.icon,
-        createdAt: request.collection.createdAt || now,
-        updatedAt: request.collection.updatedAt || now,
+        createdAt: existingCollection.createdAt || now,
+        updatedAt: existingCollection.updatedAt || now,
         queryIds: request.collection.queryIds || [],
       };
 
@@ -1458,7 +1460,7 @@ export const mockSqlProAPI: any = {
 
       // Remove collection from all queries
       mockSavedQueries.forEach((query) => {
-        query.collectionIds = query.collectionIds.filter(
+        query.collectionIds = (query.collectionIds ?? []).filter(
           (id) => id !== request.id
         );
       });
@@ -1489,13 +1491,15 @@ export const mockSqlProAPI: any = {
       }
 
       // Add query to collection if not already present
-      if (!collection.queryIds.includes(request.queryId)) {
+      if (!(collection.queryIds ?? []).includes(request.queryId)) {
+        collection.queryIds = collection.queryIds ?? [];
         collection.queryIds.push(request.queryId);
         collection.updatedAt = new Date().toISOString();
       }
 
       // Add collection to query if not already present
-      if (!query.collectionIds.includes(request.collectionId)) {
+      if (!(query.collectionIds ?? []).includes(request.collectionId)) {
+        query.collectionIds = query.collectionIds ?? [];
         query.collectionIds.push(request.collectionId);
         query.updatedAt = new Date().toISOString();
       }
@@ -1530,13 +1534,13 @@ export const mockSqlProAPI: any = {
       }
 
       // Remove query from collection
-      collection.queryIds = collection.queryIds.filter(
+      collection.queryIds = (collection.queryIds ?? []).filter(
         (id) => id !== request.queryId
       );
       collection.updatedAt = new Date().toISOString();
 
       // Remove collection from query
-      query.collectionIds = query.collectionIds.filter(
+      query.collectionIds = (query.collectionIds ?? []).filter(
         (id) => id !== request.collectionId
       );
       query.updatedAt = new Date().toISOString();
@@ -1560,7 +1564,7 @@ export const mockSqlProAPI: any = {
       // Count unique queries across all exported collections
       const queryIds = new Set<string>();
       collectionsToExport.forEach((c) => {
-        c.queryIds.forEach((id) => queryIds.add(id));
+        (c.queryIds ?? []).forEach((id) => queryIds.add(id));
       });
 
       return {

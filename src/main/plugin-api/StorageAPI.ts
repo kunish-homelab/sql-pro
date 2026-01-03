@@ -100,13 +100,21 @@ export interface StorageEvents {
 
 // ============ Storage Instance ============
 
-const storageStore = new Store<PluginStorageSchema>({
-  name: STORAGE_STORE_NAME,
-  defaults: {
-    pluginData: {},
-    pluginMetadata: {},
-  },
-});
+// Lazy-initialize store to ensure app is ready before accessing userData path
+let _storageStore: Store<PluginStorageSchema> | null = null;
+
+function getStorageStore(): Store<PluginStorageSchema> {
+  if (!_storageStore) {
+    _storageStore = new Store<PluginStorageSchema>({
+      name: STORAGE_STORE_NAME,
+      defaults: {
+        pluginData: {},
+        pluginMetadata: {},
+      },
+    });
+  }
+  return _storageStore;
+}
 
 // ============ StorageService Class ============
 
@@ -201,7 +209,7 @@ class StorageService extends EventEmitter {
     }
 
     try {
-      const pluginData = storageStore.get('pluginData', {});
+      const pluginData = getStorageStore().get('pluginData', {});
       const data = pluginData[pluginId];
 
       // Update last accessed timestamp
@@ -299,7 +307,7 @@ class StorageService extends EventEmitter {
         };
       }
 
-      const pluginData = storageStore.get('pluginData', {});
+      const pluginData = getStorageStore().get('pluginData', {});
 
       // Initialize plugin data if not exists
       if (!pluginData[pluginId]) {
@@ -320,7 +328,7 @@ class StorageService extends EventEmitter {
 
       // Store the value
       pluginData[pluginId][key] = value;
-      storageStore.set('pluginData', pluginData);
+      getStorageStore().set('pluginData', pluginData);
 
       // Update metadata
       this.updateMetadata(pluginId);
@@ -400,12 +408,12 @@ class StorageService extends EventEmitter {
     }
 
     try {
-      const pluginData = storageStore.get('pluginData', {});
+      const pluginData = getStorageStore().get('pluginData', {});
       const data = pluginData[pluginId];
 
       if (data) {
         delete data[key];
-        storageStore.set('pluginData', pluginData);
+        getStorageStore().set('pluginData', pluginData);
 
         // Update metadata
         this.updateMetadata(pluginId);
@@ -458,7 +466,7 @@ class StorageService extends EventEmitter {
     }
 
     try {
-      const pluginData = storageStore.get('pluginData', {});
+      const pluginData = getStorageStore().get('pluginData', {});
       const data = pluginData[pluginId];
 
       const keys = data ? Object.keys(data) : [];
@@ -507,19 +515,19 @@ class StorageService extends EventEmitter {
     }
 
     try {
-      const pluginData = storageStore.get('pluginData', {});
+      const pluginData = getStorageStore().get('pluginData', {});
       const keyCount = pluginData[pluginId]
         ? Object.keys(pluginData[pluginId]).length
         : 0;
 
       // Remove plugin data
       delete pluginData[pluginId];
-      storageStore.set('pluginData', pluginData);
+      getStorageStore().set('pluginData', pluginData);
 
       // Remove metadata
-      const metadata = storageStore.get('pluginMetadata', {});
+      const metadata = getStorageStore().get('pluginMetadata', {});
       delete metadata[pluginId];
-      storageStore.set('pluginMetadata', metadata);
+      getStorageStore().set('pluginMetadata', metadata);
 
       // Emit event
       this.emit('storage:clear', { pluginId, keyCount });
@@ -617,7 +625,7 @@ class StorageService extends EventEmitter {
    * @returns Storage metadata or null if not found
    */
   getPluginMetadata(pluginId: string): PluginStorageMetadata | null {
-    const metadata = storageStore.get('pluginMetadata', {});
+    const metadata = getStorageStore().get('pluginMetadata', {});
     return metadata[pluginId] || null;
   }
 
@@ -636,8 +644,8 @@ class StorageService extends EventEmitter {
       lastModified: string;
     }>;
   } {
-    const pluginData = storageStore.get('pluginData', {});
-    const metadata = storageStore.get('pluginMetadata', {});
+    const pluginData = getStorageStore().get('pluginData', {});
+    const metadata = getStorageStore().get('pluginMetadata', {});
 
     const pluginStats: Array<{
       pluginId: string;
@@ -677,7 +685,7 @@ class StorageService extends EventEmitter {
    * @returns True if the plugin has stored data
    */
   hasPluginData(pluginId: string): boolean {
-    const pluginData = storageStore.get('pluginData', {});
+    const pluginData = getStorageStore().get('pluginData', {});
     return (
       pluginId in pluginData && Object.keys(pluginData[pluginId]).length > 0
     );
@@ -703,7 +711,7 @@ class StorageService extends EventEmitter {
    */
   private updateAccessTime(pluginId: string): void {
     try {
-      const metadata = storageStore.get('pluginMetadata', {});
+      const metadata = getStorageStore().get('pluginMetadata', {});
       if (!metadata[pluginId]) {
         metadata[pluginId] = {
           keyCount: 0,
@@ -714,7 +722,7 @@ class StorageService extends EventEmitter {
       } else {
         metadata[pluginId].lastAccessed = new Date().toISOString();
       }
-      storageStore.set('pluginMetadata', metadata);
+      getStorageStore().set('pluginMetadata', metadata);
     } catch {
       // Ignore metadata update errors
     }
@@ -725,9 +733,9 @@ class StorageService extends EventEmitter {
    */
   private updateMetadata(pluginId: string): void {
     try {
-      const pluginData = storageStore.get('pluginData', {});
+      const pluginData = getStorageStore().get('pluginData', {});
       const data = pluginData[pluginId];
-      const metadata = storageStore.get('pluginMetadata', {});
+      const metadata = getStorageStore().get('pluginMetadata', {});
 
       const keyCount = data ? Object.keys(data).length : 0;
       const approximateSize = data
@@ -742,7 +750,7 @@ class StorageService extends EventEmitter {
         lastModified: now,
       };
 
-      storageStore.set('pluginMetadata', metadata);
+      getStorageStore().set('pluginMetadata', metadata);
     } catch {
       // Ignore metadata update errors
     }
@@ -753,8 +761,8 @@ class StorageService extends EventEmitter {
    * Use with caution - mainly for testing purposes.
    */
   clear(): void {
-    storageStore.set('pluginData', {});
-    storageStore.set('pluginMetadata', {});
+    getStorageStore().set('pluginData', {});
+    getStorageStore().set('pluginMetadata', {});
   }
 
   /**
@@ -762,7 +770,7 @@ class StorageService extends EventEmitter {
    * Useful for debugging.
    */
   getStorePath(): string {
-    return storageStore.path;
+    return getStorageStore().path;
   }
 }
 
@@ -772,5 +780,7 @@ export const storageService = new StorageService();
 // Export class for testing purposes
 export { StorageService };
 
-// Export storage store for advanced usage (testing, debugging)
-export { storageStore };
+// Export function to get storage store for advanced usage (testing, debugging)
+export function getPluginStorageStore(): Store<PluginStorageSchema> | null {
+  return _storageStore;
+}

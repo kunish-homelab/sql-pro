@@ -213,6 +213,11 @@ export interface GetTableDataResponse {
   errorCode?: ErrorCode;
   /** Actionable suggestions to fix the error */
   suggestions?: string[];
+  /** Nested data property (alternative format) */
+  data?: {
+    columns: ColumnInfo[];
+    rows: Record<string, unknown>[];
+  };
 }
 
 // ============ Query Types ============
@@ -341,6 +346,8 @@ export interface ExportRequest {
   table: string;
   format: ExportFormat;
   filePath: string;
+  /** Database schema (e.g., 'main', 'temp' for SQLite) */
+  schema?: string;
   /** Columns to include in export (defaults to all columns if not specified) */
   columns?: string[];
   /** Include column headers in export (CSV format, defaults to true) */
@@ -409,7 +416,9 @@ export interface SetPreferencesResponse {
 // ============ Password Storage Types ============
 
 export interface SavePasswordRequest {
-  dbPath: string;
+  dbPath?: string;
+  /** Alternative property name */
+  identifier?: string;
   password: string;
 }
 
@@ -419,7 +428,9 @@ export interface SavePasswordResponse {
 }
 
 export interface GetPasswordRequest {
-  dbPath: string;
+  dbPath?: string;
+  /** Alternative property name */
+  identifier?: string;
 }
 
 export interface GetPasswordResponse {
@@ -429,7 +440,9 @@ export interface GetPasswordResponse {
 }
 
 export interface HasPasswordRequest {
-  dbPath: string;
+  dbPath?: string;
+  /** Alternative property name */
+  identifier?: string;
 }
 
 export interface HasPasswordResponse {
@@ -438,7 +451,9 @@ export interface HasPasswordResponse {
 }
 
 export interface RemovePasswordRequest {
-  dbPath: string;
+  dbPath?: string;
+  /** Alternative property name */
+  identifier?: string;
 }
 
 export interface RemovePasswordResponse {
@@ -484,11 +499,19 @@ export interface ProfileFolder {
 
 export interface UpdateConnectionRequest {
   /** Absolute path to database file (profile identifier) */
-  path: string;
+  path?: string;
+  /** Connection ID (alternative identifier) */
+  connectionId?: string;
   /** New display name (optional, keeps existing if not provided) */
   displayName?: string;
   /** New read-only setting (optional, keeps existing if not provided) */
   readOnly?: boolean;
+  /** Updates object for partial updates */
+  updates?: Partial<{
+    displayName: string;
+    readOnly: boolean;
+    path: string;
+  }>;
 }
 
 export interface UpdateConnectionResponse {
@@ -629,15 +652,21 @@ export interface QueryHistoryEntry {
   /** Database file path (used to scope history per database) */
   dbPath: string;
   /** Full SQL query text */
-  queryText: string;
+  queryText?: string;
+  /** Alternative property for query text */
+  query?: string;
   /** When the query was executed (ISO string) */
-  executedAt: string;
+  executedAt?: string;
+  /** Alternative timestamp property */
+  timestamp?: string;
   /** Query execution duration in milliseconds */
-  durationMs: number;
+  durationMs?: number;
   /** Whether the query execution was successful */
-  success: boolean;
+  success?: boolean;
   /** Error message if execution failed */
   error?: string;
+  /** Description of the query */
+  description?: string;
 }
 
 export interface GetQueryHistoryRequest {
@@ -652,8 +681,16 @@ export interface GetQueryHistoryResponse {
 }
 
 export interface SaveQueryHistoryRequest {
-  /** The history entry to save */
-  entry: QueryHistoryEntry;
+  /** The history entry to save (new API) */
+  entry?: QueryHistoryEntry;
+  /** Query text (legacy API) */
+  query?: string;
+  /** Connection path (legacy API) */
+  connectionPath?: string;
+  /** Timestamp (legacy API) */
+  timestamp?: string;
+  /** Description (legacy API) */
+  description?: string;
 }
 
 export interface SaveQueryHistoryResponse {
@@ -663,9 +700,11 @@ export interface SaveQueryHistoryResponse {
 
 export interface DeleteQueryHistoryRequest {
   /** Database file path */
-  dbPath: string;
+  dbPath?: string;
   /** ID of the history entry to delete */
-  entryId: string;
+  entryId?: string;
+  /** Alternative ID property */
+  id?: string;
 }
 
 export interface DeleteQueryHistoryResponse {
@@ -911,6 +950,10 @@ export interface AISettings {
   temperature?: number;
   customClaudePath?: string;
   claudeCodePath?: string;
+  /** Anthropic API key */
+  anthropicApiKey?: string;
+  /** OpenAI API key */
+  openaiApiKey?: string;
 }
 
 // ============ Data Analysis Types ============
@@ -972,9 +1015,13 @@ export interface AIAgentQueryRequest {
   temperature?: number;
   tools?: unknown[];
   customClaudePath?: string;
-  prompt: string;
-  requestId: string;
+  prompt?: string;
+  requestId?: string;
   maxTurns?: number;
+  /** AI provider (anthropic or openai) */
+  provider?: 'anthropic' | 'openai';
+  /** System prompt for the AI */
+  systemPrompt?: string;
 }
 
 export interface AICancelStreamRequest {
@@ -1030,11 +1077,15 @@ export interface ProFeatureInfo {
 }
 
 export interface ProStatus {
-  isPro: boolean;
+  isPro?: boolean;
+  /** Alternative property name */
+  isActive?: boolean;
   licenseKey?: string;
   activatedAt?: string;
+  /** Alternative property name */
+  activationDate?: string;
   expiresAt?: string;
-  features: ProFeatureType[];
+  features?: ProFeatureType[];
 }
 
 export interface GetProFeaturesResponse {
@@ -1152,16 +1203,22 @@ export interface SchemaSnapshot {
   name: string;
   /** Database file path (optional, may not be present for imported snapshots) */
   dbPath?: string;
+  /** Connection path (alternative property) */
+  connectionPath?: string;
   /** Database filename (for display) */
   filename?: string;
   /** When the snapshot was created (ISO string) */
   createdAt: string;
   /** Schema information captured at snapshot time */
   schemas: SchemaInfo[];
+  /** Single schema (alternative to schemas array) */
+  schema?: SchemaInfo[];
+  /** Description of the snapshot */
+  description?: string;
   /** Total table count (for quick stats) */
-  tableCount: number;
+  tableCount?: number;
   /** Total view count (for quick stats) */
-  viewCount: number;
+  viewCount?: number;
 }
 
 /**
@@ -1333,8 +1390,14 @@ export interface SchemaComparisonResult {
 // ============ Schema Snapshot IPC Types ============
 
 export interface SaveSchemaSnapshotRequest {
-  connectionId: string;
-  name: string;
+  connectionId?: string;
+  name?: string;
+  /** Schema data (legacy API) */
+  schema?: SchemaInfo[];
+  /** Connection path (legacy API) */
+  connectionPath?: string;
+  /** Description (legacy API) */
+  description?: string;
 }
 
 export interface SaveSchemaSnapshotResponse {
@@ -1371,8 +1434,10 @@ export interface DeleteSchemaSnapshotResponse {
 // ============ Schema Comparison IPC Types ============
 
 export interface CompareConnectionsRequest {
-  sourceConnectionId: string;
-  targetConnectionId: string;
+  sourceConnectionId?: string;
+  targetConnectionId?: string;
+  connectionId1?: string;
+  connectionId2?: string;
 }
 
 export interface CompareConnectionsResponse {
@@ -1395,8 +1460,10 @@ export interface CompareConnectionToSnapshotResponse {
 }
 
 export interface CompareSnapshotsRequest {
-  sourceSnapshotId: string;
-  targetSnapshotId: string;
+  sourceSnapshotId?: string;
+  targetSnapshotId?: string;
+  snapshotId1?: string;
+  snapshotId2?: string;
 }
 
 export interface CompareSnapshotsResponse {
@@ -1406,7 +1473,9 @@ export interface CompareSnapshotsResponse {
 }
 
 export interface GenerateMigrationSQLRequest {
-  comparisonResult: SchemaComparisonResult;
+  comparisonResult?: SchemaComparisonResult;
+  /** Changes array (alternative API) */
+  changes?: unknown[];
   /** If true, generate SQL to go from target back to source */
   reverse?: boolean;
   /** Include DROP statements for removed tables/columns (default: false for safety) */
@@ -1517,19 +1586,25 @@ export interface DataComparisonResult {
  */
 export interface CompareTablesRequest {
   /** Source connection ID */
-  sourceConnectionId: string;
+  sourceConnectionId?: string;
+  connectionId1?: string;
   /** Source table name */
-  sourceTable: string;
+  sourceTable?: string;
+  table1?: string;
   /** Source schema name */
-  sourceSchema: string;
+  sourceSchema?: string;
+  schema1?: string;
   /** Target connection ID */
-  targetConnectionId: string;
+  targetConnectionId?: string;
+  connectionId2?: string;
   /** Target table name */
-  targetTable: string;
+  targetTable?: string;
+  table2?: string;
   /** Target schema name */
-  targetSchema: string;
+  targetSchema?: string;
+  schema2?: string;
   /** Primary key columns for matching rows */
-  primaryKeys: string[];
+  primaryKeys?: string[];
   /** Pagination options */
   pagination?: DataComparisonPagination;
 }
@@ -1548,7 +1623,11 @@ export interface CompareTablesResponse {
  */
 export interface GenerateSyncSQLRequest {
   /** The comparison result to generate SQL from */
-  comparisonResult: DataComparisonResult;
+  comparisonResult?: DataComparisonResult;
+  /** Source data (alternative API) */
+  sourceData?: unknown;
+  /** Target data (alternative API) */
+  targetData?: unknown;
   /** Specific primary key values to include (empty = all rows) */
   selectedRows?: Array<Record<string, unknown>>;
   /** Include INSERT statements for added rows */
@@ -1574,11 +1653,13 @@ export interface GenerateSyncSQLResponse {
 }
 
 export interface ExportComparisonReportRequest {
-  comparisonResult: SchemaComparisonResult;
+  comparisonResult?: SchemaComparisonResult;
+  /** Comparison data (alternative property) */
+  comparison?: unknown;
   /** Report format (html, json, markdown) */
   format: 'html' | 'json' | 'markdown';
   /** File path to save the report */
-  filePath: string;
+  filePath?: string;
   /** Include migration SQL in the report (optional) */
   includeMigrationSQL?: boolean;
 }
@@ -1590,364 +1671,239 @@ export interface ExportComparisonReportResponse {
   error?: string;
 }
 
-// ============ Query & Schema Sharing Types ============
+// ============ Unsaved Changes Types ============
 
-/**
- * Metadata information for shareable items.
- * Includes version for compatibility validation.
- */
-export interface ShareableMetadata {
-  /** Schema version for format compatibility (semver) */
-  version: string;
-  /** Timestamp when export was created (ISO string) */
-  exportedAt: string;
-  /** Application version that created the export */
-  appVersion?: string;
-  /** Optional user or team identifier */
-  author?: string;
-  /** Whether the export is compressed */
-  compressed?: boolean;
+export interface CheckUnsavedChangesRequest {
+  connectionId: string;
 }
 
-/**
- * Single query export with metadata and documentation.
- * Used for sharing individual queries between users.
- */
-export interface ShareableQuery {
-  /** Unique identifier for the query */
-  id: string;
-  /** User-provided query name */
-  name: string;
-  /** Query description */
-  description?: string;
-  /** SQL query text */
-  sql: string;
-  /** Database context (e.g., database name or type) */
-  databaseContext?: string;
-  /** Database type (sqlite, postgres, mysql, etc.) */
-  databaseType?: string;
-  /** Tags for categorization */
-  tags?: string[];
-  /** Optional documentation or usage notes */
-  documentation?: string;
-  /** When the query was created (ISO string) */
-  createdAt: string;
-  /** When the query was last modified (ISO string) */
-  modifiedAt?: string;
-  /** Original author or creator */
-  author?: string;
-  /** Metadata for versioning and compatibility */
-  metadata: ShareableMetadata;
+export interface CheckUnsavedChangesResponse {
+  success: boolean;
+  hasChanges?: boolean;
+  error?: string;
 }
 
-/**
- * Schema export format types.
- */
-export type SchemaExportFormat = 'json' | 'sql';
+// ============ Export/Import Bundle Types ============
 
-/**
- * Options for schema export.
- */
-export interface SchemaExportOptions {
-  /** Export format (json or sql) */
-  format: SchemaExportFormat;
-  /** Include indexes in export */
-  includeIndexes?: boolean;
-  /** Include triggers in export */
-  includeTriggers?: boolean;
-  /** Include foreign keys in export */
-  includeForeignKeys?: boolean;
-  /** Specific tables to export (exports all if not specified) */
-  tables?: string[];
-  /** Include CREATE TABLE statements */
-  includeCreateStatements?: boolean;
-  /** Include table comments/documentation */
-  includeComments?: boolean;
-}
-
-/**
- * Schema definition export for sharing database structures.
- * Can be exported in JSON or SQL format.
- */
-export interface ShareableSchema {
-  /** Unique identifier for the schema export */
-  id: string;
-  /** User-provided schema name */
-  name: string;
-  /** Schema description */
-  description?: string;
-  /** Database name or identifier */
-  databaseName?: string;
-  /** Database type (sqlite, postgres, mysql, etc.) */
-  databaseType?: string;
-  /** Export format used */
-  format: SchemaExportFormat;
-  /** Schema information (when format is 'json') */
-  schemas?: SchemaInfo[];
-  /** SQL statements (when format is 'sql') */
-  sqlStatements?: string[];
-  /** Export options used */
-  options: SchemaExportOptions;
-  /** Optional documentation */
-  documentation?: string;
-  /** When the schema was exported (ISO string) */
-  createdAt: string;
-  /** Original author or creator */
-  author?: string;
-  /** Metadata for versioning and compatibility */
-  metadata: ShareableMetadata;
-}
-
-/**
- * Bundle of multiple queries for batch sharing.
- * Useful for sharing query collections or templates.
- */
-export interface ShareableBundle {
-  /** Unique identifier for the bundle */
-  id: string;
-  /** Bundle name */
-  name: string;
-  /** Bundle description */
-  description?: string;
-  /** Collection of queries in the bundle */
-  queries: Array<{
-    /** Query ID within bundle */
-    id: string;
-    /** Query name */
+export interface ExportBundleRequest {
+  connectionId?: string;
+  queries?: string[];
+  schemas?: boolean;
+  schema?: boolean;
+  bundle?: {
     name: string;
-    /** Query description */
     description?: string;
-    /** SQL query text */
-    sql: string;
-    /** Optional query-specific notes */
-    notes?: string;
-    /** Tags for this query */
-    tags?: string[];
-    /** Order index in bundle */
-    order?: number;
-  }>;
-  /** Database context for all queries */
-  databaseContext?: string;
-  /** Database type */
-  databaseType?: string;
-  /** Bundle-level tags */
-  tags?: string[];
-  /** Optional documentation */
-  documentation?: string;
-  /** When the bundle was created (ISO string) */
-  createdAt: string;
-  /** Original author or creator */
-  author?: string;
-  /** Metadata for versioning and compatibility */
-  metadata: ShareableMetadata;
+    queries?: Array<{
+      id: string;
+      name: string;
+      description?: string;
+      sql: string;
+      tags?: string[];
+      order?: number;
+    }>;
+    documentation?: string;
+  };
+  compress?: boolean;
+  filePath?: string;
 }
 
-/**
- * Compression information for large exports.
- */
-export interface CompressionInfo {
-  /** Whether the data is compressed */
-  compressed: boolean;
-  /** Compression algorithm used (e.g., 'gzip') */
-  algorithm?: string;
-  /** Original size in bytes before compression */
-  originalSize?: number;
-  /** Compressed size in bytes */
-  compressedSize?: number;
+export interface ExportBundleResponse {
+  success: boolean;
+  data?: ShareableBundle;
+  filePath?: string;
+  error?: string;
 }
 
-/**
- * Validation result for imported shareable items.
- */
-export interface ShareableValidationResult {
-  /** Whether the item is valid */
-  valid: boolean;
-  /** Validation errors (if any) */
-  errors?: string[];
-  /** Validation warnings (non-critical issues) */
-  warnings?: string[];
-  /** Whether the version is compatible */
-  versionCompatible?: boolean;
-  /** Detected compression info */
-  compressionInfo?: CompressionInfo;
+export interface ImportBundleRequest {
+  filePath?: string;
+  data?: string;
+  importOptions?: {
+    overwrite?: boolean;
+  };
+  overwrite?: boolean;
 }
 
-// ============ Query & Schema Sharing IPC Types ============
+export interface ImportBundleResponse {
+  success: boolean;
+  imported?: {
+    queries?: number;
+    schema?: boolean;
+  };
+  error?: string;
+}
 
 export interface ExportQueryRequest {
-  /** Query data to export */
-  query: Omit<ShareableQuery, 'id' | 'metadata' | 'createdAt'>;
-  /** File path to save the export (optional, will prompt if not provided) */
-  filePath?: string;
-  /** Whether to compress the export (auto-compress if size > 100KB by default) */
+  queryId?: string;
+  query?: {
+    name: string;
+    description?: string;
+    sql: string;
+    databaseContext?: string;
+    tags?: string[];
+    documentation?: string;
+  };
   compress?: boolean;
+  filePath?: string;
 }
 
 export interface ExportQueryResponse {
   success: boolean;
-  /** Path where the query was exported */
+  data?: ShareableQuery;
   filePath?: string;
-  /** Compression info if compressed */
-  compressionInfo?: CompressionInfo;
   error?: string;
 }
 
 export interface ImportQueryRequest {
-  /** File path to import from (optional, will prompt if not provided) */
   filePath?: string;
-  /** Raw JSON data to import (alternative to filePath) */
   data?: string;
 }
 
 export interface ImportQueryResponse {
   success: boolean;
-  /** Imported query data */
+  queryId?: string;
   query?: ShareableQuery;
-  /** Validation result */
   validation?: ShareableValidationResult;
   error?: string;
 }
 
 export interface ExportSchemaRequest {
-  /** Connection ID to export schema from */
-  connectionId: string;
-  /** Schema data to export */
-  schema: Omit<ShareableSchema, 'id' | 'metadata' | 'createdAt'>;
-  /** File path to save the export (optional, will prompt if not provided) */
-  filePath?: string;
-  /** Whether to compress the export */
+  connectionId?: string;
+  snapshotId?: string;
+  schema?: {
+    name: string;
+    description?: string;
+    databaseName?: string;
+    databaseType?: string;
+    format?: 'json' | 'sql';
+    schemas?: SchemaInfo[];
+    options?: {
+      format?: 'json' | 'sql';
+      includeIndexes?: boolean;
+      includeTriggers?: boolean;
+      includeForeignKeys?: boolean;
+    };
+    documentation?: string;
+  };
   compress?: boolean;
+  filePath?: string;
 }
 
 export interface ExportSchemaResponse {
   success: boolean;
-  /** Path where the schema was exported */
+  data?: ShareableSchema;
   filePath?: string;
-  /** Compression info if compressed */
-  compressionInfo?: CompressionInfo;
   error?: string;
 }
 
 export interface ImportSchemaRequest {
-  /** File path to import from (optional, will prompt if not provided) */
   filePath?: string;
-  /** Raw JSON data to import (alternative to filePath) */
   data?: string;
 }
 
 export interface ImportSchemaResponse {
   success: boolean;
-  /** Imported schema data */
   schema?: ShareableSchema;
-  /** Validation result */
   validation?: ShareableValidationResult;
   error?: string;
 }
 
-export interface ExportBundleRequest {
-  /** Bundle data to export */
-  bundle: Omit<ShareableBundle, 'id' | 'metadata' | 'createdAt'>;
-  /** File path to save the export (optional, will prompt if not provided) */
-  filePath?: string;
-  /** Whether to compress the export */
-  compress?: boolean;
+// ============ Shareable Types ============
+
+export interface ShareableMetadata {
+  version: string;
+  exportedAt: string;
+  appVersion?: string;
+  compressed?: boolean;
+  description?: string;
 }
 
-export interface ExportBundleResponse {
-  success: boolean;
-  /** Path where the bundle was exported */
-  filePath?: string;
-  /** Compression info if compressed */
+export interface ShareableQuery {
+  id: string;
+  name: string;
+  sql: string;
+  queryText?: string;
+  description?: string;
+  tags?: string[];
+  isFavorite?: boolean;
+  databaseContext?: string;
+  documentation?: string;
+  notes?: string;
+  order?: number;
+  author?: string;
+  createdAt?: string;
+  modifiedAt?: string;
+  metadata?: ShareableMetadata;
+}
+
+export interface ShareableSchema {
+  id?: string;
+  name?: string;
+  description?: string;
+  documentation?: string;
+  format?: 'json' | 'sql';
+  tables?: TableInfo[];
+  views?: TableInfo[];
+  schemas?: SchemaInfo[];
+  databaseName?: string;
+  databaseType?: string;
+  author?: string;
+  createdAt?: string;
+  sqlStatements?: string[];
+  options?: Record<string, unknown>;
+  metadata?: ShareableMetadata;
+}
+
+export interface ShareableBundle {
+  id?: string;
+  name?: string;
+  description?: string;
+  documentation?: string;
+  databaseContext?: string;
+  metadata?: ShareableMetadata;
+  queries?: ShareableQuery[];
+  schema?: ShareableSchema;
+  schemas?: ShareableSchema[];
+  tags?: string[];
+  createdAt?: string;
+}
+
+export interface ShareableValidationResult {
+  valid: boolean;
+  errors?: string[];
+  warnings?: string[];
   compressionInfo?: CompressionInfo;
-  error?: string;
+  versionCompatible?: boolean;
 }
 
-export interface ImportBundleRequest {
-  /** File path to import from (optional, will prompt if not provided) */
-  filePath?: string;
-  /** Raw JSON data to import (alternative to filePath) */
-  data?: string;
+export interface CompressionInfo {
+  compressed: boolean;
+  algorithm?: string;
+  originalSize: number;
+  compressedSize?: number;
 }
 
-export interface ImportBundleResponse {
-  success: boolean;
-  /** Imported bundle data */
-  bundle?: ShareableBundle;
-  /** Validation result */
-  validation?: ShareableValidationResult;
-  error?: string;
-}
+// ============ Saved Query Types ============
 
-// ============ Saved Queries & Collections Types ============
-
-/**
- * Saved query that can be organized in collections and marked as favorite
- */
 export interface SavedQuery {
-  /** Unique identifier for the saved query */
   id: string;
-  /** User-defined name for the query */
   name: string;
-  /** Full SQL query text */
-  queryText: string;
-  /** Optional description of what the query does */
-  description?: string;
-  /** Database file path this query was created for (optional, can be cross-database) */
+  /** Query text */
+  queryText?: string;
+  /** Alternative property for query text */
+  query?: string;
   dbPath?: string;
-  /** When the query was created (ISO string) */
-  createdAt: string;
-  /** When the query was last updated (ISO string) */
-  updatedAt: string;
-  /** Whether this query is marked as a favorite */
-  isFavorite: boolean;
-  /** IDs of collections this query belongs to */
-  collectionIds: string[];
-}
-
-/**
- * Collection for organizing saved queries
- */
-export interface QueryCollection {
-  /** Unique identifier for the collection */
-  id: string;
-  /** User-defined name for the collection */
-  name: string;
-  /** Optional description of the collection's purpose */
+  /** Alternative property for database path */
+  connectionPath?: string;
   description?: string;
-  /** Color for the collection (hex code) */
-  color?: string;
-  /** Icon identifier for the collection */
-  icon?: string;
-  /** When the collection was created (ISO string) */
+  tags?: string[];
+  isFavorite?: boolean;
+  collectionIds?: string[];
   createdAt: string;
-  /** When the collection was last updated (ISO string) */
   updatedAt: string;
-  /** IDs of queries in this collection */
-  queryIds: string[];
-}
-
-// Saved Query IPC types
-export interface GetSavedQueriesRequest {
-  /** Optional database path to filter queries */
-  dbPath?: string;
-  /** Filter to only favorites */
-  favoritesOnly?: boolean;
-  /** Filter to specific collection */
-  collectionId?: string;
-}
-
-export interface GetSavedQueriesResponse {
-  success: boolean;
-  queries?: SavedQuery[];
-  error?: string;
 }
 
 export interface SaveSavedQueryRequest {
-  query: Omit<SavedQuery, 'id' | 'createdAt' | 'updatedAt'> & {
-    id?: string;
-    createdAt?: string;
-    updatedAt?: string;
-  };
+  query: Omit<SavedQuery, 'id' | 'createdAt' | 'updatedAt'>;
 }
 
 export interface SaveSavedQueryResponse {
@@ -1976,30 +1932,46 @@ export interface DeleteSavedQueryResponse {
   error?: string;
 }
 
+export interface GetSavedQueriesRequest {
+  dbPath?: string;
+  favoritesOnly?: boolean;
+  collectionId?: string;
+}
+
+export interface GetSavedQueriesResponse {
+  success: boolean;
+  queries?: SavedQuery[];
+  error?: string;
+}
+
 export interface ToggleFavoriteRequest {
   id: string;
-  isFavorite: boolean;
+  isFavorite?: boolean;
 }
 
 export interface ToggleFavoriteResponse {
   success: boolean;
-  query?: SavedQuery;
+  isFavorite?: boolean;
   error?: string;
 }
 
-// Collection IPC types
-export interface GetCollectionsResponse {
-  success: boolean;
-  collections?: QueryCollection[];
-  error?: string;
+// ============ Collection Types ============
+
+export interface QueryCollection {
+  id: string;
+  name: string;
+  description?: string;
+  queryIds?: string[];
+  /** Optional color for collection UI */
+  color?: string;
+  /** Optional icon for collection UI */
+  icon?: string;
+  createdAt: string;
+  updatedAt: string;
 }
 
 export interface SaveCollectionRequest {
-  collection: Omit<QueryCollection, 'id' | 'createdAt' | 'updatedAt'> & {
-    id?: string;
-    createdAt?: string;
-    updatedAt?: string;
-  };
+  collection: Omit<QueryCollection, 'id' | 'createdAt' | 'updatedAt'>;
 }
 
 export interface SaveCollectionResponse {
@@ -2028,6 +2000,12 @@ export interface DeleteCollectionResponse {
   error?: string;
 }
 
+export interface GetCollectionsResponse {
+  success: boolean;
+  collections?: QueryCollection[];
+  error?: string;
+}
+
 export interface AddQueryToCollectionRequest {
   queryId: string;
   collectionId: string;
@@ -2035,8 +2013,6 @@ export interface AddQueryToCollectionRequest {
 
 export interface AddQueryToCollectionResponse {
   success: boolean;
-  query?: SavedQuery;
-  collection?: QueryCollection;
   error?: string;
 }
 
@@ -2047,44 +2023,29 @@ export interface RemoveQueryFromCollectionRequest {
 
 export interface RemoveQueryFromCollectionResponse {
   success: boolean;
-  query?: SavedQuery;
-  collection?: QueryCollection;
   error?: string;
 }
 
-// Export/Import types
 export interface ExportCollectionsRequest {
-  /** Collection IDs to export (all if not specified) */
-  collectionIds?: string[];
-  /** File path to save the export */
-  filePath: string;
+  collectionIds: string[];
+  includeQueries?: boolean;
+  filePath?: string;
 }
 
 export interface ExportCollectionsResponse {
   success: boolean;
-  /** Path where the file was saved */
-  filePath?: string;
-  /** Number of collections exported */
-  collectionsExported?: number;
-  /** Number of queries exported */
-  queriesExported?: number;
+  data?: string;
   error?: string;
 }
 
 export interface ImportCollectionsRequest {
-  /** File path to import from */
-  filePath: string;
-  /** Strategy for handling duplicates: 'skip', 'rename', 'overwrite' */
-  duplicateStrategy?: 'skip' | 'rename' | 'overwrite';
+  data: string;
+  overwrite?: boolean;
 }
 
 export interface ImportCollectionsResponse {
   success: boolean;
-  /** Number of collections imported */
-  collectionsImported?: number;
-  /** Number of queries imported */
-  queriesImported?: number;
-  /** Number of items skipped due to duplicates */
+  imported?: number;
   skipped?: number;
   error?: string;
 }
@@ -2204,14 +2165,6 @@ export interface IPCChannels {
     ExportComparisonReportRequest,
     ExportComparisonReportResponse,
   ];
-
-  // Query & Schema Sharing
-  'query:export': [ExportQueryRequest, ExportQueryResponse];
-  'query:import': [ImportQueryRequest, ImportQueryResponse];
-  'schema:export': [ExportSchemaRequest, ExportSchemaResponse];
-  'schema:import': [ImportSchemaRequest, ImportSchemaResponse];
-  'bundle:export': [ExportBundleRequest, ExportBundleResponse];
-  'bundle:import': [ImportBundleRequest, ImportBundleResponse];
 }
 
 // ============ IPC Channel Constants ============
@@ -2379,30 +2332,122 @@ export const IPC_CHANNELS = {
   // Shortcuts
   SHORTCUTS_UPDATE: 'shortcuts:update',
 
-  // Query & Schema Sharing
-  QUERY_EXPORT: 'query:export',
-  QUERY_IMPORT: 'query:import',
-  SCHEMA_EXPORT: 'schema:export',
-  SCHEMA_IMPORT: 'schema:import',
-  BUNDLE_EXPORT: 'bundle:export',
-  BUNDLE_IMPORT: 'bundle:import',
+  // Query History (aliases)
+  QUERY_HISTORY_GET: 'history:get',
+  QUERY_HISTORY_SAVE: 'history:save',
+  QUERY_HISTORY_DELETE: 'history:delete',
+  QUERY_HISTORY_CLEAR: 'history:clear',
 
   // Saved Queries
-  SAVED_QUERY_GET_ALL: 'saved-query:get-all',
-  SAVED_QUERY_SAVE: 'saved-query:save',
-  SAVED_QUERY_UPDATE: 'saved-query:update',
-  SAVED_QUERY_DELETE: 'saved-query:delete',
-  SAVED_QUERY_TOGGLE_FAVORITE: 'saved-query:toggle-favorite',
+  SAVED_QUERIES_GET: 'saved-queries:get',
+  SAVED_QUERIES_SAVE: 'saved-queries:save',
+  SAVED_QUERIES_UPDATE: 'saved-queries:update',
+  SAVED_QUERIES_DELETE: 'saved-queries:delete',
+  SAVED_QUERY_GET_ALL: 'saved-queries:get',
+  SAVED_QUERY_SAVE: 'saved-queries:save',
+  SAVED_QUERY_UPDATE: 'saved-queries:update',
+  SAVED_QUERY_DELETE: 'saved-queries:delete',
+  SAVED_QUERY_TOGGLE_FAVORITE: 'saved-queries:toggle-favorite',
 
   // Collections
-  COLLECTION_GET_ALL: 'collection:get-all',
-  COLLECTION_SAVE: 'collection:save',
-  COLLECTION_UPDATE: 'collection:update',
-  COLLECTION_DELETE: 'collection:delete',
-  COLLECTION_ADD_QUERY: 'collection:add-query',
-  COLLECTION_REMOVE_QUERY: 'collection:remove-query',
-  COLLECTION_EXPORT: 'collection:export',
-  COLLECTION_IMPORT: 'collection:import',
+  COLLECTIONS_GET: 'collections:get',
+  COLLECTIONS_SAVE: 'collections:save',
+  COLLECTIONS_UPDATE: 'collections:update',
+  COLLECTIONS_DELETE: 'collections:delete',
+  COLLECTIONS_ADD_QUERY: 'collections:add-query',
+  COLLECTIONS_REMOVE_QUERY: 'collections:remove-query',
+  COLLECTION_GET_ALL: 'collections:get',
+  COLLECTION_SAVE: 'collections:save',
+  COLLECTION_UPDATE: 'collections:update',
+  COLLECTION_DELETE: 'collections:delete',
+  COLLECTION_ADD_QUERY: 'collections:add-query',
+  COLLECTION_REMOVE_QUERY: 'collections:remove-query',
+  COLLECTION_EXPORT: 'collections:export',
+  COLLECTION_IMPORT: 'collections:import',
+
+  // Profiles
+  PROFILES_GET: 'profile:get-all',
+  PROFILES_SAVE: 'profile:save',
+  PROFILES_UPDATE: 'profile:update',
+  PROFILES_DELETE: 'profile:delete',
+
+  // Folders
+  FOLDERS_GET: 'folder:get-all',
+  FOLDERS_SAVE: 'folder:create',
+  FOLDERS_UPDATE: 'folder:update',
+  FOLDERS_DELETE: 'folder:delete',
+
+  // Preferences
+  PREFERENCES_GET: 'app:get-preferences',
+  PREFERENCES_SET: 'app:set-preferences',
+
+  // Export/Import
+  EXPORT_BUNDLE: 'export:bundle',
+  EXPORT_QUERY: 'export:query',
+  EXPORT_SCHEMA: 'export:schema',
+  IMPORT_BUNDLE: 'import:bundle',
+  IMPORT_QUERY: 'import:query',
+  IMPORT_SCHEMA: 'import:schema',
+
+  // Schema (aliases)
+  SCHEMA_GET_SNAPSHOTS: 'schema-snapshot:get-all',
+  SCHEMA_GET_SNAPSHOT: 'schema-snapshot:get',
+  SCHEMA_SAVE_SNAPSHOT: 'schema-snapshot:save',
+  SCHEMA_DELETE_SNAPSHOT: 'schema-snapshot:delete',
+  SCHEMA_COMPARE_SNAPSHOTS: 'schema-comparison:compare-snapshots',
+  SCHEMA_COMPARE_CONNECTIONS: 'schema-comparison:compare-connections',
+  SCHEMA_COMPARE_CONNECTION_TO_SNAPSHOT:
+    'schema-comparison:compare-connection-to-snapshot',
+
+  // Table Compare
+  TABLE_COMPARE: 'data-diff:compare-tables',
+
+  // Migration
+  MIGRATION_GENERATE_SQL: 'schema-comparison:generate-migration-sql',
+  MIGRATION_GENERATE_SYNC_SQL: 'data-diff:generate-sync-sql',
+
+  // System
+  SYSTEM_FIND_CLAUDE_PATHS: 'ai:get-claude-code-paths',
+  SYSTEM_FOCUS_WINDOW: 'window:focus',
+
+  // AI (additional)
+  AI_QUERY: 'ai:agent-query',
+  AI_STREAM: 'ai:stream-anthropic',
+
+  // Unsaved changes
+  CHECK_UNSAVED_CHANGES: 'unsaved-changes:check',
+  UNSAVED_CHANGES_CHECK: 'unsaved-changes:check',
+
+  // Prevent quit
+  PREVENT_QUIT: 'app:prevent-quit',
+
+  // PRO
+  PRO_CLEAR_STATUS: 'pro:clear-status',
+
+  // Additional aliases for preload compatibility
+  QUERY_GET_SAVED_QUERIES: 'saved-queries:get',
+  QUERY_SAVE_SAVED_QUERY: 'saved-queries:save',
+  QUERY_UPDATE_SAVED_QUERY: 'saved-queries:update',
+  QUERY_DELETE_SAVED_QUERY: 'saved-queries:delete',
+  QUERY_TOGGLE_FAVORITE: 'saved-queries:toggle-favorite',
+  QUERY_EXPORT_QUERY: 'export:query',
+  QUERY_IMPORT_QUERY: 'import:query',
+
+  // Comparison aliases
+  COMPARISON_COMPARE_CONNECTIONS: 'schema-comparison:compare-connections',
+  COMPARISON_COMPARE_CONNECTION_TO_SNAPSHOT:
+    'schema-comparison:compare-connection-to-snapshot',
+  COMPARISON_COMPARE_SNAPSHOTS: 'schema-comparison:compare-snapshots',
+  COMPARISON_COMPARE_TABLES: 'data-diff:compare-tables',
+  COMPARISON_EXPORT_REPORT: 'schema-comparison:export-report',
+
+  // Bundle aliases
+  BUNDLE_EXPORT: 'export:bundle',
+  BUNDLE_IMPORT: 'import:bundle',
+
+  // Schema export/import aliases
+  SCHEMA_EXPORT: 'export:schema',
+  SCHEMA_IMPORT: 'import:schema',
 } as const;
 
 // ============ Keyboard Shortcuts Types ============
@@ -2436,10 +2481,6 @@ export type ShortcutAction =
   | 'nav.schema-compare'
   | 'nav.er-diagram'
   | 'nav.toggle-sidebar'
-  // Connection
-  | 'conn.recent-connections'
-  | 'conn.next-connection'
-  | 'conn.prev-connection'
   // View
   | 'view.toggle-history'
   | 'view.toggle-schema-details'
@@ -2458,6 +2499,10 @@ export type ShortcutAction =
   | 'action.delete-row'
   | 'action.export-data'
   | 'action.focus-search'
+  // Connection
+  | 'conn.recent-connections'
+  | 'conn.next-connection'
+  | 'conn.prev-connection'
   // Settings
   | 'settings.open'
   // Help
@@ -2525,9 +2570,6 @@ export const DEFAULT_SHORTCUTS: ShortcutPreset = {
   'nav.schema-compare': { key: '5', modifiers: { cmd: true } },
   'nav.er-diagram': { key: '3', modifiers: { cmd: true } },
   'nav.toggle-sidebar': { key: 'b', modifiers: { cmd: true } },
-  'conn.recent-connections': { key: 'r', modifiers: { ctrl: true } },
-  'conn.next-connection': { key: ']', modifiers: { cmd: true } },
-  'conn.prev-connection': { key: '[', modifiers: { cmd: true } },
   'view.toggle-history': { key: 'h', modifiers: { cmd: true } },
   'view.toggle-schema-details': { key: '4', modifiers: { cmd: true } },
   'action.command-palette': { key: 'k', modifiers: { cmd: true } },
@@ -2544,6 +2586,9 @@ export const DEFAULT_SHORTCUTS: ShortcutPreset = {
   'action.delete-row': { key: 'Backspace', modifiers: { cmd: true } },
   'action.export-data': { key: 'e', modifiers: { cmd: true, shift: true } },
   'action.focus-search': { key: 'f', modifiers: { cmd: true } },
+  'conn.recent-connections': { key: 't', modifiers: { cmd: true } },
+  'conn.next-connection': { key: ']', modifiers: { cmd: true, shift: true } },
+  'conn.prev-connection': { key: '[', modifiers: { cmd: true, shift: true } },
   'settings.open': { key: ',', modifiers: { cmd: true } },
   'help.shortcuts': { key: '/', modifiers: { cmd: true } },
 };

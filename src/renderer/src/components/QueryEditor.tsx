@@ -1,3 +1,4 @@
+import type { SavedQuery } from '@shared/types';
 import {
   AlertCircle,
   BarChart3,
@@ -196,7 +197,7 @@ export function QueryEditor() {
     }
     const searchLower = historySearch.toLowerCase();
     return history.filter((item) =>
-      item.queryText.toLowerCase().includes(searchLower)
+      (item.queryText ?? '').toLowerCase().includes(searchLower)
     );
   }, [history, historySearch]);
 
@@ -349,8 +350,8 @@ export function QueryEditor() {
     setShowSidePanel(false);
   };
 
-  const handleSavedQueryLoad = (query: { queryText: string }) => {
-    handleQueryChange(query.queryText);
+  const handleSavedQueryLoad = (query: SavedQuery) => {
+    handleQueryChange(query.queryText ?? '');
     setShowSidePanel(false);
   };
 
@@ -893,7 +894,7 @@ export function QueryEditor() {
                                               {item.success ? (
                                                 <span className="text-xs text-green-600">
                                                   {formatDuration(
-                                                    item.durationMs
+                                                    item.durationMs ?? 0
                                                   )}
                                                 </span>
                                               ) : (
@@ -903,12 +904,12 @@ export function QueryEditor() {
                                               )}
                                               <span className="text-muted-foreground text-xs">
                                                 {new Date(
-                                                  item.executedAt
+                                                  item.executedAt ?? ''
                                                 ).toLocaleTimeString()}
                                               </span>
                                             </div>
                                             <SqlHighlight
-                                              code={item.queryText}
+                                              code={item.queryText ?? ''}
                                               maxLines={3}
                                               className="mt-1"
                                             />
@@ -919,7 +920,7 @@ export function QueryEditor() {
                                           <button
                                             onClick={() =>
                                               handleHistorySelect(
-                                                item.queryText
+                                                item.queryText ?? ''
                                               )
                                             }
                                             className="w-full text-left"
@@ -928,7 +929,7 @@ export function QueryEditor() {
                                               {item.success ? (
                                                 <span className="text-xs text-green-600">
                                                   {formatDuration(
-                                                    item.durationMs
+                                                    item.durationMs ?? 0
                                                   )}
                                                 </span>
                                               ) : (
@@ -938,12 +939,12 @@ export function QueryEditor() {
                                               )}
                                               <span className="text-muted-foreground text-xs">
                                                 {new Date(
-                                                  item.executedAt
+                                                  item.executedAt ?? ''
                                                 ).toLocaleTimeString()}
                                               </span>
                                             </div>
                                             <SqlHighlight
-                                              code={item.queryText}
+                                              code={item.queryText ?? ''}
                                               maxLines={3}
                                               className="mt-1 pr-6"
                                             />
@@ -965,7 +966,9 @@ export function QueryEditor() {
                                   <ContextMenuContent>
                                     <ContextMenuItem
                                       onClick={() =>
-                                        handleSaveFromHistory(item.queryText)
+                                        handleSaveFromHistory(
+                                          item.queryText ?? ''
+                                        )
                                       }
                                     >
                                       <Save className="mr-2 h-4 w-4" />

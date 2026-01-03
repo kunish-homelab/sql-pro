@@ -33,7 +33,7 @@ describe('query and Schema Sharing Service', () => {
       expect(result.data.id).toBeDefined();
       expect(result.data.name).toBe('Test Query');
       expect(result.data.sql).toBe('SELECT * FROM users');
-      expect(result.data.metadata.version).toBe('1.0.0');
+      expect(result.data.metadata?.version).toBe('1.0.0');
       expect(result.data.createdAt).toBeDefined();
     });
 
@@ -109,7 +109,7 @@ describe('query and Schema Sharing Service', () => {
       expect(result.data.format).toBe('json');
       expect(result.data.schemas).toBeDefined();
       expect(result.data.schemas?.length).toBe(1);
-      expect(result.data.metadata.version).toBe('1.0.0');
+      expect(result.data.metadata?.version).toBe('1.0.0');
     });
 
     it('should export a valid SQL format schema', async () => {
@@ -627,8 +627,8 @@ describe('query and Schema Sharing Service', () => {
 
       expect(result.data.id).toBeDefined();
       expect(result.data.name).toBe('Test Bundle');
-      expect(result.data.queries.length).toBe(2);
-      expect(result.data.metadata.version).toBe('1.0.0');
+      expect(result.data.queries?.length).toBe(2);
+      expect(result.data.metadata?.version).toBe('1.0.0');
     });
   });
 
@@ -656,7 +656,7 @@ describe('query and Schema Sharing Service', () => {
 
       expect(result.validation.valid).toBe(true);
       expect(result.bundle.name).toBe('Test Bundle');
-      expect(result.bundle.queries.length).toBe(1);
+      expect(result.bundle.queries?.length).toBe(1);
     });
   });
 
@@ -1565,7 +1565,7 @@ describe('query and Schema Sharing Service', () => {
       expect(imported.validation.valid).toBe(true);
       expect(imported.validation.compressionInfo?.compressed).toBe(true);
       expect(imported.bundle.name).toBe('Large Bundle');
-      expect(imported.bundle.queries.length).toBe(50);
+      expect(imported.bundle.queries?.length).toBe(50);
     });
 
     it('should handle forced compression for small data', async () => {
@@ -1617,7 +1617,7 @@ describe('query and Schema Sharing Service', () => {
       const imported = await importQuery(serialized.result);
 
       // The imported query should have compressed flag in metadata
-      expect(imported.query.metadata.compressed).toBe(true);
+      expect(imported.query.metadata?.compressed).toBe(true);
     });
 
     it('should report accurate compression statistics', async () => {

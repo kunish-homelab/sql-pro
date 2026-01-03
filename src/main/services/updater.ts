@@ -6,14 +6,20 @@ import type {
 } from 'electron-updater';
 import { app, BrowserWindow, dialog } from 'electron';
 import log from 'electron-log';
-import { autoUpdater } from 'electron-updater';
 
-// Configure logging for auto-updater
-autoUpdater.logger = log;
+// Lazy import autoUpdater to avoid accessing app before it's ready
+let _autoUpdater: AppUpdater | null = null;
+let _autoUpdaterInitialized = false;
 
-// Auto-updater configuration
-autoUpdater.autoDownload = false;
-autoUpdater.autoInstallOnAppQuit = true;
+function getAutoUpdater(): AppUpdater {
+  if (!_autoUpdater) {
+    // Dynamic require to defer initialization
+    // eslint-disable-next-line ts/no-require-imports
+    const { autoUpdater } = require('electron-updater');
+    _autoUpdater = autoUpdater;
+  }
+  return _autoUpdater as AppUpdater;
+}
 
 let updateStatus: UpdateStatus = { status: 'not-available' };
 
@@ -41,6 +47,21 @@ function notifyUpdateStatus(status: UpdateStatus): void {
  * Initialize the auto-updater with event handlers
  */
 export function initAutoUpdater(): AppUpdater {
+  const autoUpdater = getAutoUpdater();
+
+  // Only initialize once
+  if (_autoUpdaterInitialized) {
+    return autoUpdater;
+  }
+  _autoUpdaterInitialized = true;
+
+  // Configure logging for auto-updater
+  autoUpdater.logger = log;
+
+  // Auto-updater configuration
+  autoUpdater.autoDownload = false;
+  autoUpdater.autoInstallOnAppQuit = true;
+
   // Check for updates error
   autoUpdater.on('error', (error: Error) => {
     log.error('Auto-updater error:', error);
@@ -162,7 +183,7 @@ export function initAutoUpdater(): AppUpdater {
  */
 export async function checkForUpdates(silent = false): Promise<void> {
   try {
-    const result = await autoUpdater.checkForUpdates();
+    const result = await getAutoUpdater().checkForUpdates();
 
     if (!silent && result?.updateInfo) {
       const isUpdateAvailable = result.updateInfo.version !== app.getVersion();
@@ -206,7 +227,7 @@ export async function checkForUpdates(silent = false): Promise<void> {
  */
 export function downloadUpdate(): void {
   log.info('Starting update download...');
-  autoUpdater.downloadUpdate();
+  getAutoUpdater().downloadUpdate();
 }
 
 /**
@@ -214,7 +235,7 @@ export function downloadUpdate(): void {
  */
 export function quitAndInstall(): void {
   log.info('Quitting and installing update...');
-  autoUpdater.quitAndInstall(false, true);
+  getAutoUpdater().quitAndInstall(false, true);
 }
 
 /**

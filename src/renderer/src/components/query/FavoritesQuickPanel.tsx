@@ -89,7 +89,7 @@ export function FavoritesQuickPanel({
         <ScrollArea className={asSection ? 'h-full' : 'max-h-96'}>
           <div className="space-y-1 p-1">
             {favoriteQueries.map((query) => {
-              const queryPreview = getQueryPreview(query.queryText);
+              const queryPreview = getQueryPreview(query.queryText ?? '');
 
               return (
                 <button
