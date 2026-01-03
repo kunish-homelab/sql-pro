@@ -153,17 +153,18 @@ export function isElectronEnvironment(): boolean {
 /**
  * Create a hybrid storage that uses electron-store in Electron
  * and falls back to localStorage in web/development mode
+ * Note: Environment check is done at each operation to handle late initialization
  */
 export function createHybridStorage<T>(
   storeKey: keyof RendererStoreSchema
 ): PersistStorage<T> {
-  if (isElectronEnvironment()) {
-    return getElectronStorage<T>(storeKey);
-  }
-
-  // Fallback to localStorage for non-Electron environments
+  // Return a storage that checks environment on each operation
   return {
     getItem: (name: string): StorageValue<T> | null => {
+      if (isElectronEnvironment()) {
+        return getElectronStorage<T>(storeKey).getItem(name);
+      }
+      // Fallback to localStorage
       const str = localStorage.getItem(name);
       if (!str) return null;
       try {
@@ -173,10 +174,19 @@ export function createHybridStorage<T>(
       }
     },
     setItem: (name: string, value: StorageValue<T>): void => {
-      localStorage.setItem(name, JSON.stringify(value));
+      if (isElectronEnvironment()) {
+        getElectronStorage<T>(storeKey).setItem(name, value);
+      } else {
+        // Fallback to localStorage
+        localStorage.setItem(name, JSON.stringify(value));
+      }
     },
     removeItem: (name: string): void => {
-      localStorage.removeItem(name);
+      if (isElectronEnvironment()) {
+        getElectronStorage<T>(storeKey).removeItem(name);
+      } else {
+        localStorage.removeItem(name);
+      }
     },
   };
 }
@@ -184,15 +194,13 @@ export function createHybridStorage<T>(
 /**
  * Create a storage adapter for connection store with custom serialization
  * Handles Map and Set types properly
+ * Note: Environment check is done at each operation to handle late initialization
  */
 export function createConnectionStorage<T>(): PersistStorage<T> {
-  const electronStorage = isElectronEnvironment()
-    ? getElectronStorage<T>('connectionUi')
-    : null;
-
   return {
     getItem: (name: string): StorageValue<T> | null => {
-      if (electronStorage) {
+      if (isElectronEnvironment()) {
+        const electronStorage = getElectronStorage<T>('connectionUi');
         const result = electronStorage.getItem(name);
         if (result && result.state) {
           const state = result.state as Record<string, unknown>;
@@ -246,7 +254,7 @@ export function createConnectionStorage<T>(): PersistStorage<T> {
     setItem: (name: string, value: StorageValue<T>): void => {
       const state = value.state as Record<string, unknown>;
 
-      if (electronStorage) {
+      if (isElectronEnvironment()) {
         // For electron-store, only persist UI state
         const uiState: RendererConnectionState = {
           activeConnectionId: (state.activeConnectionId as string) ?? null,
@@ -297,7 +305,7 @@ export function createConnectionStorage<T>(): PersistStorage<T> {
     },
 
     removeItem: (name: string): void => {
-      if (electronStorage) {
+      if (isElectronEnvironment()) {
         sqlPro.rendererStore.reset({ key: 'connectionUi' }).catch((error) => {
           console.error(
             'Failed to reset connectionUi in electron-store:',
