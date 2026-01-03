@@ -2,6 +2,7 @@ import type { ConnectionSettings } from '@/components/ConnectionSettingsDialog';
 import { useNavigate } from '@tanstack/react-router';
 import { useCallback, useEffect, useState } from 'react';
 import { ConnectionSettingsDialog } from '@/components/ConnectionSettingsDialog';
+import { ConnectionSwitcher } from '@/components/ConnectionSwitcher';
 import { DatabaseView } from '@/components/DatabaseView';
 import { PasswordDialog } from '@/components/PasswordDialog';
 import {
@@ -318,6 +319,9 @@ export function DatabasePage() {
         dbPath={pendingPath || ''}
         onSubmit={handlePasswordSubmit}
       />
+
+      {/* Connection Switcher Dialog */}
+      <ConnectionSwitcher onOpenRecentConnection={handleOpenRecentConnection} />
 
       {/* Hidden trigger buttons for menu actions */}
       <button

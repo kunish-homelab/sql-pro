@@ -1,5 +1,4 @@
 import { create } from 'zustand';
-import { persist } from 'zustand/middleware';
 
 export interface QueryTemplate {
   id: string;
@@ -386,117 +385,101 @@ export const TEMPLATE_CATEGORIES: {
 ];
 
 export const useQueryTemplatesStore = create<QueryTemplatesState>()(
-  persist(
-    (set, get) => ({
-      templates: [...BUILT_IN_TEMPLATES],
-      searchQuery: '',
-      selectedCategory: 'all',
+  (set, get) => ({
+    templates: [...BUILT_IN_TEMPLATES],
+    searchQuery: '',
+    selectedCategory: 'all',
 
-      setSearchQuery: (searchQuery) => set({ searchQuery }),
+    setSearchQuery: (searchQuery) => set({ searchQuery }),
 
-      setSelectedCategory: (selectedCategory) => set({ selectedCategory }),
+    setSelectedCategory: (selectedCategory) => set({ selectedCategory }),
 
-      addTemplate: (template) => {
-        const id = generateId();
-        const now = Date.now();
-        const newTemplate: QueryTemplate = {
-          ...template,
-          id,
-          isBuiltIn: false,
-          createdAt: now,
-          updatedAt: now,
-        };
-        set((state) => ({
-          templates: [...state.templates, newTemplate],
-        }));
-        return id;
-      },
+    addTemplate: (template) => {
+      const id = generateId();
+      const now = Date.now();
+      const newTemplate: QueryTemplate = {
+        ...template,
+        id,
+        isBuiltIn: false,
+        createdAt: now,
+        updatedAt: now,
+      };
+      set((state) => ({
+        templates: [...state.templates, newTemplate],
+      }));
+      return id;
+    },
 
-      updateTemplate: (id, updates) => {
-        set((state) => ({
-          templates: state.templates.map((t) =>
-            t.id === id && !t.isBuiltIn
-              ? { ...t, ...updates, updatedAt: Date.now() }
-              : t
-          ),
-        }));
-      },
+    updateTemplate: (id, updates) => {
+      set((state) => ({
+        templates: state.templates.map((t) =>
+          t.id === id && !t.isBuiltIn
+            ? { ...t, ...updates, updatedAt: Date.now() }
+            : t
+        ),
+      }));
+    },
 
-      deleteTemplate: (id) => {
-        set((state) => ({
-          templates: state.templates.filter((t) => t.id !== id || t.isBuiltIn),
-        }));
-      },
+    deleteTemplate: (id) => {
+      set((state) => ({
+        templates: state.templates.filter((t) => t.id !== id || t.isBuiltIn),
+      }));
+    },
 
-      duplicateTemplate: (id) => {
-        const state = get();
-        const templateToDuplicate = state.templates.find((t) => t.id === id);
-        if (!templateToDuplicate) return '';
+    duplicateTemplate: (id) => {
+      const state = get();
+      const templateToDuplicate = state.templates.find((t) => t.id === id);
+      if (!templateToDuplicate) return '';
 
-        const newId = generateId();
-        const now = Date.now();
-        const newTemplate: QueryTemplate = {
-          ...templateToDuplicate,
-          id: newId,
-          name: `${templateToDuplicate.name} (Copy)`,
-          isBuiltIn: false,
-          createdAt: now,
-          updatedAt: now,
-        };
+      const newId = generateId();
+      const now = Date.now();
+      const newTemplate: QueryTemplate = {
+        ...templateToDuplicate,
+        id: newId,
+        name: `${templateToDuplicate.name} (Copy)`,
+        isBuiltIn: false,
+        createdAt: now,
+        updatedAt: now,
+      };
 
-        set((state) => ({
-          templates: [...state.templates, newTemplate],
-        }));
+      set((state) => ({
+        templates: [...state.templates, newTemplate],
+      }));
 
-        return newId;
-      },
+      return newId;
+    },
 
-      getFilteredTemplates: () => {
-        const state = get();
-        let filtered = state.templates;
+    getFilteredTemplates: () => {
+      const state = get();
+      let filtered = state.templates;
 
-        // Filter by category
-        if (state.selectedCategory !== 'all') {
-          filtered = filtered.filter(
-            (t) => t.category === state.selectedCategory
-          );
-        }
+      // Filter by category
+      if (state.selectedCategory !== 'all') {
+        filtered = filtered.filter(
+          (t) => t.category === state.selectedCategory
+        );
+      }
 
-        // Filter by search query
-        if (state.searchQuery.trim()) {
-          const query = state.searchQuery.toLowerCase();
-          filtered = filtered.filter(
-            (t) =>
-              t.name.toLowerCase().includes(query) ||
-              t.description.toLowerCase().includes(query) ||
-              t.query.toLowerCase().includes(query)
-          );
-        }
+      // Filter by search query
+      if (state.searchQuery.trim()) {
+        const query = state.searchQuery.toLowerCase();
+        filtered = filtered.filter(
+          (t) =>
+            t.name.toLowerCase().includes(query) ||
+            t.description.toLowerCase().includes(query) ||
+            t.query.toLowerCase().includes(query)
+        );
+      }
 
-        return filtered;
-      },
+      return filtered;
+    },
 
-      resetToDefaults: () => {
-        set({
-          templates: [...BUILT_IN_TEMPLATES],
-          searchQuery: '',
-          selectedCategory: 'all',
-        });
-      },
-    }),
-    {
-      name: 'sql-pro-query-templates',
-      partialize: (state) => ({
-        // Only persist custom templates
-        templates: state.templates.filter((t) => !t.isBuiltIn),
-      }),
-      merge: (persisted, current) => ({
-        ...current,
-        templates: [
-          ...BUILT_IN_TEMPLATES,
-          ...((persisted as { templates?: QueryTemplate[] })?.templates || []),
-        ],
-      }),
-    }
-  )
+    resetToDefaults: () => {
+      set({
+        templates: [...BUILT_IN_TEMPLATES],
+        searchQuery: '',
+        selectedCategory: 'all',
+      });
+    },
+  })
 );

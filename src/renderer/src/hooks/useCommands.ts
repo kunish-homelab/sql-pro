@@ -39,6 +39,7 @@ import {
   useChangesStore,
   useCommandPaletteStore,
   useConnectionStore,
+  useConnectionSwitcherStore,
   useKeyboardShortcutsStore,
   useSettingsStore,
   useTableDataStore,
@@ -52,9 +53,9 @@ import {
 export function useCommands() {
   const navigate = useNavigate();
   const toggle = useCommandPaletteStore((s) => s.toggle);
-  const openWithFilter = useCommandPaletteStore((s) => s.openWithFilter);
   const registerCommands = useCommandPaletteStore((s) => s.registerCommands);
   const unregisterCommand = useCommandPaletteStore((s) => s.unregisterCommand);
+  const openConnectionSwitcher = useConnectionSwitcherStore((s) => s.open);
 
   // Subscribe to connections for dynamic command registration
   const connections = useConnectionStore((s) => s.connections);
@@ -140,8 +141,8 @@ export function useCommands() {
       const recentConnectionsBinding = getShortcut('conn.recent-connections');
       if (matchesBinding(e, recentConnectionsBinding)) {
         e.preventDefault();
-        // Open command palette with switch connection filter
-        openWithFilter('switch');
+        // Open connection switcher dialog
+        openConnectionSwitcher();
         return;
       }
 
@@ -281,7 +282,7 @@ export function useCommands() {
 
     window.addEventListener('keydown', handleKeyDown);
     return () => window.removeEventListener('keydown', handleKeyDown);
-  }, [toggle, openWithFilter]);
+  }, [toggle, openConnectionSwitcher]);
 
   // Register commands only once on mount
   useEffect(() => {
@@ -384,8 +385,8 @@ export function useCommands() {
         category: 'navigation',
         keywords: ['recent', 'connection', 'database', 'switch'],
         action: () => {
-          // Open command palette filtered to connection switching commands
-          openWithFilter('switch');
+          // Open connection switcher dialog
+          useConnectionSwitcherStore.getState().open();
         },
       },
       {

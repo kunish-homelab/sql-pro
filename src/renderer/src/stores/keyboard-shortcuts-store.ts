@@ -7,7 +7,6 @@ import type {
 } from '@shared/types';
 import { DEFAULT_SHORTCUTS } from '@shared/types';
 import { create } from 'zustand';
-import { persist } from 'zustand/middleware';
 
 // Re-export types from shared for convenience
 export type {
@@ -497,118 +496,103 @@ interface KeyboardShortcutsState {
 }
 
 export const useKeyboardShortcutsStore = create<KeyboardShortcutsState>()(
-  persist(
-    (set, get) => ({
-      activePreset: 'default',
-      customShortcuts: { ...DEFAULT_SHORTCUTS },
-      vimShortcutsEnabled: true,
+  (set, get) => ({
+    activePreset: 'default',
+    customShortcuts: { ...DEFAULT_SHORTCUTS },
+    vimShortcutsEnabled: true,
 
-      setPreset: (preset) => set({ activePreset: preset }),
+    setPreset: (preset) => set({ activePreset: preset }),
 
-      setShortcut: (action, binding) => {
-        const { customShortcuts } = get();
-        set({
-          activePreset: 'custom',
-          customShortcuts: {
-            ...customShortcuts,
-            [action]: binding,
-          },
-        });
-      },
+    setShortcut: (action, binding) => {
+      const { customShortcuts } = get();
+      set({
+        activePreset: 'custom',
+        customShortcuts: {
+          ...customShortcuts,
+          [action]: binding,
+        },
+      });
+    },
 
-      resetToPreset: (preset) => {
-        set({
-          activePreset: preset,
-          customShortcuts: { ...SHORTCUT_PRESETS[preset] },
-        });
-      },
+    resetToPreset: (preset) => {
+      set({
+        activePreset: preset,
+        customShortcuts: { ...SHORTCUT_PRESETS[preset] },
+      });
+    },
 
-      getShortcut: (action) => {
-        const { activePreset, customShortcuts } = get();
-        if (activePreset === 'custom') {
-          return customShortcuts[action];
+    getShortcut: (action) => {
+      const { activePreset, customShortcuts } = get();
+      if (activePreset === 'custom') {
+        return customShortcuts[action];
+      }
+      return SHORTCUT_PRESETS[activePreset][action];
+    },
+
+    getActiveShortcuts: () => {
+      const { activePreset, customShortcuts } = get();
+      if (activePreset === 'custom') {
+        return customShortcuts;
+      }
+      return SHORTCUT_PRESETS[activePreset];
+    },
+
+    findConflicts: (action, binding) => {
+      const shortcuts = get().getActiveShortcuts();
+      const conflicts: ShortcutAction[] = [];
+
+      for (const [otherAction, otherBinding] of Object.entries(shortcuts)) {
+        if (otherAction !== action && bindingsEqual(binding, otherBinding)) {
+          conflicts.push(otherAction as ShortcutAction);
         }
-        return SHORTCUT_PRESETS[activePreset][action];
-      },
+      }
 
-      getActiveShortcuts: () => {
-        const { activePreset, customShortcuts } = get();
-        if (activePreset === 'custom') {
-          return customShortcuts;
-        }
-        return SHORTCUT_PRESETS[activePreset];
-      },
+      return conflicts;
+    },
 
-      findConflicts: (action, binding) => {
-        const shortcuts = get().getActiveShortcuts();
-        const conflicts: ShortcutAction[] = [];
+    setVimShortcutsEnabled: (enabled) => set({ vimShortcutsEnabled: enabled }),
 
-        for (const [otherAction, otherBinding] of Object.entries(shortcuts)) {
-          if (otherAction !== action && bindingsEqual(binding, otherBinding)) {
-            conflicts.push(otherAction as ShortcutAction);
-          }
-        }
+    exportShortcuts: () => {
+      const { activePreset, customShortcuts } = get();
+      return {
+        version: 1,
+        preset: activePreset,
+        shortcuts:
+          activePreset === 'custom'
+            ? customShortcuts
+            : SHORTCUT_PRESETS[activePreset],
+        exportedAt: new Date().toISOString(),
+      };
+    },
 
-        return conflicts;
-      },
-
-      setVimShortcutsEnabled: (enabled) =>
-        set({ vimShortcutsEnabled: enabled }),
-
-      exportShortcuts: () => {
-        const { activePreset, customShortcuts } = get();
-        return {
-          version: 1,
-          preset: activePreset,
-          shortcuts:
-            activePreset === 'custom'
-              ? customShortcuts
-              : SHORTCUT_PRESETS[activePreset],
-          exportedAt: new Date().toISOString(),
-        };
-      },
-
-      importShortcuts: (data) => {
-        try {
-          if (data.version !== 1) {
-            console.error('Unsupported shortcuts export version');
-            return false;
-          }
-
-          // Validate all actions exist
-          const validActions = new Set(SHORTCUT_ACTIONS.map((a) => a.id));
-          for (const action of Object.keys(data.shortcuts)) {
-            if (!validActions.has(action as ShortcutAction)) {
-              console.error(`Unknown shortcut action: ${action}`);
-              return false;
-            }
-          }
-
-          set({
-            activePreset: 'custom',
-            customShortcuts: data.shortcuts,
-          });
-
-          return true;
-        } catch (error) {
-          console.error('Failed to import shortcuts:', error);
+    importShortcuts: (data) => {
+      try {
+        if (data.version !== 1) {
+          console.error('Unsupported shortcuts export version');
           return false;
         }
-      },
-    }),
-    {
-      name: 'sql-pro-keyboard-shortcuts',
-      version: 1,
-      onRehydrateStorage: () => {
-        return (state) => {
-          // Sync shortcuts to main process after rehydration
-          if (state) {
-            syncShortcutsToMain(state.getActiveShortcuts());
+
+        // Validate all actions exist
+        const validActions = new Set(SHORTCUT_ACTIONS.map((a) => a.id));
+        for (const action of Object.keys(data.shortcuts)) {
+          if (!validActions.has(action as ShortcutAction)) {
+            console.error(`Unknown shortcut action: ${action}`);
+            return false;
           }
-        };
-      },
-    }
-  )
+        }
+
+        set({
+          activePreset: 'custom',
+          customShortcuts: data.shortcuts,
+        });
+
+        return true;
+      } catch (error) {
+        console.error('Failed to import shortcuts:', error);
+        return false;
+      }
+    },
+  })
 );
 
 /**

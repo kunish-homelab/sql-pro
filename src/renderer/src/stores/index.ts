@@ -9,6 +9,7 @@ export {
 } from './command-palette-store';
 export type { Command } from './command-palette-store';
 export { useConnectionStore } from './connection-store';
+export { useConnectionSwitcherStore } from './connection-switcher-store';
 export { useDataDiffStore } from './data-diff-store';
 export type {
   DataDiffFilters,

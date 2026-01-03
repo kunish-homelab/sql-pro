@@ -9,8 +9,6 @@ import type {
   TableSchema,
 } from '@/types/database';
 import { create } from 'zustand';
-import { persist } from 'zustand/middleware';
-import { createConnectionStorage } from '@/lib/electron-storage';
 import { useChangesStore } from './changes-store';
 
 interface ConnectionState {
@@ -135,393 +133,380 @@ const initialState = {
   schema: null,
 };
 
-export const useConnectionStore = create<ConnectionState>()(
-  persist(
-    (set, get) => ({
-      ...initialState,
+export const useConnectionStore = create<ConnectionState>()((set, get) => ({
+  ...initialState,
 
-      // Connection Actions
-      addConnection: (connection) =>
-        set((state) => {
-          const newConnections = new Map(state.connections);
-          newConnections.set(connection.id, connection);
+  // Connection Actions
+  addConnection: (connection) =>
+    set((state) => {
+      const newConnections = new Map(state.connections);
+      newConnections.set(connection.id, connection);
 
-          // Add to tab order if not already present
-          const newTabOrder = state.connectionTabOrder.includes(connection.id)
-            ? state.connectionTabOrder
-            : [...state.connectionTabOrder, connection.id];
+      // Add to tab order if not already present
+      const newTabOrder = state.connectionTabOrder.includes(connection.id)
+        ? state.connectionTabOrder
+        : [...state.connectionTabOrder, connection.id];
 
-          return {
-            connections: newConnections,
-            activeConnectionId: connection.id,
-            connectionTabOrder: newTabOrder,
-            // Clear selected table when switching to new connection
-            selectedTable: null,
-            selectedSchemaObject: null,
-            // Legacy compatibility
-            connection,
-            schema: null,
-            error: null,
-          };
-        }),
+      return {
+        connections: newConnections,
+        activeConnectionId: connection.id,
+        connectionTabOrder: newTabOrder,
+        // Clear selected table when switching to new connection
+        selectedTable: null,
+        selectedSchemaObject: null,
+        // Legacy compatibility
+        connection,
+        schema: null,
+        error: null,
+      };
+    }),
 
-      removeConnection: (id) =>
-        set((state) => {
-          const newConnections = new Map(state.connections);
-          newConnections.delete(id);
+  removeConnection: (id) =>
+    set((state) => {
+      const newConnections = new Map(state.connections);
+      newConnections.delete(id);
 
-          const newSchemas = new Map(state.schemas);
-          newSchemas.delete(id);
+      const newSchemas = new Map(state.schemas);
+      newSchemas.delete(id);
 
-          // Remove from tab order
-          const newTabOrder = state.connectionTabOrder.filter(
-            (connId) => connId !== id
-          );
+      // Remove from tab order
+      const newTabOrder = state.connectionTabOrder.filter(
+        (connId) => connId !== id
+      );
 
-          // Remove from connection colors
-          const { [id]: _, ...newConnectionColors } = state.connectionColors;
+      // Remove from connection colors
+      const { [id]: _, ...newConnectionColors } = state.connectionColors;
 
-          // If removing the active connection, switch to another one or null
-          let newActiveId = state.activeConnectionId;
-          let newConnection: DatabaseConnection | null = null;
-          let newSchema: DatabaseSchema | null = null;
+      // If removing the active connection, switch to another one or null
+      let newActiveId = state.activeConnectionId;
+      let newConnection: DatabaseConnection | null = null;
+      let newSchema: DatabaseSchema | null = null;
 
-          if (state.activeConnectionId === id) {
-            const remainingIds = Array.from(newConnections.keys());
-            newActiveId = remainingIds.length > 0 ? remainingIds[0] : null;
-            newConnection = newActiveId
-              ? newConnections.get(newActiveId) || null
-              : null;
-            newSchema = newActiveId
-              ? newSchemas.get(newActiveId) || null
-              : null;
-          } else {
-            newConnection = state.activeConnectionId
-              ? newConnections.get(state.activeConnectionId) || null
-              : null;
-            newSchema = state.activeConnectionId
-              ? newSchemas.get(state.activeConnectionId) || null
-              : null;
-          }
+      if (state.activeConnectionId === id) {
+        const remainingIds = Array.from(newConnections.keys());
+        newActiveId = remainingIds.length > 0 ? remainingIds[0] : null;
+        newConnection = newActiveId
+          ? newConnections.get(newActiveId) || null
+          : null;
+        newSchema = newActiveId ? newSchemas.get(newActiveId) || null : null;
+      } else {
+        newConnection = state.activeConnectionId
+          ? newConnections.get(state.activeConnectionId) || null
+          : null;
+        newSchema = state.activeConnectionId
+          ? newSchemas.get(state.activeConnectionId) || null
+          : null;
+      }
 
-          return {
-            connections: newConnections,
-            schemas: newSchemas,
-            activeConnectionId: newActiveId,
-            connectionTabOrder: newTabOrder,
-            connectionColors: newConnectionColors,
-            selectedTable:
-              state.activeConnectionId === id ? null : state.selectedTable,
-            selectedSchemaObject:
-              state.activeConnectionId === id
-                ? null
-                : state.selectedSchemaObject,
-            // Legacy compatibility
-            connection: newConnection,
-            schema: newSchema,
-          };
-        }),
+      return {
+        connections: newConnections,
+        schemas: newSchemas,
+        activeConnectionId: newActiveId,
+        connectionTabOrder: newTabOrder,
+        connectionColors: newConnectionColors,
+        selectedTable:
+          state.activeConnectionId === id ? null : state.selectedTable,
+        selectedSchemaObject:
+          state.activeConnectionId === id ? null : state.selectedSchemaObject,
+        // Legacy compatibility
+        connection: newConnection,
+        schema: newSchema,
+      };
+    }),
 
-      setActiveConnection: (id) =>
-        set((state) => {
-          if (id === null) {
-            return {
-              activeConnectionId: null,
-              selectedTable: null,
-              selectedSchemaObject: null,
-              // Legacy compatibility
-              connection: null,
-              schema: null,
-            };
-          }
-
-          const connection = state.connections.get(id);
-          if (!connection) return state;
-
-          return {
-            activeConnectionId: id,
-            selectedTable: null,
-            selectedSchemaObject: null,
-            // Legacy compatibility
-            connection,
-            schema: state.schemas.get(id) || null,
-          };
-        }),
-
-      updateConnection: (id, updates) =>
-        set((state) => {
-          const existingConnection = state.connections.get(id);
-          if (!existingConnection) return state;
-
-          const updatedConnection = { ...existingConnection, ...updates };
-          const newConnections = new Map(state.connections);
-          newConnections.set(id, updatedConnection);
-
-          return {
-            connections: newConnections,
-            // Legacy compatibility
-            connection:
-              state.activeConnectionId === id
-                ? updatedConnection
-                : state.connection,
-          };
-        }),
-
-      reorderConnections: (fromIndex, toIndex) =>
-        set((state) => {
-          const newTabOrder = [...state.connectionTabOrder];
-          const [movedId] = newTabOrder.splice(fromIndex, 1);
-          newTabOrder.splice(toIndex, 0, movedId);
-
-          return {
-            connectionTabOrder: newTabOrder,
-          };
-        }),
-
-      setConnectionColor: (id, color) =>
-        set((state) => {
-          // Validate hex color format: #RGB or #RRGGBB
-          const hexColorRegex = /^#(?:[A-F0-9]{6}|[A-F0-9]{3})$/i;
-          if (!hexColorRegex.test(color)) {
-            // Invalid color, don't update state
-            return state;
-          }
-
-          return {
-            connectionColors: {
-              ...state.connectionColors,
-              [id]: color,
-            },
-          };
-        }),
-
-      // Schema Actions
-      setSchema: (connectionId, schema) =>
-        set((state) => {
-          const newSchemas = new Map(state.schemas);
-          if (schema) {
-            newSchemas.set(connectionId, schema);
-          } else {
-            newSchemas.delete(connectionId);
-          }
-
-          return {
-            schemas: newSchemas,
-            // Legacy compatibility
-            schema:
-              state.activeConnectionId === connectionId ? schema : state.schema,
-          };
-        }),
-
-      // Selection Actions
-      setSelectedTable: (selectedTable) => set({ selectedTable }),
-      setSelectedSchemaObject: (selectedSchemaObject) =>
-        set({ selectedSchemaObject }),
-
-      // Recent Connections Actions
-      setRecentConnections: (recentConnections) => set({ recentConnections }),
-
-      // Profile Actions
-      addProfile: (profile) =>
-        set((state) => {
-          const newProfiles = new Map(state.profiles);
-          newProfiles.set(profile.id, profile);
-          return { profiles: newProfiles };
-        }),
-
-      updateProfile: (id, updates) =>
-        set((state) => {
-          const existingProfile = state.profiles.get(id);
-          if (!existingProfile) return state;
-
-          const updatedProfile = { ...existingProfile, ...updates };
-          const newProfiles = new Map(state.profiles);
-          newProfiles.set(id, updatedProfile);
-
-          return { profiles: newProfiles };
-        }),
-
-      deleteProfile: (id) =>
-        set((state) => {
-          const newProfiles = new Map(state.profiles);
-          newProfiles.delete(id);
-
-          return {
-            profiles: newProfiles,
-            selectedProfileId:
-              state.selectedProfileId === id ? null : state.selectedProfileId,
-          };
-        }),
-
-      selectProfile: (id) => set({ selectedProfileId: id }),
-
-      setProfiles: (profiles) =>
-        set(() => {
-          const profileMap = new Map<string, ConnectionProfile>();
-          profiles.forEach((profile) => {
-            profileMap.set(profile.id, profile);
-          });
-          return { profiles: profileMap };
-        }),
-
-      // Folder Actions
-      addFolder: (folder) =>
-        set((state) => {
-          const newFolders = new Map(state.folders);
-          newFolders.set(folder.id, folder);
-          return { folders: newFolders };
-        }),
-
-      updateFolder: (id, updates) =>
-        set((state) => {
-          const existingFolder = state.folders.get(id);
-          if (!existingFolder) return state;
-
-          const updatedFolder = { ...existingFolder, ...updates };
-          const newFolders = new Map(state.folders);
-          newFolders.set(id, updatedFolder);
-
-          return { folders: newFolders };
-        }),
-
-      deleteFolder: (id) =>
-        set((state) => {
-          const newFolders = new Map(state.folders);
-          newFolders.delete(id);
-
-          const newExpandedFolderIds = new Set(state.expandedFolderIds);
-          newExpandedFolderIds.delete(id);
-
-          return {
-            folders: newFolders,
-            expandedFolderIds: newExpandedFolderIds,
-          };
-        }),
-
-      toggleFolderExpanded: (id) =>
-        set((state) => {
-          const newExpandedFolderIds = new Set(state.expandedFolderIds);
-          if (newExpandedFolderIds.has(id)) {
-            newExpandedFolderIds.delete(id);
-          } else {
-            newExpandedFolderIds.add(id);
-          }
-          return { expandedFolderIds: newExpandedFolderIds };
-        }),
-
-      setFolders: (folders) =>
-        set(() => {
-          const folderMap = new Map<string, ProfileFolder>();
-          folders.forEach((folder) => {
-            folderMap.set(folder.id, folder);
-          });
-          return { folders: folderMap };
-        }),
-
-      // Loading State Actions
-      setIsConnecting: (isConnecting) => set({ isConnecting }),
-      setIsLoadingSchema: (isLoadingSchema) => set({ isLoadingSchema }),
-
-      // Error Actions
-      setError: (error) => set({ error }),
-
-      // Reset - clears all state
-      reset: () =>
-        set({
-          connections: new Map(),
+  setActiveConnection: (id) =>
+    set((state) => {
+      if (id === null) {
+        return {
           activeConnectionId: null,
-          connectionTabOrder: [],
-          connectionColors: {},
-          schemas: new Map(),
           selectedTable: null,
           selectedSchemaObject: null,
-          recentConnections: [],
-          profiles: get().profiles, // Keep profiles
-          folders: get().folders, // Keep folders
-          selectedProfileId: null,
-          expandedFolderIds: get().expandedFolderIds, // Keep folder expansion state
-          isConnecting: false,
-          isLoadingSchema: false,
-          error: null,
           // Legacy compatibility
           connection: null,
           schema: null,
-        }),
+        };
+      }
 
-      // Computed getters
-      getConnection: () => {
-        const state = get();
-        if (!state.activeConnectionId) return null;
-        return state.connections.get(state.activeConnectionId) || null;
-      },
+      const connection = state.connections.get(id);
+      if (!connection) return state;
 
-      getSchema: () => {
-        const state = get();
-        if (!state.activeConnectionId) return null;
-        return state.schemas.get(state.activeConnectionId) || null;
-      },
-
-      getConnectionById: (id) => {
-        return get().connections.get(id);
-      },
-
-      getSchemaByConnectionId: (id) => {
-        return get().schemas.get(id);
-      },
-
-      getAllConnections: () => {
-        return Array.from(get().connections.values());
-      },
-
-      getConnectionColor: (id) => {
-        return get().connectionColors[id];
-      },
-
-      hasUnsavedChanges: (connectionId) => {
-        const changesStore = useChangesStore.getState();
-        return changesStore.hasChangesForConnection(connectionId);
-      },
-
-      // Profile getters
-      getProfileById: (id) => {
-        return get().profiles.get(id);
-      },
-
-      getAllProfiles: () => {
-        return Array.from(get().profiles.values());
-      },
-
-      getProfilesByFolder: (folderId) => {
-        return Array.from(get().profiles.values()).filter(
-          (profile) => profile.folderId === folderId
-        );
-      },
-
-      // Folder getters
-      getFolderById: (id) => {
-        return get().folders.get(id);
-      },
-
-      getAllFolders: () => {
-        return Array.from(get().folders.values());
-      },
-
-      getSubfolders: (parentId) => {
-        return Array.from(get().folders.values()).filter(
-          (folder) => folder.parentId === parentId
-        );
-      },
-
-      // Legacy compatibility
-      setConnection: (connection) =>
-        set({
-          connection,
-        }),
+      return {
+        activeConnectionId: id,
+        selectedTable: null,
+        selectedSchemaObject: null,
+        // Legacy compatibility
+        connection,
+        schema: state.schemas.get(id) || null,
+      };
     }),
-    {
-      name: 'connection-store',
-      version: 2, // Bump version for electron-store migration
-      storage: createConnectionStorage(),
-    }
-  )
-);
+
+  updateConnection: (id, updates) =>
+    set((state) => {
+      const existingConnection = state.connections.get(id);
+      if (!existingConnection) return state;
+
+      const updatedConnection = { ...existingConnection, ...updates };
+      const newConnections = new Map(state.connections);
+      newConnections.set(id, updatedConnection);
+
+      return {
+        connections: newConnections,
+        // Legacy compatibility
+        connection:
+          state.activeConnectionId === id
+            ? updatedConnection
+            : state.connection,
+      };
+    }),
+
+  reorderConnections: (fromIndex, toIndex) =>
+    set((state) => {
+      const newTabOrder = [...state.connectionTabOrder];
+      const [movedId] = newTabOrder.splice(fromIndex, 1);
+      newTabOrder.splice(toIndex, 0, movedId);
+
+      return {
+        connectionTabOrder: newTabOrder,
+      };
+    }),
+
+  setConnectionColor: (id, color) =>
+    set((state) => {
+      // Validate hex color format: #RGB or #RRGGBB
+      const hexColorRegex = /^#(?:[A-F0-9]{6}|[A-F0-9]{3})$/i;
+      if (!hexColorRegex.test(color)) {
+        // Invalid color, don't update state
+        return state;
+      }
+
+      return {
+        connectionColors: {
+          ...state.connectionColors,
+          [id]: color,
+        },
+      };
+    }),
+
+  // Schema Actions
+  setSchema: (connectionId, schema) =>
+    set((state) => {
+      const newSchemas = new Map(state.schemas);
+      if (schema) {
+        newSchemas.set(connectionId, schema);
+      } else {
+        newSchemas.delete(connectionId);
+      }
+
+      return {
+        schemas: newSchemas,
+        // Legacy compatibility
+        schema:
+          state.activeConnectionId === connectionId ? schema : state.schema,
+      };
+    }),
+
+  // Selection Actions
+  setSelectedTable: (selectedTable) => set({ selectedTable }),
+  setSelectedSchemaObject: (selectedSchemaObject) =>
+    set({ selectedSchemaObject }),
+
+  // Recent Connections Actions
+  setRecentConnections: (recentConnections) => set({ recentConnections }),
+
+  // Profile Actions
+  addProfile: (profile) =>
+    set((state) => {
+      const newProfiles = new Map(state.profiles);
+      newProfiles.set(profile.id, profile);
+      return { profiles: newProfiles };
+    }),
+
+  updateProfile: (id, updates) =>
+    set((state) => {
+      const existingProfile = state.profiles.get(id);
+      if (!existingProfile) return state;
+
+      const updatedProfile = { ...existingProfile, ...updates };
+      const newProfiles = new Map(state.profiles);
+      newProfiles.set(id, updatedProfile);
+
+      return { profiles: newProfiles };
+    }),
+
+  deleteProfile: (id) =>
+    set((state) => {
+      const newProfiles = new Map(state.profiles);
+      newProfiles.delete(id);
+
+      return {
+        profiles: newProfiles,
+        selectedProfileId:
+          state.selectedProfileId === id ? null : state.selectedProfileId,
+      };
+    }),
+
+  selectProfile: (id) => set({ selectedProfileId: id }),
+
+  setProfiles: (profiles) =>
+    set(() => {
+      const profileMap = new Map<string, ConnectionProfile>();
+      profiles.forEach((profile) => {
+        profileMap.set(profile.id, profile);
+      });
+      return { profiles: profileMap };
+    }),
+
+  // Folder Actions
+  addFolder: (folder) =>
+    set((state) => {
+      const newFolders = new Map(state.folders);
+      newFolders.set(folder.id, folder);
+      return { folders: newFolders };
+    }),
+
+  updateFolder: (id, updates) =>
+    set((state) => {
+      const existingFolder = state.folders.get(id);
+      if (!existingFolder) return state;
+
+      const updatedFolder = { ...existingFolder, ...updates };
+      const newFolders = new Map(state.folders);
+      newFolders.set(id, updatedFolder);
+
+      return { folders: newFolders };
+    }),
+
+  deleteFolder: (id) =>
+    set((state) => {
+      const newFolders = new Map(state.folders);
+      newFolders.delete(id);
+
+      const newExpandedFolderIds = new Set(state.expandedFolderIds);
+      newExpandedFolderIds.delete(id);
+
+      return {
+        folders: newFolders,
+        expandedFolderIds: newExpandedFolderIds,
+      };
+    }),
+
+  toggleFolderExpanded: (id) =>
+    set((state) => {
+      const newExpandedFolderIds = new Set(state.expandedFolderIds);
+      if (newExpandedFolderIds.has(id)) {
+        newExpandedFolderIds.delete(id);
+      } else {
+        newExpandedFolderIds.add(id);
+      }
+      return { expandedFolderIds: newExpandedFolderIds };
+    }),
+
+  setFolders: (folders) =>
+    set(() => {
+      const folderMap = new Map<string, ProfileFolder>();
+      folders.forEach((folder) => {
+        folderMap.set(folder.id, folder);
+      });
+      return { folders: folderMap };
+    }),
+
+  // Loading State Actions
+  setIsConnecting: (isConnecting) => set({ isConnecting }),
+  setIsLoadingSchema: (isLoadingSchema) => set({ isLoadingSchema }),
+
+  // Error Actions
+  setError: (error) => set({ error }),
+
+  // Reset - clears all state
+  reset: () =>
+    set({
+      connections: new Map(),
+      activeConnectionId: null,
+      connectionTabOrder: [],
+      connectionColors: {},
+      schemas: new Map(),
+      selectedTable: null,
+      selectedSchemaObject: null,
+      recentConnections: [],
+      profiles: get().profiles, // Keep profiles
+      folders: get().folders, // Keep folders
+      selectedProfileId: null,
+      expandedFolderIds: get().expandedFolderIds, // Keep folder expansion state
+      isConnecting: false,
+      isLoadingSchema: false,
+      error: null,
+      // Legacy compatibility
+      connection: null,
+      schema: null,
+    }),
+
+  // Computed getters
+  getConnection: () => {
+    const state = get();
+    if (!state.activeConnectionId) return null;
+    return state.connections.get(state.activeConnectionId) || null;
+  },
+
+  getSchema: () => {
+    const state = get();
+    if (!state.activeConnectionId) return null;
+    return state.schemas.get(state.activeConnectionId) || null;
+  },
+
+  getConnectionById: (id) => {
+    return get().connections.get(id);
+  },
+
+  getSchemaByConnectionId: (id) => {
+    return get().schemas.get(id);
+  },
+
+  getAllConnections: () => {
+    return Array.from(get().connections.values());
+  },
+
+  getConnectionColor: (id) => {
+    return get().connectionColors[id];
+  },
+
+  hasUnsavedChanges: (connectionId) => {
+    const changesStore = useChangesStore.getState();
+    return changesStore.hasChangesForConnection(connectionId);
+  },
+
+  // Profile getters
+  getProfileById: (id) => {
+    return get().profiles.get(id);
+  },
+
+  getAllProfiles: () => {
+    return Array.from(get().profiles.values());
+  },
+
+  getProfilesByFolder: (folderId) => {
+    return Array.from(get().profiles.values()).filter(
+      (profile) => profile.folderId === folderId
+    );
+  },
+
+  // Folder getters
+  getFolderById: (id) => {
+    return get().folders.get(id);
+  },
+
+  getAllFolders: () => {
+    return Array.from(get().folders.values());
+  },
+
+  getSubfolders: (parentId) => {
+    return Array.from(get().folders.values()).filter(
+      (folder) => folder.parentId === parentId
+    );
+  },
+
+  // Legacy compatibility
+  setConnection: (connection) =>
+    set({
+      connection,
+    }),
+}));

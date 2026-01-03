@@ -1,5 +1,4 @@
 import { create } from 'zustand';
-import { persist } from 'zustand/middleware';
 
 /**
  * Sort options for tables in the sidebar
@@ -77,188 +76,183 @@ const DEFAULT_METADATA: TableMetadata = {
 };
 
 export const useTableOrganizationStore = create<TableOrganizationState>()(
-  persist(
-    (set, get) => ({
-      sortOption: 'name-asc',
-      availableTags: [],
-      tableMetadata: {},
-      activeTagFilter: null,
+  (set, get) => ({
+    sortOption: 'name-asc',
+    availableTags: [],
+    tableMetadata: {},
+    activeTagFilter: null,
 
-      setSortOption: (option) => set({ sortOption: option }),
+    setSortOption: (option) => set({ sortOption: option }),
 
-      // Tag management
-      addTag: (tag) => {
-        const trimmedTag = tag.trim();
-        if (!trimmedTag) return;
-        set((state) => ({
-          availableTags: state.availableTags.includes(trimmedTag)
-            ? state.availableTags
-            : [...state.availableTags, trimmedTag],
-        }));
-      },
+    // Tag management
+    addTag: (tag) => {
+      const trimmedTag = tag.trim();
+      if (!trimmedTag) return;
+      set((state) => ({
+        availableTags: state.availableTags.includes(trimmedTag)
+          ? state.availableTags
+          : [...state.availableTags, trimmedTag],
+      }));
+    },
 
-      removeTag: (tag) => {
-        set((state) => {
-          // Remove tag from available tags
-          const newAvailableTags = state.availableTags.filter((t) => t !== tag);
+    removeTag: (tag) => {
+      set((state) => {
+        // Remove tag from available tags
+        const newAvailableTags = state.availableTags.filter((t) => t !== tag);
 
-          // Remove tag from all tables that have it
-          const newTableMetadata = { ...state.tableMetadata };
-          for (const key of Object.keys(newTableMetadata)) {
-            if (newTableMetadata[key].tags.includes(tag)) {
-              newTableMetadata[key] = {
-                ...newTableMetadata[key],
-                tags: newTableMetadata[key].tags.filter((t) => t !== tag),
-              };
-            }
+        // Remove tag from all tables that have it
+        const newTableMetadata = { ...state.tableMetadata };
+        for (const key of Object.keys(newTableMetadata)) {
+          if (newTableMetadata[key].tags.includes(tag)) {
+            newTableMetadata[key] = {
+              ...newTableMetadata[key],
+              tags: newTableMetadata[key].tags.filter((t) => t !== tag),
+            };
           }
+        }
 
-          return {
-            availableTags: newAvailableTags,
-            tableMetadata: newTableMetadata,
-            activeTagFilter:
-              state.activeTagFilter === tag ? null : state.activeTagFilter,
-          };
-        });
-      },
+        return {
+          availableTags: newAvailableTags,
+          tableMetadata: newTableMetadata,
+          activeTagFilter:
+            state.activeTagFilter === tag ? null : state.activeTagFilter,
+        };
+      });
+    },
 
-      renameTag: (oldTag, newTag) => {
-        const trimmedNewTag = newTag.trim();
-        if (!trimmedNewTag || oldTag === trimmedNewTag) return;
+    renameTag: (oldTag, newTag) => {
+      const trimmedNewTag = newTag.trim();
+      if (!trimmedNewTag || oldTag === trimmedNewTag) return;
 
-        set((state) => {
-          // Rename in available tags
-          const newAvailableTags = state.availableTags.map((t) =>
-            t === oldTag ? trimmedNewTag : t
-          );
+      set((state) => {
+        // Rename in available tags
+        const newAvailableTags = state.availableTags.map((t) =>
+          t === oldTag ? trimmedNewTag : t
+        );
 
-          // Rename in all tables that have it
-          const newTableMetadata = { ...state.tableMetadata };
-          for (const key of Object.keys(newTableMetadata)) {
-            if (newTableMetadata[key].tags.includes(oldTag)) {
-              newTableMetadata[key] = {
-                ...newTableMetadata[key],
-                tags: newTableMetadata[key].tags.map((t) =>
-                  t === oldTag ? trimmedNewTag : t
-                ),
-              };
-            }
+        // Rename in all tables that have it
+        const newTableMetadata = { ...state.tableMetadata };
+        for (const key of Object.keys(newTableMetadata)) {
+          if (newTableMetadata[key].tags.includes(oldTag)) {
+            newTableMetadata[key] = {
+              ...newTableMetadata[key],
+              tags: newTableMetadata[key].tags.map((t) =>
+                t === oldTag ? trimmedNewTag : t
+              ),
+            };
           }
+        }
 
-          return {
-            availableTags: newAvailableTags,
-            tableMetadata: newTableMetadata,
-            activeTagFilter:
-              state.activeTagFilter === oldTag
-                ? trimmedNewTag
-                : state.activeTagFilter,
-          };
-        });
-      },
+        return {
+          availableTags: newAvailableTags,
+          tableMetadata: newTableMetadata,
+          activeTagFilter:
+            state.activeTagFilter === oldTag
+              ? trimmedNewTag
+              : state.activeTagFilter,
+        };
+      });
+    },
 
-      // Table metadata actions
-      setTableTags: (tableKey, tags) => {
-        set((state) => {
-          const existing = state.tableMetadata[tableKey] || DEFAULT_METADATA;
-          return {
-            tableMetadata: {
-              ...state.tableMetadata,
-              [tableKey]: { ...existing, tags },
+    // Table metadata actions
+    setTableTags: (tableKey, tags) => {
+      set((state) => {
+        const existing = state.tableMetadata[tableKey] || DEFAULT_METADATA;
+        return {
+          tableMetadata: {
+            ...state.tableMetadata,
+            [tableKey]: { ...existing, tags },
+          },
+        };
+      });
+    },
+
+    addTableTag: (tableKey, tag) => {
+      const trimmedTag = tag.trim();
+      if (!trimmedTag) return;
+
+      set((state) => {
+        const existing = state.tableMetadata[tableKey] || DEFAULT_METADATA;
+        if (existing.tags.includes(trimmedTag)) return state;
+
+        // Also add to available tags if not present
+        const newAvailableTags = state.availableTags.includes(trimmedTag)
+          ? state.availableTags
+          : [...state.availableTags, trimmedTag];
+
+        return {
+          availableTags: newAvailableTags,
+          tableMetadata: {
+            ...state.tableMetadata,
+            [tableKey]: { ...existing, tags: [...existing.tags, trimmedTag] },
+          },
+        };
+      });
+    },
+
+    removeTableTag: (tableKey, tag) => {
+      set((state) => {
+        const existing = state.tableMetadata[tableKey];
+        if (!existing) return state;
+
+        return {
+          tableMetadata: {
+            ...state.tableMetadata,
+            [tableKey]: {
+              ...existing,
+              tags: existing.tags.filter((t) => t !== tag),
             },
-          };
-        });
-      },
+          },
+        };
+      });
+    },
 
-      addTableTag: (tableKey, tag) => {
-        const trimmedTag = tag.trim();
-        if (!trimmedTag) return;
+    setTablePinned: (tableKey, pinned) => {
+      set((state) => {
+        const existing = state.tableMetadata[tableKey] || DEFAULT_METADATA;
+        return {
+          tableMetadata: {
+            ...state.tableMetadata,
+            [tableKey]: { ...existing, pinned },
+          },
+        };
+      });
+    },
 
-        set((state) => {
-          const existing = state.tableMetadata[tableKey] || DEFAULT_METADATA;
-          if (existing.tags.includes(trimmedTag)) return state;
+    setTableColor: (tableKey, color) => {
+      set((state) => {
+        const existing = state.tableMetadata[tableKey] || DEFAULT_METADATA;
+        return {
+          tableMetadata: {
+            ...state.tableMetadata,
+            [tableKey]: { ...existing, color },
+          },
+        };
+      });
+    },
 
-          // Also add to available tags if not present
-          const newAvailableTags = state.availableTags.includes(trimmedTag)
-            ? state.availableTags
-            : [...state.availableTags, trimmedTag];
+    setTableSortOrder: (tableKey, order) => {
+      set((state) => {
+        const existing = state.tableMetadata[tableKey] || DEFAULT_METADATA;
+        return {
+          tableMetadata: {
+            ...state.tableMetadata,
+            [tableKey]: { ...existing, sortOrder: order },
+          },
+        };
+      });
+    },
 
-          return {
-            availableTags: newAvailableTags,
-            tableMetadata: {
-              ...state.tableMetadata,
-              [tableKey]: { ...existing, tags: [...existing.tags, trimmedTag] },
-            },
-          };
-        });
-      },
+    setActiveTagFilter: (tag) => set({ activeTagFilter: tag }),
 
-      removeTableTag: (tableKey, tag) => {
-        set((state) => {
-          const existing = state.tableMetadata[tableKey];
-          if (!existing) return state;
+    getTableMetadata: (tableKey) => {
+      return get().tableMetadata[tableKey] || DEFAULT_METADATA;
+    },
 
-          return {
-            tableMetadata: {
-              ...state.tableMetadata,
-              [tableKey]: {
-                ...existing,
-                tags: existing.tags.filter((t) => t !== tag),
-              },
-            },
-          };
-        });
-      },
-
-      setTablePinned: (tableKey, pinned) => {
-        set((state) => {
-          const existing = state.tableMetadata[tableKey] || DEFAULT_METADATA;
-          return {
-            tableMetadata: {
-              ...state.tableMetadata,
-              [tableKey]: { ...existing, pinned },
-            },
-          };
-        });
-      },
-
-      setTableColor: (tableKey, color) => {
-        set((state) => {
-          const existing = state.tableMetadata[tableKey] || DEFAULT_METADATA;
-          return {
-            tableMetadata: {
-              ...state.tableMetadata,
-              [tableKey]: { ...existing, color },
-            },
-          };
-        });
-      },
-
-      setTableSortOrder: (tableKey, order) => {
-        set((state) => {
-          const existing = state.tableMetadata[tableKey] || DEFAULT_METADATA;
-          return {
-            tableMetadata: {
-              ...state.tableMetadata,
-              [tableKey]: { ...existing, sortOrder: order },
-            },
-          };
-        });
-      },
-
-      setActiveTagFilter: (tag) => set({ activeTagFilter: tag }),
-
-      getTableMetadata: (tableKey) => {
-        return get().tableMetadata[tableKey] || DEFAULT_METADATA;
-      },
-
-      getTableKey: (connectionPath, schemaName, tableName) => {
-        return `${connectionPath}:${schemaName}:${tableName}`;
-      },
-    }),
-    {
-      name: 'sql-pro-table-organization',
-    }
-  )
+    getTableKey: (connectionPath, schemaName, tableName) => {
+      return `${connectionPath}:${schemaName}:${tableName}`;
+    },
+  })
 );
 
 // Selector hooks

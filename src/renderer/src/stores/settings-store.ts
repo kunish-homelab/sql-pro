@@ -1,8 +1,5 @@
 import type { FontConfig, FontSettings } from '@shared/types/font';
-import type { RendererSettingsState } from '@shared/types/renderer-store';
 import { create } from 'zustand';
-import { persist } from 'zustand/middleware';
-import { createHybridStorage } from '@/lib/electron-storage';
 
 // Common monospace fonts available on different platforms
 export const MONOSPACE_FONTS = [
@@ -73,141 +70,84 @@ const DEFAULT_FONTS: FontSettings = {
   syncAll: true,
 };
 
-// Migration function to handle old settings format (from localStorage)
-interface OldSettingsFormat {
-  editorMode?: 'vim' | 'normal';
-  fontSize?: number;
-  fontFamily?: string;
-  tabSize?: number;
-}
+export const useSettingsStore = create<SettingsState>()((set, get) => ({
+  // Default to vim mode for editor
+  editorVimMode: true,
+  appVimMode: false,
 
-function migrateOldSettings(
-  persisted: unknown
-): Partial<RendererSettingsState> | undefined {
-  if (!persisted || typeof persisted !== 'object') return undefined;
+  fonts: DEFAULT_FONTS,
 
-  const old = persisted as OldSettingsFormat & Partial<RendererSettingsState>;
+  tabSize: 2,
 
-  // Check if already migrated (has fonts object)
-  if ('fonts' in old && old.fonts) {
-    return old as Partial<RendererSettingsState>;
-  }
+  pageSize: 100,
 
-  // Migrate from old format
-  const editorVimMode = old.editorMode === 'vim';
-  const fontSize = old.fontSize ?? 14;
-  const fontFamily = old.fontFamily ?? '';
+  restoreSession: true,
 
-  return {
-    editorVimMode,
-    appVimMode: false,
-    fonts: {
-      editor: { family: fontFamily, size: fontSize },
-      table: { family: fontFamily, size: fontSize },
-      ui: { family: fontFamily, size: 13 },
-      syncAll: true,
-    },
-    tabSize: old.tabSize ?? 2,
-  };
-}
+  sidebarCollapsed: false,
 
-export const useSettingsStore = create<SettingsState>()(
-  persist(
-    (set, get) => ({
-      // Default to vim mode for editor
-      editorVimMode: true,
-      appVimMode: false,
+  setEditorVimMode: (enabled) => set({ editorVimMode: enabled }),
 
-      fonts: DEFAULT_FONTS,
+  setAppVimMode: (enabled) => set({ appVimMode: enabled }),
 
-      tabSize: 2,
+  setFont: (category, config) => {
+    const { fonts } = get();
+    const newConfig = { ...fonts[category], ...config };
 
-      pageSize: 100,
-
-      restoreSession: true,
-
-      sidebarCollapsed: false,
-
-      setEditorVimMode: (enabled) => set({ editorVimMode: enabled }),
-
-      setAppVimMode: (enabled) => set({ appVimMode: enabled }),
-
-      setFont: (category, config) => {
-        const { fonts } = get();
-        const newConfig = { ...fonts[category], ...config };
-
-        if (fonts.syncAll) {
-          // Sync all fonts when syncAll is enabled
-          set({
-            fonts: {
-              ...fonts,
-              editor: { ...newConfig },
-              table: { ...newConfig },
-              ui: { ...newConfig },
-            },
-          });
-        } else {
-          // Only update the specific category
-          set({
-            fonts: {
-              ...fonts,
-              [category]: newConfig,
-            },
-          });
-        }
-      },
-
-      setSyncAll: (sync) => {
-        const { fonts } = get();
-        if (sync) {
-          // When enabling sync, use editor font as the source of truth
-          const editorFont = fonts.editor;
-          set({
-            fonts: {
-              editor: { ...editorFont },
-              table: { ...editorFont },
-              ui: { ...editorFont },
-              syncAll: true,
-            },
-          });
-        } else {
-          set({
-            fonts: {
-              ...fonts,
-              syncAll: false,
-            },
-          });
-        }
-      },
-
-      setTabSize: (size) => set({ tabSize: size }),
-
-      setPageSize: (size) => set({ pageSize: size }),
-
-      setRestoreSession: (enabled) => set({ restoreSession: enabled }),
-
-      setSidebarCollapsed: (collapsed) => set({ sidebarCollapsed: collapsed }),
-
-      toggleSidebar: () =>
-        set((state) => ({ sidebarCollapsed: !state.sidebarCollapsed })),
-    }),
-    {
-      name: 'settings', // Store key in electron-store
-      storage: createHybridStorage('settings'),
-      migrate: migrateOldSettings,
-      version: 2, // Bump version for electron-store migration
-      partialize: (state) => ({
-        editorVimMode: state.editorVimMode,
-        appVimMode: state.appVimMode,
-        fonts: state.fonts,
-        tabSize: state.tabSize,
-        pageSize: state.pageSize,
-        restoreSession: state.restoreSession,
-        sidebarCollapsed: state.sidebarCollapsed,
-      }),
+    if (fonts.syncAll) {
+      // Sync all fonts when syncAll is enabled
+      set({
+        fonts: {
+          ...fonts,
+          editor: { ...newConfig },
+          table: { ...newConfig },
+          ui: { ...newConfig },
+        },
+      });
+    } else {
+      // Only update the specific category
+      set({
+        fonts: {
+          ...fonts,
+          [category]: newConfig,
+        },
+      });
     }
-  )
-);
+  },
+
+  setSyncAll: (sync) => {
+    const { fonts } = get();
+    if (sync) {
+      // When enabling sync, use editor font as the source of truth
+      const editorFont = fonts.editor;
+      set({
+        fonts: {
+          editor: { ...editorFont },
+          table: { ...editorFont },
+          ui: { ...editorFont },
+          syncAll: true,
+        },
+      });
+    } else {
+      set({
+        fonts: {
+          ...fonts,
+          syncAll: false,
+        },
+      });
+    }
+  },
+
+  setTabSize: (size) => set({ tabSize: size }),
+
+  setPageSize: (size) => set({ pageSize: size }),
+
+  setRestoreSession: (enabled) => set({ restoreSession: enabled }),
+
+  setSidebarCollapsed: (collapsed) => set({ sidebarCollapsed: collapsed }),
+
+  toggleSidebar: () =>
+    set((state) => ({ sidebarCollapsed: !state.sidebarCollapsed })),
+}));
 
 // Re-export shared types for convenience
 export type { FontConfig, FontSettings } from '@shared/types/font';
