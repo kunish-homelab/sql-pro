@@ -107,6 +107,7 @@ import {
   getProfiles,
   getProStatus,
   getQueryHistory,
+  getRecentConnections,
   getSavedQueries,
   getSchemaSnapshot,
   getSchemaSnapshots,
@@ -1201,6 +1202,22 @@ export function setupIpcHandlers(): void {
     }
   });
 
+  // App: Get Recent Connections
+  ipcMain.handle(IPC_CHANNELS.APP_GET_RECENT_CONNECTIONS, async () => {
+    try {
+      const connections = getRecentConnections();
+      return { success: true, connections };
+    } catch (error) {
+      return {
+        success: false,
+        error:
+          error instanceof Error
+            ? error.message
+            : 'Failed to get recent connections',
+      };
+    }
+  });
+
   // Folders: Get
   ipcMain.handle(IPC_CHANNELS.FOLDERS_GET, async () => {
     try {
@@ -1256,6 +1273,23 @@ export function setupIpcHandlers(): void {
         success: false,
         error:
           error instanceof Error ? error.message : 'Failed to delete folder',
+      };
+    }
+  });
+
+  // Password: Is Available
+  ipcMain.handle(IPC_CHANNELS.PASSWORD_IS_AVAILABLE, async () => {
+    try {
+      const available = passwordStorageService.isAvailable();
+      return { success: true, available };
+    } catch (error) {
+      return {
+        success: false,
+        available: false,
+        error:
+          error instanceof Error
+            ? error.message
+            : 'Failed to check password storage availability',
       };
     }
   });
