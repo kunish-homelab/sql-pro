@@ -391,9 +391,11 @@ export function WelcomeScreen() {
   ) => {
     setPasswordDialogOpen(false);
     if (pendingPath) {
-      // Use rememberPassword from settings dialog if available, otherwise from password dialog
+      // Save password if either dialog requested it (OR logic)
+      // - pendingSettings?.rememberPassword: from settings dialog (if shown)
+      // - rememberPassword: from password dialog
       const shouldRemember =
-        pendingSettings?.rememberPassword ?? rememberPassword;
+        rememberPassword || pendingSettings?.rememberPassword;
 
       // Save password if requested
       if (shouldRemember) {
@@ -425,6 +427,7 @@ export function WelcomeScreen() {
           await connectToDatabase(path, savedPasswordResult.password, readOnly);
         } else {
           // No saved password, show dialog - store readOnly for later use
+          // Note: rememberPassword will be determined by PasswordDialog
           setPendingPath(path);
           setPendingSettings(
             readOnly !== undefined

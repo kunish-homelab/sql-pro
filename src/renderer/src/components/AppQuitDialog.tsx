@@ -106,7 +106,7 @@ export function AppQuitDialog({
         </AlertDialogHeader>
 
         {/* Change Summary by Connection */}
-        <div className="max-h-[300px] space-y-3 overflow-y-auto">
+        <div className="max-h-75 space-y-3 overflow-y-auto">
           {connectionsWithChanges.map((connection) => (
             <div
               key={connection.connectionId}
