@@ -269,242 +269,246 @@ export function SavedQueriesPanel({ onLoadQuery }: SavedQueriesPanelProps) {
   const isSaveDisabled = isSaving || !editFormData.name.trim();
 
   return (
-    <div className="flex h-full flex-col">
-      {/* Header */}
-      <div className="border-b p-4">
-        <div className="flex items-center justify-between">
-          <div>
-            <h2 className="text-lg font-semibold">Saved Queries</h2>
-            <p className="text-muted-foreground text-sm">
-              {selectedCollectionName
-                ? `Filtered by ${selectedCollectionName}`
-                : 'Access and manage your saved queries'}
-            </p>
-          </div>
-          <div className="flex items-center gap-2">
-            {/* Favorites Filter Toggle */}
-            <Toggle
-              pressed={favoritesOnly}
-              onPressedChange={setFavoritesOnly}
-              aria-label="Show only favorites"
-              size="sm"
-            >
-              <Star
-                className={`h-4 w-4 ${favoritesOnly ? 'fill-yellow-400 text-yellow-400' : ''}`}
-              />
-            </Toggle>
-          </div>
-        </div>
-
-        {/* Search */}
-        <div className="relative mt-3">
-          <Search className="text-muted-foreground absolute top-1/2 left-2.5 h-4 w-4 -translate-y-1/2" />
-          <Input
-            type="search"
-            placeholder="Search queries by name, description, or content..."
-            value={searchQuery}
-            onChange={(e) => setSearchQuery(e.target.value)}
-            className="pr-9 pl-9"
-          />
-          {searchQuery && (
-            <Button
-              variant="ghost"
-              size="sm"
-              className="absolute top-1/2 right-1 h-7 w-7 -translate-y-1/2 p-0"
-              onClick={() => setSearchQuery('')}
-            >
-              <X className="h-4 w-4" />
-            </Button>
-          )}
-        </div>
-      </div>
-
-      {/* Queries List */}
-      <ScrollArea className="flex-1">
-        <div className="space-y-3 p-4">
-          {isLoading ? (
-            // Skeleton loading state
-            <>
-              {Array.from({ length: 3 }).map((_, index) => (
-                <Card key={index} size="sm">
-                  <CardHeader>
-                    <div className="flex items-start gap-3">
-                      {/* Icon skeleton */}
-                      <Skeleton className="h-10 w-10 shrink-0 rounded-lg" />
-
-                      {/* Content skeleton */}
-                      <div className="min-w-0 flex-1 space-y-2">
-                        <Skeleton className="h-5 w-3/4" />
-                        <Skeleton className="h-4 w-full" />
-                        <Skeleton className="h-8 w-full rounded" />
-                        <div className="flex items-center gap-4">
-                          <Skeleton className="h-3 w-24" />
-                          <Skeleton className="h-3 w-32" />
-                        </div>
-                      </div>
-
-                      {/* Action skeleton */}
-                      <Skeleton className="h-8 w-8 shrink-0 rounded" />
-                    </div>
-                  </CardHeader>
-                </Card>
-              ))}
-            </>
-          ) : filteredQueries.length === 0 ? (
-            <div className="py-12 text-center">
-              <Bookmark className="text-muted-foreground/50 mx-auto h-12 w-12" />
-              <h3 className="mt-4 text-sm font-medium">
-                {searchQuery
-                  ? 'No queries found'
-                  : favoritesOnly
-                    ? 'No favorite queries'
-                    : selectedCollectionId
-                      ? 'No queries in this collection'
-                      : 'No saved queries yet'}
-              </h3>
-              <p className="text-muted-foreground mt-2 text-sm">
-                {searchQuery
-                  ? 'Try a different search term'
-                  : favoritesOnly
-                    ? 'Star queries to mark them as favorites'
-                    : selectedCollectionId
-                      ? 'Add queries to this collection to see them here'
-                      : 'Save queries from the editor to see them here'}
+    <>
+      <div className="flex h-full flex-col">
+        {/* Header */}
+        <div className="border-b p-4">
+          <div className="flex items-center justify-between">
+            <div>
+              <h2 className="text-lg font-semibold">Saved Queries</h2>
+              <p className="text-muted-foreground text-sm">
+                {selectedCollectionName
+                  ? `Filtered by ${selectedCollectionName}`
+                  : 'Access and manage your saved queries'}
               </p>
             </div>
-          ) : (
-            filteredQueries.map((query) => {
-              const collectionNames = getCollectionNames(query.collectionIds);
-              const queryPreview = getQueryPreview(query.queryText);
+            <div className="flex items-center gap-2">
+              {/* Favorites Filter Toggle */}
+              <Toggle
+                pressed={favoritesOnly}
+                onPressedChange={setFavoritesOnly}
+                aria-label="Show only favorites"
+                size="sm"
+              >
+                <Star
+                  className={`h-4 w-4 ${favoritesOnly ? 'fill-yellow-400 text-yellow-400' : ''}`}
+                />
+              </Toggle>
+            </div>
+          </div>
 
-              return (
-                <Card
-                  key={query.id}
-                  size="sm"
-                  className="hover:bg-accent cursor-pointer transition-colors"
-                  onClick={() => handleLoadQuery(query)}
-                >
-                  <CardHeader>
-                    <div className="flex items-start gap-3">
-                      {/* Icon */}
-                      <div className="bg-primary/10 text-primary flex h-10 w-10 items-center justify-center rounded-lg">
-                        <FileText className="h-5 w-5" />
+          {/* Search */}
+          <div className="relative mt-3">
+            <Search className="text-muted-foreground absolute top-1/2 left-2.5 h-4 w-4 -translate-y-1/2" />
+            <Input
+              type="search"
+              placeholder="Search queries by name, description, or content..."
+              value={searchQuery}
+              onChange={(e) => setSearchQuery(e.target.value)}
+              className="pr-9 pl-9"
+            />
+            {searchQuery && (
+              <Button
+                variant="ghost"
+                size="sm"
+                className="absolute top-1/2 right-1 h-7 w-7 -translate-y-1/2 p-0"
+                onClick={() => setSearchQuery('')}
+              >
+                <X className="h-4 w-4" />
+              </Button>
+            )}
+          </div>
+        </div>
+
+        {/* Queries List */}
+        <ScrollArea className="flex-1">
+          <div className="space-y-3 p-4">
+            {isLoading ? (
+              // Skeleton loading state
+              <>
+                {Array.from({ length: 3 }).map((_, index) => (
+                  <Card key={index} size="sm">
+                    <CardHeader>
+                      <div className="flex items-start gap-3">
+                        {/* Icon skeleton */}
+                        <Skeleton className="h-10 w-10 shrink-0 rounded-lg" />
+
+                        {/* Content skeleton */}
+                        <div className="min-w-0 flex-1 space-y-2">
+                          <Skeleton className="h-5 w-3/4" />
+                          <Skeleton className="h-4 w-full" />
+                          <Skeleton className="h-8 w-full rounded" />
+                          <div className="flex items-center gap-4">
+                            <Skeleton className="h-3 w-24" />
+                            <Skeleton className="h-3 w-32" />
+                          </div>
+                        </div>
+
+                        {/* Action skeleton */}
+                        <Skeleton className="h-8 w-8 shrink-0 rounded" />
                       </div>
+                    </CardHeader>
+                  </Card>
+                ))}
+              </>
+            ) : filteredQueries.length === 0 ? (
+              <div className="py-12 text-center">
+                <Bookmark className="text-muted-foreground/50 mx-auto h-12 w-12" />
+                <h3 className="mt-4 text-sm font-medium">
+                  {searchQuery
+                    ? 'No queries found'
+                    : favoritesOnly
+                      ? 'No favorite queries'
+                      : selectedCollectionId
+                        ? 'No queries in this collection'
+                        : 'No saved queries yet'}
+                </h3>
+                <p className="text-muted-foreground mt-2 text-sm">
+                  {searchQuery
+                    ? 'Try a different search term'
+                    : favoritesOnly
+                      ? 'Star queries to mark them as favorites'
+                      : selectedCollectionId
+                        ? 'Add queries to this collection to see them here'
+                        : 'Save queries from the editor to see them here'}
+                </p>
+              </div>
+            ) : (
+              filteredQueries.map((query) => {
+                const collectionNames = getCollectionNames(query.collectionIds);
+                const queryPreview = getQueryPreview(query.queryText);
 
-                      {/* Content */}
-                      <div className="min-w-0 flex-1">
-                        <div className="flex items-start gap-2">
-                          <CardTitle className="flex-1">{query.name}</CardTitle>
-                          {/* Favorite Star */}
-                          <Button
-                            variant="ghost"
-                            size="sm"
-                            className="-mt-1 h-8 w-8 p-0"
-                            onClick={(e) => handleToggleFavorite(query, e)}
-                          >
-                            <Star
-                              className={`h-4 w-4 ${
-                                query.isFavorite
-                                  ? 'fill-yellow-400 text-yellow-400'
-                                  : ''
-                              }`}
-                            />
-                          </Button>
+                return (
+                  <Card
+                    key={query.id}
+                    size="sm"
+                    className="hover:bg-accent cursor-pointer transition-colors"
+                    onClick={() => handleLoadQuery(query)}
+                  >
+                    <CardHeader>
+                      <div className="flex items-start gap-3">
+                        {/* Icon */}
+                        <div className="bg-primary/10 text-primary flex h-10 w-10 items-center justify-center rounded-lg">
+                          <FileText className="h-5 w-5" />
                         </div>
 
-                        {query.description && (
-                          <CardDescription className="mt-1">
-                            {query.description}
-                          </CardDescription>
-                        )}
-
-                        {/* Query Preview */}
-                        <div className="bg-muted text-muted-foreground mt-2 rounded px-2 py-1 font-mono text-xs">
-                          {queryPreview}
-                        </div>
-
-                        {/* Metadata */}
-                        <div className="text-muted-foreground mt-2 flex items-center gap-4 text-xs">
-                          {collectionNames && (
-                            <div className="flex items-center gap-1">
-                              <Bookmark className="h-3 w-3" />
-                              <span className="truncate">
-                                {collectionNames}
-                              </span>
-                            </div>
-                          )}
-                          {query.dbPath && (
-                            <div className="truncate">
-                              DB: {query.dbPath.split('/').pop()}
-                            </div>
-                          )}
-                        </div>
-                      </div>
-
-                      {/* Actions */}
-                      <CardAction>
-                        <DropdownMenu>
-                          <DropdownMenuTrigger
-                            onClick={(e) => e.stopPropagation()}
-                          >
+                        {/* Content */}
+                        <div className="min-w-0 flex-1">
+                          <div className="flex items-start gap-2">
+                            <CardTitle className="flex-1">
+                              {query.name}
+                            </CardTitle>
+                            {/* Favorite Star */}
                             <Button
                               variant="ghost"
                               size="sm"
-                              className="h-8 w-8 p-0"
+                              className="-mt-1 h-8 w-8 p-0"
+                              onClick={(e) => handleToggleFavorite(query, e)}
                             >
-                              <MoreVertical className="h-4 w-4" />
+                              <Star
+                                className={`h-4 w-4 ${
+                                  query.isFavorite
+                                    ? 'fill-yellow-400 text-yellow-400'
+                                    : ''
+                                }`}
+                              />
                             </Button>
-                          </DropdownMenuTrigger>
-                          <DropdownMenuContent
-                            align="end"
-                            onClick={(e) => e.stopPropagation()}
-                          >
-                            <DropdownMenuItem
-                              onClick={(e) => {
-                                e.stopPropagation();
-                                handleLoadQuery(query);
-                              }}
+                          </div>
+
+                          {query.description && (
+                            <CardDescription className="mt-1">
+                              {query.description}
+                            </CardDescription>
+                          )}
+
+                          {/* Query Preview */}
+                          <div className="bg-muted text-muted-foreground mt-2 rounded px-2 py-1 font-mono text-xs">
+                            {queryPreview}
+                          </div>
+
+                          {/* Metadata */}
+                          <div className="text-muted-foreground mt-2 flex items-center gap-4 text-xs">
+                            {collectionNames && (
+                              <div className="flex items-center gap-1">
+                                <Bookmark className="h-3 w-3" />
+                                <span className="truncate">
+                                  {collectionNames}
+                                </span>
+                              </div>
+                            )}
+                            {query.dbPath && (
+                              <div className="truncate">
+                                DB: {query.dbPath.split('/').pop()}
+                              </div>
+                            )}
+                          </div>
+                        </div>
+
+                        {/* Actions */}
+                        <CardAction>
+                          <DropdownMenu>
+                            <DropdownMenuTrigger
+                              onClick={(e) => e.stopPropagation()}
                             >
-                              <Play className="mr-2 h-4 w-4" />
-                              Load Query
-                            </DropdownMenuItem>
-                            <DropdownMenuItem
-                              onClick={(e) => handleCopyQuery(query, e)}
+                              <Button
+                                variant="ghost"
+                                size="sm"
+                                className="h-8 w-8 p-0"
+                              >
+                                <MoreVertical className="h-4 w-4" />
+                              </Button>
+                            </DropdownMenuTrigger>
+                            <DropdownMenuContent
+                              align="end"
+                              onClick={(e) => e.stopPropagation()}
                             >
-                              <Copy className="mr-2 h-4 w-4" />
-                              Copy to Clipboard
-                            </DropdownMenuItem>
-                            <DropdownMenuSeparator />
-                            <DropdownMenuItem
-                              onClick={(e) => {
-                                e.stopPropagation();
-                                openEditDialog(query);
-                              }}
-                            >
-                              <Pencil className="mr-2 h-4 w-4" />
-                              Edit
-                            </DropdownMenuItem>
-                            <DropdownMenuItem
-                              onClick={(e) => {
-                                e.stopPropagation();
-                                openDeleteDialog(query);
-                              }}
-                              className="text-destructive focus:text-destructive"
-                            >
-                              <Trash2 className="mr-2 h-4 w-4" />
-                              Delete
-                            </DropdownMenuItem>
-                          </DropdownMenuContent>
-                        </DropdownMenu>
-                      </CardAction>
-                    </div>
-                  </CardHeader>
-                </Card>
-              );
-            })
-          )}
-        </div>
-      </ScrollArea>
+                              <DropdownMenuItem
+                                onClick={(e) => {
+                                  e.stopPropagation();
+                                  handleLoadQuery(query);
+                                }}
+                              >
+                                <Play className="mr-2 h-4 w-4" />
+                                Load Query
+                              </DropdownMenuItem>
+                              <DropdownMenuItem
+                                onClick={(e) => handleCopyQuery(query, e)}
+                              >
+                                <Copy className="mr-2 h-4 w-4" />
+                                Copy to Clipboard
+                              </DropdownMenuItem>
+                              <DropdownMenuSeparator />
+                              <DropdownMenuItem
+                                onClick={(e) => {
+                                  e.stopPropagation();
+                                  openEditDialog(query);
+                                }}
+                              >
+                                <Pencil className="mr-2 h-4 w-4" />
+                                Edit
+                              </DropdownMenuItem>
+                              <DropdownMenuItem
+                                onClick={(e) => {
+                                  e.stopPropagation();
+                                  openDeleteDialog(query);
+                                }}
+                                className="text-destructive focus:text-destructive"
+                              >
+                                <Trash2 className="mr-2 h-4 w-4" />
+                                Delete
+                              </DropdownMenuItem>
+                            </DropdownMenuContent>
+                          </DropdownMenu>
+                        </CardAction>
+                      </div>
+                    </CardHeader>
+                  </Card>
+                );
+              })
+            )}
+          </div>
+        </ScrollArea>
+      </div>
 
       {/* Edit Query Dialog */}
       <Dialog open={editDialogOpen} onOpenChange={setEditDialogOpen}>
@@ -646,6 +650,6 @@ export function SavedQueriesPanel({ onLoadQuery }: SavedQueriesPanelProps) {
           </AlertDialogFooter>
         </AlertDialogContent>
       </AlertDialog>
-    </div>
+    </>
   );
 }

@@ -229,68 +229,60 @@ export function CollectionsList() {
   const isSaveDisabled = isSaving || !formData.name.trim();
 
   return (
-    <div className="flex h-full flex-col">
+    <div className="grid h-full min-w-40 grid-rows-[auto_1fr]">
       {/* Header */}
-      <div className="border-b p-4">
-        <div className="flex items-center justify-between">
-          <div>
-            <h2 className="text-lg font-semibold">Collections</h2>
-            <p className="text-muted-foreground text-sm">
-              Organize your queries into collections
+      <div className="border-b p-3">
+        <div className="flex flex-col gap-2">
+          <div className="min-w-0">
+            <h2 className="truncate text-base font-semibold">Collections</h2>
+            <p className="text-muted-foreground truncate text-xs">
+              Organize queries
             </p>
           </div>
-          <Button onClick={() => setCreateDialogOpen(true)} size="sm">
-            <Plus className="mr-2 h-4 w-4" />
-            New Collection
+          <Button
+            onClick={() => setCreateDialogOpen(true)}
+            size="sm"
+            className="w-full"
+          >
+            <Plus className="mr-1 h-4 w-4" />
+            New
           </Button>
         </div>
       </div>
 
       {/* Collections List */}
-      <ScrollArea className="flex-1">
-        <div className="space-y-3 p-4">
-          {isLoading ? (
-            // Skeleton loading state
-            <>
-              {Array.from({ length: 3 }).map((_, index) => (
-                <Card key={index} size="sm">
-                  <CardHeader>
-                    <div className="flex items-start gap-3">
-                      {/* Color indicator & Icon skeleton */}
-                      <Skeleton className="h-10 w-10 shrink-0 rounded-lg" />
-
-                      {/* Content skeleton */}
-                      <div className="min-w-0 flex-1 space-y-2">
-                        <Skeleton className="h-5 w-2/3" />
-                        <Skeleton className="h-4 w-full" />
-                        <Skeleton className="h-3 w-16" />
-                      </div>
-
-                      {/* Action skeleton */}
-                      <Skeleton className="h-8 w-8 shrink-0 rounded" />
+      {isLoading ? (
+        <div className="overflow-auto">
+          <div className="space-y-3 p-4">
+            {Array.from({ length: 3 }).map((_, index) => (
+              <Card key={index} size="sm">
+                <CardHeader>
+                  <div className="flex items-start gap-3">
+                    <Skeleton className="h-10 w-10 shrink-0 rounded-lg" />
+                    <div className="min-w-0 flex-1 space-y-2">
+                      <Skeleton className="h-5 w-2/3" />
+                      <Skeleton className="h-4 w-full" />
+                      <Skeleton className="h-3 w-16" />
                     </div>
-                  </CardHeader>
-                </Card>
-              ))}
-            </>
-          ) : collections.length === 0 ? (
-            <div className="py-12 text-center">
-              <Folder className="text-muted-foreground/50 mx-auto h-12 w-12" />
-              <h3 className="mt-4 text-sm font-medium">No collections yet</h3>
-              <p className="text-muted-foreground mt-2 text-sm">
-                Create your first collection to organize your queries
-              </p>
-              <Button
-                onClick={() => setCreateDialogOpen(true)}
-                size="sm"
-                className="mt-4"
-              >
-                <Plus className="mr-2 h-4 w-4" />
-                Create Collection
-              </Button>
-            </div>
-          ) : (
-            collections.map((collection) => {
+                    <Skeleton className="h-8 w-8 shrink-0 rounded" />
+                  </div>
+                </CardHeader>
+              </Card>
+            ))}
+          </div>
+        </div>
+      ) : collections.length === 0 ? (
+        <div className="flex flex-col items-center justify-center p-4 text-center">
+          <Folder className="text-muted-foreground/50 h-8 w-8 shrink-0" />
+          <h3 className="mt-2 text-sm font-medium">No collections</h3>
+          <p className="text-muted-foreground mt-1 text-xs">
+            Create one to organize queries
+          </p>
+        </div>
+      ) : (
+        <ScrollArea className="h-full">
+          <div className="space-y-3 p-4">
+            {collections.map((collection) => {
               const queryCount = getQueryCountForCollection(collection.id);
               const isSelected = selectedCollectionId === collection.id;
 
@@ -299,7 +291,7 @@ export function CollectionsList() {
                   key={collection.id}
                   size="sm"
                   className={`hover:bg-accent cursor-pointer transition-colors ${
-                    isSelected ? 'ring-primary ring-2' : ''
+                    isSelected ? 'ring-primary ring-2 ring-offset-2' : ''
                   }`}
                   onClick={() => handleCollectionClick(collection.id)}
                 >
@@ -373,10 +365,10 @@ export function CollectionsList() {
                   </CardHeader>
                 </Card>
               );
-            })
-          )}
-        </div>
-      </ScrollArea>
+            })}
+          </div>
+        </ScrollArea>
+      )}
 
       {/* Create Collection Dialog */}
       <Dialog open={createDialogOpen} onOpenChange={setCreateDialogOpen}>
