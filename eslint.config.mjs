@@ -19,8 +19,10 @@ export default antfu({
     '**/*.md',
     'out/**',
     'dist/**',
-    'plugin-sdk/**',
+    'packages/plugin-sdk/**',
+    'packages/docs/**',
     'pnpm-workspace.yaml',
     'node_modules/**',
+    '.nx/**',
   ],
 });

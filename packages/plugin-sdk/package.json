@@ -1,0 +1,32 @@
+{
+  "name": "@sqlpro/plugin-sdk",
+  "version": "1.0.0",
+  "description": "SQL Pro Plugin SDK - TypeScript type definitions and templates for developing SQL Pro plugins",
+  "license": "MIT",
+  "type": "module",
+  "types": "./types/index.d.ts",
+  "exports": {
+    ".": {
+      "types": "./types/index.d.ts"
+    },
+    "./types": {
+      "types": "./types/index.d.ts"
+    }
+  },
+  "files": [
+    "types",
+    "templates"
+  ],
+  "keywords": [
+    "sql-pro",
+    "plugin",
+    "sdk",
+    "typescript",
+    "types"
+  ],
+  "repository": {
+    "type": "git",
+    "url": "https://github.com/kunish-homelab/sql-pro.git",
+    "directory": "packages/plugin-sdk"
+  }
+}

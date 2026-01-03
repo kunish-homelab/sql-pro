@@ -1,0 +1,24 @@
+{
+  "name": "@sqlpro/ui",
+  "$schema": "../../node_modules/nx/schemas/project-schema.json",
+  "sourceRoot": "packages/ui/src",
+  "projectType": "library",
+  "tags": ["scope:ui", "type:lib"],
+  "targets": {
+    "build": {
+      "executor": "@nx/js:tsc",
+      "outputs": ["{options.outputPath}"],
+      "options": {
+        "outputPath": "packages/ui/dist",
+        "main": "packages/ui/src/index.ts",
+        "tsConfig": "packages/ui/tsconfig.build.json"
+      }
+    },
+    "lint": {
+      "executor": "@nx/eslint:lint",
+      "options": {
+        "lintFilePatterns": ["packages/ui/**/*.{ts,tsx}"]
+      }
+    }
+  }
+}

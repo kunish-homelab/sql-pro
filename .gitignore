@@ -4,6 +4,7 @@ node_modules
 # Build output
 dist
 out
+packages/*/dist
 
 # IDE
 .idea
@@ -30,8 +31,10 @@ coverage
 *.bak
 *.tmp
 
-docs/.vitepress/cache
+packages/docs/.vitepress/cache
 .worktrees
 .auto-claude/
 .auto-claude-status
 .claude_settings.json
+.nx/cache
+.nx/workspace-data

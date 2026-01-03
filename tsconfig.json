@@ -7,5 +7,5 @@
     { "path": "./tsconfig.web.json" }
   ],
   "files": [],
-  "exclude": ["plugin-sdk"]
+  "exclude": ["packages/plugin-sdk", "packages/docs", "packages/ui"]
 }
