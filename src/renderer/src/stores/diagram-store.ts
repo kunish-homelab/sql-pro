@@ -1,5 +1,10 @@
+import type { RendererDiagramState } from '@shared/types/renderer-store';
 import type { DiagramViewport, NodePosition } from '@/types/er-diagram';
 import { create } from 'zustand';
+import {
+  persistDiagram,
+  registerDiagramHydrator,
+} from '@/lib/electron-storage';
 
 interface DiagramState {
   // Per-database node positions (keyed by database path)
@@ -93,3 +98,19 @@ export const useDiagramStore = create<DiagramState>()((set, get) => ({
   setShowColumns: (show) => set({ showColumns: show }),
   setShowTypes: (show) => set({ showTypes: show }),
 }));
+
+// Register hydrator for loading persisted diagram state
+registerDiagramHydrator((data: RendererDiagramState) => {
+  useDiagramStore.setState(data);
+});
+
+// Subscribe to state changes and persist to electron-store
+useDiagramStore.subscribe((state) => {
+  const persistedState: RendererDiagramState = {
+    nodePositionsMap: state.nodePositionsMap,
+    viewportMap: state.viewportMap,
+    showColumns: state.showColumns,
+    showTypes: state.showTypes,
+  };
+  persistDiagram(persistedState);
+});

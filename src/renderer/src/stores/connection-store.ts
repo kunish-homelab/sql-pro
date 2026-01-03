@@ -3,12 +3,17 @@ import type {
   ProfileFolder,
   RecentConnection,
 } from '@shared/types';
+import type { RendererConnectionState } from '@shared/types/renderer-store';
 import type {
   DatabaseConnection,
   DatabaseSchema,
   TableSchema,
 } from '@/types/database';
 import { create } from 'zustand';
+import {
+  persistConnectionUi,
+  registerConnectionUiHydrator,
+} from '@/lib/electron-storage';
 import { useChangesStore } from './changes-store';
 
 interface ConnectionState {
@@ -510,3 +515,24 @@ export const useConnectionStore = create<ConnectionState>()((set, get) => ({
       connection,
     }),
 }));
+
+// Register hydrator for loading persisted connection UI state
+registerConnectionUiHydrator((data: RendererConnectionState) => {
+  useConnectionStore.setState({
+    activeConnectionId: data.activeConnectionId,
+    expandedFolderIds: new Set(data.expandedFolderIds),
+    connectionTabOrder: data.connectionTabOrder,
+    connectionColors: data.connectionColors,
+  });
+});
+
+// Subscribe to state changes and persist connection UI state to electron-store
+useConnectionStore.subscribe((state) => {
+  const persistedState: RendererConnectionState = {
+    activeConnectionId: state.activeConnectionId,
+    expandedFolderIds: Array.from(state.expandedFolderIds),
+    connectionTabOrder: state.connectionTabOrder,
+    connectionColors: state.connectionColors,
+  };
+  persistConnectionUi(persistedState);
+});

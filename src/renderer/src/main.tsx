@@ -2,12 +2,14 @@ import React from 'react';
 import ReactDOM from 'react-dom/client';
 import App from './App';
 import {
+  hydrateStores,
   initializeElectronStorage,
   isElectronEnvironment,
 } from './lib/electron-storage';
-import { useConnectionStore } from './stores/connection-store';
-import { useDiagramStore } from './stores/diagram-store';
-import { useSettingsStore } from './stores/settings-store';
+// Import stores to register their hydrators
+import './stores/connection-store';
+import './stores/diagram-store';
+import './stores/settings-store';
 import './styles/globals.css';
 
 // Initialize electron storage before rendering the app
@@ -15,16 +17,11 @@ import './styles/globals.css';
 async function bootstrap() {
   if (isElectronEnvironment()) {
     try {
+      // Load all persisted data from electron-store into cache
       await initializeElectronStorage();
 
-      // Force rehydrate all persisted stores after cache is populated
-      // This is needed because stores are created at module import time,
-      // before initializeElectronStorage() is called
-      await Promise.all([
-        useSettingsStore.persist.rehydrate(),
-        useDiagramStore.persist.rehydrate(),
-        useConnectionStore.persist.rehydrate(),
-      ]);
+      // Hydrate all registered stores with cached data
+      hydrateStores();
     } catch (error) {
       console.error('Failed to initialize electron storage:', error);
     }

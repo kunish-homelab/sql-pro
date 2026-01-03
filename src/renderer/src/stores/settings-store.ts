@@ -1,5 +1,10 @@
 import type { FontConfig, FontSettings } from '@shared/types/font';
+import type { RendererSettingsState } from '@shared/types/renderer-store';
 import { create } from 'zustand';
+import {
+  persistSettings,
+  registerSettingsHydrator,
+} from '@/lib/electron-storage';
 
 // Common monospace fonts available on different platforms
 export const MONOSPACE_FONTS = [
@@ -148,6 +153,33 @@ export const useSettingsStore = create<SettingsState>()((set, get) => ({
   toggleSidebar: () =>
     set((state) => ({ sidebarCollapsed: !state.sidebarCollapsed })),
 }));
+
+// Register hydrator for loading persisted settings
+registerSettingsHydrator((data: RendererSettingsState) => {
+  useSettingsStore.setState({
+    editorVimMode: data.editorVimMode,
+    appVimMode: data.appVimMode,
+    fonts: data.fonts,
+    tabSize: data.tabSize,
+    pageSize: data.pageSize as PageSizeOption,
+    restoreSession: data.restoreSession,
+    sidebarCollapsed: data.sidebarCollapsed,
+  });
+});
+
+// Subscribe to state changes and persist to electron-store
+useSettingsStore.subscribe((state) => {
+  const persistedState: RendererSettingsState = {
+    editorVimMode: state.editorVimMode,
+    appVimMode: state.appVimMode,
+    fonts: state.fonts,
+    tabSize: state.tabSize,
+    pageSize: state.pageSize,
+    restoreSession: state.restoreSession,
+    sidebarCollapsed: state.sidebarCollapsed,
+  };
+  persistSettings(persistedState);
+});
 
 // Re-export shared types for convenience
 export type { FontConfig, FontSettings } from '@shared/types/font';

@@ -1,9 +1,8 @@
 /**
  * Electron Store Persistence Utility for Zustand
  *
- * Provides a custom storage adapter that persists zustand state
- * to the main process via IPC, using electron-store under the hood.
- * This ensures all app data is stored in a single, consistent location.
+ * Provides centralized persistence for renderer state via IPC to electron-store.
+ * Uses a simple cache-based approach: load all data at startup, persist on change.
  */
 
 import type {
@@ -13,7 +12,6 @@ import type {
   RendererSettingsState,
   RendererStoreSchema,
 } from '@shared/types/renderer-store';
-import type { PersistStorage, StorageValue } from 'zustand/middleware';
 import { sqlPro } from './api';
 
 // Re-export types for convenience
@@ -25,109 +23,33 @@ export type {
   RendererStoreSchema,
 };
 
-/**
- * Synchronous storage adapter for initial state loading
- * Uses a cache that's populated on app start
- */
-class SyncElectronStorage<T> implements PersistStorage<T> {
-  private storeKey: keyof RendererStoreSchema;
-  private cache: StorageValue<T> | null = null;
-  private initialized = false;
-  private initPromise: Promise<void> | null = null;
+// ============ Cache for loaded data ============
 
-  constructor(storeKey: keyof RendererStoreSchema) {
-    this.storeKey = storeKey;
-  }
-
-  /**
-   * Initialize the cache by loading data from electron-store
-   */
-  async initialize(): Promise<void> {
-    if (this.initialized) return;
-
-    if (this.initPromise) {
-      return this.initPromise;
-    }
-
-    this.initPromise = (async () => {
-      try {
-        const response = await sqlPro.rendererStore.get({
-          key: this.storeKey,
-        });
-        if (response.success && response.data !== undefined) {
-          this.cache = { state: response.data as T };
-        }
-      } catch (error) {
-        console.error(
-          `Failed to initialize ${this.storeKey} from electron-store:`,
-          error
-        );
-      } finally {
-        this.initialized = true;
-      }
-    })();
-
-    return this.initPromise;
-  }
-
-  getItem(_name: string): StorageValue<T> | null {
-    // Return cached value synchronously
-    return this.cache;
-  }
-
-  setItem(_name: string, value: StorageValue<T>): void {
-    // Update cache immediately
-    this.cache = value;
-
-    // Persist to electron-store asynchronously
-    sqlPro.rendererStore
-      .set({
-        key: this.storeKey,
-        value: value.state,
-      })
-      .catch((error) => {
-        console.error(
-          `Failed to persist ${this.storeKey} to electron-store:`,
-          error
-        );
-      });
-  }
-
-  removeItem(_name: string): void {
-    this.cache = null;
-    sqlPro.rendererStore.reset({ key: this.storeKey }).catch((error) => {
-      console.error(
-        `Failed to reset ${this.storeKey} in electron-store:`,
-        error
-      );
-    });
-  }
+interface ElectronStorageCache {
+  settings: RendererSettingsState | null;
+  diagram: RendererDiagramState | null;
+  panelWidths: RendererPanelWidths | null;
+  connectionUi: RendererConnectionState | null;
 }
 
-// Storage instances for each store type
-const storageInstances = new Map<
-  keyof RendererStoreSchema,
-  SyncElectronStorage<unknown>
->();
+const cache: ElectronStorageCache = {
+  settings: null,
+  diagram: null,
+  panelWidths: null,
+  connectionUi: null,
+};
+
+let initialized = false;
+
+// ============ Initialization ============
 
 /**
- * Get or create a synchronous storage adapter for a specific store key
- */
-export function getElectronStorage<T>(
-  storeKey: keyof RendererStoreSchema
-): SyncElectronStorage<T> {
-  let storage = storageInstances.get(storeKey);
-  if (!storage) {
-    storage = new SyncElectronStorage<T>(storeKey);
-    storageInstances.set(storeKey, storage);
-  }
-  return storage as SyncElectronStorage<T>;
-}
-
-/**
- * Initialize all storage instances - call this early in app startup
+ * Initialize electron storage by loading all data from electron-store.
+ * Call this early in app startup before accessing any cached data.
  */
 export async function initializeElectronStorage(): Promise<void> {
+  if (initialized) return;
+
   const keys: (keyof RendererStoreSchema)[] = [
     'settings',
     'diagram',
@@ -137,10 +59,39 @@ export async function initializeElectronStorage(): Promise<void> {
 
   await Promise.all(
     keys.map(async (key) => {
-      const storage = getElectronStorage(key);
-      await storage.initialize();
+      try {
+        const response = await sqlPro.rendererStore.get({ key });
+        if (response.success && response.data !== undefined) {
+          // Use explicit type assertion based on key
+          switch (key) {
+            case 'settings':
+              cache.settings = response.data as RendererSettingsState;
+              break;
+            case 'diagram':
+              cache.diagram = response.data as RendererDiagramState;
+              break;
+            case 'panelWidths':
+              cache.panelWidths = response.data as RendererPanelWidths;
+              break;
+            case 'connectionUi':
+              cache.connectionUi = response.data as RendererConnectionState;
+              break;
+          }
+        }
+      } catch (error) {
+        console.error(`Failed to load ${key} from electron-store:`, error);
+      }
     })
   );
+
+  initialized = true;
+}
+
+/**
+ * Check if electron storage has been initialized
+ */
+export function isStorageInitialized(): boolean {
+  return initialized;
 }
 
 /**
@@ -150,87 +101,138 @@ export function isElectronEnvironment(): boolean {
   return typeof window !== 'undefined' && !!window.sqlPro?.rendererStore;
 }
 
+// ============ Getters ============
+
 /**
- * Create a storage adapter that uses electron-store via IPC
+ * Get cached settings state
  */
-export function createHybridStorage<T>(
-  storeKey: keyof RendererStoreSchema
-): PersistStorage<T> {
-  return {
-    getItem: (_name: string): StorageValue<T> | null => {
-      return getElectronStorage<T>(storeKey).getItem(_name);
-    },
-    setItem: (_name: string, value: StorageValue<T>): void => {
-      getElectronStorage<T>(storeKey).setItem(_name, value);
-    },
-    removeItem: (_name: string): void => {
-      getElectronStorage<T>(storeKey).removeItem(_name);
-    },
-  };
+export function getCachedSettings(): RendererSettingsState | null {
+  return cache.settings;
 }
 
 /**
- * Create a storage adapter for connection store with custom serialization
- * Handles Map and Set types properly
+ * Get cached diagram state
  */
-export function createConnectionStorage<T>(): PersistStorage<T> {
-  return {
-    getItem: (_name: string): StorageValue<T> | null => {
-      const electronStorage = getElectronStorage<T>('connectionUi');
-      const result = electronStorage.getItem(_name);
-      if (result && result.state) {
-        const state = result.state as Record<string, unknown>;
-        // Transform flat arrays back to Maps/Sets in the state
-        return {
-          ...result,
-          state: {
-            ...state,
-            // Restore Set from array
-            expandedFolderIds: new Set(
-              (state.expandedFolderIds as string[]) || []
-            ),
-            // Restore Map types (they're not persisted in electron-store, so use empty)
-            connections: state.connections ?? new Map(),
-            schemas: state.schemas ?? new Map(),
-            profiles: state.profiles ?? new Map(),
-            folders: state.folders ?? new Map(),
-          } as T,
-        };
-      }
-      return null;
-    },
+export function getCachedDiagram(): RendererDiagramState | null {
+  return cache.diagram;
+}
 
-    setItem: (_name: string, value: StorageValue<T>): void => {
-      const state = value.state as Record<string, unknown>;
+/**
+ * Get cached panel widths
+ */
+export function getCachedPanelWidths(): RendererPanelWidths | null {
+  return cache.panelWidths;
+}
 
-      // For electron-store, only persist UI state
-      const uiState: RendererConnectionState = {
-        activeConnectionId: (state.activeConnectionId as string) ?? null,
-        expandedFolderIds: Array.from(
-          (state.expandedFolderIds as Set<string>) || new Set()
-        ),
-        connectionTabOrder: (state.connectionTabOrder as string[]) || [],
-        connectionColors:
-          (state.connectionColors as Record<string, string>) || {},
-      };
+/**
+ * Get cached connection UI state
+ */
+export function getCachedConnectionUi(): RendererConnectionState | null {
+  return cache.connectionUi;
+}
 
-      sqlPro.rendererStore
-        .set({
-          key: 'connectionUi',
-          value: uiState,
-        })
-        .catch((error) => {
-          console.error(
-            'Failed to persist connectionUi to electron-store:',
-            error
-          );
-        });
-    },
+// ============ Persistence Functions ============
 
-    removeItem: (_name: string): void => {
-      sqlPro.rendererStore.reset({ key: 'connectionUi' }).catch((error) => {
-        console.error('Failed to reset connectionUi in electron-store:', error);
-      });
-    },
-  };
+/**
+ * Persist settings to electron-store
+ */
+export function persistSettings(settings: RendererSettingsState): void {
+  cache.settings = settings;
+  sqlPro.rendererStore
+    .set({ key: 'settings', value: settings })
+    .catch((error) => {
+      console.error('Failed to persist settings to electron-store:', error);
+    });
+}
+
+/**
+ * Persist diagram state to electron-store
+ */
+export function persistDiagram(diagram: RendererDiagramState): void {
+  cache.diagram = diagram;
+  sqlPro.rendererStore
+    .set({ key: 'diagram', value: diagram })
+    .catch((error) => {
+      console.error('Failed to persist diagram to electron-store:', error);
+    });
+}
+
+/**
+ * Persist panel widths to electron-store
+ */
+export function persistPanelWidths(panelWidths: RendererPanelWidths): void {
+  cache.panelWidths = panelWidths;
+  sqlPro.rendererStore
+    .set({ key: 'panelWidths', value: panelWidths })
+    .catch((error) => {
+      console.error('Failed to persist panelWidths to electron-store:', error);
+    });
+}
+
+/**
+ * Persist connection UI state to electron-store
+ */
+export function persistConnectionUi(
+  connectionUi: RendererConnectionState
+): void {
+  cache.connectionUi = connectionUi;
+  sqlPro.rendererStore
+    .set({ key: 'connectionUi', value: connectionUi })
+    .catch((error) => {
+      console.error('Failed to persist connectionUi to electron-store:', error);
+    });
+}
+
+// ============ Store Hydration ============
+
+// Store setters - will be registered by each store
+type StoreHydrator<T> = (data: T) => void;
+
+const storeHydrators = {
+  settings: null as StoreHydrator<RendererSettingsState> | null,
+  diagram: null as StoreHydrator<RendererDiagramState> | null,
+  connectionUi: null as StoreHydrator<RendererConnectionState> | null,
+};
+
+/**
+ * Register a store hydrator function for settings
+ */
+export function registerSettingsHydrator(
+  hydrator: StoreHydrator<RendererSettingsState>
+): void {
+  storeHydrators.settings = hydrator;
+}
+
+/**
+ * Register a store hydrator function for diagram
+ */
+export function registerDiagramHydrator(
+  hydrator: StoreHydrator<RendererDiagramState>
+): void {
+  storeHydrators.diagram = hydrator;
+}
+
+/**
+ * Register a store hydrator function for connectionUi
+ */
+export function registerConnectionUiHydrator(
+  hydrator: StoreHydrator<RendererConnectionState>
+): void {
+  storeHydrators.connectionUi = hydrator;
+}
+
+/**
+ * Hydrate all registered stores with cached data.
+ * Call this after initializeElectronStorage and after stores are created.
+ */
+export function hydrateStores(): void {
+  if (cache.settings && storeHydrators.settings) {
+    storeHydrators.settings(cache.settings);
+  }
+  if (cache.diagram && storeHydrators.diagram) {
+    storeHydrators.diagram(cache.diagram);
+  }
+  if (cache.connectionUi && storeHydrators.connectionUi) {
+    storeHydrators.connectionUi(cache.connectionUi);
+  }
 }
