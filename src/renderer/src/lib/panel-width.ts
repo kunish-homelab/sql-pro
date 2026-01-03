@@ -7,7 +7,6 @@
 import type { RendererPanelWidths } from '@shared/types/renderer-store';
 import { useCallback, useEffect, useRef, useState } from 'react';
 import { sqlPro } from './api';
-import { isElectronEnvironment } from './electron-storage';
 
 // In-memory cache for panel widths
 let panelWidthsCache: RendererPanelWidths = {};
@@ -26,17 +25,9 @@ async function initializeCache(): Promise<void> {
 
   initPromise = (async () => {
     try {
-      if (isElectronEnvironment()) {
-        const response = await sqlPro.rendererStore.get({ key: 'panelWidths' });
-        if (response.success && response.data) {
-          panelWidthsCache = response.data as RendererPanelWidths;
-        }
-      } else {
-        // Fallback: load from localStorage
-        const stored = localStorage.getItem('panel-widths');
-        if (stored) {
-          panelWidthsCache = JSON.parse(stored);
-        }
+      const response = await sqlPro.rendererStore.get({ key: 'panelWidths' });
+      if (response.success && response.data) {
+        panelWidthsCache = response.data as RendererPanelWidths;
       }
     } catch (error) {
       console.error('Failed to initialize panel widths cache:', error);
@@ -62,23 +53,14 @@ function setCachedWidth(key: string, width: number): void {
   panelWidthsCache[key] = width;
 
   // Persist asynchronously
-  if (isElectronEnvironment()) {
-    sqlPro.rendererStore
-      .set({
-        key: 'panelWidths',
-        value: panelWidthsCache,
-      })
-      .catch((error) => {
-        console.error('Failed to persist panel width:', error);
-      });
-  } else {
-    // Fallback: save to localStorage
-    try {
-      localStorage.setItem('panel-widths', JSON.stringify(panelWidthsCache));
-    } catch {
-      // Ignore storage errors
-    }
-  }
+  sqlPro.rendererStore
+    .set({
+      key: 'panelWidths',
+      value: panelWidthsCache,
+    })
+    .catch((error) => {
+      console.error('Failed to persist panel width:', error);
+    });
 }
 
 /**
@@ -96,26 +78,6 @@ export function usePanelWidth(
     if (cached !== undefined && cached >= minWidth && cached <= maxWidth) {
       return cached;
     }
-
-    // Try localStorage fallback for initial render
-    if (typeof window !== 'undefined') {
-      try {
-        const stored = localStorage.getItem(`panel-width-${key}`);
-        if (stored) {
-          const parsed = Number.parseInt(stored, 10);
-          if (
-            !Number.isNaN(parsed) &&
-            parsed >= minWidth &&
-            parsed <= maxWidth
-          ) {
-            return parsed;
-          }
-        }
-      } catch {
-        // Ignore
-      }
-    }
-
     return defaultWidth;
   });
 

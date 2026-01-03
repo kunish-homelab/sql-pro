@@ -147,51 +147,24 @@ export async function initializeElectronStorage(): Promise<void> {
  * Helper to check if running in Electron environment
  */
 export function isElectronEnvironment(): boolean {
-  const result =
-    typeof window !== 'undefined' && !!window.sqlPro?.rendererStore;
-  return result;
+  return typeof window !== 'undefined' && !!window.sqlPro?.rendererStore;
 }
 
 /**
- * Create a hybrid storage that uses electron-store in Electron
- * and falls back to localStorage in web/development mode
- * Note: Environment check is done at each operation to handle late initialization
+ * Create a storage adapter that uses electron-store via IPC
  */
 export function createHybridStorage<T>(
   storeKey: keyof RendererStoreSchema
 ): PersistStorage<T> {
-  // Return a storage that checks environment on each operation
   return {
-    getItem: (name: string): StorageValue<T> | null => {
-      const isElectron = isElectronEnvironment();
-      if (isElectron) {
-        const result = getElectronStorage<T>(storeKey).getItem(name);
-        return result;
-      }
-      // Fallback to localStorage
-      const str = localStorage.getItem(name);
-      if (!str) return null;
-      try {
-        return JSON.parse(str) as StorageValue<T>;
-      } catch {
-        return null;
-      }
+    getItem: (_name: string): StorageValue<T> | null => {
+      return getElectronStorage<T>(storeKey).getItem(_name);
     },
-    setItem: (name: string, value: StorageValue<T>): void => {
-      const isElectron = isElectronEnvironment();
-      if (isElectron) {
-        getElectronStorage<T>(storeKey).setItem(name, value);
-      } else {
-        // Fallback to localStorage
-        localStorage.setItem(name, JSON.stringify(value));
-      }
+    setItem: (_name: string, value: StorageValue<T>): void => {
+      getElectronStorage<T>(storeKey).setItem(_name, value);
     },
-    removeItem: (name: string): void => {
-      if (isElectronEnvironment()) {
-        getElectronStorage<T>(storeKey).removeItem(name);
-      } else {
-        localStorage.removeItem(name);
-      }
+    removeItem: (_name: string): void => {
+      getElectronStorage<T>(storeKey).removeItem(_name);
     },
   };
 }
@@ -199,127 +172,65 @@ export function createHybridStorage<T>(
 /**
  * Create a storage adapter for connection store with custom serialization
  * Handles Map and Set types properly
- * Note: Environment check is done at each operation to handle late initialization
  */
 export function createConnectionStorage<T>(): PersistStorage<T> {
   return {
-    getItem: (name: string): StorageValue<T> | null => {
-      if (isElectronEnvironment()) {
-        const electronStorage = getElectronStorage<T>('connectionUi');
-        const result = electronStorage.getItem(name);
-        if (result && result.state) {
-          const state = result.state as Record<string, unknown>;
-          // Transform flat arrays back to Maps/Sets in the state
-          return {
-            ...result,
-            state: {
-              ...state,
-              // Restore Set from array
-              expandedFolderIds: new Set(
-                (state.expandedFolderIds as string[]) || []
-              ),
-              // Restore Map types (they're not persisted in electron-store, so use empty)
-              connections: state.connections ?? new Map(),
-              schemas: state.schemas ?? new Map(),
-              profiles: state.profiles ?? new Map(),
-              folders: state.folders ?? new Map(),
-            } as T,
-          };
-        }
-        return null;
-      }
-
-      // Fallback to localStorage with existing serialization
-      const str = localStorage.getItem(name);
-      if (!str) return null;
-      try {
-        const parsed = JSON.parse(str) as StorageValue<Record<string, unknown>>;
-        const state = parsed.state;
+    getItem: (_name: string): StorageValue<T> | null => {
+      const electronStorage = getElectronStorage<T>('connectionUi');
+      const result = electronStorage.getItem(_name);
+      if (result && result.state) {
+        const state = result.state as Record<string, unknown>;
+        // Transform flat arrays back to Maps/Sets in the state
         return {
-          ...parsed,
+          ...result,
           state: {
             ...state,
-            // Restore Map/Set types
-            connections: new Map(
-              (state.connections as [string, unknown][]) || []
-            ),
-            schemas: new Map((state.schemas as [string, unknown][]) || []),
-            profiles: new Map((state.profiles as [string, unknown][]) || []),
-            folders: new Map((state.folders as [string, unknown][]) || []),
+            // Restore Set from array
             expandedFolderIds: new Set(
               (state.expandedFolderIds as string[]) || []
             ),
+            // Restore Map types (they're not persisted in electron-store, so use empty)
+            connections: state.connections ?? new Map(),
+            schemas: state.schemas ?? new Map(),
+            profiles: state.profiles ?? new Map(),
+            folders: state.folders ?? new Map(),
           } as T,
         };
-      } catch {
-        return null;
       }
+      return null;
     },
 
-    setItem: (name: string, value: StorageValue<T>): void => {
+    setItem: (_name: string, value: StorageValue<T>): void => {
       const state = value.state as Record<string, unknown>;
 
-      if (isElectronEnvironment()) {
-        // For electron-store, only persist UI state
-        const uiState: RendererConnectionState = {
-          activeConnectionId: (state.activeConnectionId as string) ?? null,
-          expandedFolderIds: Array.from(
-            (state.expandedFolderIds as Set<string>) || new Set()
-          ),
-          connectionTabOrder: (state.connectionTabOrder as string[]) || [],
-          connectionColors:
-            (state.connectionColors as Record<string, string>) || {},
-        };
+      // For electron-store, only persist UI state
+      const uiState: RendererConnectionState = {
+        activeConnectionId: (state.activeConnectionId as string) ?? null,
+        expandedFolderIds: Array.from(
+          (state.expandedFolderIds as Set<string>) || new Set()
+        ),
+        connectionTabOrder: (state.connectionTabOrder as string[]) || [],
+        connectionColors:
+          (state.connectionColors as Record<string, string>) || {},
+      };
 
-        sqlPro.rendererStore
-          .set({
-            key: 'connectionUi',
-            value: uiState,
-          })
-          .catch((error) => {
-            console.error(
-              'Failed to persist connectionUi to electron-store:',
-              error
-            );
-          });
-      } else {
-        // Fallback to localStorage with full serialization
-        const serialized = {
-          ...value,
-          state: {
-            ...state,
-            connections: Array.from(
-              (state.connections as Map<string, unknown>) || new Map()
-            ),
-            schemas: Array.from(
-              (state.schemas as Map<string, unknown>) || new Map()
-            ),
-            profiles: Array.from(
-              (state.profiles as Map<string, unknown>) || new Map()
-            ),
-            folders: Array.from(
-              (state.folders as Map<string, unknown>) || new Map()
-            ),
-            expandedFolderIds: Array.from(
-              (state.expandedFolderIds as Set<string>) || new Set()
-            ),
-          },
-        };
-        localStorage.setItem(name, JSON.stringify(serialized));
-      }
-    },
-
-    removeItem: (name: string): void => {
-      if (isElectronEnvironment()) {
-        sqlPro.rendererStore.reset({ key: 'connectionUi' }).catch((error) => {
+      sqlPro.rendererStore
+        .set({
+          key: 'connectionUi',
+          value: uiState,
+        })
+        .catch((error) => {
           console.error(
-            'Failed to reset connectionUi in electron-store:',
+            'Failed to persist connectionUi to electron-store:',
             error
           );
         });
-      } else {
-        localStorage.removeItem(name);
-      }
+    },
+
+    removeItem: (_name: string): void => {
+      sqlPro.rendererStore.reset({ key: 'connectionUi' }).catch((error) => {
+        console.error('Failed to reset connectionUi in electron-store:', error);
+      });
     },
   };
 }
