@@ -780,7 +780,5 @@ export const storageService = new StorageService();
 // Export class for testing purposes
 export { StorageService };
 
-// Export function to get storage store for advanced usage (testing, debugging)
-export function getPluginStorageStore(): Store<PluginStorageSchema> | null {
-  return _storageStore;
-}
+// Export storage store getter for advanced usage (testing, debugging)
+export { getStorageStore };
