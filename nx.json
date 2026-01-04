@@ -9,13 +9,23 @@
       "!{projectRoot}/**/*.spec.{ts,tsx}",
       "!{projectRoot}/**/test/**/*"
     ],
-    "sharedGlobals": []
+    "sharedGlobals": ["{workspaceRoot}/.github/workflows/ci.yml"]
   },
   "targetDefaults": {
-    "build": { "dependsOn": ["^build"], "cache": true },
-    "lint": { "cache": true },
-    "test": { "cache": true }
+    "build": {
+      "dependsOn": ["^build"],
+      "cache": true
+    },
+    "lint": {
+      "cache": true
+    },
+    "test": {
+      "cache": true
+    }
   },
-  "workspaceLayout": { "appsDir": "apps", "libsDir": "packages" },
+  "workspaceLayout": {
+    "appsDir": "apps",
+    "libsDir": "packages"
+  },
   "nxCloudId": "6959fd57d916979c94d1fc62"
 }
