@@ -176,8 +176,15 @@ export class MySQLAdapter implements DatabaseAdapter {
     }
 
     try {
-      // Use void to handle the promise asynchronously
-      void conn.connection.end();
+      // Handle the promise with catch to log any closure errors
+      conn.connection.end().catch((err) => {
+        sqlLogger.logClose({
+          connectionId,
+          dbPath: conn.filename,
+          success: false,
+          error: err instanceof Error ? err.message : 'Connection close failed',
+        });
+      });
       this.connections.delete(connectionId);
 
       sqlLogger.logClose({

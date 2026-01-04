@@ -96,6 +96,15 @@ export class PostgreSQLAdapter implements DatabaseAdapter {
       // Format: https://project-ref.supabase.co -> db.project-ref.supabase.co
       try {
         const url = new URL(config.supabaseUrl);
+        // Validate that it looks like a Supabase URL
+        if (!url.hostname.endsWith('.supabase.co')) {
+          return {
+            success: false,
+            error:
+              'Invalid Supabase URL format. Expected format: https://your-project.supabase.co',
+            errorCode: 'CONNECTION_ERROR',
+          };
+        }
         host = `db.${url.hostname}`;
         port = 5432;
         database = 'postgres';
@@ -106,7 +115,8 @@ export class PostgreSQLAdapter implements DatabaseAdapter {
       } catch {
         return {
           success: false,
-          error: 'Invalid Supabase URL format',
+          error:
+            'Invalid Supabase URL format. Expected format: https://your-project.supabase.co',
           errorCode: 'CONNECTION_ERROR',
         };
       }
@@ -229,7 +239,15 @@ export class PostgreSQLAdapter implements DatabaseAdapter {
     }
 
     try {
-      void conn.client.end();
+      // Handle the promise with catch to log any closure errors
+      conn.client.end().catch((err) => {
+        sqlLogger.logClose({
+          connectionId,
+          dbPath: conn.filename,
+          success: false,
+          error: err instanceof Error ? err.message : 'Connection close failed',
+        });
+      });
       this.connections.delete(connectionId);
 
       sqlLogger.logClose({
