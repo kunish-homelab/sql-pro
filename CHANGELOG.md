@@ -2,25 +2,23 @@
 
 ## [1.9.0](https://github.com/kunish-homelab/sql-pro/compare/v1.8.0...v1.9.0) (2026-01-03)
 
-
 ### Features
 
-* add keyboard shortcuts for recent, next, and previous connections ([cb4bfa0](https://github.com/kunish-homelab/sql-pro/commit/cb4bfa0bf49be9f5f708e15cdbad5cdbb21a31c3))
-* **connection-store:** implement unsaved changes tracking for connections ([8ba034e](https://github.com/kunish-homelab/sql-pro/commit/8ba034e9e0f1450b430f755897e2d0891bb3909c))
-* **data-diff:** add data comparison summary and row difference cards ([4b3af88](https://github.com/kunish-homelab/sql-pro/commit/4b3af8858f2e3feab097da83fa477f8430bdb0ca))
-* **ipc:** add handlers for retrieving recent connections and checking password availability ([285f698](https://github.com/kunish-homelab/sql-pro/commit/285f69819aba5322157d331e0b75409747a454a7))
-* **ipc:** split into multiple modules ([38434ed](https://github.com/kunish-homelab/sql-pro/commit/38434ede0ddec19cefccd0a68b2bc3f59d6ebf17))
-* **mock-api:** enhance mock mode detection and add new mock operations ([a1d092f](https://github.com/kunish-homelab/sql-pro/commit/a1d092fffb3f3bcd74b85e93bf9b2ccee9ae0e26))
-* refactor QueryEditor and CollectionsList components ([2721c4b](https://github.com/kunish-homelab/sql-pro/commit/2721c4b47836f7850983213ed57d8e6ff0858799))
-* **schema-comparison:** add API methods for schema comparison operations ([84d117b](https://github.com/kunish-homelab/sql-pro/commit/84d117bde4cf884592632844b4d9175969c1dcb0))
-* **store:** enhance connection store with serialization for Maps and Sets ([38434ed](https://github.com/kunish-homelab/sql-pro/commit/38434ede0ddec19cefccd0a68b2bc3f59d6ebf17))
-
+- add keyboard shortcuts for recent, next, and previous connections ([cb4bfa0](https://github.com/kunish-homelab/sql-pro/commit/cb4bfa0bf49be9f5f708e15cdbad5cdbb21a31c3))
+- **connection-store:** implement unsaved changes tracking for connections ([8ba034e](https://github.com/kunish-homelab/sql-pro/commit/8ba034e9e0f1450b430f755897e2d0891bb3909c))
+- **data-diff:** add data comparison summary and row difference cards ([4b3af88](https://github.com/kunish-homelab/sql-pro/commit/4b3af8858f2e3feab097da83fa477f8430bdb0ca))
+- **ipc:** add handlers for retrieving recent connections and checking password availability ([285f698](https://github.com/kunish-homelab/sql-pro/commit/285f69819aba5322157d331e0b75409747a454a7))
+- **ipc:** split into multiple modules ([38434ed](https://github.com/kunish-homelab/sql-pro/commit/38434ede0ddec19cefccd0a68b2bc3f59d6ebf17))
+- **mock-api:** enhance mock mode detection and add new mock operations ([a1d092f](https://github.com/kunish-homelab/sql-pro/commit/a1d092fffb3f3bcd74b85e93bf9b2ccee9ae0e26))
+- refactor QueryEditor and CollectionsList components ([2721c4b](https://github.com/kunish-homelab/sql-pro/commit/2721c4b47836f7850983213ed57d8e6ff0858799))
+- **schema-comparison:** add API methods for schema comparison operations ([84d117b](https://github.com/kunish-homelab/sql-pro/commit/84d117bde4cf884592632844b4d9175969c1dcb0))
+- **store:** enhance connection store with serialization for Maps and Sets ([38434ed](https://github.com/kunish-homelab/sql-pro/commit/38434ede0ddec19cefccd0a68b2bc3f59d6ebf17))
 
 ### Bug Fixes
 
-* **data-diff:** improve layout and accessibility of comparison controls ([25ec5a2](https://github.com/kunish-homelab/sql-pro/commit/25ec5a2d16ccfbcbaa67353dab6987f71c850719))
-* **schema-comparison:** improve className handling in SchemaComparisonPanel ([88c6f3c](https://github.com/kunish-homelab/sql-pro/commit/88c6f3c2213d0cbe938613333476a198506e8315))
-* **vitest:** update alias configuration for Vitest ([8ba034e](https://github.com/kunish-homelab/sql-pro/commit/8ba034e9e0f1450b430f755897e2d0891bb3909c))
+- **data-diff:** improve layout and accessibility of comparison controls ([25ec5a2](https://github.com/kunish-homelab/sql-pro/commit/25ec5a2d16ccfbcbaa67353dab6987f71c850719))
+- **schema-comparison:** improve className handling in SchemaComparisonPanel ([88c6f3c](https://github.com/kunish-homelab/sql-pro/commit/88c6f3c2213d0cbe938613333476a198506e8315))
+- **vitest:** update alias configuration for Vitest ([8ba034e](https://github.com/kunish-homelab/sql-pro/commit/8ba034e9e0f1450b430f755897e2d0891bb3909c))
 
 ## [1.8.0](https://github.com/kunish-homelab/sql-pro/compare/v1.7.0...v1.8.0) (2026-01-02)
 
