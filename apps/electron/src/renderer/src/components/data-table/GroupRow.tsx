@@ -6,10 +6,11 @@ import { cn } from '@/lib/utils';
 
 interface GroupRowProps {
   row: Row<TableRowData>;
+  // Pass isExpanded as prop to trigger re-render when state changes
+  isExpanded: boolean;
 }
 
-export const GroupRow = memo(({ row }: GroupRowProps) => {
-  const isExpanded = row.getIsExpanded();
+export const GroupRow = memo(({ row, isExpanded }: GroupRowProps) => {
   const groupingValue = row.groupingValue;
   // Use getLeafRows() to get the actual count of leaf rows (data rows, not groups)
   const leafCount = row.getLeafRows().length;

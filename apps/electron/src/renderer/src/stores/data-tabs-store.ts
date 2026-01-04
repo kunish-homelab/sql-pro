@@ -1,4 +1,5 @@
-import type { TableSchema } from '@/types/database';
+import type { UIFilterState } from '@/lib/filter-utils';
+import type { SortState, TableSchema } from '@/types/database';
 import { create } from 'zustand';
 
 export interface DataTab {
@@ -13,6 +14,14 @@ export interface DataTab {
   connectionId: string;
   /** Search term for filtering results in this tab */
   searchTerm: string;
+  /** Current page number (1-indexed) */
+  page: number;
+  /** Sort state */
+  sort: SortState | null;
+  /** Grouping columns */
+  grouping: string[];
+  /** UI filters */
+  filters: UIFilterState[];
 }
 
 interface ConnectionDataTabState {
@@ -95,6 +104,38 @@ interface DataTabsState {
   ) => void;
 
   /**
+   * Update tab page number
+   */
+  updateTabPage: (connectionId: string, tabId: string, page: number) => void;
+
+  /**
+   * Update tab sort state
+   */
+  updateTabSort: (
+    connectionId: string,
+    tabId: string,
+    sort: SortState | null
+  ) => void;
+
+  /**
+   * Update tab grouping columns
+   */
+  updateTabGrouping: (
+    connectionId: string,
+    tabId: string,
+    grouping: string[]
+  ) => void;
+
+  /**
+   * Update tab filters
+   */
+  updateTabFilters: (
+    connectionId: string,
+    tabId: string,
+    filters: UIFilterState[]
+  ) => void;
+
+  /**
    * Check if a table is already open in a tab
    */
   findTabByTable: (
@@ -124,6 +165,10 @@ const createDataTab = (connectionId: string, table: TableSchema): DataTab => ({
   title: table.name,
   createdAt: Date.now(),
   searchTerm: '',
+  page: 1,
+  sort: null,
+  grouping: [],
+  filters: [],
 });
 
 const createDefaultConnectionState = (): ConnectionDataTabState => ({
@@ -395,6 +440,78 @@ export const useDataTabsStore = create<DataTabsState>()((set, get) => ({
           ...connState,
           tabs: connState.tabs.map((tab) =>
             tab.id === tabId ? { ...tab, searchTerm } : tab
+          ),
+        },
+      },
+    });
+  },
+
+  updateTabPage: (connectionId, tabId, page) => {
+    const state = get();
+    const connState = state.tabsByConnection[connectionId];
+    if (!connState) return;
+
+    set({
+      tabsByConnection: {
+        ...state.tabsByConnection,
+        [connectionId]: {
+          ...connState,
+          tabs: connState.tabs.map((tab) =>
+            tab.id === tabId ? { ...tab, page } : tab
+          ),
+        },
+      },
+    });
+  },
+
+  updateTabSort: (connectionId, tabId, sort) => {
+    const state = get();
+    const connState = state.tabsByConnection[connectionId];
+    if (!connState) return;
+
+    set({
+      tabsByConnection: {
+        ...state.tabsByConnection,
+        [connectionId]: {
+          ...connState,
+          tabs: connState.tabs.map((tab) =>
+            tab.id === tabId ? { ...tab, sort } : tab
+          ),
+        },
+      },
+    });
+  },
+
+  updateTabGrouping: (connectionId, tabId, grouping) => {
+    const state = get();
+    const connState = state.tabsByConnection[connectionId];
+    if (!connState) return;
+
+    set({
+      tabsByConnection: {
+        ...state.tabsByConnection,
+        [connectionId]: {
+          ...connState,
+          tabs: connState.tabs.map((tab) =>
+            tab.id === tabId ? { ...tab, grouping } : tab
+          ),
+        },
+      },
+    });
+  },
+
+  updateTabFilters: (connectionId, tabId, filters) => {
+    const state = get();
+    const connState = state.tabsByConnection[connectionId];
+    if (!connState) return;
+
+    set({
+      tabsByConnection: {
+        ...state.tabsByConnection,
+        [connectionId]: {
+          ...connState,
+          tabs: connState.tabs.map((tab) =>
+            tab.id === tabId ? { ...tab, filters } : tab
           ),
         },
       },

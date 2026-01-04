@@ -203,7 +203,13 @@ export const TableBody = memo(
           const change = changes?.get(rowId);
 
           if (isGroupRow) {
-            return <GroupRow key={row.id} row={row} />;
+            return (
+              <GroupRow
+                key={row.id}
+                row={row}
+                isExpanded={row.getIsExpanded()}
+              />
+            );
           }
 
           return (

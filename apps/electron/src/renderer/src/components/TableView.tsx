@@ -83,14 +83,21 @@ export function TableView({
     selectedTable: storeSelectedTable,
     activeConnectionId,
   } = useConnectionStore();
-  const { getActiveTab, updateTabSearchTerm } = useDataTabsStore();
+  const {
+    getActiveTab,
+    updateTabSearchTerm,
+    updateTabPage,
+    updateTabSort,
+    updateTabGrouping,
+    updateTabFilters,
+  } = useDataTabsStore();
 
   // Use tableOverride if provided, otherwise fall back to store's selectedTable
   const selectedTable = tableOverride || storeSelectedTable;
   const dataTableRef = useRef<DataTableRef>(null);
   const searchInputRef = useRef<HTMLInputElement>(null);
 
-  // Get active tab for search term
+  // Get active tab for state (persisted per tab)
   const activeTab = activeConnectionId
     ? getActiveTab(activeConnectionId)
     : undefined;
@@ -102,15 +109,59 @@ export function TableView({
   // Calculate actual page size - use a very large number for 'all'
   const pageSize = pageSizeOption === 'all' ? 1000000 : pageSizeOption;
 
-  // Pagination state (local since TanStack Query handles the data)
-  const [page, setPage] = useState(1);
-  const [sort, setSort] = useState<SortState | null>(null);
-  const [grouping, setGrouping] = useState<string[]>([]);
+  // Use state from store (persisted per tab)
+  const page = activeTab?.page ?? 1;
+  const sort = activeTab?.sort ?? null;
+  const grouping = activeTab?.grouping ?? [];
+  // Memoize filters to avoid creating new array reference on every render
+  const filters = useMemo(() => activeTab?.filters ?? [], [activeTab?.filters]);
+
+  // Local UI state (not persisted)
   const [showDiffPreview, setShowDiffPreview] = useState(false);
   const [showExportDialog, setShowExportDialog] = useState(false);
   const [showBulkEditDialog, setShowBulkEditDialog] = useState(false);
-  const [filters, setFilters] = useState<UIFilterState[]>([]);
   const [selectedRowIds, setSelectedRowIds] = useState<string[]>([]);
+
+  // Setters that update the store
+  const setPage = useCallback(
+    (newPage: number) => {
+      if (activeConnectionId && activeTab?.id) {
+        updateTabPage(activeConnectionId, activeTab.id, newPage);
+      }
+    },
+    [activeConnectionId, activeTab?.id, updateTabPage]
+  );
+
+  const setSort = useCallback(
+    (newSort: SortState | null) => {
+      if (activeConnectionId && activeTab?.id) {
+        updateTabSort(activeConnectionId, activeTab.id, newSort);
+      }
+    },
+    [activeConnectionId, activeTab?.id, updateTabSort]
+  );
+
+  const setGrouping = useCallback(
+    (newGrouping: string[]) => {
+      if (activeConnectionId && activeTab?.id) {
+        updateTabGrouping(activeConnectionId, activeTab.id, newGrouping);
+      }
+    },
+    [activeConnectionId, activeTab?.id, updateTabGrouping]
+  );
+
+  const setFilters = useCallback(
+    (
+      newFilters: UIFilterState[] | ((prev: UIFilterState[]) => UIFilterState[])
+    ) => {
+      if (activeConnectionId && activeTab?.id) {
+        const resolvedFilters =
+          typeof newFilters === 'function' ? newFilters(filters) : newFilters;
+        updateTabFilters(activeConnectionId, activeTab.id, resolvedFilters);
+      }
+    },
+    [activeConnectionId, activeTab?.id, filters, updateTabFilters]
+  );
 
   // Use search term from store (persisted per tab)
   const searchTerm = activeTab?.searchTerm ?? '';
@@ -222,9 +273,12 @@ export function TableView({
   }, [pendingChanges]);
 
   // Handle page change
-  const handlePageChange = useCallback((newPage: number) => {
-    setPage(newPage);
-  }, []);
+  const handlePageChange = useCallback(
+    (newPage: number) => {
+      setPage(newPage);
+    },
+    [setPage]
+  );
 
   // Handle page size change (global setting)
   const handlePageSizeChange = useCallback(
@@ -234,47 +288,56 @@ export function TableView({
       setPageSize(newSize as PageSizeOption);
       setPage(1); // Reset to first page when changing page size
     },
-    [setPageSize]
+    [setPageSize, setPage]
   );
 
   // Handle sort change from DataTable
-  const handleSortChange = useCallback((newSort: SortState | null) => {
-    setSort(newSort);
-    setPage(1); // Reset to first page on sort change
-  }, []);
+  const handleSortChange = useCallback(
+    (newSort: SortState | null) => {
+      setSort(newSort);
+      setPage(1); // Reset to first page on sort change
+    },
+    [setSort, setPage]
+  );
 
   // Handle filter add/update from ColumnFilterPopover
-  const handleFilterAdd = useCallback((filter: UIFilterState) => {
-    setFilters((prevFilters) => {
-      // Check if a filter already exists for this column
-      const existingIndex = prevFilters.findIndex(
-        (f) => f.column === filter.column
-      );
-      if (existingIndex >= 0) {
-        // Update existing filter
-        const newFilters = [...prevFilters];
-        newFilters[existingIndex] = filter;
-        return newFilters;
-      }
-      // Add new filter
-      return [...prevFilters, filter];
-    });
-    setPage(1); // Reset to first page on filter change
-  }, []);
+  const handleFilterAdd = useCallback(
+    (filter: UIFilterState) => {
+      setFilters((prevFilters) => {
+        // Check if a filter already exists for this column
+        const existingIndex = prevFilters.findIndex(
+          (f) => f.column === filter.column
+        );
+        if (existingIndex >= 0) {
+          // Update existing filter
+          const newFilters = [...prevFilters];
+          newFilters[existingIndex] = filter;
+          return newFilters;
+        }
+        // Add new filter
+        return [...prevFilters, filter];
+      });
+      setPage(1); // Reset to first page on filter change
+    },
+    [setFilters, setPage]
+  );
 
   // Handle filter removal by column id
-  const handleFilterRemove = useCallback((columnId: string) => {
-    setFilters((prevFilters) =>
-      prevFilters.filter((f) => f.column !== columnId)
-    );
-    setPage(1); // Reset to first page on filter change
-  }, []);
+  const handleFilterRemove = useCallback(
+    (columnId: string) => {
+      setFilters((prevFilters) =>
+        prevFilters.filter((f) => f.column !== columnId)
+      );
+      setPage(1); // Reset to first page on filter change
+    },
+    [setFilters, setPage]
+  );
 
   // Handle clearing all filters
   const handleFiltersClear = useCallback(() => {
     setFilters([]);
     setPage(1); // Reset to first page on filter change
-  }, []);
+  }, [setFilters, setPage]);
 
   // Handle cell change from DataTable
   const handleCellChange = useCallback(
