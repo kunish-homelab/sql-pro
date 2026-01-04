@@ -83,6 +83,39 @@ export function DatabasePage() {
     setTableDataActiveConnection,
   ]);
 
+  // Listen for external file changes and reload schema
+  useEffect(() => {
+    const unsubscribe = sqlPro.db.onFileChanged(async (event) => {
+      // Check if this connection is currently active
+      const connectionStore = useConnectionStore.getState();
+      const conn = connectionStore.getConnectionById(event.connectionId);
+
+      if (conn) {
+        // Reload schema for the changed connection
+        connectionStore.setIsLoadingSchema(true);
+        try {
+          const schemaResult = await sqlPro.db.getSchema({
+            connectionId: event.connectionId,
+          });
+
+          if (schemaResult.success) {
+            connectionStore.setSchema(event.connectionId, {
+              schemas: schemaResult.schemas || [],
+              tables: schemaResult.tables || [],
+              views: schemaResult.views || [],
+            });
+          }
+        } finally {
+          connectionStore.setIsLoadingSchema(false);
+        }
+      }
+    });
+
+    return () => {
+      unsubscribe();
+    };
+  }, []);
+
   // Connect to a database
   const connectToDatabase = useCallback(
     async (

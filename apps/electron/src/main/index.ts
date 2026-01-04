@@ -11,6 +11,7 @@ import {
   session,
   shell,
 } from 'electron';
+import { fileWatcherService } from './services/file-watcher';
 import { cleanupIpcHandlers, setupIpcHandlers } from './services/ipc-handlers';
 import {
   createApplicationMenu,
@@ -225,6 +226,9 @@ app.whenReady().then(async () => {
 app.on('window-all-closed', async () => {
   // Shutdown plugin system (unloads all plugins)
   await pluginService.shutdown();
+
+  // Clean up file watchers
+  fileWatcherService.unwatchAll();
 
   cleanupIpcHandlers();
   if (process.platform !== 'darwin') {

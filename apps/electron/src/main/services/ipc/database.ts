@@ -11,6 +11,7 @@ import type {
 import { IPC_CHANNELS } from '@shared/types';
 import { ipcMain } from 'electron';
 import { databaseService } from '../database';
+import { fileWatcherService } from '../file-watcher';
 import { addRecentConnection } from '../store';
 
 export function setupDatabaseHandlers(): void {
@@ -30,6 +31,9 @@ export function setupDatabaseHandlers(): void {
           result.connection.filename,
           result.connection.isEncrypted
         );
+
+        // Start watching the database file for external changes
+        fileWatcherService.watch(result.connection.id, request.path);
       }
 
       return result;
@@ -40,6 +44,8 @@ export function setupDatabaseHandlers(): void {
   ipcMain.handle(
     IPC_CHANNELS.DB_CLOSE,
     async (_event, request: CloseDatabaseRequest) => {
+      // Stop watching the file before closing the connection
+      fileWatcherService.unwatch(request.connectionId);
       return databaseService.close(request.connectionId);
     }
   );
@@ -73,6 +79,19 @@ export function setupDatabaseHandlers(): void {
   ipcMain.handle(
     IPC_CHANNELS.DB_EXECUTE_QUERY,
     async (_event, request: ExecuteQueryRequest) => {
+      // Check if this is a modifying query (INSERT, UPDATE, DELETE, etc.)
+      const modifyingKeywords =
+        /^\s*(?:INSERT|UPDATE|DELETE|CREATE|DROP|ALTER|TRUNCATE|REPLACE)/i;
+      const isModifying = modifyingKeywords.test(request.query);
+
+      // Ignore file changes during our own writes
+      if (isModifying) {
+        const connection = databaseService.getConnection(request.connectionId);
+        if (connection) {
+          fileWatcherService.ignoreChanges(connection.path);
+        }
+      }
+
       const startTime = Date.now();
       const result = databaseService.executeQuery(
         request.connectionId,
@@ -132,6 +151,12 @@ export function setupDatabaseHandlers(): void {
   ipcMain.handle(
     IPC_CHANNELS.DB_APPLY_CHANGES,
     async (_event, request: ApplyChangesRequest) => {
+      // Get the connection to find the database path
+      const connection = databaseService.getConnection(request.connectionId);
+      if (connection) {
+        // Ignore file changes during our own writes
+        fileWatcherService.ignoreChanges(connection.path);
+      }
       return databaseService.applyChanges(
         request.connectionId,
         request.changes
