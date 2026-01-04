@@ -2167,6 +2167,20 @@ export interface IPCChannels {
   ];
 }
 
+// ============ File Watcher Types ============
+
+/**
+ * Event emitted when a watched database file changes externally
+ */
+export interface FileChangeEvent {
+  /** Connection ID of the changed database */
+  connectionId: string;
+  /** Path to the database file */
+  dbPath: string;
+  /** Type of change detected */
+  eventType: 'change' | 'rename';
+}
+
 // ============ IPC Channel Constants ============
 
 export const IPC_CHANNELS = {
@@ -2179,6 +2193,7 @@ export const IPC_CHANNELS = {
   DB_VALIDATE_CHANGES: 'db:validate-changes',
   DB_APPLY_CHANGES: 'db:apply-changes',
   DB_ANALYZE_PLAN: 'db:analyze-plan',
+  DB_FILE_CHANGED: 'db:file-changed',
 
   // Dialog
   DIALOG_OPEN_FILE: 'dialog:open-file',

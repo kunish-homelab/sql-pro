@@ -64,6 +64,7 @@ import type {
   ExportResponse,
   ExportSchemaRequest,
   ExportSchemaResponse,
+  FileChangeEvent,
   FocusWindowRequest,
   FocusWindowResponse,
   GenerateMigrationSQLRequest,
@@ -224,6 +225,16 @@ const sqlProAPI = {
       request: AnalyzeQueryPlanRequest
     ): Promise<AnalyzeQueryPlanResponse> =>
       ipcRenderer.invoke(IPC_CHANNELS.DB_ANALYZE_PLAN, request),
+    onFileChanged: (
+      callback: (event: FileChangeEvent) => void
+    ): (() => void) => {
+      const handler = (
+        _event: Electron.IpcRendererEvent,
+        fileChangeEvent: FileChangeEvent
+      ) => callback(fileChangeEvent);
+      ipcRenderer.on(IPC_CHANNELS.DB_FILE_CHANGED, handler);
+      return () => ipcRenderer.off(IPC_CHANNELS.DB_FILE_CHANGED, handler);
+    },
   },
 
   // Dialog operations
