@@ -1,0 +1,8 @@
+{
+  "name": "@sqlpro/plugin-sdk",
+  "$schema": "../../node_modules/nx/schemas/project-schema.json",
+  "sourceRoot": "packages/plugin-sdk",
+  "projectType": "library",
+  "tags": ["scope:sdk", "type:lib"],
+  "targets": {}
+}

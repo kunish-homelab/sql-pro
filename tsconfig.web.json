@@ -1,21 +1,16 @@
 {
-  "extends": "@electron-toolkit/tsconfig/tsconfig.web.json",
+  "extends": "@sqlpro/tsconfig/web.json",
   "compilerOptions": {
-    "composite": true,
-    "jsx": "react-jsx",
-    "baseUrl": ".",
     "paths": {
-      "@/*": ["./src/renderer/src/*"],
-      "@shared/*": ["./src/shared/*"]
-    },
-    "types": ["vitest/globals", "@testing-library/jest-dom"],
-    "noEmit": true
+      "@/*": ["./apps/electron/src/renderer/src/*"],
+      "@shared/*": ["./apps/electron/src/shared/*"]
+    }
   },
   "include": [
-    "src/renderer/src/env.d.ts",
-    "src/renderer/src/**/*",
-    "src/renderer/src/**/*.tsx",
-    "src/preload/*.d.ts",
-    "src/shared/**/*"
+    "apps/electron/src/renderer/src/env.d.ts",
+    "apps/electron/src/renderer/src/**/*",
+    "apps/electron/src/renderer/src/**/*.tsx",
+    "apps/electron/src/preload/*.d.ts",
+    "apps/electron/src/shared/**/*"
   ]
 }

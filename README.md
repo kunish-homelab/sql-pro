@@ -158,8 +158,10 @@ sql-pro/
 │       ├── components/ # UI components
 │       ├── stores/     # Zustand stores
 │       └── routes/     # TanStack Router routes
-├── docs/               # VitePress documentation
-├── plugin-sdk/         # Plugin development templates
+├── packages/
+│   ├── docs/           # VitePress documentation
+│   ├── plugin-sdk/     # Plugin development SDK & templates
+│   └── ui/             # Shared UI components
 └── resources/          # App icons and assets
 ```
 

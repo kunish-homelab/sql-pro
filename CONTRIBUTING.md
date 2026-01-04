@@ -307,7 +307,7 @@ describe('formatBytes', () => {
 
 ### User Documentation
 
-Documentation is in the `docs/` directory using VitePress:
+Documentation is in the `packages/docs/` directory using VitePress:
 
 ```bash
 # Start docs dev server

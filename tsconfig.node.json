@@ -1,17 +1,15 @@
 {
-  "extends": "@electron-toolkit/tsconfig/tsconfig.node.json",
+  "extends": "@sqlpro/tsconfig/node.json",
   "compilerOptions": {
-    "composite": true,
     "paths": {
-      "@/*": ["./src/main/*"],
-      "@shared/*": ["./src/shared/*"]
-    },
-    "types": ["electron-vite/node"]
+      "@/*": ["./apps/electron/src/main/*"],
+      "@shared/*": ["./apps/electron/src/shared/*"]
+    }
   },
   "include": [
-    "electron.vite.config.*",
-    "src/main/**/*",
-    "src/preload/**/*",
-    "src/shared/**/*"
+    "apps/electron/electron.vite.config.*",
+    "apps/electron/src/main/**/*",
+    "apps/electron/src/preload/**/*",
+    "apps/electron/src/shared/**/*"
   ]
 }

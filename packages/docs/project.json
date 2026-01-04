@@ -1,0 +1,31 @@
+{
+  "name": "@sqlpro/docs",
+  "$schema": "../../node_modules/nx/schemas/project-schema.json",
+  "sourceRoot": "packages/docs",
+  "projectType": "application",
+  "tags": ["scope:docs", "type:app"],
+  "targets": {
+    "dev": {
+      "executor": "nx:run-commands",
+      "options": {
+        "command": "pnpm vitepress dev",
+        "cwd": "packages/docs"
+      }
+    },
+    "build": {
+      "executor": "nx:run-commands",
+      "outputs": ["{projectRoot}/.vitepress/dist"],
+      "options": {
+        "command": "pnpm vitepress build",
+        "cwd": "packages/docs"
+      }
+    },
+    "preview": {
+      "executor": "nx:run-commands",
+      "options": {
+        "command": "pnpm vitepress preview",
+        "cwd": "packages/docs"
+      }
+    }
+  }
+}

@@ -1,11 +1,8 @@
 {
-  "compilerOptions": {
-    "types": ["@testing-library/jest-dom"]
-  },
   "references": [
     { "path": "./tsconfig.node.json" },
     { "path": "./tsconfig.web.json" }
   ],
   "files": [],
-  "exclude": ["plugin-sdk"]
+  "exclude": ["node_modules", "apps", "packages"]
 }

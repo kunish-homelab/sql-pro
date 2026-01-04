@@ -1,0 +1,63 @@
+appId: com.sqlpro.app
+productName: SQL Pro
+copyright: Copyright © 2025 kunish
+
+# Specify electron version explicitly for monorepo setup
+electronVersion: 39.2.7
+
+directories:
+  buildResources: build
+
+files:
+  - from: .
+    to: .
+    filter:
+      - package.json
+      - out/**/*
+
+asarUnpack:
+  - resources/**
+
+# Generate required update metadata files
+generateUpdatesFilesForAllChannels: true
+
+# macOS Configuration
+mac:
+  icon: resources/icon.icns
+  category: public.app-category.developer-tools
+  entitlementsInherit: build/entitlements.mac.plist
+  notarize: false
+
+dmg:
+  artifactName: ${name}-${version}.${ext}
+
+# Windows Configuration
+win:
+  icon: resources/icon.ico
+
+nsis:
+  artifactName: ${name}-${version}-setup.${ext}
+  shortcutName: ${productName}
+  uninstallDisplayName: ${productName}
+  createDesktopShortcut: always
+
+# Linux Configuration
+linux:
+  target:
+    - AppImage
+    - snap
+    - deb
+  icon: resources/icons
+  category: Development
+
+appImage:
+  artifactName: ${name}-${version}.${ext}
+
+npmRebuild: false
+
+# Auto-update configuration - publish to GitHub releases
+publish:
+  provider: github
+  owner: kunish-homelab
+  repo: sql-pro
+  releaseType: release
