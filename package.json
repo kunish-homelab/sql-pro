@@ -50,6 +50,7 @@
     "@hookform/resolvers": "^5.2.2",
     "@monaco-editor/react": "^4.7.0",
     "@radix-ui/react-label": "^2.1.8",
+    "@sqlpro/ui": "workspace:*",
     "@tailwindcss/vite": "^4.1.18",
     "@tanstack/ai": "^0.2.0",
     "@tanstack/ai-anthropic": "^0.2.0",

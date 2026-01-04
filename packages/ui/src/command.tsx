@@ -4,13 +4,6 @@ import { Command as CommandPrimitive } from 'cmdk';
 import { CheckIcon, SearchIcon } from 'lucide-react';
 
 import * as React from 'react';
-import {
-  Dialog,
-  DialogContent,
-  DialogDescription,
-  DialogHeader,
-  DialogTitle,
-} from './dialog';
 import { InputGroup, InputGroupAddon } from './input-group';
 import { cn } from './lib/utils';
 
@@ -27,36 +20,6 @@ function Command({
       )}
       {...props}
     />
-  );
-}
-
-function CommandDialog({
-  title = 'Command Palette',
-  description = 'Search for a command to run...',
-  children,
-  className,
-  showCloseButton = false,
-  ...props
-}: Omit<React.ComponentProps<typeof Dialog>, 'children'> & {
-  title?: string;
-  description?: string;
-  className?: string;
-  showCloseButton?: boolean;
-  children: React.ReactNode;
-}) {
-  return (
-    <Dialog {...props}>
-      <DialogHeader className="sr-only">
-        <DialogTitle>{title}</DialogTitle>
-        <DialogDescription>{description}</DialogDescription>
-      </DialogHeader>
-      <DialogContent
-        className={cn('overflow-hidden rounded-xl! p-0', className)}
-        showCloseButton={showCloseButton}
-      >
-        {children}
-      </DialogContent>
-    </Dialog>
   );
 }
 
@@ -179,7 +142,6 @@ function CommandShortcut({
 
 export {
   Command,
-  CommandDialog,
   CommandEmpty,
   CommandGroup,
   CommandInput,
