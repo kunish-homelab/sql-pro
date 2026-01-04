@@ -1,5 +1,11 @@
+/**
+ * SQLite database adapter
+ * Refactored from the original database.ts to implement the adapter interface
+ */
+
 import type {
   ColumnInfo,
+  DatabaseConnectionConfig,
   ErrorCode,
   ErrorPosition,
   ForeignKeyInfo,
@@ -13,13 +19,18 @@ import type {
   TriggerInfo,
   ValidationResult,
 } from '@shared/types';
+import type {
+  AdapterConnectionInfo,
+  DatabaseAdapter,
+  OpenResult,
+} from './types';
 import { Buffer } from 'node:buffer';
 import { readFileSync } from 'node:fs';
 import Database from 'better-sqlite3-multiple-ciphers';
 import { enhanceConnectionError, enhanceQueryError } from '@/lib/error-parser';
-import { sqlLogger } from './sql-logger';
+import { sqlLogger } from '../sql-logger';
 
-interface ConnectionInfo {
+interface SQLiteConnectionInfo {
   id: string;
   db: Database.Database;
   path: string;
@@ -32,7 +43,7 @@ interface ConnectionInfo {
 let idCounter = 0;
 function generateId(): string {
   idCounter += 1;
-  return `conn_${idCounter}_${Math.random().toString(36).substring(2, 9)}`;
+  return `sqlite_${idCounter}_${Math.random().toString(36).substring(2, 9)}`;
 }
 
 // Check if file appears to be encrypted (doesn't have SQLite header)
@@ -53,70 +64,70 @@ interface CipherConfig {
   legacy?: number;
   kdfIter?: number;
   pageSize?: number;
-  hexKey?: boolean; // If true, wrap key as x'...'
-  rawKey?: boolean; // If true, treat password as already being hex
+  hexKey?: boolean;
+  rawKey?: boolean;
   plaintextHeader?: number;
 }
 
 const CIPHER_CONFIGS: CipherConfig[] = [
-  // SQLCipher 4 (default, most common)
   { cipher: 'sqlcipher', legacy: 0 },
-  // SQLCipher 4 with hex key
   { cipher: 'sqlcipher', legacy: 0, hexKey: true },
-  // SQLCipher 4 treating password as raw hex key
   { cipher: 'sqlcipher', legacy: 0, rawKey: true },
-  // SQLCipher 3 (older databases)
   { cipher: 'sqlcipher', legacy: 1 },
-  // SQLCipher 3 with hex key
   { cipher: 'sqlcipher', legacy: 1, hexKey: true },
-  // SQLCipher 3 treating password as raw hex key
   { cipher: 'sqlcipher', legacy: 1, rawKey: true },
-  // SQLCipher 2
   { cipher: 'sqlcipher', legacy: 2 },
-  // SQLCipher 1
   { cipher: 'sqlcipher', legacy: 3 },
-  // ChaCha20 (used by some apps like Signal)
   { cipher: 'chacha20' },
   { cipher: 'chacha20', hexKey: true },
   { cipher: 'chacha20', rawKey: true },
-  // AES-256-CBC
   { cipher: 'aes256cbc' },
   { cipher: 'aes256cbc', hexKey: true },
   { cipher: 'aes256cbc', rawKey: true },
-  // RC4 (legacy)
   { cipher: 'rc4' },
   { cipher: 'rc4', rawKey: true },
-  // wxSQLite3 AES-128
   { cipher: 'aes128cbc' },
   { cipher: 'aes128cbc', rawKey: true },
-  // SQLCipher with different KDF iterations (some apps use lower values)
   { cipher: 'sqlcipher', legacy: 0, kdfIter: 64000 },
   { cipher: 'sqlcipher', legacy: 0, kdfIter: 4000 },
   { cipher: 'sqlcipher', legacy: 0, kdfIter: 1 },
-  // SQLCipher with plaintext header (some apps use this)
   { cipher: 'sqlcipher', legacy: 0, plaintextHeader: 32 },
-  // Also try SQLCipher 4 with HMAC disabled (some implementations)
   { cipher: 'sqlcipher', legacy: 4 },
 ];
 
-class DatabaseService {
-  private connections: Map<string, ConnectionInfo> = new Map();
+// Helper functions
+function calculateDepth(nodes: QueryPlanNode[], currentDepth = 0): number {
+  if (nodes.length === 0) return currentDepth;
 
-  async open(
-    path: string,
-    password?: string,
-    readOnly = false
-  ): Promise<
-    | { success: true; connection: Omit<ConnectionInfo, 'db'> }
-    | {
-        success: false;
-        error: string;
-        needsPassword?: boolean;
-        errorCode?: ErrorCode;
-        troubleshootingSteps?: string[];
-        documentationUrl?: string;
-      }
-  > {
+  let maxDepth = currentDepth;
+  for (const node of nodes) {
+    const childDepth = calculateDepth(node.children || [], currentDepth + 1);
+    maxDepth = Math.max(maxDepth, childDepth);
+  }
+
+  return maxDepth;
+}
+
+/**
+ * SQLite database adapter implementation
+ */
+export class SQLiteAdapter implements DatabaseAdapter {
+  readonly type = 'sqlite' as const;
+  private connections: Map<string, SQLiteConnectionInfo> = new Map();
+
+  async open(config: DatabaseConnectionConfig): Promise<OpenResult> {
+    const path = config.path;
+    const password = config.password;
+    const readOnly = config.readOnly ?? false;
+
+    if (!path) {
+      return {
+        success: false,
+        error: 'SQLite database path is required',
+        errorCode: 'CONNECTION_ERROR',
+      };
+    }
+
     try {
       // Check if file appears encrypted before trying to open
       const fileIsEncrypted = isFileEncrypted(path);
@@ -138,34 +149,32 @@ class DatabaseService {
 
       // If password provided, try different cipher configurations
       if (password) {
-        for (const config of CIPHER_CONFIGS) {
+        for (const cipherConfig of CIPHER_CONFIGS) {
           let db: Database.Database | null = null;
           try {
             db = new Database(path, { readonly: readOnly });
 
             // Set cipher configuration
-            db.pragma(`cipher = '${config.cipher}'`);
-            if (config.legacy !== undefined) {
-              db.pragma(`legacy = ${config.legacy}`);
+            db.pragma(`cipher = '${cipherConfig.cipher}'`);
+            if (cipherConfig.legacy !== undefined) {
+              db.pragma(`legacy = ${cipherConfig.legacy}`);
             }
-            if (config.kdfIter !== undefined) {
-              db.pragma(`kdf_iter = ${config.kdfIter}`);
+            if (cipherConfig.kdfIter !== undefined) {
+              db.pragma(`kdf_iter = ${cipherConfig.kdfIter}`);
             }
-            if (config.pageSize !== undefined) {
-              db.pragma(`cipher_page_size = ${config.pageSize}`);
+            if (cipherConfig.pageSize !== undefined) {
+              db.pragma(`cipher_page_size = ${cipherConfig.pageSize}`);
             }
-            if (config.plaintextHeader !== undefined) {
+            if (cipherConfig.plaintextHeader !== undefined) {
               db.pragma(
-                `cipher_plaintext_header_size = ${config.plaintextHeader}`
+                `cipher_plaintext_header_size = ${cipherConfig.plaintextHeader}`
               );
             }
 
             // Set the key (hex format if specified)
-            if (config.rawKey) {
-              // Treat password as already being a hex key
+            if (cipherConfig.rawKey) {
               db.pragma(`key = "x'${password}'"`);
-            } else if (config.hexKey) {
-              // Convert password to hex string
+            } else if (cipherConfig.hexKey) {
               const hexKey = Buffer.from(password, 'utf8').toString('hex');
               db.pragma(`key = "x'${hexKey}'"`);
             } else {
@@ -179,7 +188,7 @@ class DatabaseService {
             const id = generateId();
             const filename = path.split('/').pop() || path;
 
-            const connectionInfo: ConnectionInfo = {
+            const connectionInfo: SQLiteConnectionInfo = {
               id,
               db,
               path,
@@ -205,10 +214,10 @@ class DatabaseService {
                 filename,
                 isEncrypted: true,
                 isReadOnly: readOnly,
+                databaseType: 'sqlite',
               },
             };
           } catch {
-            // This cipher config didn't work, close and try the next one
             if (db) {
               try {
                 db.close();
@@ -248,7 +257,7 @@ class DatabaseService {
       const id = generateId();
       const filename = path.split('/').pop() || path;
 
-      const connectionInfo: ConnectionInfo = {
+      const connectionInfo: SQLiteConnectionInfo = {
         id,
         db,
         path,
@@ -274,6 +283,7 @@ class DatabaseService {
           filename,
           isEncrypted: false,
           isReadOnly: readOnly,
+          databaseType: 'sqlite',
         },
       };
     } catch (error) {
@@ -357,11 +367,7 @@ class DatabaseService {
     }
   }
 
-  /**
-   * Get connection information by connection ID.
-   * Used for retrieving connection metadata without database operations.
-   */
-  getConnection(connectionId: string): Omit<ConnectionInfo, 'db'> | null {
+  getConnection(connectionId: string): AdapterConnectionInfo | null {
     const conn = this.connections.get(connectionId);
     if (!conn) {
       return null;
@@ -373,6 +379,7 @@ class DatabaseService {
       filename: conn.filename,
       isEncrypted: conn.isEncrypted,
       isReadOnly: conn.isReadOnly,
+      databaseType: 'sqlite',
     };
   }
 
@@ -390,15 +397,12 @@ class DatabaseService {
     }
 
     try {
-      // Get all attached databases/schemas using PRAGMA database_list
-      // Returns: seq, name, file (e.g., 0, main, /path/to/db.sqlite)
       const startTime = performance.now();
       const databaseList = conn.db
         .prepare('PRAGMA database_list')
         .all() as Array<{ seq: number; name: string; file: string }>;
       const durationMs = performance.now() - startTime;
 
-      // Log schema query
       sqlLogger.logQuery({
         connectionId,
         dbPath: conn.path,
@@ -415,7 +419,6 @@ class DatabaseService {
       for (const dbInfo of databaseList) {
         const schemaName = dbInfo.name;
 
-        // Get tables and views for this schema
         const tables = this.getTablesAndViews(
           conn.db,
           'table',
@@ -431,7 +434,6 @@ class DatabaseService {
           conn.path
         );
 
-        // Only add schema if it has tables or views (skip empty temp schema)
         if (tables.length > 0 || views.length > 0 || schemaName === 'main') {
           schemas.push({
             name: schemaName,
@@ -461,7 +463,6 @@ class DatabaseService {
     dbPath?: string
   ): TableInfo[] {
     const sqliteType = type === 'table' ? 'table' : 'view';
-    // Query the schema-specific sqlite_master table
     const sql = `SELECT name, sql FROM "${schema}".sqlite_master WHERE type = ? AND name NOT LIKE 'sqlite_%' ORDER BY name`;
     const startTime = performance.now();
     const items = db.prepare(sql).all(sqliteType) as Array<{
@@ -470,7 +471,6 @@ class DatabaseService {
     }>;
     const durationMs = performance.now() - startTime;
 
-    // Log the query if connectionId is provided
     if (connectionId) {
       sqlLogger.logQuery({
         connectionId,
@@ -515,7 +515,6 @@ class DatabaseService {
     tableName: string,
     schema: string = 'main'
   ): ColumnInfo[] {
-    // Use schema-qualified PRAGMA for table_info
     const columns = db
       .prepare(`PRAGMA "${schema}".table_info("${tableName}")`)
       .all() as Array<{
@@ -615,7 +614,6 @@ class DatabaseService {
       .all(tableName) as Array<{ name: string; sql: string }>;
 
     return triggers.map((trigger) => {
-      // Parse timing and event from SQL
       const sql = trigger.sql || '';
       let timing: 'BEFORE' | 'AFTER' | 'INSTEAD OF' = 'BEFORE';
       let event: 'INSERT' | 'UPDATE' | 'DELETE' = 'INSERT';
@@ -654,7 +652,6 @@ class DatabaseService {
         .get() as { count: number };
       return result.count;
     } catch {
-      // If count fails, return 0
       return 0;
     }
   }
@@ -664,11 +661,7 @@ class DatabaseService {
     sql: string,
     params?: unknown[]
   ):
-    | {
-        success: true;
-        changes: number;
-        lastInsertRowid: number;
-      }
+    | { success: true; changes: number; lastInsertRowid: number }
     | {
         success: false;
         error: string;
@@ -688,7 +681,6 @@ class DatabaseService {
       const result = stmt.run(...(params || []));
       const durationMs = performance.now() - startTime;
 
-      // Log successful execute
       sqlLogger.logExecute({
         connectionId,
         dbPath: conn.path,
@@ -712,7 +704,6 @@ class DatabaseService {
         error instanceof Error ? error.message : 'Unknown error';
       const enhanced = enhanceQueryError(errorMessage, sql);
 
-      // Log failed execute
       sqlLogger.logExecute({
         connectionId,
         dbPath: conn.path,
@@ -738,11 +729,7 @@ class DatabaseService {
     sql: string,
     params?: unknown[]
   ):
-    | {
-        success: true;
-        columns: string[];
-        rows: unknown[][];
-      }
+    | { success: true; columns: string[]; rows: unknown[][] }
     | {
         success: false;
         error: string;
@@ -765,7 +752,6 @@ class DatabaseService {
       const durationMs = performance.now() - startTime;
 
       if (rows.length === 0) {
-        // Log successful query with no results
         sqlLogger.logQuery({
           connectionId,
           dbPath: conn.path,
@@ -785,7 +771,6 @@ class DatabaseService {
       const columns = Object.keys(rows[0]);
       const rowsArray = rows.map((row) => columns.map((col) => row[col]));
 
-      // Log successful query
       sqlLogger.logQuery({
         connectionId,
         dbPath: conn.path,
@@ -806,7 +791,6 @@ class DatabaseService {
         error instanceof Error ? error.message : 'Unknown error';
       const enhanced = enhanceQueryError(errorMessage, sql);
 
-      // Log failed query
       sqlLogger.logQuery({
         connectionId,
         dbPath: conn.path,
@@ -823,133 +807,6 @@ class DatabaseService {
         errorPosition: enhanced.errorPosition,
         troubleshootingSteps: enhanced.troubleshootingSteps,
         documentationUrl: enhanced.documentationUrl,
-      };
-    }
-  }
-
-  getTableStructure(
-    connectionId: string,
-    tableName: string,
-    schema: string = 'main'
-  ):
-    | { success: true; structure: TableInfo }
-    | { success: false; error: string } {
-    const conn = this.connections.get(connectionId);
-    if (!conn) {
-      return { success: false, error: 'Connection not found' };
-    }
-
-    try {
-      const tables = this.getTablesAndViews(conn.db, 'table', schema);
-      const table = tables.find((t) => t.name === tableName);
-
-      if (!table) {
-        return { success: false, error: `Table "${tableName}" not found` };
-      }
-
-      return { success: true, structure: table };
-    } catch (error) {
-      return {
-        success: false,
-        error:
-          error instanceof Error
-            ? error.message
-            : 'Failed to get table structure',
-      };
-    }
-  }
-
-  explainQuery(
-    connectionId: string,
-    sql: string
-  ):
-    | { success: true; plan: QueryPlanNode; stats: QueryPlanStats }
-    | { success: false; error: string } {
-    const conn = this.connections.get(connectionId);
-    if (!conn) {
-      return { success: false, error: 'Connection not found' };
-    }
-
-    try {
-      // Get the query plan
-      const planRows = conn.db
-        .prepare(`EXPLAIN QUERY PLAN ${sql}`)
-        .all() as Array<{
-        id: number;
-        parent: number;
-        notused: number;
-        detail: string;
-      }>;
-
-      // Parse the plan into a tree structure
-      const planMap = new Map<number, QueryPlanNode>();
-      const roots: QueryPlanNode[] = [];
-
-      for (const row of planRows) {
-        const node: QueryPlanNode = {
-          id: row.id,
-          parent: row.parent,
-          notUsed: row.notused,
-          detail: row.detail,
-          children: [] as QueryPlanNode[],
-        };
-
-        planMap.set(row.id, node);
-
-        if (row.parent === 0) {
-          roots.push(node);
-        } else {
-          const parent = planMap.get(row.parent);
-          if (parent && parent.children) {
-            parent.children.push(node);
-          }
-        }
-      }
-
-      // Calculate statistics
-      const stats: QueryPlanStats = {
-        totalNodes: planRows.length,
-        depth: calculateDepth(roots),
-        hasScan: planRows.some((r) => r.detail.includes('SCAN')),
-        hasSort: planRows.some((r) => r.detail.includes('SORT')),
-        hasIndex: planRows.some((r) => r.detail.includes('INDEX')),
-      };
-
-      return {
-        success: true,
-        plan: roots[0] || {
-          id: 0,
-          parent: 0,
-          notUsed: 0,
-          detail: 'UNKNOWN',
-          children: [],
-        },
-        stats,
-      };
-    } catch (error) {
-      return {
-        success: false,
-        error:
-          error instanceof Error ? error.message : 'Failed to explain query',
-      };
-    }
-  }
-
-  validateQuery(connectionId: string, sql: string): ValidationResult {
-    const conn = this.connections.get(connectionId);
-    if (!conn) {
-      return { isValid: false, error: 'Connection not found' };
-    }
-
-    try {
-      conn.db.prepare(sql);
-      return { isValid: true };
-    } catch (error) {
-      const errorMessage =
-        error instanceof Error ? error.message : 'Unknown error';
-      return {
-        isValid: false,
-        error: errorMessage,
       };
     }
   }
@@ -978,7 +835,6 @@ class DatabaseService {
     const params: unknown[] = [];
 
     try {
-      // Apply filters
       if (filters && filters.length > 0) {
         const conditions = filters.map((f) => {
           switch (f.operator) {
@@ -1015,12 +871,10 @@ class DatabaseService {
         sql += ` WHERE ${conditions.join(' AND ')}`;
       }
 
-      // Apply sorting
       if (sortColumn) {
         sql += ` ORDER BY "${sortColumn}" ${sortDirection === 'desc' ? 'DESC' : 'ASC'}`;
       }
 
-      // Get total count
       const countSql = sql.replace(/SELECT \*/, 'SELECT COUNT(*) as count');
       const countStartTime = performance.now();
       const countResult = conn.db.prepare(countSql).get(...params) as {
@@ -1029,7 +883,6 @@ class DatabaseService {
       const countDurationMs = performance.now() - countStartTime;
       const totalRows = countResult.count;
 
-      // Log count query
       sqlLogger.logQuery({
         connectionId,
         dbPath: conn.path,
@@ -1039,7 +892,6 @@ class DatabaseService {
         rowCount: 1,
       });
 
-      // Apply pagination
       const offset = (page - 1) * pageSize;
       sql += ` LIMIT ? OFFSET ?`;
       params.push(pageSize, offset);
@@ -1050,7 +902,6 @@ class DatabaseService {
       >;
       const dataDurationMs = performance.now() - dataStartTime;
 
-      // Log data query
       sqlLogger.logQuery({
         connectionId,
         dbPath: conn.path,
@@ -1060,7 +911,6 @@ class DatabaseService {
         rowCount: rows.length,
       });
 
-      // Get column info
       const columns = this.getColumns(conn.db, table, schema || 'main');
 
       return {
@@ -1073,7 +923,6 @@ class DatabaseService {
       const errorMessage =
         error instanceof Error ? error.message : 'Failed to get table data';
 
-      // Log failed query
       sqlLogger.logQuery({
         connectionId,
         dbPath: conn.path,
@@ -1090,10 +939,6 @@ class DatabaseService {
     }
   }
 
-  /**
-   * Split SQL string into individual statements.
-   * Handles semicolons inside strings and comments.
-   */
   private splitStatements(sql: string): string[] {
     const statements: string[] = [];
     let current = '';
@@ -1105,7 +950,6 @@ class DatabaseService {
       const char = sql[i];
       const nextChar = sql[i + 1];
 
-      // Handle line comments
       if (!inString && !inBlockComment && char === '-' && nextChar === '-') {
         inLineComment = true;
         current += char;
@@ -1118,7 +962,6 @@ class DatabaseService {
         continue;
       }
 
-      // Handle block comments
       if (!inString && !inLineComment && char === '/' && nextChar === '*') {
         inBlockComment = true;
         current += char;
@@ -1132,12 +975,10 @@ class DatabaseService {
         continue;
       }
 
-      // Handle strings
       if (!inLineComment && !inBlockComment) {
         if (!inString && (char === "'" || char === '"')) {
           inString = char;
         } else if (inString === char) {
-          // Check for escaped quote
           if (nextChar === char) {
             current += char + nextChar;
             i++;
@@ -1147,7 +988,6 @@ class DatabaseService {
         }
       }
 
-      // Handle statement separator
       if (!inString && !inLineComment && !inBlockComment && char === ';') {
         const stmt = current.trim();
         if (stmt) {
@@ -1160,7 +1000,6 @@ class DatabaseService {
       current += char;
     }
 
-    // Add the last statement if it doesn't end with semicolon
     const lastStmt = current.trim();
     if (lastStmt) {
       statements.push(lastStmt);
@@ -1172,23 +1011,19 @@ class DatabaseService {
   executeQuery(connectionId: string, query: string) {
     const conn = this.connections.get(connectionId);
     if (!conn) {
-      return { success: false, error: 'Connection not found' };
+      return { success: false as const, error: 'Connection not found' };
     }
 
-    // Split into individual statements
     const statements = this.splitStatements(query);
 
     if (statements.length === 0) {
-      return { success: false, error: 'No SQL statements to execute' };
+      return { success: false as const, error: 'No SQL statements to execute' };
     }
 
-    // For single statement, use the original logic
     if (statements.length === 1) {
       return this.executeSingleStatement(connectionId, statements[0]);
     }
 
-    // For multiple statements, execute them sequentially
-    // Collect all results (SELECT results as separate result sets)
     const resultSets: Array<{
       columns: string[];
       rows: Record<string, unknown>[];
@@ -1197,7 +1032,6 @@ class DatabaseService {
     let lastInsertRowid = 0;
     let executedCount = 0;
 
-    // Check if user is managing their own transaction
     const hasUserTransaction = statements.some((stmt) => {
       const upper = stmt.trim().toUpperCase();
       return (
@@ -1208,7 +1042,6 @@ class DatabaseService {
       );
     });
 
-    // Only wrap in transaction if user isn't managing their own
     const useAutoTransaction = !hasUserTransaction;
 
     try {
@@ -1246,7 +1079,6 @@ class DatabaseService {
 
         executedCount++;
 
-        // Track results
         if ('rows' in result && result.success) {
           resultSets.push({
             columns: result.columns,
@@ -1262,10 +1094,7 @@ class DatabaseService {
         conn.db.exec('COMMIT');
       }
 
-      // Return results based on what was executed
       if (resultSets.length > 0) {
-        // Return all result sets for multiple SELECTs
-        // For single result set, return in flat format for backward compatibility
         if (resultSets.length === 1) {
           return {
             success: true as const,
@@ -1276,7 +1105,6 @@ class DatabaseService {
           };
         }
 
-        // Multiple result sets - return as array
         return {
           success: true as const,
           resultSets,
@@ -1286,7 +1114,7 @@ class DatabaseService {
       }
 
       return {
-        success: true,
+        success: true as const,
         changes: totalChanges,
         lastInsertRowid,
         executedStatements: executedCount,
@@ -1300,15 +1128,12 @@ class DatabaseService {
         }
       }
       return {
-        success: false,
+        success: false as const,
         error: error instanceof Error ? error.message : 'Unknown error',
       };
     }
   }
 
-  /**
-   * Execute a single SQL statement
-   */
   private executeSingleStatement(
     connectionId: string,
     query: string
@@ -1331,7 +1156,6 @@ class DatabaseService {
         troubleshootingSteps?: string[];
         documentationUrl?: string;
       } {
-    // Determine if it's a SELECT or a modification query
     const trimmed = query.trim().toUpperCase();
     if (
       trimmed.startsWith('SELECT') ||
@@ -1341,7 +1165,6 @@ class DatabaseService {
     ) {
       const result = this.query(connectionId, query);
       if (result.success) {
-        // Convert array format to record format
         const rows = result.rows.map((row) => {
           const record: Record<string, unknown> = {};
           result.columns.forEach((col, i) => {
@@ -1361,23 +1184,115 @@ class DatabaseService {
     }
   }
 
-  validateChanges(connectionId: string, changes: PendingChangeInfo[]) {
+  validateQuery(connectionId: string, sql: string): ValidationResult {
+    const conn = this.connections.get(connectionId);
+    if (!conn) {
+      return { isValid: false, error: 'Connection not found' };
+    }
+
+    try {
+      conn.db.prepare(sql);
+      return { isValid: true };
+    } catch (error) {
+      const errorMessage =
+        error instanceof Error ? error.message : 'Unknown error';
+      return {
+        isValid: false,
+        error: errorMessage,
+      };
+    }
+  }
+
+  explainQuery(
+    connectionId: string,
+    sql: string
+  ):
+    | { success: true; plan: QueryPlanNode; stats: QueryPlanStats }
+    | { success: false; error: string } {
     const conn = this.connections.get(connectionId);
     if (!conn) {
       return { success: false, error: 'Connection not found' };
+    }
+
+    try {
+      const planRows = conn.db
+        .prepare(`EXPLAIN QUERY PLAN ${sql}`)
+        .all() as Array<{
+        id: number;
+        parent: number;
+        notused: number;
+        detail: string;
+      }>;
+
+      const planMap = new Map<number, QueryPlanNode>();
+      const roots: QueryPlanNode[] = [];
+
+      for (const row of planRows) {
+        const node: QueryPlanNode = {
+          id: row.id,
+          parent: row.parent,
+          notUsed: row.notused,
+          detail: row.detail,
+          children: [] as QueryPlanNode[],
+        };
+
+        planMap.set(row.id, node);
+
+        if (row.parent === 0) {
+          roots.push(node);
+        } else {
+          const parent = planMap.get(row.parent);
+          if (parent && parent.children) {
+            parent.children.push(node);
+          }
+        }
+      }
+
+      const stats: QueryPlanStats = {
+        totalNodes: planRows.length,
+        depth: calculateDepth(roots),
+        hasScan: planRows.some((r) => r.detail.includes('SCAN')),
+        hasSort: planRows.some((r) => r.detail.includes('SORT')),
+        hasIndex: planRows.some((r) => r.detail.includes('INDEX')),
+      };
+
+      return {
+        success: true,
+        plan: roots[0] || {
+          id: 0,
+          parent: 0,
+          notUsed: 0,
+          detail: 'UNKNOWN',
+          children: [],
+        },
+        stats,
+      };
+    } catch (error) {
+      return {
+        success: false,
+        error:
+          error instanceof Error ? error.message : 'Failed to explain query',
+      };
+    }
+  }
+
+  validateChanges(connectionId: string, changes: PendingChangeInfo[]) {
+    const conn = this.connections.get(connectionId);
+    if (!conn) {
+      return { success: false as const, error: 'Connection not found' };
     }
 
     const results: ValidationResult[] = [];
     for (const change of changes) {
       results.push({ changeId: change.id, isValid: true });
     }
-    return { success: true, results };
+    return { success: true as const, results };
   }
 
   applyChanges(connectionId: string, changes: PendingChangeInfo[]) {
     const conn = this.connections.get(connectionId);
     if (!conn) {
-      return { success: false, error: 'Connection not found' };
+      return { success: false as const, error: 'Connection not found' };
     }
 
     try {
@@ -1412,23 +1327,51 @@ class DatabaseService {
         }
       }
 
-      return { success: true, appliedCount };
+      return { success: true as const, appliedCount };
     } catch (error) {
       return {
-        success: false,
+        success: false as const,
         error:
           error instanceof Error ? error.message : 'Failed to apply changes',
       };
     }
   }
 
-  analyzeQueryPlan(connectionId: string, query: string) {
-    return this.explainQuery(connectionId, query);
-  }
-
   closeAll() {
     for (const [id] of this.connections) {
       this.close(id);
+    }
+  }
+
+  getTableStructure(
+    connectionId: string,
+    tableName: string,
+    schema: string = 'main'
+  ):
+    | { success: true; structure: TableInfo }
+    | { success: false; error: string } {
+    const conn = this.connections.get(connectionId);
+    if (!conn) {
+      return { success: false, error: 'Connection not found' };
+    }
+
+    try {
+      const tables = this.getTablesAndViews(conn.db, 'table', schema);
+      const table = tables.find((t) => t.name === tableName);
+
+      if (!table) {
+        return { success: false, error: `Table "${tableName}" not found` };
+      }
+
+      return { success: true, structure: table };
+    } catch (error) {
+      return {
+        success: false,
+        error:
+          error instanceof Error
+            ? error.message
+            : 'Failed to get table structure',
+      };
     }
   }
 
@@ -1443,10 +1386,6 @@ class DatabaseService {
     }
 
     try {
-      // Check if there are pending transactions
-      // This is a simplified implementation - just check if we're in a transaction
-      // Actual implementation would track schema changes, table modifications, etc.
-
       return { success: true, changes: [] };
     } catch (error) {
       return {
@@ -1460,23 +1399,5 @@ class DatabaseService {
   }
 }
 
-// Helper functions
-function calculateDepth(nodes: QueryPlanNode[], currentDepth = 0): number {
-  if (nodes.length === 0) return currentDepth;
-
-  let maxDepth = currentDepth;
-  for (const node of nodes) {
-    const childDepth = calculateDepth(node.children || [], currentDepth + 1);
-    maxDepth = Math.max(maxDepth, childDepth);
-  }
-
-  return maxDepth;
-}
-
-const databaseService = new DatabaseService();
-export { databaseService };
-export default databaseService;
-
-// Re-export the new database manager for multi-database support
-export { databaseManager } from './database-adapters';
-export type { DatabaseConnectionConfig, DatabaseType } from '@shared/types';
+// Export singleton instance
+export const sqliteAdapter = new SQLiteAdapter();

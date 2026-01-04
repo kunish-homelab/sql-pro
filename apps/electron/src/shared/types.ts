@@ -78,10 +78,54 @@ export interface EnhancedErrorInfo {
 
 // ============ Connection Types ============
 
+/**
+ * Supported database types
+ */
+export type DatabaseType = 'sqlite' | 'mysql' | 'postgresql' | 'supabase';
+
+/**
+ * Connection configuration for different database types
+ */
+export interface DatabaseConnectionConfig {
+  type: DatabaseType;
+  /** For SQLite: file path. For others: display name */
+  name?: string;
+  /** SQLite-specific: file path */
+  path?: string;
+  /** SQLite-specific: encryption password */
+  password?: string;
+  /** For MySQL/PostgreSQL/Supabase */
+  host?: string;
+  /** Database port */
+  port?: number;
+  /** Database name */
+  database?: string;
+  /** Database username */
+  username?: string;
+  /** Supabase-specific: project URL */
+  supabaseUrl?: string;
+  /** Supabase-specific: anon/service role key */
+  supabaseKey?: string;
+  /** SSL/TLS configuration */
+  ssl?:
+    | boolean
+    | {
+        rejectUnauthorized?: boolean;
+        ca?: string;
+        cert?: string;
+        key?: string;
+      };
+  /** Read-only mode */
+  readOnly?: boolean;
+}
+
 export interface OpenDatabaseRequest {
-  path: string;
+  /** Legacy support: file path for SQLite */
+  path?: string;
   password?: string;
   readOnly?: boolean;
+  /** New: full connection configuration */
+  config?: DatabaseConnectionConfig;
 }
 
 export interface OpenDatabaseResponse {
@@ -92,6 +136,8 @@ export interface OpenDatabaseResponse {
     filename: string;
     isEncrypted: boolean;
     isReadOnly: boolean;
+    /** Database type for this connection */
+    databaseType?: DatabaseType;
   };
   error?: string;
   /** When true, indicates the database requires a password to open */
@@ -385,6 +431,10 @@ export interface RecentConnection {
   readOnly?: boolean;
   /** Timestamp when connection was first saved */
   createdAt?: string;
+  /** Database type (defaults to 'sqlite' for backward compatibility) */
+  databaseType?: DatabaseType;
+  /** Connection configuration for non-SQLite databases */
+  connectionConfig?: DatabaseConnectionConfig;
 }
 
 export interface GetRecentConnectionsResponse {
@@ -484,6 +534,10 @@ export interface ConnectionProfile {
   tags?: string[];
   notes?: string;
   isSaved: boolean;
+  /** Database type (defaults to 'sqlite' for backward compatibility) */
+  databaseType?: DatabaseType;
+  /** Connection configuration for non-SQLite databases */
+  connectionConfig?: DatabaseConnectionConfig;
 }
 
 /**
