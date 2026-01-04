@@ -15,6 +15,7 @@ import {
   DropdownMenuSeparator,
   DropdownMenuTrigger,
 } from '@sqlpro/ui/dropdown-menu';
+import { ScrollArea } from '@sqlpro/ui/scroll-area';
 import { Tooltip, TooltipContent, TooltipTrigger } from '@sqlpro/ui/tooltip';
 import {
   AlertCircle,
@@ -685,7 +686,7 @@ export function WelcomeScreen() {
 
   return (
     <div
-      className="bg-grid-dot relative flex h-full items-center justify-center"
+      className="bg-grid-dot relative flex min-h-full justify-center overflow-y-auto py-8"
       onDragOver={handleDragOver}
       onDragLeave={handleDragLeave}
       onDrop={handleDrop}
@@ -731,17 +732,17 @@ export function WelcomeScreen() {
 
       <div
         className={cn(
-          'w-full max-w-md space-y-8 px-4',
+          'm-auto w-full max-w-lg space-y-6 px-4',
           isDragging && 'opacity-30'
         )}
       >
         {/* Logo & Title */}
         <div className="text-center">
-          <div className="bg-primary/10 mx-auto mb-4 flex h-16 w-16 items-center justify-center rounded-2xl">
-            <Database className="text-primary h-8 w-8" />
+          <div className="bg-primary/10 mx-auto mb-3 flex h-14 w-14 items-center justify-center rounded-xl">
+            <Database className="text-primary h-7 w-7" />
           </div>
-          <h1 className="text-2xl font-semibold tracking-tight">SQL Pro</h1>
-          <p className="text-muted-foreground mt-1 text-sm">
+          <h1 className="text-xl font-semibold tracking-tight">SQL Pro</h1>
+          <p className="text-muted-foreground mt-0.5 text-sm">
             Professional Database Manager
           </p>
         </div>
@@ -792,109 +793,111 @@ export function WelcomeScreen() {
         ) : (
           recentConnections.length > 0 && (
             <div className="space-y-2">
-              <div className="flex items-center justify-between">
-                <label className="text-sm font-medium">
+              <div className="flex items-center justify-between px-1">
+                <span className="text-muted-foreground text-xs font-medium tracking-wide uppercase">
                   Recent Connections
-                </label>
-                <Clock className="text-muted-foreground h-4 w-4" />
+                </span>
+                <Clock className="text-muted-foreground h-3.5 w-3.5" />
               </div>
-              <div className="space-y-1">
-                {recentConnections.map((conn) => (
-                  <div
-                    key={conn.path}
-                    className="group flex items-center gap-2"
-                  >
-                    <Button
-                      variant="ghost"
-                      className="h-auto min-w-0 flex-1 justify-start px-2 py-2 text-left"
-                      onClick={() =>
-                        handleRecentClick(
-                          conn.path,
-                          conn.isEncrypted,
-                          conn.readOnly
-                        )
-                      }
-                      disabled={isConnecting}
+              <ScrollArea className="max-h-72 **:data-[slot=scroll-area-viewport]:max-h-[inherit]">
+                <div className="space-y-0.5 pr-2">
+                  {recentConnections.map((conn) => (
+                    <div
+                      key={conn.path}
+                      className="group flex items-center gap-1"
                     >
-                      {(() => {
-                        const { Icon, color, label } = getDatabaseIcon(
-                          conn.databaseType
-                        );
-                        return (
-                          <Tooltip>
-                            <TooltipTrigger>
-                              <Icon
-                                className={cn('mr-2 h-4 w-4 shrink-0', color)}
-                              />
-                            </TooltipTrigger>
-                            <TooltipContent>{label}</TooltipContent>
-                          </Tooltip>
-                        );
-                      })()}
-                      <div className="min-w-0 flex-1">
-                        <div className="flex items-center gap-2">
-                          <span className="truncate text-sm font-medium">
-                            {conn.displayName || conn.filename}
-                          </span>
-                          <div className="flex shrink-0 items-center gap-1">
-                            {conn.readOnly && (
-                              <Tooltip>
-                                <TooltipTrigger>
-                                  <Eye className="text-muted-foreground h-3 w-3" />
-                                </TooltipTrigger>
-                                <TooltipContent>Read-only</TooltipContent>
-                              </Tooltip>
-                            )}
-                            <HasSavedPasswordIndicator path={conn.path} />
+                      <Button
+                        variant="ghost"
+                        className="h-auto min-w-0 flex-1 justify-start px-2 py-1.5 text-left"
+                        onClick={() =>
+                          handleRecentClick(
+                            conn.path,
+                            conn.isEncrypted,
+                            conn.readOnly
+                          )
+                        }
+                        disabled={isConnecting}
+                      >
+                        {(() => {
+                          const { Icon, color, label } = getDatabaseIcon(
+                            conn.databaseType
+                          );
+                          return (
+                            <Tooltip>
+                              <TooltipTrigger>
+                                <Icon
+                                  className={cn('mr-2 h-4 w-4 shrink-0', color)}
+                                />
+                              </TooltipTrigger>
+                              <TooltipContent>{label}</TooltipContent>
+                            </Tooltip>
+                          );
+                        })()}
+                        <div className="min-w-0 flex-1">
+                          <div className="flex items-center gap-2">
+                            <span className="truncate text-sm font-medium">
+                              {conn.displayName || conn.filename}
+                            </span>
+                            <div className="flex shrink-0 items-center gap-1">
+                              {conn.readOnly && (
+                                <Tooltip>
+                                  <TooltipTrigger>
+                                    <Eye className="text-muted-foreground h-3 w-3" />
+                                  </TooltipTrigger>
+                                  <TooltipContent>Read-only</TooltipContent>
+                                </Tooltip>
+                              )}
+                              <HasSavedPasswordIndicator path={conn.path} />
+                            </div>
+                          </div>
+                          <div className="text-muted-foreground truncate text-xs">
+                            {conn.path}
                           </div>
                         </div>
-                        <div className="text-muted-foreground truncate text-xs">
-                          {conn.path}
-                        </div>
-                      </div>
-                    </Button>
-                    <DropdownMenu>
-                      <DropdownMenuTrigger>
-                        <Button
-                          variant="ghost"
-                          size="sm"
-                          className="text-muted-foreground shrink-0 opacity-0 group-hover:opacity-100"
+                      </Button>
+                      <DropdownMenu>
+                        <DropdownMenuTrigger>
+                          <Button
+                            variant="ghost"
+                            size="sm"
+                            className="text-muted-foreground shrink-0 opacity-0 group-hover:opacity-100"
+                          >
+                            <MoreVertical className="h-4 w-4" />
+                          </Button>
+                        </DropdownMenuTrigger>
+                        <DropdownMenuContent
+                          align="end"
+                          side="bottom"
+                          className="w-auto"
                         >
-                          <MoreVertical className="h-4 w-4" />
-                        </Button>
-                      </DropdownMenuTrigger>
-                      <DropdownMenuContent
-                        align="end"
-                        side="bottom"
-                        className="w-auto"
-                      >
-                        <DropdownMenuItem
-                          onClick={() => handleEditConnection(conn)}
-                          className="whitespace-nowrap"
-                        >
-                          <Settings className="mr-2 h-4 w-4" />
-                          <span>Edit</span>
-                        </DropdownMenuItem>
-                        <DropdownMenuItem
-                          onClick={() => handleSaveAsProfile(conn)}
-                          className="whitespace-nowrap"
-                        >
-                          <BookmarkPlus className="mr-2 h-4 w-4" />
-                          <span>Save as Profile</span>
-                        </DropdownMenuItem>
-                        <DropdownMenuSeparator />
-                        <DropdownMenuItem
-                          onClick={() => handleRemoveConnection(conn)}
-                          className="text-destructive focus:text-destructive whitespace-nowrap"
-                        >
-                          <Trash2 className="mr-2 h-4 w-4" />
-                          <span>Remove</span>
-                        </DropdownMenuItem>
-                      </DropdownMenuContent>
-                    </DropdownMenu>
-                  </div>
-                ))}
-              </div>
+                          <DropdownMenuItem
+                            onClick={() => handleEditConnection(conn)}
+                            className="whitespace-nowrap"
+                          >
+                            <Settings className="mr-2 h-4 w-4" />
+                            <span>Edit</span>
+                          </DropdownMenuItem>
+                          <DropdownMenuItem
+                            onClick={() => handleSaveAsProfile(conn)}
+                            className="whitespace-nowrap"
+                          >
+                            <BookmarkPlus className="mr-2 h-4 w-4" />
+                            <span>Save as Profile</span>
+                          </DropdownMenuItem>
+                          <DropdownMenuSeparator />
+                          <DropdownMenuItem
+                            onClick={() => handleRemoveConnection(conn)}
+                            className="text-destructive focus:text-destructive whitespace-nowrap"
+                          >
+                            <Trash2 className="mr-2 h-4 w-4" />
+                            <span>Remove</span>
+                          </DropdownMenuItem>
+                        </DropdownMenuContent>
+                      </DropdownMenu>
+                    </div>
+                  ))}
+                </div>
+              </ScrollArea>
             </div>
           )
         )}
