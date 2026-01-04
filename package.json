@@ -36,6 +36,7 @@
     "@nx/js": "^22.3.3",
     "@nx/vite": "^22.3.3",
     "@nx/workspace": "^22.3.3",
+    "@typescript/native-preview": "7.0.0-dev.20260103.1",
     "eslint": "^9.39.2",
     "eslint-plugin-react-refresh": "^0.4.26",
     "husky": "^9.1.7",
@@ -43,7 +44,6 @@
     "nx": "^22.3.3",
     "prettier": "^3.7.4",
     "prettier-plugin-tailwindcss": "^0.7.2",
-    "typescript": "^5.9.3",
-    "vitepress": "2.0.0-alpha.15"
+    "typescript": "^5.9.3"
   }
 }

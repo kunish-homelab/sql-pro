@@ -23,7 +23,7 @@ This plugin demonstrates the fundamental building blocks of a SQL Pro plugin:
 3. Modify `index.ts` to implement your plugin's functionality
 4. Compile TypeScript to JavaScript:
    ```bash
-   npx tsc index.ts --outDir dist --declaration
+   npx tsgo index.ts --outDir dist --declaration
    ```
 5. Update `main` in `plugin.json` to point to your compiled entry file
 

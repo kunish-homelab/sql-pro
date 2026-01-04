@@ -22,10 +22,10 @@
     "src"
   ],
   "scripts": {
-    "build": "tsc --project tsconfig.build.json",
-    "dev": "tsc --project tsconfig.build.json --watch",
+    "build": "tsgo --project tsconfig.build.json",
+    "dev": "tsgo --project tsconfig.build.json --watch",
     "lint": "eslint src/",
-    "typecheck": "tsc --noEmit"
+    "typecheck": "tsgo --noEmit"
   },
   "peerDependencies": {
     "@base-ui/react": "^1.0.0",
