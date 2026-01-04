@@ -1,0 +1,7 @@
+{
+  "name": "@sqlpro/tsconfig",
+  "$schema": "../../node_modules/nx/schemas/project-schema.json",
+  "sourceRoot": "packages/tsconfig",
+  "projectType": "library",
+  "tags": ["scope:shared", "type:config"]
+}

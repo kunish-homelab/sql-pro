@@ -1,0 +1,12 @@
+{
+  "name": "@sqlpro/tsconfig",
+  "version": "1.0.0",
+  "description": "Shared TypeScript configurations for SQL Pro monorepo",
+  "license": "MIT",
+  "files": [
+    "*.json"
+  ],
+  "publishConfig": {
+    "access": "public"
+  }
+}

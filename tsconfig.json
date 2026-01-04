@@ -1,13 +1,7 @@
 {
+  "extends": "@sqlpro/tsconfig/base.json",
   "compilerOptions": {
-    "target": "ES2022",
-    "baseUrl": ".",
-    "module": "ESNext",
-    "moduleResolution": "bundler",
-    "resolveJsonModule": true,
-    "strict": true,
-    "esModuleInterop": true,
-    "skipLibCheck": true
+    "baseUrl": "."
   },
   "exclude": ["node_modules", "apps", "packages"]
 }

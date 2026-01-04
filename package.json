@@ -36,6 +36,7 @@
     "@nx/js": "^22.3.3",
     "@nx/vite": "^22.3.3",
     "@nx/workspace": "^22.3.3",
+    "@sqlpro/tsconfig": "workspace:*",
     "@typescript/native-preview": "7.0.0-dev.20260103.1",
     "eslint": "^9.39.2",
     "eslint-plugin-react-refresh": "^0.4.26",

@@ -34,6 +34,9 @@ importers:
       '@nx/workspace':
         specifier: ^22.3.3
         version: 22.3.3
+      '@sqlpro/tsconfig':
+        specifier: workspace:*
+        version: link:packages/tsconfig
       '@typescript/native-preview':
         specifier: 7.0.0-dev.20260103.1
         version: 7.0.0-dev.20260103.1
@@ -242,6 +245,9 @@ importers:
       '@electron-toolkit/tsconfig':
         specifier: ^2.0.0
         version: 2.0.0(@types/node@25.0.3)
+      '@sqlpro/tsconfig':
+        specifier: workspace:*
+        version: link:../../packages/tsconfig
       '@testing-library/jest-dom':
         specifier: ^6.9.1
         version: 6.9.1
@@ -316,6 +322,8 @@ importers:
         version: 2.0.0-alpha.15(@algolia/client-search@5.46.2)(@types/node@25.0.3)(@types/react@19.2.7)(axios@1.13.2)(change-case@5.4.4)(esbuild@0.27.2)(jiti@2.6.1)(postcss@8.5.6)(react-dom@19.2.3(react@19.2.3))(react@19.2.3)(search-insights@2.17.3)(tsx@4.21.0)(typescript@5.9.3)(yaml@2.8.2)
 
   packages/plugin-sdk: {}
+
+  packages/tsconfig: {}
 
   packages/ui:
     dependencies:

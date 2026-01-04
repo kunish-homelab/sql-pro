@@ -1,3 +1,16 @@
 {
-  "extends": "./apps/electron/tsconfig.web.json"
+  "extends": "@sqlpro/tsconfig/web.json",
+  "compilerOptions": {
+    "paths": {
+      "@/*": ["./apps/electron/src/renderer/src/*"],
+      "@shared/*": ["./apps/electron/src/shared/*"]
+    }
+  },
+  "include": [
+    "apps/electron/src/renderer/src/env.d.ts",
+    "apps/electron/src/renderer/src/**/*",
+    "apps/electron/src/renderer/src/**/*.tsx",
+    "apps/electron/src/preload/*.d.ts",
+    "apps/electron/src/shared/**/*"
+  ]
 }

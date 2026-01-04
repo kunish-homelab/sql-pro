@@ -1,12 +1,10 @@
 {
-  "extends": "@electron-toolkit/tsconfig/tsconfig.node.json",
+  "extends": "@sqlpro/tsconfig/node.json",
   "compilerOptions": {
-    "composite": true,
     "paths": {
       "@/*": ["./src/main/*"],
       "@shared/*": ["./src/shared/*"]
-    },
-    "types": ["electron-vite/node"]
+    }
   },
   "include": [
     "electron.vite.config.*",

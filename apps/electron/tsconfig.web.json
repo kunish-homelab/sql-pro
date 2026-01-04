@@ -1,14 +1,10 @@
 {
-  "extends": "@electron-toolkit/tsconfig/tsconfig.web.json",
+  "extends": "@sqlpro/tsconfig/web.json",
   "compilerOptions": {
-    "composite": true,
-    "jsx": "react-jsx",
     "paths": {
       "@/*": ["./src/renderer/src/*"],
       "@shared/*": ["./src/shared/*"]
-    },
-    "types": ["vitest/globals", "@testing-library/jest-dom"],
-    "noEmit": true
+    }
   },
   "include": [
     "src/renderer/src/env.d.ts",
