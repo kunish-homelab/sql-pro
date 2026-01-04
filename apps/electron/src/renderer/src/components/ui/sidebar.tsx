@@ -13,11 +13,7 @@ import {
   SheetTitle,
 } from '@sqlpro/ui/sheet';
 import { Skeleton } from '@sqlpro/ui/skeleton';
-import {
-  Tooltip,
-  TooltipContent,
-  TooltipTrigger,
-} from '@sqlpro/ui/tooltip';
+import { Tooltip, TooltipContent, TooltipTrigger } from '@sqlpro/ui/tooltip';
 import { cva } from 'class-variance-authority';
 import { PanelLeftIcon } from 'lucide-react';
 import * as React from 'react';

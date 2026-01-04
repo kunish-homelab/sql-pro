@@ -5,6 +5,8 @@ node_modules
 dist
 out
 packages/*/dist
+apps/*/out
+apps/*/dist
 
 # IDE
 .idea

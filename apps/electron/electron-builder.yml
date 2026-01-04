@@ -2,6 +2,9 @@ appId: com.sqlpro.app
 productName: SQL Pro
 copyright: Copyright © 2025 kunish
 
+# Specify electron version explicitly for monorepo setup
+electronVersion: 39.2.7
+
 directories:
   buildResources: build
 

@@ -3,7 +3,7 @@
 @import 'shadcn/tailwind.css';
 
 /* Include @sqlpro/ui package classes in Tailwind scanning */
-@source '../../../../packages/ui/src';
+@source '../../../../../../packages/ui/src';
 
 @custom-variant dark (&:is(.dark *));
 

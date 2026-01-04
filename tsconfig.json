@@ -1,11 +1,13 @@
 {
   "compilerOptions": {
-    "types": ["@testing-library/jest-dom"]
+    "target": "ES2022",
+    "baseUrl": ".",
+    "module": "ESNext",
+    "moduleResolution": "bundler",
+    "resolveJsonModule": true,
+    "strict": true,
+    "esModuleInterop": true,
+    "skipLibCheck": true
   },
-  "references": [
-    { "path": "./tsconfig.node.json" },
-    { "path": "./tsconfig.web.json" }
-  ],
-  "files": [],
-  "exclude": ["packages/plugin-sdk", "packages/docs", "packages/ui"]
+  "exclude": ["node_modules", "apps", "packages"]
 }

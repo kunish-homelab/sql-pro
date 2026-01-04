@@ -1,0 +1,71 @@
+{
+  "name": "@sqlpro/app",
+  "$schema": "../../node_modules/nx/schemas/project-schema.json",
+  "sourceRoot": "apps/electron/src",
+  "projectType": "application",
+  "tags": ["scope:app", "type:app"],
+  "targets": {
+    "dev": {
+      "executor": "nx:run-commands",
+      "options": {
+        "command": "electron-vite dev",
+        "cwd": "apps/electron"
+      }
+    },
+    "build": {
+      "executor": "nx:run-commands",
+      "outputs": ["{projectRoot}/out"],
+      "options": {
+        "command": "electron-vite build",
+        "cwd": "apps/electron"
+      }
+    },
+    "build:mac": {
+      "executor": "nx:run-commands",
+      "dependsOn": ["build"],
+      "options": {
+        "command": "electron-builder --mac",
+        "cwd": "apps/electron"
+      }
+    },
+    "build:win": {
+      "executor": "nx:run-commands",
+      "dependsOn": ["build"],
+      "options": {
+        "command": "electron-builder --win",
+        "cwd": "apps/electron"
+      }
+    },
+    "build:linux": {
+      "executor": "nx:run-commands",
+      "dependsOn": ["build"],
+      "options": {
+        "command": "electron-builder --linux",
+        "cwd": "apps/electron"
+      }
+    },
+    "test": {
+      "executor": "@nx/vite:test",
+      "options": {
+        "config": "apps/electron/vitest.config.ts"
+      }
+    },
+    "lint": {
+      "executor": "@nx/eslint:lint",
+      "options": {
+        "lintFilePatterns": ["apps/electron/src/**/*.{ts,tsx}"]
+      }
+    },
+    "typecheck": {
+      "executor": "nx:run-commands",
+      "options": {
+        "commands": [
+          "tsc --noEmit -p tsconfig.node.json --composite false",
+          "tsc --noEmit -p tsconfig.web.json --composite false"
+        ],
+        "cwd": "apps/electron",
+        "parallel": false
+      }
+    }
+  }
+}
