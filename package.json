@@ -1,6 +1,6 @@
 {
   "name": "sql-pro-monorepo",
-  "version": "1.9.0",
+  "version": "1.10.0",
   "private": true,
   "packageManager": "pnpm@10.27.0",
   "description": "SQL Pro Monorepo - Professional SQLite database manager",
