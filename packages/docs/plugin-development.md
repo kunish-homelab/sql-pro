@@ -689,7 +689,7 @@ SQL Pro provides several example plugins as templates. Each demonstrates differe
 
 ### Hello World Plugin
 
-**Location:** `plugin-sdk/templates/hello-world/`
+**Location:** `packages/plugin-sdk/templates/hello-world/`
 
 A minimal plugin demonstrating the basic structure:
 
@@ -721,7 +721,7 @@ export const activate = (context: PluginContext) => {
 
 ### Menu Command Plugin
 
-**Location:** `plugin-sdk/templates/menu-command/`
+**Location:** `packages/plugin-sdk/templates/menu-command/`
 
 Demonstrates advanced menu and command patterns:
 
@@ -733,7 +733,7 @@ Demonstrates advanced menu and command patterns:
 
 ### Query Hook Logger Plugin
 
-**Location:** `plugin-sdk/templates/query-hook/`
+**Location:** `packages/plugin-sdk/templates/query-hook/`
 
 A complete query logging solution demonstrating:
 
@@ -892,7 +892,7 @@ SQL Pro plugins run in a sandboxed environment with the following restrictions:
 Need assistance with plugin development?
 
 - **[Plugin API Reference](/plugin-api)** - Complete API documentation with all methods and types
-- **[Example Plugins](#example-plugins)** - Browse the example plugins in `plugin-sdk/templates/`
+- **[Example Plugins](#example-plugins)** - Browse the example plugins in `packages/plugin-sdk/templates/`
 - **[GitHub Issues](https://github.com/kunish-homelab/sql-pro/issues)** - Report bugs or request features
 - **[GitHub Discussions](https://github.com/kunish-homelab/sql-pro/discussions)** - Ask questions and share ideas
 

@@ -53,12 +53,12 @@ src/
 ### Conventions
 
 - **Imports**: Use `@/` for renderer imports, `@shared/` for shared code
-- **File Naming**: 
+- **File Naming**:
   - Components: PascalCase (e.g., `TableView.tsx`)
   - Utilities: kebab-case (e.g., `filter-utils.ts`)
   - Stores: kebab-case with `-store` suffix (e.g., `theme-store.ts`)
   - Tests: Same name as source file with `.test.ts` or `.test.tsx`
-- **Component Style**: 
+- **Component Style**:
   - Use functional components with hooks
   - Prefer named exports for components
   - Use TypeScript interfaces for props
@@ -89,6 +89,7 @@ src/
 ### Test Areas
 
 Priority test coverage:
+
 1. **Utilities** (`lib/utils.ts`, `lib/filter-utils.ts`): Comprehensive unit tests
 2. **SQL Logic** (`lib/monaco-sql-config.ts`): Parser and formatter tests
 3. **State Management** (`stores/*.ts`): Test all actions and state updates
@@ -131,6 +132,7 @@ pnpm dev:mock
 ### Pre-commit Hooks
 
 The project uses Husky and lint-staged:
+
 - Automatically runs ESLint and Prettier on staged files
 - Validates commit messages with commitlint
 - Configured in `.husky/` and `.lintstagedrc.yml`
@@ -169,6 +171,7 @@ test(utils): add edge cases for filter utilities
 ### Scope Guidelines
 
 Common scopes in this project:
+
 - `query-editor`: Monaco SQL editor features
 - `database`: Database connection and operations
 - `schema`: Schema browser and comparison
@@ -181,12 +184,13 @@ Common scopes in this project:
 
 SQL Pro has a plugin system for extending functionality:
 
-- **Plugin SDK**: Located in `plugin-sdk/`
-- **Templates**: Available in `plugin-sdk/templates/`
+- **Plugin SDK**: Located in `packages/plugin-sdk/`
+- **Templates**: Available in `packages/plugin-sdk/templates/`
 - **Types**: Query hooks, menu commands, custom panels
-- **Development**: See `docs/plugin-development.md`
+- **Development**: See `packages/docs/plugin-development.md`
 
 When working with plugins:
+
 - Plugins run in sandboxed environments
 - Use the Plugin API defined in `src/main/services/plugin/`
 - Test plugin integration thoroughly
@@ -242,13 +246,13 @@ export function MyComponent({ title, onAction }: MyComponentProps) {
 
 ## Documentation
 
-- **User Docs**: VitePress documentation in `docs/`
-- **Commands**: 
+- **User Docs**: VitePress documentation in `packages/docs/`
+- **Commands**:
   - `pnpm docs:dev`: Start docs dev server
   - `pnpm docs:build`: Build documentation
 - **Screenshots**: Automated with `pnpm screenshots` command
 
-When updating features, update corresponding documentation in `docs/` directory.
+When updating features, update corresponding documentation in `packages/docs/` directory.
 
 ## Performance Considerations
 
@@ -273,7 +277,7 @@ When updating features, update corresponding documentation in `docs/` directory.
 3. Implement IPC handlers in `src/main/services/` if main process access required
 4. Add types to `src/shared/` for IPC communication
 5. Write tests for new functionality
-6. Update documentation in `docs/`
+6. Update documentation in `packages/docs/`
 7. Test in development mode with `pnpm dev`
 
 ### Fixing a Bug
@@ -300,4 +304,4 @@ When updating features, update corresponding documentation in `docs/` directory.
 - **Main Docs**: https://kunish-homelab.github.io/sql-pro/
 - **Repository**: https://github.com/kunish-homelab/sql-pro
 - **Issue Tracker**: Use GitHub Issues for bugs and feature requests
-- **Roadmap**: See `docs/ROADMAP.md` for planned features
+- **Roadmap**: See `packages/docs/ROADMAP.md` for planned features

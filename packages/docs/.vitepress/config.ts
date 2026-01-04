@@ -121,7 +121,8 @@ export default defineConfig({
     },
 
     editLink: {
-      pattern: 'https://github.com/kunish-homelab/sql-pro/edit/main/docs/:path',
+      pattern:
+        'https://github.com/kunish-homelab/sql-pro/edit/main/packages/docs/:path',
       text: 'Edit this page on GitHub',
     },
   },

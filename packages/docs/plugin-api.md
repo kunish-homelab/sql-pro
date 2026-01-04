@@ -1646,4 +1646,4 @@ export const deactivate: PluginModule['deactivate'] = async () => {
 
 - [Plugin Development Guide](/plugin-development) - Complete guide to building plugins
 - [Example Plugins](https://github.com/sqlpro/plugin-registry) - Browse and install community plugins
-- [TypeScript SDK Types](https://github.com/kunish-homelab/sql-pro/tree/main/plugin-sdk/types) - Full type definitions
+- [TypeScript SDK Types](https://github.com/kunish-homelab/sql-pro/tree/main/packages/plugin-sdk/types) - Full type definitions
