@@ -8,6 +8,8 @@ export interface DatabaseConnection {
   status: 'connected' | 'disconnected' | 'error';
   error?: string;
   connectedAt?: Date;
+  /** Database type */
+  databaseType?: 'sqlite' | 'mysql' | 'postgresql' | 'supabase';
 }
 
 // Column information

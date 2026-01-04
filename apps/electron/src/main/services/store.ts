@@ -1,5 +1,7 @@
 import type {
   AISettings,
+  DatabaseConnectionConfig,
+  DatabaseType,
   ProFeatureType,
   ProStatus,
   QueryCollection,
@@ -28,6 +30,10 @@ export interface StoredRecentConnection {
   displayName?: string;
   readOnly?: boolean;
   createdAt?: string;
+  /** Database type (defaults to 'sqlite' for backward compatibility) */
+  databaseType?: DatabaseType;
+  /** Connection configuration for non-SQLite databases */
+  connectionConfig?: DatabaseConnectionConfig;
 }
 
 export interface StoredConnectionProfile extends StoredRecentConnection {
@@ -166,8 +172,10 @@ export function addRecentConnection(
   filePath: string,
   filename: string,
   isEncrypted: boolean,
+  databaseType?: DatabaseType,
   displayName?: string,
-  readOnly?: boolean
+  readOnly?: boolean,
+  connectionConfig?: DatabaseConnectionConfig
 ): void {
   const connections = getRecentConnections();
   const prefs = getPreferences();
@@ -189,6 +197,8 @@ export function addRecentConnection(
     displayName: displayName ?? existing?.displayName ?? filename,
     readOnly: readOnly ?? existing?.readOnly ?? false,
     createdAt: existing?.createdAt ?? now,
+    databaseType: databaseType ?? existing?.databaseType ?? 'sqlite',
+    connectionConfig: connectionConfig ?? existing?.connectionConfig,
   });
 
   // Limit to configured max
