@@ -2,9 +2,6 @@ appId: com.sqlpro.app
 productName: SQL Pro
 copyright: Copyright © 2025 kunish
 
-# Specify electron version explicitly for monorepo setup
-electronVersion: 39.2.7
-
 directories:
   buildResources: build
 
@@ -29,14 +26,14 @@ mac:
   notarize: false
 
 dmg:
-  artifactName: ${name}-${version}.${ext}
+  artifactName: ${productName}-${version}.${ext}
 
 # Windows Configuration
 win:
   icon: resources/icon.ico
 
 nsis:
-  artifactName: ${name}-${version}-setup.${ext}
+  artifactName: ${productName}-${version}-setup.${ext}
   shortcutName: ${productName}
   uninstallDisplayName: ${productName}
   createDesktopShortcut: always
@@ -51,7 +48,7 @@ linux:
   category: Development
 
 appImage:
-  artifactName: ${name}-${version}.${ext}
+  artifactName: ${productName}-${version}.${ext}
 
 npmRebuild: false
 
