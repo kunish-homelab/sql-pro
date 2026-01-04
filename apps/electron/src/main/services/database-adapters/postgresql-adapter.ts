@@ -92,8 +92,9 @@ export class PostgreSQLAdapter implements DatabaseAdapter {
     let password = config.password;
 
     if (config.type === 'supabase' && config.supabaseUrl) {
-      // Supabase connection: extract host from URL
-      // Format: https://project-ref.supabase.co -> db.project-ref.supabase.co
+      // Supabase connection: extract project reference from URL
+      // Modern Supabase uses pooler: aws-0-[region].pooler.supabase.com
+      // Legacy format was: db.project-ref.supabase.co (deprecated for new projects)
       try {
         const url = new URL(config.supabaseUrl);
         // Validate that it looks like a Supabase URL
@@ -105,12 +106,49 @@ export class PostgreSQLAdapter implements DatabaseAdapter {
             errorCode: 'CONNECTION_ERROR',
           };
         }
-        host = `db.${url.hostname}`;
-        port = 5432;
-        database = 'postgres';
-        // For Supabase, username is usually 'postgres'
-        username = username || 'postgres';
-        // Supabase uses the project's database password or service role key
+
+        // Extract project reference from URL (e.g., sxnvasccbftikzuiyjfq from sxnvasccbftikzuiyjfq.supabase.co)
+        const projectRef = url.hostname.replace('.supabase.co', '');
+
+        // Determine if using pooler or direct connection based on host
+        const isPoolerConnection = host?.includes('.pooler.supabase.com');
+
+        // If host is provided by user (from Supabase Dashboard), use it directly
+        // This is the recommended approach for newer Supabase projects that use pooler
+        if (!host) {
+          // Fallback: try legacy db.{hostname} format for older projects
+          // Note: This may not work for newer projects, user should provide host from Dashboard
+          host = `db.${url.hostname}`;
+          console.warn(
+            'Supabase: No host provided, falling back to legacy format:',
+            host
+          );
+          console.warn(
+            'If connection fails, please provide the Database Host from Supabase Dashboard -> Settings -> Database -> Connection string'
+          );
+        }
+
+        // Set default port based on connection type
+        // Pooler: 6543 (transaction mode) or 5432 (session mode)
+        // Direct: 5432
+        port = config.port || 5432;
+
+        // Database is always 'postgres' for Supabase
+        database = database || 'postgres';
+
+        // For Supabase pooler, username format is: postgres.[project-ref]
+        // For direct connection (db.xxx.supabase.co), username is just 'postgres'
+        if (!username) {
+          if (isPoolerConnection) {
+            // Pooler connection requires postgres.{project-ref} format
+            username = `postgres.${projectRef}`;
+          } else {
+            // Direct connection uses plain 'postgres'
+            username = 'postgres';
+          }
+        }
+
+        // Supabase uses the project's database password
         password = config.supabaseKey || password;
       } catch {
         return {

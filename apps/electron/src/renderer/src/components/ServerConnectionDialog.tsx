@@ -96,6 +96,18 @@ export function ServerConnectionDialog({
       config.supabaseUrl = supabaseUrl;
       config.supabaseKey = supabaseKey;
       config.ssl = true;
+      // Pass host if user provided one (for pooler connections)
+      if (host) {
+        config.host = host;
+      }
+      // Pass port if user provided one
+      if (port && port !== DEFAULT_PORTS[databaseType].toString()) {
+        config.port = Number.parseInt(port, 10);
+      }
+      // Pass username if user provided one
+      if (username) {
+        config.username = username;
+      }
     } else {
       config.host = host;
       config.port = Number.parseInt(port, 10);
@@ -114,9 +126,12 @@ export function ServerConnectionDialog({
 
   return (
     <Dialog open={open} onOpenChange={onOpenChange}>
-      <DialogContent className="sm:max-w-md">
-        <form onSubmit={handleSubmit}>
-          <DialogHeader>
+      <DialogContent className="flex max-h-[90vh] flex-col sm:max-w-md">
+        <form
+          onSubmit={handleSubmit}
+          className="flex flex-1 flex-col overflow-hidden"
+        >
+          <DialogHeader className="pb-4">
             <DialogTitle>
               Connect to {DATABASE_LABELS[databaseType]}
             </DialogTitle>
@@ -127,7 +142,7 @@ export function ServerConnectionDialog({
             </DialogDescription>
           </DialogHeader>
 
-          <div className="space-y-4 py-4">
+          <div className="flex-1 space-y-4 overflow-y-auto pr-2">
             {/* Display name (optional) */}
             <div className="space-y-2">
               <Label htmlFor="displayName">Connection Name (optional)</Label>
@@ -155,7 +170,63 @@ export function ServerConnectionDialog({
                     required
                   />
                   <p className="text-muted-foreground text-xs">
-                    Found in your Supabase project settings
+                    Found in Project Settings → General
+                  </p>
+                </div>
+
+                {/* Supabase Host (optional, for pooler connections) */}
+                <div className="space-y-2">
+                  <Label htmlFor="supabaseHost">
+                    Database Host{' '}
+                    <span className="text-muted-foreground text-xs">
+                      (recommended)
+                    </span>
+                  </Label>
+                  <Input
+                    id="supabaseHost"
+                    placeholder="aws-0-us-east-1.pooler.supabase.com"
+                    value={host}
+                    onChange={(e) => setHost(e.target.value)}
+                  />
+                  <p className="text-muted-foreground text-xs">
+                    Found in Project Settings → Database → Connection string.
+                    Use pooler host for better performance.
+                  </p>
+                </div>
+
+                {/* Port for Supabase */}
+                <div className="space-y-2">
+                  <Label htmlFor="supabasePort">
+                    Port{' '}
+                    <span className="text-muted-foreground text-xs">
+                      (optional)
+                    </span>
+                  </Label>
+                  <Input
+                    id="supabasePort"
+                    type="number"
+                    placeholder="5432 or 6543 for transaction mode"
+                    value={port}
+                    onChange={(e) => setPort(e.target.value)}
+                  />
+                </div>
+
+                {/* Username for Supabase */}
+                <div className="space-y-2">
+                  <Label htmlFor="supabaseUsername">
+                    Username{' '}
+                    <span className="text-muted-foreground text-xs">
+                      (optional)
+                    </span>
+                  </Label>
+                  <Input
+                    id="supabaseUsername"
+                    placeholder="postgres or postgres.[project-ref]"
+                    value={username}
+                    onChange={(e) => setUsername(e.target.value)}
+                  />
+                  <p className="text-muted-foreground text-xs">
+                    For pooler: postgres.[project-ref]. Auto-detected if empty.
                   </p>
                 </div>
 
@@ -174,7 +245,7 @@ export function ServerConnectionDialog({
                     required
                   />
                   <p className="text-muted-foreground text-xs">
-                    Found in Project Settings → Database
+                    The password you set when creating the project
                   </p>
                 </div>
               </>
@@ -279,7 +350,7 @@ export function ServerConnectionDialog({
             )}
           </div>
 
-          <DialogFooter>
+          <DialogFooter className="flex-shrink-0 pt-4">
             <Button
               type="button"
               variant="outline"

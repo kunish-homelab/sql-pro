@@ -574,16 +574,20 @@ export function WelcomeScreen() {
   );
 
   // Handle database type selection
-  const handleDbTypeSelect = useCallback((type: DatabaseType) => {
-    setSelectedDbType(type);
-    if (type === 'sqlite') {
-      // For SQLite, open the file dialog
-      handleOpenDatabase();
-    } else {
-      // For server databases, open the connection dialog
-      setServerConnectionOpen(true);
-    }
-  }, []);
+  const handleDbTypeSelect = useCallback(
+    (type: DatabaseType) => {
+      setSelectedDbType(type);
+      setError(null); // Clear any previous errors when opening a new connection dialog
+      if (type === 'sqlite') {
+        // For SQLite, open the file dialog
+        handleOpenDatabase();
+      } else {
+        // For server databases, open the connection dialog
+        setServerConnectionOpen(true);
+      }
+    },
+    [setError]
+  );
 
   // Handle server database connection
   const handleServerConnect = useCallback(
@@ -972,7 +976,12 @@ export function WelcomeScreen() {
       {/* Server Connection Dialog */}
       <ServerConnectionDialog
         open={serverConnectionOpen}
-        onOpenChange={setServerConnectionOpen}
+        onOpenChange={(open) => {
+          setServerConnectionOpen(open);
+          if (!open) {
+            setError(null); // Clear error when dialog is closed
+          }
+        }}
         databaseType={selectedDbType}
         onConnect={handleServerConnect}
         isConnecting={isConnecting}
