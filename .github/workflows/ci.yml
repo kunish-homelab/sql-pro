@@ -18,7 +18,7 @@ jobs:
 
       - uses: pnpm/action-setup@v4
 
-      - run: pnpm nx start-ci-run --distribute-on="3 linux-medium-js" --stop-agents-after="build"
+      - run: npx nx start-ci-run --distribute-on="3 linux-medium-js" --stop-agents-after="build"
 
       - uses: actions/setup-node@v6
         with:
