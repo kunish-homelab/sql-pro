@@ -29,3 +29,6 @@ jobs:
       - uses: nrwl/nx-set-shas@v4
 
       - run: pnpm exec nx affected -t format lint test build
+
+      - run: pnpm exec nx fix-ci
+        if: always()
