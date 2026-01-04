@@ -20,7 +20,9 @@ import type {
   DatabaseAdapter,
   OpenResult,
 } from './types';
-import { MySQLAdapter, PostgreSQLAdapter, SQLiteAdapter } from './index';
+import { MySQLAdapter } from './mysql-adapter';
+import { PostgreSQLAdapter } from './postgresql-adapter';
+import { SQLiteAdapter } from './sqlite-adapter';
 
 /**
  * Connection metadata stored by the manager
