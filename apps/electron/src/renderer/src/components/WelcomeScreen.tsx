@@ -1,4 +1,9 @@
-import type { ConnectionProfile, RecentConnection } from '@shared/types';
+import type {
+  ConnectionProfile,
+  DatabaseConnectionConfig,
+  DatabaseType,
+  RecentConnection,
+} from '@shared/types';
 import type { DragEvent } from 'react';
 import type { ProfileFormData } from './connection-profiles/ProfileForm';
 import type { ConnectionSettings } from './ConnectionSettingsDialog';
@@ -15,6 +20,7 @@ import {
   AlertCircle,
   BookmarkPlus,
   Clock,
+  Cloud,
   Database,
   Eye,
   FolderOpen,
@@ -22,6 +28,7 @@ import {
   Monitor,
   Moon,
   MoreVertical,
+  Server,
   Settings,
   Sun,
   Trash2,
@@ -40,7 +47,9 @@ import { useConnectionStore, useThemeStore } from '@/stores';
 import { ProfileForm } from './connection-profiles/ProfileForm';
 import { ProfileManager } from './connection-profiles/ProfileManager';
 import { ConnectionSettingsDialog } from './ConnectionSettingsDialog';
+import { DatabaseTypeSelector } from './DatabaseTypeSelector';
 import { PasswordDialog } from './PasswordDialog';
+import { ServerConnectionDialog } from './ServerConnectionDialog';
 
 // Supported database file extensions
 const DB_EXTENSIONS = ['.db', '.sqlite', '.sqlite3', '.db3', '.s3db', '.sl3'];
@@ -73,6 +82,21 @@ function HasSavedPasswordIndicator({ path }: { path: string }) {
       <TooltipContent>Password saved</TooltipContent>
     </Tooltip>
   );
+}
+
+// Helper to get database type icon
+function getDatabaseIcon(type?: DatabaseType) {
+  switch (type) {
+    case 'mysql':
+      return { Icon: Server, color: 'text-orange-500', label: 'MySQL' };
+    case 'postgresql':
+      return { Icon: Server, color: 'text-indigo-500', label: 'PostgreSQL' };
+    case 'supabase':
+      return { Icon: Cloud, color: 'text-green-500', label: 'Supabase' };
+    case 'sqlite':
+    default:
+      return { Icon: Database, color: 'text-blue-500', label: 'SQLite' };
+  }
 }
 
 export function WelcomeScreen() {
@@ -115,6 +139,11 @@ export function WelcomeScreen() {
     filename: string;
     isEncrypted: boolean;
   } | null>(null);
+
+  // Database type selector state
+  const [dbTypeSelectorOpen, setDbTypeSelectorOpen] = useState(false);
+  const [serverConnectionOpen, setServerConnectionOpen] = useState(false);
+  const [selectedDbType, setSelectedDbType] = useState<DatabaseType>('sqlite');
 
   // Load folders on mount
   useEffect(() => {
@@ -543,6 +572,84 @@ export function WelcomeScreen() {
     [profileToSave, setError]
   );
 
+  // Handle database type selection
+  const handleDbTypeSelect = useCallback((type: DatabaseType) => {
+    setSelectedDbType(type);
+    if (type === 'sqlite') {
+      // For SQLite, open the file dialog
+      handleOpenDatabase();
+    } else {
+      // For server databases, open the connection dialog
+      setServerConnectionOpen(true);
+    }
+  }, []);
+
+  // Handle server database connection
+  const handleServerConnect = useCallback(
+    async (config: DatabaseConnectionConfig) => {
+      setIsConnecting(true);
+      setError(null);
+
+      try {
+        const result = await sqlPro.db.open({ config });
+
+        if (!result.success) {
+          setError(result.error || 'Failed to connect to database');
+          setIsConnecting(false);
+          return;
+        }
+
+        if (result.connection) {
+          addConnection({
+            id: result.connection.id,
+            path: result.connection.path,
+            filename: result.connection.filename,
+            isEncrypted: result.connection.isEncrypted,
+            isReadOnly: result.connection.isReadOnly,
+            status: 'connected',
+            databaseType: result.connection.databaseType || config.type,
+          });
+
+          // Load schema
+          setIsLoadingSchema(true);
+          const schemaResult = await sqlPro.db.getSchema({
+            connectionId: result.connection.id,
+          });
+
+          if (schemaResult.success) {
+            setSchema(result.connection.id, {
+              schemas: schemaResult.schemas || [],
+              tables: schemaResult.tables || [],
+              views: schemaResult.views || [],
+            });
+          }
+          setIsLoadingSchema(false);
+
+          // Refresh recent connections
+          const connectionsResult = await sqlPro.app.getRecentConnections();
+          if (connectionsResult.success && connectionsResult.connections) {
+            setRecentConnections(connectionsResult.connections);
+          }
+
+          // Close the dialog
+          setServerConnectionOpen(false);
+        }
+      } catch (err) {
+        setError(err instanceof Error ? err.message : 'Unknown error');
+      } finally {
+        setIsConnecting(false);
+      }
+    },
+    [
+      setIsConnecting,
+      setError,
+      addConnection,
+      setSchema,
+      setIsLoadingSchema,
+      setRecentConnections,
+    ]
+  );
+
   const cycleTheme = () => {
     const themes: Array<'light' | 'dark' | 'system'> = [
       'light',
@@ -635,7 +742,7 @@ export function WelcomeScreen() {
           </div>
           <h1 className="text-2xl font-semibold tracking-tight">SQL Pro</h1>
           <p className="text-muted-foreground mt-1 text-sm">
-            Professional SQLite Database Manager
+            Professional Database Manager
           </p>
         </div>
 
@@ -647,8 +754,8 @@ export function WelcomeScreen() {
           </div>
         )}
 
-        {/* Open Database Button */}
-        <div className="space-y-2">
+        {/* Connection Buttons */}
+        <div className="space-y-3">
           <Button
             className="w-full"
             size="lg"
@@ -657,10 +764,20 @@ export function WelcomeScreen() {
             data-action="open-database"
           >
             <FolderOpen className="mr-2 h-4 w-4" />
-            {isConnecting ? 'Opening...' : 'Open Database'}
+            {isConnecting ? 'Opening...' : 'Open SQLite Database'}
+          </Button>
+          <Button
+            className="w-full"
+            size="lg"
+            variant="outline"
+            onClick={() => setDbTypeSelectorOpen(true)}
+            disabled={isConnecting}
+          >
+            <Server className="mr-2 h-4 w-4" />
+            Connect to Server
           </Button>
           <p className="text-muted-foreground text-center text-xs">
-            or drag and drop a database file
+            Supports MySQL, PostgreSQL, and Supabase
           </p>
         </div>
 
@@ -699,7 +816,21 @@ export function WelcomeScreen() {
                       }
                       disabled={isConnecting}
                     >
-                      <Database className="text-muted-foreground mr-2 h-4 w-4 shrink-0" />
+                      {(() => {
+                        const { Icon, color, label } = getDatabaseIcon(
+                          conn.databaseType
+                        );
+                        return (
+                          <Tooltip>
+                            <TooltipTrigger>
+                              <Icon
+                                className={cn('mr-2 h-4 w-4 shrink-0', color)}
+                              />
+                            </TooltipTrigger>
+                            <TooltipContent>{label}</TooltipContent>
+                          </Tooltip>
+                        );
+                      })()}
                       <div className="min-w-0 flex-1">
                         <div className="flex items-center gap-2">
                           <span className="truncate text-sm font-medium">
@@ -827,6 +958,23 @@ export function WelcomeScreen() {
           )}
         </DialogContent>
       </Dialog>
+
+      {/* Database Type Selector */}
+      <DatabaseTypeSelector
+        open={dbTypeSelectorOpen}
+        onOpenChange={setDbTypeSelectorOpen}
+        onSelect={handleDbTypeSelect}
+      />
+
+      {/* Server Connection Dialog */}
+      <ServerConnectionDialog
+        open={serverConnectionOpen}
+        onOpenChange={setServerConnectionOpen}
+        databaseType={selectedDbType}
+        onConnect={handleServerConnect}
+        isConnecting={isConnecting}
+        error={error}
+      />
     </div>
   );
 }
