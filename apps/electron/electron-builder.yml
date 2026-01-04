@@ -11,6 +11,7 @@ files:
     filter:
       - package.json
       - out/**/*
+      - node_modules/**/*
 
 asarUnpack:
   - resources/**
@@ -24,6 +25,9 @@ mac:
   category: public.app-category.developer-tools
   entitlementsInherit: build/entitlements.mac.plist
   notarize: false
+  # Set identity to null to completely disable code signing for local builds
+  # For production builds, remove this line or set a valid signing identity
+  identity: null
 
 dmg:
   artifactName: ${productName}-${version}.${ext}

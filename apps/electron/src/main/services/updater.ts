@@ -6,17 +6,15 @@ import type {
 } from 'electron-updater';
 import { app, BrowserWindow, dialog } from 'electron';
 import log from 'electron-log';
+// Static import so Vite can bundle electron-updater and its dependencies
+import { autoUpdater as electronAutoUpdater } from 'electron-updater';
 
-// Lazy import autoUpdater to avoid accessing app before it's ready
 let _autoUpdater: AppUpdater | null = null;
 let _autoUpdaterInitialized = false;
 
 function getAutoUpdater(): AppUpdater {
   if (!_autoUpdater) {
-    // Dynamic require to defer initialization
-    // eslint-disable-next-line ts/no-require-imports
-    const { autoUpdater } = require('electron-updater');
-    _autoUpdater = autoUpdater;
+    _autoUpdater = electronAutoUpdater;
   }
   return _autoUpdater as AppUpdater;
 }
