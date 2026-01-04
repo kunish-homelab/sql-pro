@@ -1,13 +1,13 @@
-import { Panel, useReactFlow } from '@xyflow/react';
-import { Download, ImageIcon, LayoutGrid, Maximize } from 'lucide-react';
-import { useCallback, useState } from 'react';
-import { Button } from '@/components/ui/button';
+import { Button } from '@sqlpro/ui/button';
 import {
   DropdownMenu,
   DropdownMenuContent,
   DropdownMenuItem,
   DropdownMenuTrigger,
-} from '@/components/ui/dropdown-menu';
+} from '@sqlpro/ui/dropdown-menu';
+import { Panel, useReactFlow } from '@xyflow/react';
+import { Download, ImageIcon, LayoutGrid, Maximize } from 'lucide-react';
+import { useCallback, useState } from 'react';
 import { exportDiagramAsPng, exportDiagramAsSvg } from './utils/export-diagram';
 
 interface ERControlsProps {

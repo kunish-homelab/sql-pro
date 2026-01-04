@@ -1,6 +1,6 @@
-// Re-export base command components from @sqlpro/ui
-// CommandDialog has app-specific dependencies (dialog with store/hooks)
-// so we keep it local
+// CommandDialog is kept local because it depends on the local dialog component
+// which has app-specific dependencies (stores/hooks)
+// Other Command components should be imported directly from @sqlpro/ui/command
 import * as React from 'react';
 import { cn } from '@/lib/utils';
 import {
@@ -10,17 +10,6 @@ import {
   DialogHeader,
   DialogTitle,
 } from './dialog';
-
-export {
-  Command,
-  CommandEmpty,
-  CommandGroup,
-  CommandInput,
-  CommandItem,
-  CommandList,
-  CommandSeparator,
-  CommandShortcut,
-} from '@sqlpro/ui/command';
 
 function CommandDialog({
   title = 'Command Palette',

@@ -1,10 +1,10 @@
 import type { PluginInfo } from '@/components/plugins/PluginCard';
+import { Button } from '@sqlpro/ui/button';
 import { useNavigate } from '@tanstack/react-router';
 import { ArrowLeft, Store } from 'lucide-react';
 import { useState } from 'react';
 import { PluginManager } from '@/components/plugins/PluginManager';
 import { PluginMarketplace } from '@/components/plugins/PluginMarketplace';
-import { Button } from '@/components/ui/button';
 
 /**
  * Plugins page route component.

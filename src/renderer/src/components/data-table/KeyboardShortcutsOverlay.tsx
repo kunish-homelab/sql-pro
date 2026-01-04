@@ -1,4 +1,6 @@
 import type { ShortcutAction } from '@/stores/keyboard-shortcuts-store';
+import { Button } from '@sqlpro/ui/button';
+import { Popover, PopoverContent, PopoverTrigger } from '@sqlpro/ui/popover';
 import {
   ArrowUp,
   Command,
@@ -8,12 +10,6 @@ import {
   X,
 } from 'lucide-react';
 import { memo, useEffect, useMemo, useState } from 'react';
-import { Button } from '@/components/ui/button';
-import {
-  Popover,
-  PopoverContent,
-  PopoverTrigger,
-} from '@/components/ui/popover';
 import { cn } from '@/lib/utils';
 import {
   formatShortcutBinding,

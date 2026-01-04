@@ -1,3 +1,14 @@
+import { Alert, AlertDescription, AlertTitle } from '@sqlpro/ui/alert';
+import { Button } from '@sqlpro/ui/button';
+import { Card, CardContent, CardHeader, CardTitle } from '@sqlpro/ui/card';
+import { ScrollArea } from '@sqlpro/ui/scroll-area';
+import {
+  Select,
+  SelectContent,
+  SelectItem,
+  SelectTrigger,
+  SelectValue,
+} from '@sqlpro/ui/select';
 import {
   AlertCircle,
   ArrowLeftRight,
@@ -10,18 +21,7 @@ import {
   Table2,
 } from 'lucide-react';
 import { useCallback, useEffect, useRef, useState } from 'react';
-import { Alert, AlertDescription, AlertTitle } from '@/components/ui/alert';
-import { Button } from '@/components/ui/button';
-import { Card, CardContent, CardHeader, CardTitle } from '@/components/ui/card';
 import { ShortcutKbd } from '@/components/ui/kbd';
-import { ScrollArea } from '@/components/ui/scroll-area';
-import {
-  Select,
-  SelectContent,
-  SelectItem,
-  SelectTrigger,
-  SelectValue,
-} from '@/components/ui/select';
 import { useConnectionStore, useDataDiffStore } from '@/stores';
 
 interface DataDiffPanelProps {

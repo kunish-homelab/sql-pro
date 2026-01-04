@@ -1,7 +1,16 @@
 import type { QueryResult } from '@/types/database';
+import { Button } from '@sqlpro/ui/button';
+import { Input } from '@sqlpro/ui/input';
+import { Label } from '@sqlpro/ui/label';
+import {
+  Select,
+  SelectContent,
+  SelectItem,
+  SelectTrigger,
+  SelectValue,
+} from '@sqlpro/ui/select';
 import { BarChart3, LineChart, PieChart, Plus, TrendingUp } from 'lucide-react';
 import { memo, useCallback, useMemo, useState } from 'react';
-import { Button } from '@/components/ui/button';
 import {
   Dialog,
   DialogContent,
@@ -10,15 +19,6 @@ import {
   DialogHeader,
   DialogTitle,
 } from '@/components/ui/dialog';
-import { Input } from '@/components/ui/input';
-import { Label } from '@/components/ui/label';
-import {
-  Select,
-  SelectContent,
-  SelectItem,
-  SelectTrigger,
-  SelectValue,
-} from '@/components/ui/select';
 import { cn } from '@/lib/utils';
 
 export type ChartType = 'bar' | 'line' | 'pie' | 'area';

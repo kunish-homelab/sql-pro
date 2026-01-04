@@ -7,6 +7,8 @@ import type {
   TableDiff,
   TriggerDiff,
 } from '@shared/types';
+import { Button } from '@sqlpro/ui/button';
+import { Card, CardContent, CardHeader, CardTitle } from '@sqlpro/ui/card';
 import {
   ChevronDown,
   ChevronUp,
@@ -20,8 +22,6 @@ import {
   Zap,
 } from 'lucide-react';
 import { useMemo } from 'react';
-import { Button } from '@/components/ui/button';
-import { Card, CardContent, CardHeader, CardTitle } from '@/components/ui/card';
 import { cn } from '@/lib/utils';
 import { useSchemaComparisonStore } from '@/stores';
 

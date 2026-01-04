@@ -1,3 +1,13 @@
+import { Badge } from '@sqlpro/ui/badge';
+import { Button } from '@sqlpro/ui/button';
+import { ScrollArea } from '@sqlpro/ui/scroll-area';
+import { Tabs, TabsContent, TabsList, TabsTrigger } from '@sqlpro/ui/tabs';
+import {
+  Tooltip,
+  TooltipContent,
+  TooltipProvider,
+  TooltipTrigger,
+} from '@sqlpro/ui/tooltip';
 import {
   AlertTriangle,
   Check,
@@ -10,8 +20,6 @@ import {
   X,
 } from 'lucide-react';
 import { memo, useCallback, useState } from 'react';
-import { Badge } from '@/components/ui/badge';
-import { Button } from '@/components/ui/button';
 import {
   Dialog,
   DialogContent,
@@ -19,14 +27,6 @@ import {
   DialogHeader,
   DialogTitle,
 } from '@/components/ui/dialog';
-import { ScrollArea } from '@/components/ui/scroll-area';
-import { Tabs, TabsContent, TabsList, TabsTrigger } from '@/components/ui/tabs';
-import {
-  Tooltip,
-  TooltipContent,
-  TooltipProvider,
-  TooltipTrigger,
-} from '@/components/ui/tooltip';
 import { cn } from '@/lib/utils';
 
 interface ColumnConstraint {

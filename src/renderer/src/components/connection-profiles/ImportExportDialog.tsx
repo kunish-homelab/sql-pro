@@ -1,8 +1,8 @@
 import type { ConnectionProfile, ProfileFolder } from '@shared/types.ts';
+import { Button } from '@sqlpro/ui/button';
+import { Checkbox } from '@sqlpro/ui/checkbox';
 import { Download, Upload } from 'lucide-react';
 import { useCallback, useState } from 'react';
-import { Button } from '@/components/ui/button';
-import { Checkbox } from '@/components/ui/checkbox';
 import {
   Dialog,
   DialogContent,

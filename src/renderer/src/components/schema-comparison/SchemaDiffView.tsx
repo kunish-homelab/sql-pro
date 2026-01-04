@@ -1,7 +1,7 @@
 import type { SchemaComparisonResult } from '@shared/types';
+import { ScrollArea } from '@sqlpro/ui/scroll-area';
 import { FileQuestion } from 'lucide-react';
 import { useMemo } from 'react';
-import { ScrollArea } from '@/components/ui/scroll-area';
 import { cn } from '@/lib/utils';
 import { useSchemaComparisonStore } from '@/stores';
 import { TableDiffCard } from './TableDiffCard';

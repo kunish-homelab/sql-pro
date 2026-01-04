@@ -1,4 +1,9 @@
 import type { PluginInfo, PluginListing } from './PluginCard';
+import { Button } from '@sqlpro/ui/button';
+
+import { Input } from '@sqlpro/ui/input';
+import { ScrollArea } from '@sqlpro/ui/scroll-area';
+import { Tabs, TabsList, TabsTrigger } from '@sqlpro/ui/tabs';
 import {
   AlertCircle,
   Grid3X3,
@@ -9,9 +14,7 @@ import {
   Store,
   WifiOff,
 } from 'lucide-react';
-
 import * as React from 'react';
-import { Button } from '@/components/ui/button';
 import {
   Dialog,
   DialogContent,
@@ -19,9 +22,6 @@ import {
   DialogHeader,
   DialogTitle,
 } from '@/components/ui/dialog';
-import { Input } from '@/components/ui/input';
-import { ScrollArea } from '@/components/ui/scroll-area';
-import { Tabs, TabsList, TabsTrigger } from '@/components/ui/tabs';
 
 import { cn } from '@/lib/utils';
 import { PluginCard } from './PluginCard';

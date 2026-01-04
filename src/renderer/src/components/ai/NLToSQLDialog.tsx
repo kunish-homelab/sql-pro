@@ -1,4 +1,6 @@
 import type { SchemaInfo } from '@shared/types';
+import { Button } from '@sqlpro/ui/button';
+import { Textarea } from '@sqlpro/ui/textarea';
 import {
   AlertCircle,
   ArrowRight,
@@ -10,7 +12,6 @@ import {
 import { useState } from 'react';
 import { ProGate } from '@/components/pro/ProGate';
 import { SettingsDialog } from '@/components/SettingsDialog';
-import { Button } from '@/components/ui/button';
 import {
   Dialog,
   DialogContent,
@@ -19,7 +20,6 @@ import {
   DialogTitle,
 } from '@/components/ui/dialog';
 import { SqlHighlight } from '@/components/ui/sql-highlight';
-import { Textarea } from '@/components/ui/textarea';
 import { useNLToSQL } from '@/hooks/useAI';
 
 interface NLToSQLDialogProps {

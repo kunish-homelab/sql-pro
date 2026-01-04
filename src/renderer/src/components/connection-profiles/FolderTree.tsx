@@ -1,4 +1,16 @@
 import type { ConnectionProfile, ProfileFolder } from '@shared/types.ts';
+import { Button } from '@sqlpro/ui/button';
+import {
+  Collapsible,
+  CollapsibleContent,
+  CollapsibleTrigger,
+} from '@sqlpro/ui/collapsible';
+import {
+  ContextMenu,
+  ContextMenuContent,
+  ContextMenuItem,
+  ContextMenuTrigger,
+} from '@sqlpro/ui/context-menu';
 import {
   ChevronDown,
   ChevronRight,
@@ -9,18 +21,6 @@ import {
   Trash2,
 } from 'lucide-react';
 import { useState } from 'react';
-import { Button } from '@/components/ui/button';
-import {
-  Collapsible,
-  CollapsibleContent,
-  CollapsibleTrigger,
-} from '@/components/ui/collapsible';
-import {
-  ContextMenu,
-  ContextMenuContent,
-  ContextMenuItem,
-  ContextMenuTrigger,
-} from '@/components/ui/context-menu';
 import { cn } from '@/lib/utils';
 
 export interface FolderTreeProps {

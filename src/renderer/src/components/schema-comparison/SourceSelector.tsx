@@ -1,8 +1,18 @@
 import type { ComparisonSource } from '@/stores/schema-comparison-store';
 import type { DatabaseConnection } from '@/types/database';
+import { Button } from '@sqlpro/ui/button';
+import { Input } from '@sqlpro/ui/input';
+import { Label } from '@sqlpro/ui/label';
+import {
+  Select,
+  SelectContent,
+  SelectItem,
+  SelectTrigger,
+  SelectValue,
+} from '@sqlpro/ui/select';
+import { Tabs, TabsContent, TabsList, TabsTrigger } from '@sqlpro/ui/tabs';
 import { Database, FileText, Loader2, Plus, Save } from 'lucide-react';
 import { useCallback, useState } from 'react';
-import { Button } from '@/components/ui/button';
 import {
   Dialog,
   DialogContent,
@@ -11,16 +21,6 @@ import {
   DialogHeader,
   DialogTitle,
 } from '@/components/ui/dialog';
-import { Input } from '@/components/ui/input';
-import { Label } from '@/components/ui/label';
-import {
-  Select,
-  SelectContent,
-  SelectItem,
-  SelectTrigger,
-  SelectValue,
-} from '@/components/ui/select';
-import { Tabs, TabsContent, TabsList, TabsTrigger } from '@/components/ui/tabs';
 import { sqlPro } from '@/lib/api';
 import { useConnectionStore, useSchemaComparisonStore } from '@/stores';
 

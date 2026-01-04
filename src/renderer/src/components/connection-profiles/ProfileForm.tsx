@@ -1,20 +1,16 @@
 import type { ConnectionProfile, ProfileFolder } from '@shared/types.ts';
-import { Info } from 'lucide-react';
-import { useEffect, useState } from 'react';
-import { Button } from '@/components/ui/button';
+import { Button } from '@sqlpro/ui/button';
 import {
   Select,
   SelectContent,
   SelectItem,
   SelectTrigger,
   SelectValue,
-} from '@/components/ui/select';
-import { Textarea } from '@/components/ui/textarea';
-import {
-  Tooltip,
-  TooltipContent,
-  TooltipTrigger,
-} from '@/components/ui/tooltip';
+} from '@sqlpro/ui/select';
+import { Textarea } from '@sqlpro/ui/textarea';
+import { Tooltip, TooltipContent, TooltipTrigger } from '@sqlpro/ui/tooltip';
+import { Info } from 'lucide-react';
+import { useEffect, useState } from 'react';
 import { sqlPro } from '@/lib/api';
 import { cn } from '@/lib/utils';
 

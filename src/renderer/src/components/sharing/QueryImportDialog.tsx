@@ -1,4 +1,7 @@
 import type { ImportQueryResponse, ShareableQuery } from '@shared/types';
+import { Button } from '@sqlpro/ui/button';
+import { Label } from '@sqlpro/ui/label';
+import { Textarea } from '@sqlpro/ui/textarea';
 import {
   AlertCircle,
   AlertTriangle,
@@ -8,7 +11,6 @@ import {
   Upload,
 } from 'lucide-react';
 import { useCallback, useState } from 'react';
-import { Button } from '@/components/ui/button';
 import {
   Dialog,
   DialogContent,
@@ -17,8 +19,6 @@ import {
   DialogHeader,
   DialogTitle,
 } from '@/components/ui/dialog';
-import { Label } from '@/components/ui/label';
-import { Textarea } from '@/components/ui/textarea';
 import { sqlPro } from '@/lib/api';
 
 export interface QueryImportDialogProps {

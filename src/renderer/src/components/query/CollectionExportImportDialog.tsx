@@ -1,3 +1,15 @@
+import { Button } from '@sqlpro/ui/button';
+import { Checkbox } from '@sqlpro/ui/checkbox';
+import { Label } from '@sqlpro/ui/label';
+import { ScrollArea } from '@sqlpro/ui/scroll-area';
+import {
+  Select,
+  SelectContent,
+  SelectItem,
+  SelectTrigger,
+  SelectValue,
+} from '@sqlpro/ui/select';
+import { Tabs, TabsContent, TabsList, TabsTrigger } from '@sqlpro/ui/tabs';
 import {
   ArrowDownToLine,
   ArrowUpFromLine,
@@ -9,8 +21,6 @@ import {
   XCircle,
 } from 'lucide-react';
 import { useCallback, useEffect, useState } from 'react';
-import { Button } from '@/components/ui/button';
-import { Checkbox } from '@/components/ui/checkbox';
 import {
   Dialog,
   DialogContent,
@@ -19,16 +29,6 @@ import {
   DialogHeader,
   DialogTitle,
 } from '@/components/ui/dialog';
-import { Label } from '@/components/ui/label';
-import { ScrollArea } from '@/components/ui/scroll-area';
-import {
-  Select,
-  SelectContent,
-  SelectItem,
-  SelectTrigger,
-  SelectValue,
-} from '@/components/ui/select';
-import { Tabs, TabsContent, TabsList, TabsTrigger } from '@/components/ui/tabs';
 import { useCollectionsStore } from '@/stores/collections-store';
 import { useSavedQueriesStore } from '@/stores/saved-queries-store';
 

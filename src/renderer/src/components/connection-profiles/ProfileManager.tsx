@@ -1,5 +1,8 @@
 import type { ConnectionProfile, ProfileFolder } from '@shared/types.ts';
 import type { ProfileFormData } from './ProfileForm';
+import { Button } from '@sqlpro/ui/button';
+import { Input } from '@sqlpro/ui/input';
+import { Tooltip, TooltipContent, TooltipTrigger } from '@sqlpro/ui/tooltip';
 import {
   AlertTriangle,
   Database,
@@ -12,19 +15,12 @@ import {
   X,
 } from 'lucide-react';
 import { useCallback, useEffect, useState } from 'react';
-import { Button } from '@/components/ui/button';
 import {
   Dialog,
   DialogContent,
   DialogHeader,
   DialogTitle,
 } from '@/components/ui/dialog';
-import { Input } from '@/components/ui/input';
-import {
-  Tooltip,
-  TooltipContent,
-  TooltipTrigger,
-} from '@/components/ui/tooltip';
 import { sqlPro } from '@/lib/api';
 import { cn } from '@/lib/utils';
 import { useConnectionStore } from '@/stores';

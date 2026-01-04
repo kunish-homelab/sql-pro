@@ -1,10 +1,10 @@
 'use client';
 
 import { Dialog as DialogPrimitive } from '@base-ui/react/dialog';
-import { XIcon } from 'lucide-react';
+import { Button } from '@sqlpro/ui/button';
 
+import { XIcon } from 'lucide-react';
 import * as React from 'react';
-import { Button } from '@/components/ui/button';
 import { getFontFamilyCSS } from '@/hooks/useApplyFont';
 import { cn } from '@/lib/utils';
 import { useUIFont } from '@/stores';

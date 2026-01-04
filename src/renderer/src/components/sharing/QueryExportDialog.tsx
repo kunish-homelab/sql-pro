@@ -1,8 +1,11 @@
 import type { ExportQueryRequest } from '@shared/types';
+import { Button } from '@sqlpro/ui/button';
+import { Checkbox } from '@sqlpro/ui/checkbox';
+import { Input } from '@sqlpro/ui/input';
+import { Label } from '@sqlpro/ui/label';
+import { Textarea } from '@sqlpro/ui/textarea';
 import { FileDown, Loader2, Share2 } from 'lucide-react';
 import { useCallback, useState } from 'react';
-import { Button } from '@/components/ui/button';
-import { Checkbox } from '@/components/ui/checkbox';
 import {
   Dialog,
   DialogContent,
@@ -11,9 +14,6 @@ import {
   DialogHeader,
   DialogTitle,
 } from '@/components/ui/dialog';
-import { Input } from '@/components/ui/input';
-import { Label } from '@/components/ui/label';
-import { Textarea } from '@/components/ui/textarea';
 import { sqlPro } from '@/lib/api';
 
 export interface QueryExportDialogProps {

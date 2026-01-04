@@ -1,7 +1,5 @@
 import type { RecentConnection } from '@shared/types';
 import type { DatabaseConnection } from '@/types/database';
-import { Check, Clock, Database } from 'lucide-react';
-import { useCallback, useEffect, useMemo } from 'react';
 import {
   Command,
   CommandEmpty,
@@ -9,7 +7,9 @@ import {
   CommandInput,
   CommandItem,
   CommandList,
-} from '@/components/ui/command';
+} from '@sqlpro/ui/command';
+import { Check, Clock, Database } from 'lucide-react';
+import { useCallback, useEffect, useMemo } from 'react';
 import { Dialog, DialogContent, DialogTitle } from '@/components/ui/dialog';
 import { cn } from '@/lib/utils';
 import {

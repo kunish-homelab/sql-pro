@@ -1,8 +1,8 @@
 import type { SplitPane } from '@/stores';
 import type { DatabaseSchema } from '@/types/database';
+import { Button } from '@sqlpro/ui/button';
 import { AlertCircle, Clock, Loader2, Play, X, Zap } from 'lucide-react';
 import { memo, useCallback, useState } from 'react';
-import { Button } from '@/components/ui/button';
 import { sqlPro } from '@/lib/api';
 import { generateSuggestions } from '@/lib/query-plan-analyzer';
 import { cn } from '@/lib/utils';

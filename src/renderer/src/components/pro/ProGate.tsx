@@ -1,7 +1,7 @@
 import type { ProFeature } from '@shared/types';
 import type { ReactNode } from 'react';
+import { Button } from '@sqlpro/ui/button';
 import { Crown, Lock, Sparkles } from 'lucide-react';
-import { Button } from '@/components/ui/button';
 import { cn } from '@/lib/utils';
 import { useProStore } from '@/stores';
 import { ProBadge } from './ProBadge';

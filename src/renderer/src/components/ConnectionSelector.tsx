@@ -1,8 +1,6 @@
 import type { PendingChangeInfo, RecentConnection } from '@shared/types';
 import type { DatabaseConnection } from '@/types/database';
-import { Check, ChevronDown, Clock, Database, Plus, X } from 'lucide-react';
-import { useCallback, useState } from 'react';
-import { Button } from '@/components/ui/button';
+import { Button } from '@sqlpro/ui/button';
 import {
   DropdownMenu,
   DropdownMenuContent,
@@ -10,12 +8,10 @@ import {
   DropdownMenuLabel,
   DropdownMenuSeparator,
   DropdownMenuTrigger,
-} from '@/components/ui/dropdown-menu';
-import {
-  Tooltip,
-  TooltipContent,
-  TooltipTrigger,
-} from '@/components/ui/tooltip';
+} from '@sqlpro/ui/dropdown-menu';
+import { Tooltip, TooltipContent, TooltipTrigger } from '@sqlpro/ui/tooltip';
+import { Check, ChevronDown, Clock, Database, Plus, X } from 'lucide-react';
+import { useCallback, useState } from 'react';
 import { UnsavedChangesDialog } from '@/components/UnsavedChangesDialog';
 import { cn } from '@/lib/utils';
 import { useChangesStore, useConnectionStore, useTableFont } from '@/stores';

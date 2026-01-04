@@ -1,20 +1,20 @@
 import type { DataTab } from '@/stores';
-import { Eye, Plus, Table, X } from 'lucide-react';
-import { memo, useCallback, useEffect } from 'react';
-import { Button } from '@/components/ui/button';
+import { Button } from '@sqlpro/ui/button';
 import {
   ContextMenu,
   ContextMenuContent,
   ContextMenuItem,
   ContextMenuSeparator,
   ContextMenuTrigger,
-} from '@/components/ui/context-menu';
+} from '@sqlpro/ui/context-menu';
 import {
   Tooltip,
   TooltipContent,
   TooltipProvider,
   TooltipTrigger,
-} from '@/components/ui/tooltip';
+} from '@sqlpro/ui/tooltip';
+import { Eye, Plus, Table, X } from 'lucide-react';
+import { memo, useCallback, useEffect } from 'react';
 import { cn } from '@/lib/utils';
 import { useConnectionStore, useDataTabsStore } from '@/stores';
 

@@ -2,6 +2,27 @@ import type { AIProvider } from '@shared/types';
 import type { FontCategory, SystemFont } from '@shared/types/font';
 import type { FontConfig } from '@/stores/settings-store';
 import { FONT_CATEGORY_LABELS } from '@shared/types/font';
+import { Button } from '@sqlpro/ui/button';
+import {
+  Command,
+  CommandEmpty,
+  CommandGroup,
+  CommandInput,
+  CommandItem,
+  CommandList,
+} from '@sqlpro/ui/command';
+import { Input } from '@sqlpro/ui/input';
+import { Label } from '@sqlpro/ui/label';
+import { Popover, PopoverContent, PopoverTrigger } from '@sqlpro/ui/popover';
+import {
+  Select,
+  SelectContent,
+  SelectItem,
+  SelectTrigger,
+  SelectValue,
+} from '@sqlpro/ui/select';
+import { Separator } from '@sqlpro/ui/separator';
+import { Switch } from '@sqlpro/ui/switch';
 import {
   Check,
   ChevronRight,
@@ -20,37 +41,12 @@ import {
   Unlink,
 } from 'lucide-react';
 import { useEffect, useMemo, useState } from 'react';
-import { Button } from '@/components/ui/button';
-import {
-  Command,
-  CommandEmpty,
-  CommandGroup,
-  CommandInput,
-  CommandItem,
-  CommandList,
-} from '@/components/ui/command';
 import {
   Dialog,
   DialogContent,
   DialogHeader,
   DialogTitle,
 } from '@/components/ui/dialog';
-import { Input } from '@/components/ui/input';
-import { Label } from '@/components/ui/label';
-import {
-  Popover,
-  PopoverContent,
-  PopoverTrigger,
-} from '@/components/ui/popover';
-import {
-  Select,
-  SelectContent,
-  SelectItem,
-  SelectTrigger,
-  SelectValue,
-} from '@/components/ui/select';
-import { Separator } from '@/components/ui/separator';
-import { Switch } from '@/components/ui/switch';
 import { cn } from '@/lib/utils';
 import {
   DEFAULT_MODELS,

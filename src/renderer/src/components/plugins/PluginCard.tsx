@@ -1,8 +1,6 @@
-import { Download, MoreHorizontal, Package, Trash2 } from 'lucide-react';
-import * as React from 'react';
+import { Badge } from '@sqlpro/ui/badge';
+import { Button } from '@sqlpro/ui/button';
 
-import { Badge } from '@/components/ui/badge';
-import { Button } from '@/components/ui/button';
 import {
   Card,
   CardContent,
@@ -10,15 +8,17 @@ import {
   CardFooter,
   CardHeader,
   CardTitle,
-} from '@/components/ui/card';
+} from '@sqlpro/ui/card';
 import {
   DropdownMenu,
   DropdownMenuContent,
   DropdownMenuItem,
   DropdownMenuSeparator,
   DropdownMenuTrigger,
-} from '@/components/ui/dropdown-menu';
-import { Switch } from '@/components/ui/switch';
+} from '@sqlpro/ui/dropdown-menu';
+import { Switch } from '@sqlpro/ui/switch';
+import { Download, MoreHorizontal, Package, Trash2 } from 'lucide-react';
+import * as React from 'react';
 import { cn } from '@/lib/utils';
 
 // ============ Plugin Types (mirrored from main process for renderer usage) ============

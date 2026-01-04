@@ -1,4 +1,7 @@
 import type { ColumnInfo, DataInsight } from '@shared/types';
+import { Badge } from '@sqlpro/ui/badge';
+import { Button } from '@sqlpro/ui/button';
+import { ScrollArea } from '@sqlpro/ui/scroll-area';
 import {
   AlertCircle,
   AlertTriangle,
@@ -12,8 +15,6 @@ import {
 } from 'lucide-react';
 import { memo, useState } from 'react';
 import { SettingsDialog } from '@/components/SettingsDialog';
-import { Badge } from '@/components/ui/badge';
-import { Button } from '@/components/ui/button';
 import {
   Dialog,
   DialogContent,
@@ -21,7 +22,6 @@ import {
   DialogHeader,
   DialogTitle,
 } from '@/components/ui/dialog';
-import { ScrollArea } from '@/components/ui/scroll-area';
 import { useDataAnalysis } from '@/hooks/useAI';
 import { cn } from '@/lib/utils';
 

@@ -1,4 +1,7 @@
 import type { ALL_PRO_FEATURES } from '@/stores';
+import { Button } from '@sqlpro/ui/button';
+import { Input } from '@sqlpro/ui/input';
+import { Label } from '@sqlpro/ui/label';
 import {
   Check,
   Crown,
@@ -9,7 +12,6 @@ import {
   Sparkles,
 } from 'lucide-react';
 import { useEffect, useMemo, useState } from 'react';
-import { Button } from '@/components/ui/button';
 import {
   Dialog,
   DialogContent,
@@ -18,8 +20,6 @@ import {
   DialogHeader,
   DialogTitle,
 } from '@/components/ui/dialog';
-import { Input } from '@/components/ui/input';
-import { Label } from '@/components/ui/label';
 import { cn } from '@/lib/utils';
 import { useProStore } from '@/stores';
 import { ProBadge } from './ProBadge';

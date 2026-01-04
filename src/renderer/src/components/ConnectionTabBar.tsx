@@ -16,8 +16,6 @@ import {
   useSortable,
 } from '@dnd-kit/sortable';
 import { CSS } from '@dnd-kit/utilities';
-import { AlertCircle, CheckCircle, Circle, Palette, X } from 'lucide-react';
-import { memo } from 'react';
 import {
   ContextMenu,
   ContextMenuContent,
@@ -27,13 +25,15 @@ import {
   ContextMenuSubContent,
   ContextMenuSubTrigger,
   ContextMenuTrigger,
-} from '@/components/ui/context-menu';
+} from '@sqlpro/ui/context-menu';
 import {
   Tooltip,
   TooltipContent,
   TooltipProvider,
   TooltipTrigger,
-} from '@/components/ui/tooltip';
+} from '@sqlpro/ui/tooltip';
+import { AlertCircle, CheckCircle, Circle, Palette, X } from 'lucide-react';
+import { memo } from 'react';
 import { cn } from '@/lib/utils';
 import { useConnectionStore } from '@/stores';
 import { useChangesStore } from '@/stores/changes-store';

@@ -1,13 +1,13 @@
 import type { TableRowData } from './hooks/useTableCore';
 import type { ColumnSchema } from '@/types/database';
-import { Copy, Maximize2 } from 'lucide-react';
-import { memo, useState } from 'react';
-import { Button } from '@/components/ui/button';
+import { Button } from '@sqlpro/ui/button';
 import {
   HoverCard,
   HoverCardContent,
   HoverCardTrigger,
-} from '@/components/ui/hover-card';
+} from '@sqlpro/ui/hover-card';
+import { Copy, Maximize2 } from 'lucide-react';
+import { memo, useState } from 'react';
 import { cn } from '@/lib/utils';
 
 interface RowHoverCardProps {

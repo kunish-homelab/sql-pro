@@ -1,12 +1,8 @@
 import * as Dialog from '@radix-ui/react-dialog';
+import { Button } from '@sqlpro/ui/button';
+import { Tooltip, TooltipContent, TooltipTrigger } from '@sqlpro/ui/tooltip';
 import { Info, Lock } from 'lucide-react';
 import { useEffect, useState } from 'react';
-import { Button } from '@/components/ui/button';
-import {
-  Tooltip,
-  TooltipContent,
-  TooltipTrigger,
-} from '@/components/ui/tooltip';
 import { sqlPro } from '@/lib/api';
 import { cn } from '@/lib/utils';
 

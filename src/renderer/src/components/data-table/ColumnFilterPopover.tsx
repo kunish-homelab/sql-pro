@@ -5,21 +5,17 @@ import type {
   UIFilterState,
   UIOperator,
 } from '@/lib/filter-utils';
-import { useCallback, useEffect, useState } from 'react';
-import { Button } from '@/components/ui/button';
-import { Input } from '@/components/ui/input';
-import {
-  Popover,
-  PopoverContent,
-  PopoverTrigger,
-} from '@/components/ui/popover';
+import { Button } from '@sqlpro/ui/button';
+import { Input } from '@sqlpro/ui/input';
+import { Popover, PopoverContent, PopoverTrigger } from '@sqlpro/ui/popover';
 import {
   Select,
   SelectContent,
   SelectItem,
   SelectTrigger,
   SelectValue,
-} from '@/components/ui/select';
+} from '@sqlpro/ui/select';
+import { useCallback, useEffect, useState } from 'react';
 import {
   generateFilterId,
   getOperatorsForColumnType,

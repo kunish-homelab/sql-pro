@@ -1,5 +1,3 @@
-import { Command as CommandIcon } from 'lucide-react';
-import { useCallback, useEffect, useMemo } from 'react';
 import {
   Command,
   CommandEmpty,
@@ -8,7 +6,9 @@ import {
   CommandItem,
   CommandList,
   CommandShortcut,
-} from '@/components/ui/command';
+} from '@sqlpro/ui/command';
+import { Command as CommandIcon } from 'lucide-react';
+import { useCallback, useEffect, useMemo } from 'react';
 import { Dialog, DialogContent, DialogTitle } from '@/components/ui/dialog';
 import {
   getFilteredCommands,

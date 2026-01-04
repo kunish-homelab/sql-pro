@@ -1,4 +1,8 @@
 import type { PendingChange } from '@/lib/collections';
+import { Badge } from '@sqlpro/ui/badge';
+import { Button } from '@sqlpro/ui/button';
+import { ScrollArea } from '@sqlpro/ui/scroll-area';
+import { Tooltip, TooltipContent, TooltipTrigger } from '@sqlpro/ui/tooltip';
 import {
   AlertCircle,
   Check,
@@ -15,15 +19,7 @@ import {
   X,
 } from 'lucide-react';
 import { useCallback, useEffect, useMemo, useState } from 'react';
-import { Badge } from '@/components/ui/badge';
-import { Button } from '@/components/ui/button';
-import { ScrollArea } from '@/components/ui/scroll-area';
 import { SqlHighlight } from '@/components/ui/sql-highlight';
-import {
-  Tooltip,
-  TooltipContent,
-  TooltipTrigger,
-} from '@/components/ui/tooltip';
 import { usePendingChanges } from '@/hooks/usePendingChanges';
 import { generateSQLScript } from '@/lib/sql-generator';
 import { cn } from '@/lib/utils';

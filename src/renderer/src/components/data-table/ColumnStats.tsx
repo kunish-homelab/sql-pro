@@ -1,5 +1,11 @@
 import type { ColumnSchema } from '@/types/database';
 import {
+  Collapsible,
+  CollapsibleContent,
+  CollapsibleTrigger,
+} from '@sqlpro/ui/collapsible';
+import { Progress } from '@sqlpro/ui/progress';
+import {
   BarChart3,
   ChevronDown,
   ChevronUp,
@@ -10,12 +16,6 @@ import {
   TrendingUp,
 } from 'lucide-react';
 import { memo, useMemo, useState } from 'react';
-import {
-  Collapsible,
-  CollapsibleContent,
-  CollapsibleTrigger,
-} from '@/components/ui/collapsible';
-import { Progress } from '@/components/ui/progress';
 import { cn } from '@/lib/utils';
 
 interface ColumnStatsProps {

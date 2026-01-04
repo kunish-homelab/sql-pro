@@ -1,12 +1,8 @@
 import type { UIFilterState } from '@/lib/filter-utils';
 import type { ColumnSchema } from '@/types/database';
+import { Tooltip, TooltipContent, TooltipTrigger } from '@sqlpro/ui/tooltip';
 import { Hash, Sparkles, Tag, X } from 'lucide-react';
 import { memo, useMemo } from 'react';
-import {
-  Tooltip,
-  TooltipContent,
-  TooltipTrigger,
-} from '@/components/ui/tooltip';
 import { cn } from '@/lib/utils';
 
 interface QuickFilterTagsProps {

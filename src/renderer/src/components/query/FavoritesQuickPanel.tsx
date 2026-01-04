@@ -1,16 +1,16 @@
 import type { SavedQuery } from '@shared/types';
-import { FileText, Star } from 'lucide-react';
-import { useCallback, useEffect, useMemo } from 'react';
-import { Button } from '@/components/ui/button';
+import { Button } from '@sqlpro/ui/button';
 import {
   Popover,
   PopoverContent,
   PopoverHeader,
   PopoverTitle,
   PopoverTrigger,
-} from '@/components/ui/popover';
-import { ScrollArea } from '@/components/ui/scroll-area';
-import { Skeleton } from '@/components/ui/skeleton';
+} from '@sqlpro/ui/popover';
+import { ScrollArea } from '@sqlpro/ui/scroll-area';
+import { Skeleton } from '@sqlpro/ui/skeleton';
+import { FileText, Star } from 'lucide-react';
+import { useCallback, useEffect, useMemo } from 'react';
 import { useSavedQueriesStore } from '@/stores/saved-queries-store';
 
 interface FavoritesQuickPanelProps {

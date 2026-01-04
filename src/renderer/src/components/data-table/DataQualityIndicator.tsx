@@ -1,11 +1,7 @@
 import type { ColumnSchema } from '@/types/database';
+import { Tooltip, TooltipContent, TooltipTrigger } from '@sqlpro/ui/tooltip';
 import { AlertCircle, CheckCircle, Info, XCircle } from 'lucide-react';
 import { memo, useMemo } from 'react';
-import {
-  Tooltip,
-  TooltipContent,
-  TooltipTrigger,
-} from '@/components/ui/tooltip';
 import { cn } from '@/lib/utils';
 
 interface DataQualityIndicatorProps {

@@ -1,7 +1,7 @@
 import type { UIFilterState } from '@/lib/filter-utils';
+import { Badge } from '@sqlpro/ui/badge';
+import { Button } from '@sqlpro/ui/button';
 import { X } from 'lucide-react';
-import { Badge } from '@/components/ui/badge';
-import { Button } from '@/components/ui/button';
 import { generateCompactFilterLabel } from '@/lib/filter-utils';
 
 export interface ActiveFiltersProps {

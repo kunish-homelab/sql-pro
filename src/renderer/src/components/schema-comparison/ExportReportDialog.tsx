@@ -1,8 +1,16 @@
 import type { SchemaComparisonResult } from '@shared/types';
+import { Button } from '@sqlpro/ui/button';
+import { Checkbox } from '@sqlpro/ui/checkbox';
+import { Label } from '@sqlpro/ui/label';
+import {
+  Select,
+  SelectContent,
+  SelectItem,
+  SelectTrigger,
+  SelectValue,
+} from '@sqlpro/ui/select';
 import { FileCode, FileDown, FileJson, FileText, Loader2 } from 'lucide-react';
 import { useCallback, useState } from 'react';
-import { Button } from '@/components/ui/button';
-import { Checkbox } from '@/components/ui/checkbox';
 import {
   Dialog,
   DialogContent,
@@ -11,14 +19,6 @@ import {
   DialogHeader,
   DialogTitle,
 } from '@/components/ui/dialog';
-import { Label } from '@/components/ui/label';
-import {
-  Select,
-  SelectContent,
-  SelectItem,
-  SelectTrigger,
-  SelectValue,
-} from '@/components/ui/select';
 
 type ReportFormat = 'html' | 'json' | 'markdown';
 

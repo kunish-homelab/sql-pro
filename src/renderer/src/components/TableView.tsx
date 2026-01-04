@@ -4,6 +4,21 @@ import type { ExportOptions } from './ExportDialog';
 import type { UIFilterState } from '@/lib/filter-utils';
 import type { PageSizeOption } from '@/stores';
 import type { PendingChange, SortState, TableSchema } from '@/types/database';
+import { Button } from '@sqlpro/ui/button';
+import { Input } from '@sqlpro/ui/input';
+import {
+  Select,
+  SelectContent,
+  SelectItem,
+  SelectTrigger,
+  SelectValue,
+} from '@sqlpro/ui/select';
+import {
+  Tooltip,
+  TooltipContent,
+  TooltipProvider,
+  TooltipTrigger,
+} from '@sqlpro/ui/tooltip';
 import {
   AlertTriangle,
   ChevronLeft,
@@ -22,22 +37,7 @@ import {
   X,
 } from 'lucide-react';
 import { useCallback, useEffect, useMemo, useRef, useState } from 'react';
-import { Button } from '@/components/ui/button';
-import { Input } from '@/components/ui/input';
 import { ShortcutKbd } from '@/components/ui/kbd';
-import {
-  Select,
-  SelectContent,
-  SelectItem,
-  SelectTrigger,
-  SelectValue,
-} from '@/components/ui/select';
-import {
-  Tooltip,
-  TooltipContent,
-  TooltipProvider,
-  TooltipTrigger,
-} from '@/components/ui/tooltip';
 import { useClientSearch } from '@/hooks/useClientSearch';
 import { useExport } from '@/hooks/useExport';
 import { usePendingChanges } from '@/hooks/usePendingChanges';

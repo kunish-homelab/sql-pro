@@ -1,8 +1,8 @@
 import type { SavedQuery } from '@shared/types';
+import { Tabs, TabsContent, TabsList, TabsTrigger } from '@sqlpro/ui/tabs';
 import { ArrowLeftRight, Code, GitCompare, GitFork, Table } from 'lucide-react';
 import { useCallback, useEffect, useRef, useState } from 'react';
 import { ShortcutKbd } from '@/components/ui/kbd';
-import { Tabs, TabsContent, TabsList, TabsTrigger } from '@/components/ui/tabs';
 import { cn } from '@/lib/utils';
 import {
   useChangesStore,

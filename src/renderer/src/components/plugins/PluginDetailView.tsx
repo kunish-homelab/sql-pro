@@ -1,3 +1,17 @@
+import { Badge } from '@sqlpro/ui/badge';
+import { Button } from '@sqlpro/ui/button';
+
+import { ScrollArea } from '@sqlpro/ui/scroll-area';
+import { Separator } from '@sqlpro/ui/separator';
+import {
+  Sheet,
+  SheetContent,
+  SheetDescription,
+  SheetFooter,
+  SheetHeader,
+  SheetTitle,
+} from '@sqlpro/ui/sheet';
+import { Switch } from '@sqlpro/ui/switch';
 import {
   AlertCircle,
   Calendar,
@@ -14,20 +28,6 @@ import {
   User,
 } from 'lucide-react';
 import * as React from 'react';
-
-import { Badge } from '@/components/ui/badge';
-import { Button } from '@/components/ui/button';
-import { ScrollArea } from '@/components/ui/scroll-area';
-import { Separator } from '@/components/ui/separator';
-import {
-  Sheet,
-  SheetContent,
-  SheetDescription,
-  SheetFooter,
-  SheetHeader,
-  SheetTitle,
-} from '@/components/ui/sheet';
-import { Switch } from '@/components/ui/switch';
 import { cn } from '@/lib/utils';
 
 // ============ Plugin Types (mirrored from main process for renderer usage) ============

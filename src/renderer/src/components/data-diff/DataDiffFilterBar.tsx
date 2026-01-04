@@ -1,8 +1,8 @@
+import { Button } from '@sqlpro/ui/button';
+import { Input } from '@sqlpro/ui/input';
+import { Separator } from '@sqlpro/ui/separator';
+import { Toggle } from '@sqlpro/ui/toggle';
 import { Edit, Filter, Minus, Plus, RotateCcw, Search, X } from 'lucide-react';
-import { Button } from '@/components/ui/button';
-import { Input } from '@/components/ui/input';
-import { Separator } from '@/components/ui/separator';
-import { Toggle } from '@/components/ui/toggle';
 import { cn } from '@/lib/utils';
 import { useDataDiffStore } from '@/stores';
 

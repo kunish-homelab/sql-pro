@@ -1,26 +1,26 @@
 import type { QueryTab } from '@/stores';
-import { Columns2, Copy, FileCode, Plus, Rows2, X } from 'lucide-react';
-import { memo, useCallback, useRef, useState } from 'react';
-import { Button } from '@/components/ui/button';
+import { Button } from '@sqlpro/ui/button';
 import {
   ContextMenu,
   ContextMenuContent,
   ContextMenuItem,
   ContextMenuSeparator,
   ContextMenuTrigger,
-} from '@/components/ui/context-menu';
+} from '@sqlpro/ui/context-menu';
 import {
   DropdownMenu,
   DropdownMenuContent,
   DropdownMenuItem,
   DropdownMenuTrigger,
-} from '@/components/ui/dropdown-menu';
+} from '@sqlpro/ui/dropdown-menu';
 import {
   Tooltip,
   TooltipContent,
   TooltipProvider,
   TooltipTrigger,
-} from '@/components/ui/tooltip';
+} from '@sqlpro/ui/tooltip';
+import { Columns2, Copy, FileCode, Plus, Rows2, X } from 'lucide-react';
+import { memo, useCallback, useRef, useState } from 'react';
 import { cn } from '@/lib/utils';
 import { useConnectionStore, useQueryTabsStore } from '@/stores';
 

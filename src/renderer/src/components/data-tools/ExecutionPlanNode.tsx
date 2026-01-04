@@ -1,4 +1,5 @@
 import type { ExecutionPlanNodeData } from '@/lib/query-plan-analyzer';
+import { Tooltip, TooltipContent, TooltipTrigger } from '@sqlpro/ui/tooltip';
 import { Handle, Position } from '@xyflow/react';
 import {
   AlertTriangle,
@@ -9,11 +10,6 @@ import {
   Zap,
 } from 'lucide-react';
 import { memo } from 'react';
-import {
-  Tooltip,
-  TooltipContent,
-  TooltipTrigger,
-} from '@/components/ui/tooltip';
 import { getWarningMessage } from '@/lib/query-plan-analyzer';
 import { cn } from '@/lib/utils';
 

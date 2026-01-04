@@ -6,6 +6,8 @@ import type {
   PendingChange,
   SortState,
 } from '@/types/database';
+import { Button } from '@sqlpro/ui/button';
+import { ScrollArea } from '@sqlpro/ui/scroll-area';
 import { useVirtualizer } from '@tanstack/react-virtual';
 import { Filter, SearchX } from 'lucide-react';
 import {
@@ -15,8 +17,6 @@ import {
   useMemo,
   useRef,
 } from 'react';
-import { Button } from '@/components/ui/button';
-import { ScrollArea } from '@/components/ui/scroll-area';
 import { cn } from '@/lib/utils';
 import { useTableFont } from '@/stores';
 import { useTableCore } from './hooks/useTableCore';

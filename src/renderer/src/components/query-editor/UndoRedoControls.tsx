@@ -1,13 +1,13 @@
 import type { PendingChange } from '@/types/database';
-import { Redo2, Undo2 } from 'lucide-react';
-import { memo, useCallback, useEffect } from 'react';
-import { Button } from '@/components/ui/button';
+import { Button } from '@sqlpro/ui/button';
 import {
   Tooltip,
   TooltipContent,
   TooltipProvider,
   TooltipTrigger,
-} from '@/components/ui/tooltip';
+} from '@sqlpro/ui/tooltip';
+import { Redo2, Undo2 } from 'lucide-react';
+import { memo, useCallback, useEffect } from 'react';
 import { cn } from '@/lib/utils';
 import { useUndoRedoStore } from '@/stores';
 

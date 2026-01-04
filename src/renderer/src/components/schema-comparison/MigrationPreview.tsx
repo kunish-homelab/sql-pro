@@ -1,4 +1,11 @@
 import type { GenerateMigrationSQLResponse } from '@shared/types';
+import { Alert, AlertDescription, AlertTitle } from '@sqlpro/ui/alert';
+import { Badge } from '@sqlpro/ui/badge';
+import { Button } from '@sqlpro/ui/button';
+import { Card, CardContent, CardHeader, CardTitle } from '@sqlpro/ui/card';
+import { Label } from '@sqlpro/ui/label';
+import { ScrollArea } from '@sqlpro/ui/scroll-area';
+import { Switch } from '@sqlpro/ui/switch';
 import {
   AlertCircle,
   Check,
@@ -11,14 +18,7 @@ import {
   RotateCcw,
 } from 'lucide-react';
 import { useCallback, useEffect, useState } from 'react';
-import { Alert, AlertDescription, AlertTitle } from '@/components/ui/alert';
-import { Badge } from '@/components/ui/badge';
-import { Button } from '@/components/ui/button';
-import { Card, CardContent, CardHeader, CardTitle } from '@/components/ui/card';
-import { Label } from '@/components/ui/label';
-import { ScrollArea } from '@/components/ui/scroll-area';
 import { SqlHighlight } from '@/components/ui/sql-highlight';
-import { Switch } from '@/components/ui/switch';
 import { sqlPro } from '@/lib/api';
 import { cn } from '@/lib/utils';
 import {

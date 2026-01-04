@@ -1,8 +1,8 @@
 import type { ColumnChange, RowDiff } from '@shared/types';
+import { Badge } from '@sqlpro/ui/badge';
+import { Card, CardContent, CardHeader, CardTitle } from '@sqlpro/ui/card';
 import { ChevronDown, ChevronRight, Minus, Plus, Table } from 'lucide-react';
 import { useMemo } from 'react';
-import { Badge } from '@/components/ui/badge';
-import { Card, CardContent, CardHeader, CardTitle } from '@/components/ui/card';
 import { cn } from '@/lib/utils';
 
 interface RowDiffCardProps {

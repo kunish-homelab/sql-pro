@@ -1,6 +1,4 @@
 import type { PendingChange } from '@/types/database';
-import { AlertTriangle, Edit3, Plus, Trash2 } from 'lucide-react';
-import { useEffect, useMemo, useState } from 'react';
 import {
   AlertDialog,
   AlertDialogAction,
@@ -11,8 +9,10 @@ import {
   AlertDialogHeader,
   AlertDialogMedia,
   AlertDialogTitle,
-} from '@/components/ui/alert-dialog';
-import { Button } from '@/components/ui/button';
+} from '@sqlpro/ui/alert-dialog';
+import { Button } from '@sqlpro/ui/button';
+import { AlertTriangle, Edit3, Plus, Trash2 } from 'lucide-react';
+import { useEffect, useMemo, useState } from 'react';
 
 interface UnsavedChangesDialogProps {
   open: boolean;

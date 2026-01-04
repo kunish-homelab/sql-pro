@@ -1,4 +1,15 @@
 import type { SqlLogEntry, SqlLogLevel } from '@/types/sql-log';
+import { Badge } from '@sqlpro/ui/badge';
+import { Button } from '@sqlpro/ui/button';
+import { Input } from '@sqlpro/ui/input';
+import {
+  Select,
+  SelectContent,
+  SelectItem,
+  SelectTrigger,
+  SelectValue,
+} from '@sqlpro/ui/select';
+import { Sheet, SheetContent, SheetHeader, SheetTitle } from '@sqlpro/ui/sheet';
 import {
   AlertCircle,
   CheckCircle2,
@@ -18,17 +29,6 @@ import {
   initSqlLogListener,
   useSqlLogStore,
 } from '@/stores/sql-log-store';
-import { Badge } from './ui/badge';
-import { Button } from './ui/button';
-import { Input } from './ui/input';
-import {
-  Select,
-  SelectContent,
-  SelectItem,
-  SelectTrigger,
-  SelectValue,
-} from './ui/select';
-import { Sheet, SheetContent, SheetHeader, SheetTitle } from './ui/sheet';
 
 const LOG_LEVEL_COLORS: Record<SqlLogLevel, string> = {
   info: 'bg-blue-500/10 text-blue-500',

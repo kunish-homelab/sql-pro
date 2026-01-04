@@ -1,7 +1,5 @@
-import { Bookmark, Loader2, Plus, Star } from 'lucide-react';
-import { useCallback, useEffect, useState } from 'react';
-import { Button } from '@/components/ui/button';
-import { Checkbox } from '@/components/ui/checkbox';
+import { Button } from '@sqlpro/ui/button';
+import { Checkbox } from '@sqlpro/ui/checkbox';
 import {
   Combobox,
   ComboboxChip,
@@ -13,7 +11,12 @@ import {
   ComboboxItem,
   ComboboxList,
   useComboboxAnchor,
-} from '@/components/ui/combobox';
+} from '@sqlpro/ui/combobox';
+import { Input } from '@sqlpro/ui/input';
+import { Label } from '@sqlpro/ui/label';
+import { Textarea } from '@sqlpro/ui/textarea';
+import { Bookmark, Loader2, Plus, Star } from 'lucide-react';
+import { useCallback, useEffect, useState } from 'react';
 import {
   Dialog,
   DialogContent,
@@ -22,9 +25,6 @@ import {
   DialogHeader,
   DialogTitle,
 } from '@/components/ui/dialog';
-import { Input } from '@/components/ui/input';
-import { Label } from '@/components/ui/label';
-import { Textarea } from '@/components/ui/textarea';
 import { useCollectionsStore } from '@/stores/collections-store';
 import { useSavedQueriesStore } from '@/stores/saved-queries-store';
 

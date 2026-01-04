@@ -5,6 +5,8 @@ import type {
   TableSchema,
   TriggerSchema,
 } from '@/types/database';
+import { Button } from '@sqlpro/ui/button';
+import { ScrollArea } from '@sqlpro/ui/scroll-area';
 import {
   ChevronDown,
   ChevronRight,
@@ -18,8 +20,6 @@ import {
   Zap,
 } from 'lucide-react';
 import { useState } from 'react';
-import { Button } from '@/components/ui/button';
-import { ScrollArea } from '@/components/ui/scroll-area';
 import { SqlHighlight } from '@/components/ui/sql-highlight';
 import { cn } from '@/lib/utils';
 

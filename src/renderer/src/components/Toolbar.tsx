@@ -1,4 +1,7 @@
 import type { PendingChangeInfo, SavedQuery } from '@shared/types';
+import { Button } from '@sqlpro/ui/button';
+import { Separator } from '@sqlpro/ui/separator';
+import { Tooltip, TooltipContent, TooltipTrigger } from '@sqlpro/ui/tooltip';
 import {
   Database,
   FileText,
@@ -12,14 +15,7 @@ import {
 } from 'lucide-react';
 import { useState } from 'react';
 import { FavoritesQuickPanel } from '@/components/query/FavoritesQuickPanel';
-import { Button } from '@/components/ui/button';
 import { ShortcutKbd } from '@/components/ui/kbd';
-import { Separator } from '@/components/ui/separator';
-import {
-  Tooltip,
-  TooltipContent,
-  TooltipTrigger,
-} from '@/components/ui/tooltip';
 import { UnsavedChangesDialog } from '@/components/UnsavedChangesDialog';
 import { sqlPro } from '@/lib/api';
 import {

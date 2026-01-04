@@ -5,6 +5,17 @@ import type {
   ExecutionPlanFlowEdge,
   ExecutionPlanFlowNode,
 } from '@/lib/query-plan-analyzer';
+import { Badge } from '@sqlpro/ui/badge';
+import { Button } from '@sqlpro/ui/button';
+import { ScrollArea } from '@sqlpro/ui/scroll-area';
+import {
+  Sheet,
+  SheetClose,
+  SheetContent,
+  SheetDescription,
+  SheetHeader,
+  SheetTitle,
+} from '@sqlpro/ui/sheet';
 import {
   Background,
   Controls,
@@ -34,8 +45,6 @@ import {
 } from 'lucide-react';
 import { useTheme } from 'next-themes';
 import { Component, memo, useCallback, useMemo, useState } from 'react';
-import { Badge } from '@/components/ui/badge';
-import { Button } from '@/components/ui/button';
 import {
   Dialog,
   DialogContent,
@@ -43,15 +52,6 @@ import {
   DialogHeader,
   DialogTitle,
 } from '@/components/ui/dialog';
-import { ScrollArea } from '@/components/ui/scroll-area';
-import {
-  Sheet,
-  SheetClose,
-  SheetContent,
-  SheetDescription,
-  SheetHeader,
-  SheetTitle,
-} from '@/components/ui/sheet';
 import { SqlHighlight } from '@/components/ui/sql-highlight';
 import { convertPlanToFlow, exportPlanAsText } from '@/lib/query-plan-analyzer';
 import { cn } from '@/lib/utils';

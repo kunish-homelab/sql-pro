@@ -1,4 +1,5 @@
 import type { ErrorComponentProps } from '@tanstack/react-router';
+import { Button } from '@sqlpro/ui/button';
 import {
   AlertTriangle,
   ChevronDown,
@@ -8,7 +9,6 @@ import {
   RotateCcw,
 } from 'lucide-react';
 import { useState } from 'react';
-import { Button } from '@/components/ui/button';
 import { cn } from '@/lib/utils';
 
 interface StackFrame {

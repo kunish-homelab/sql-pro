@@ -1,4 +1,25 @@
 import type { SavedQuery } from '@shared/types';
+import { Button } from '@sqlpro/ui/button';
+import {
+  ContextMenu,
+  ContextMenuContent,
+  ContextMenuItem,
+  ContextMenuTrigger,
+} from '@sqlpro/ui/context-menu';
+import {
+  DropdownMenu,
+  DropdownMenuContent,
+  DropdownMenuItem,
+  DropdownMenuTrigger,
+} from '@sqlpro/ui/dropdown-menu';
+import { Input } from '@sqlpro/ui/input';
+import {
+  ResizableHandle,
+  ResizablePanelGroup,
+  ResizablePanel as ResizablePanelUI,
+} from '@sqlpro/ui/resizable';
+import { ScrollArea } from '@sqlpro/ui/scroll-area';
+import { Tabs, TabsContent, TabsList, TabsTrigger } from '@sqlpro/ui/tabs';
 import {
   AlertCircle,
   BarChart3,
@@ -39,13 +60,6 @@ import {
   QueryExportDialog,
   QueryImportDialog,
 } from '@/components/sharing';
-import { Button } from '@/components/ui/button';
-import {
-  ContextMenu,
-  ContextMenuContent,
-  ContextMenuItem,
-  ContextMenuTrigger,
-} from '@/components/ui/context-menu';
 import {
   Dialog,
   DialogContent,
@@ -54,22 +68,8 @@ import {
   DialogHeader,
   DialogTitle,
 } from '@/components/ui/dialog';
-import {
-  DropdownMenu,
-  DropdownMenuContent,
-  DropdownMenuItem,
-  DropdownMenuTrigger,
-} from '@/components/ui/dropdown-menu';
-import { Input } from '@/components/ui/input';
 import { ShortcutKbd } from '@/components/ui/kbd';
-import {
-  ResizableHandle,
-  ResizablePanelGroup,
-  ResizablePanel as ResizablePanelUI,
-} from '@/components/ui/resizable';
-import { ScrollArea } from '@/components/ui/scroll-area';
 import { SqlHighlight } from '@/components/ui/sql-highlight';
-import { Tabs, TabsContent, TabsList, TabsTrigger } from '@/components/ui/tabs';
 import { sqlPro } from '@/lib/api';
 import { generateSuggestions } from '@/lib/query-plan-analyzer';
 import { cn } from '@/lib/utils';

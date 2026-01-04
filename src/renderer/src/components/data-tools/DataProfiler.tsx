@@ -1,3 +1,8 @@
+import { Badge } from '@sqlpro/ui/badge';
+import { Button } from '@sqlpro/ui/button';
+import { Progress } from '@sqlpro/ui/progress';
+import { ScrollArea } from '@sqlpro/ui/scroll-area';
+import { Tabs, TabsContent, TabsList, TabsTrigger } from '@sqlpro/ui/tabs';
 import {
   BarChart3,
   Calendar,
@@ -11,8 +16,6 @@ import {
   Type,
 } from 'lucide-react';
 import { memo, useCallback, useState } from 'react';
-import { Badge } from '@/components/ui/badge';
-import { Button } from '@/components/ui/button';
 import {
   Dialog,
   DialogContent,
@@ -20,9 +23,6 @@ import {
   DialogHeader,
   DialogTitle,
 } from '@/components/ui/dialog';
-import { Progress } from '@/components/ui/progress';
-import { ScrollArea } from '@/components/ui/scroll-area';
-import { Tabs, TabsContent, TabsList, TabsTrigger } from '@/components/ui/tabs';
 import { cn } from '@/lib/utils';
 
 interface ColumnProfile {

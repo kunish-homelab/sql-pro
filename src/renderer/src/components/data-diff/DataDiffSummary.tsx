@@ -1,4 +1,6 @@
 import type { DataComparisonResult, DiffType } from '@shared/types';
+import { Button } from '@sqlpro/ui/button';
+import { Card, CardContent, CardHeader, CardTitle } from '@sqlpro/ui/card';
 import {
   ChevronDown,
   ChevronUp,
@@ -7,8 +9,6 @@ import {
   Plus,
   TableIcon,
 } from 'lucide-react';
-import { Button } from '@/components/ui/button';
-import { Card, CardContent, CardHeader, CardTitle } from '@/components/ui/card';
 import { cn } from '@/lib/utils';
 import { useDataDiffStore } from '@/stores';
 
