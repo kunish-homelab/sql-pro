@@ -104,7 +104,16 @@ export function DatabasePage() {
               tables: schemaResult.tables || [],
               views: schemaResult.views || [],
             });
+          } else {
+            // Log error but don't show to user since this is background refresh
+            console.warn(
+              'Failed to reload schema after file change:',
+              schemaResult.error
+            );
           }
+        } catch (err) {
+          // Log error but don't show to user since this is background refresh
+          console.warn('Failed to reload schema after file change:', err);
         } finally {
           connectionStore.setIsLoadingSchema(false);
         }

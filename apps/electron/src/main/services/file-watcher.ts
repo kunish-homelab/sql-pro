@@ -16,6 +16,8 @@ class FileWatcherService {
     new Map();
   // Track if we should ignore the next change (for our own writes)
   private ignoredPaths: Set<string> = new Set();
+  // Track ignore timeout timers for cleanup
+  private ignoreTimers: Map<string, ReturnType<typeof setTimeout>> = new Map();
   // Debounce delay in milliseconds
   private readonly debounceDelay = 500;
 
@@ -25,7 +27,7 @@ class FileWatcherService {
    * @param dbPath The path to the database file
    */
   watch(connectionId: string, dbPath: string): void {
-    // Don't watch if already watching this path
+    // Don't watch if already watching this connection
     if (this.watchers.has(connectionId)) {
       return;
     }
@@ -79,6 +81,12 @@ class FileWatcherService {
     for (const [connectionId] of this.watchers) {
       this.unwatch(connectionId);
     }
+
+    // Clear all ignore timers
+    for (const [, timer] of this.ignoreTimers) {
+      clearTimeout(timer);
+    }
+    this.ignoreTimers.clear();
     this.ignoredPaths.clear();
   }
 
@@ -90,10 +98,18 @@ class FileWatcherService {
    * @param duration How long to ignore (ms), default 1000ms
    */
   ignoreChanges(dbPath: string, duration: number = 1000): void {
+    // Clear any existing timer for this path
+    const existingTimer = this.ignoreTimers.get(dbPath);
+    if (existingTimer) {
+      clearTimeout(existingTimer);
+    }
+
     this.ignoredPaths.add(dbPath);
-    setTimeout(() => {
+    const timer = setTimeout(() => {
       this.ignoredPaths.delete(dbPath);
+      this.ignoreTimers.delete(dbPath);
     }, duration);
+    this.ignoreTimers.set(dbPath, timer);
   }
 
   /**
